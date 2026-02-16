@@ -1,0 +1,207 @@
+/* Medieval UI Sprite System - Avant-Garde Edition */
+
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Inter:wght@400;600;800&display=swap');
+
+:root {
+    --ui-sprite: url('/Kringsringen/assets/sprites/ui/MediavelFree.png');
+    --color-wood: #5d3a2e;
+    --color-amber: #d9a066;
+    --color-gold: #ffcc00;
+}
+
+.medieval-pixel {
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+}
+
+/* Base Animations */
+@keyframes m-float {
+
+    0%,
+    100% {
+        transform: translateY(0) scale(var(--m-scale, 1));
+    }
+
+    50% {
+        transform: translateY(-10px) scale(var(--m-scale, 1));
+    }
+}
+
+@keyframes m-shine {
+    0% {
+        background-position: -200% center;
+    }
+
+    100% {
+        background-position: 200% center;
+    }
+}
+
+@keyframes m-vignette {
+    0% {
+        opacity: 0;
+    }
+
+    100% {
+        opacity: 1;
+    }
+}
+
+/* Hanging Sign - 64x80 */
+.m-sign-hanging {
+    width: 64px;
+    height: 80px;
+    background: var(--ui-sprite) 0px 0px no-repeat;
+    image-rendering: pixelated;
+}
+
+.m-float {
+    animation: m-float 3s ease-in-out infinite;
+}
+
+/* Wooden Sign Part Only (64x64) */
+.m-sign-wood {
+    width: 64px;
+    height: 64px;
+    background: var(--ui-sprite) 0 -16px no-repeat;
+    image-rendering: pixelated;
+}
+
+/* Progress Bar - Container 64x16 */
+.m-progress-container {
+    width: 64px;
+    height: 16px;
+    background: var(--ui-sprite) 0px -96px no-repeat;
+    image-rendering: pixelated;
+    position: relative;
+    box-sizing: border-box;
+    filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.3));
+}
+
+.m-progress-fill {
+    position: absolute;
+    left: 4px;
+    top: 2px;
+    height: 10px;
+    background: linear-gradient(to bottom, #ff4444, #c32422);
+    box-shadow: inset 1px 1px 2px rgba(255, 255, 255, 0.2);
+    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Circular Wooden Buttons - 16x16 */
+.m-btn {
+    width: 16px;
+    height: 16px;
+    background: var(--ui-sprite) -64px 0px no-repeat;
+    image-rendering: pixelated;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+}
+
+.m-btn:hover {
+    background-position-y: -16px;
+    transform: scale(1.1) rotate(2deg);
+    filter: brightness(1.2);
+}
+
+.m-btn:active {
+    background-position-y: -32px;
+    transform: scale(0.95);
+}
+
+/* Button Variants */
+.m-btn-plus {
+    background-position-x: -80px;
+}
+
+.m-btn-check {
+    background-position-x: -96px;
+}
+
+.m-btn-cross {
+    background-position-x: -128px;
+}
+
+.m-btn-help {
+    background-position-x: -144px;
+}
+
+/* Typography */
+.m-text-hud {
+    font-family: 'Cinzel', serif;
+    color: var(--color-wood);
+    font-weight: 900;
+    text-shadow: 1px 1px 0 rgba(255, 255, 255, 0.2), -0.5px -0.5px 0 rgba(0, 0, 0, 0.1);
+    letter-spacing: -0.02em;
+}
+
+.m-text-stats {
+    font-family: 'Inter', sans-serif;
+    color: var(--color-wood);
+    font-weight: 800;
+    text-transform: uppercase;
+    font-size: 10px;
+    letter-spacing: 0.05em;
+    opacity: 0.6;
+}
+
+.m-text-gold {
+    color: var(--color-gold);
+    text-shadow:
+        0.5px 0.5px 0 rgba(255, 255, 255, 0.3),
+        2px 2px 4px rgba(0, 0, 0, 0.5),
+        0 0 12px rgba(255, 204, 0, 0.4);
+}
+
+/* Scale Utility (Sets --m-scale for animations to inherit) */
+.m-scale-2 {
+    --m-scale: 2;
+    transform: scale(2);
+}
+
+.m-scale-3 {
+    --m-scale: 3;
+    transform: scale(3);
+}
+
+.m-scale-4 {
+    --m-scale: 4;
+    transform: scale(4);
+}
+
+.m-scale-5 {
+    --m-scale: 5;
+    transform: scale(5);
+}
+
+/* Overlays */
+.m-vignette {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle, transparent 40%, rgba(0, 0, 0, 0.8) 100%);
+    pointer-events: none;
+    animation: m-vignette 1s ease-out;
+}
+
+.m-card-shine {
+    position: relative;
+    overflow: hidden;
+}
+
+.m-card-shine::after {
+    content: '';
+    position: absolute;
+    inset: -100%;
+    background: linear-gradient(45deg,
+            transparent 45%,
+            rgba(255, 255, 255, 0.1) 50%,
+            transparent 55%);
+    background-size: 200% 200%;
+    animation: m-shine 3s infinite;
+    pointer-events: none;
+}

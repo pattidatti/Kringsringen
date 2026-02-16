@@ -11,6 +11,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     private lastAttackTime: number = 0;
     private isAttacking: boolean = false;
     public hasHit: boolean = false;
+    private isPushingBack: boolean = false;
 
     constructor(scene: Phaser.Scene, x: number, y: number, target: Phaser.GameObjects.Components.Transform) {
         super(scene, x, y, 'orc-idle');
@@ -40,7 +41,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 
     preUpdate(time: number, delta: number) {
         super.preUpdate(time, delta);
-        if (this.isDead) return;
+        if (this.isDead || this.isPushingBack) return;
 
         const distance = Phaser.Math.Distance.Between(this.x, this.y, (this.target as any).x, (this.target as any).y);
 
@@ -106,7 +107,15 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         this.hpBar.destroy();
         this.setTint(0x444444);
 
+        // Blood effect
+        const bloodKey = `blood_${Phaser.Math.Between(1, 5)}`;
+        const blood = this.scene.add.sprite(this.x, this.y, bloodKey);
+        blood.setScale(1.5); // Slightly larger than enemy for visibility
+        blood.play(bloodKey);
+        blood.on('animationcomplete', () => blood.destroy());
+
         // Simple fade out
+        this.emit('dead', this.x, this.y);
         this.scene.tweens.add({
             targets: this,
             alpha: 0,
@@ -114,6 +123,27 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
             onComplete: () => {
                 this.destroy();
             }
+        });
+    }
+
+    public pushback(sourceX: number, sourceY: number, force: number = 400) {
+        if (this.isDead) return;
+
+        this.isPushingBack = true;
+        this.isAttacking = false;
+        this.clearTint();
+        this.setTint(0xffffff); // Flash white
+
+        const angle = Phaser.Math.Angle.Between(sourceX, sourceY, this.x, this.y);
+        this.setVelocity(
+            Math.cos(angle) * force,
+            Math.sin(angle) * force
+        );
+
+        this.scene.time.delayedCall(200, () => {
+            this.isPushingBack = false;
+            this.clearTint();
+            if (!this.isDead) this.play('orc-walk');
         });
     }
 }
