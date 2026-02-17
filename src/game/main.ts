@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { Enemy } from './Enemy';
 import { XPGem } from './XPGem';
+import { MapGenerator } from './MapGenerator';
 
 class MainScene extends Phaser.Scene {
     public enemies!: Phaser.Physics.Arcade.Group;
@@ -107,108 +108,27 @@ class MainScene extends Phaser.Scene {
             patch.setAlpha(0.8);
         }
 
-        // 3. Structures and Ruins (Points of Interest / Tactical Cover)
-        for (let i = 0; i < 12; i++) {
-            const rx = Phaser.Math.Between(300, mapWidth - 300);
-            const ry = Phaser.Math.Between(300, mapHeight - 300);
-
-            // Avoid spawning in player starting area
-            if (Phaser.Math.Distance.Between(rx, ry, mapWidth / 2, mapHeight / 2) < 200) continue;
-
-            // RUINS: Cluster of structure blocks in a semi-tactical layout (e.g. L-shapes or corridors)
-            const isHorizontal = Math.random() > 0.5;
-            for (let j = 0; j < 6; j++) {
-                const ox = isHorizontal ? j * 32 : Phaser.Math.Between(-10, 10);
-                const oy = isHorizontal ? Phaser.Math.Between(-10, 10) : j * 32;
-                const frame = Phaser.Math.Between(0, 5);
-
-                const wx = rx + ox;
-                const wy = ry + oy;
-
-                // Add shadow
-                const shadow = this.add.image(wx + 4, wy + 8, 'shadows', 0);
-                shadow.setAlpha(0.3);
-                shadow.setDepth(wy - 1);
-
-                const wall = this.obstacles.create(wx, wy, 'struct', frame);
-                wall.setScale(2);
-                wall.setDepth(wy);
-                wall.refreshBody();
-                // Set solid wall collision area
-                wall.body.setSize(30, 24);
-                wall.body.setOffset(1, 4);
-            }
-        }
-
-        // 4. Clustered Props (Denser Forests & Rocks)
-        for (let i = 0; i < 70; i++) {
-            const clusterX = Phaser.Math.Between(100, mapWidth - 100);
-            const clusterY = Phaser.Math.Between(100, mapHeight - 100);
-
-            // Avoid spawning in player starting area
-            if (Phaser.Math.Distance.Between(clusterX, clusterY, mapWidth / 2, mapHeight / 2) < 150) continue;
-
-            const clusterSize = Phaser.Math.Between(5, 12);
-
-            for (let j = 0; j < clusterSize; j++) {
-                const ox = Phaser.Math.Between(-100, 100);
-                const oy = Phaser.Math.Between(-100, 100);
-                const isPlant = Math.random() > 0.3;
-                const tex = isPlant ? 'plants' : 'props';
-                const frame = Phaser.Math.Between(0, 10);
-
-                const rx = clusterX + ox;
-                const ry = clusterY + oy;
-
-                // Shadow
-                if (isPlant) {
-                    const shadow = this.add.image(rx, ry + 10, 'shadows-plant', 0);
-                    shadow.setAlpha(0.2);
-                    shadow.setDepth(ry - 1);
-                } else {
-                    const shadow = this.add.image(rx + 2, ry + 5, 'shadows', 0);
-                    shadow.setAlpha(0.2);
-                    shadow.setDepth(ry - 1);
-                }
-
-                const prop = this.obstacles.create(rx, ry, tex, frame);
-                prop.setDepth(ry);
-                prop.setScale(2);
-                prop.refreshBody();
-
-                // Specific collision boxes
-                if (isPlant && frame <= 2) { // LARGE TREES
-                    prop.body.setCircle(8, 8, 16); // Small circle at the base
-                } else if (isPlant && frame <= 8) { // BUSHES
-                    prop.body.setSize(24, 16);
-                    prop.body.setOffset(4, 16);
-                } else if (!isPlant && frame <= 5) { // ROCKS / PROPS
-                    prop.body.setSize(28, 20);
-                    prop.body.setOffset(2, 6);
-                } else {
-                    // Small props or decorative only
-                    prop.body.setSize(10, 10);
-                    prop.body.setOffset(11, 11);
-                }
-            }
-        }
+        // 3. Procedural Map Generation (Map Engine)
+        const mapGenerator = new MapGenerator(this, this.obstacles, mapWidth, mapHeight);
+        mapGenerator.generate();
 
         this.setupAnimations();
 
         const player = this.physics.add.sprite(mapWidth / 2, mapHeight / 2, 'player-idle');
         player.setCollideWorldBounds(true);
         player.setScale(2);
-        player.setBodySize(20, 20);
-        player.setOffset(40, 70);
+        player.setBodySize(20, 15, true);
+        player.setOffset(player.body!.offset.x, 75); // Center X automatically, move Y to feet
         player.setMass(2); // Make player a bit heavier than enemies
         player.play('player-idle');
 
         // Camera follow
         this.cameras.main.startFollow(player, true, 0.1, 0.1);
 
-        // Attack Hitbox (invisible) - Increased width and closer to player for better reach with collisions
-        this.attackHitbox = this.add.rectangle(0, 0, 100, 60, 0xff0000, 0) as any;
+        // Attack Hitbox (invisible circle) - Better for 360-degree detection
+        this.attackHitbox = this.add.rectangle(0, 0, 60, 60, 0xff0000, 0) as any;
         this.physics.add.existing(this.attackHitbox);
+        this.attackHitbox.body!.setCircle(30);
         this.attackHitbox.body!.setEnable(false);
 
         // Enemy Group
@@ -530,11 +450,11 @@ class MainScene extends Phaser.Scene {
         }
 
         // Update attack hitbox position based on mouse angle (360 degrees)
-        const angle = Phaser.Math.Angle.Between(player.x, player.y, pointer.worldX, pointer.worldY);
-        const radius = 40; // Distance from player center
+        const angle = Phaser.Math.Angle.Between(player.x, player.y + 33, pointer.worldX, pointer.worldY);
+        const radius = 50; // Reach from feet center
         this.attackHitbox.setPosition(
             player.x + Math.cos(angle) * radius,
-            player.y + Math.sin(angle) * radius
+            player.y + 33 + Math.sin(angle) * radius
         );
         this.attackHitbox.setRotation(angle);
 
@@ -580,8 +500,12 @@ class MainScene extends Phaser.Scene {
         this.enemies.getChildren().forEach((enemy) => {
             const e = enemy as Enemy;
             if (e.active && e.isOnDamageFrame && !e.hasHit) {
-                const dist = Phaser.Math.Distance.Between(player.x, player.y, e.x, e.y);
-                if (dist < 85) { // Reach of the orc attack
+                // Calculate distance between "feet" where collision happens
+                const playerFeetY = player.y + 33;
+                const enemyFeetY = e.y + 33;
+                const dist = Phaser.Math.Distance.Between(player.x, playerFeetY, e.x, enemyFeetY);
+
+                if (dist < 75) { // Reach of the orc attack
                     e.hasHit = true;
                     this.takePlayerDamage(10, e);
                 }
@@ -610,7 +534,7 @@ export const createGame = (containerId: string) => {
             default: 'arcade',
             arcade: {
                 gravity: { x: 0, y: 0 },
-                debug: false
+                debug: true
             }
         },
         scene: MainScene,

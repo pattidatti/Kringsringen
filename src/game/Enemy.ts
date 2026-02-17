@@ -23,8 +23,8 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 
         this.setScale(2);
         this.setCollideWorldBounds(true);
-        this.setBodySize(20, 20);
-        this.setOffset(40, 70);
+        this.setBodySize(20, 15, true);
+        this.setOffset(this.body!.offset.x, 75); // Keep centered X, move Y to feet
 
         this.play('orc-walk');
 
