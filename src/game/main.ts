@@ -3,8 +3,9 @@ import { Enemy } from './Enemy';
 import { XPGem } from './XPGem';
 
 class MainScene extends Phaser.Scene {
-    private enemies!: Phaser.Physics.Arcade.Group;
+    public enemies!: Phaser.Physics.Arcade.Group;
     private gems!: Phaser.Physics.Arcade.Group;
+    public obstacles!: Phaser.Physics.Arcade.StaticGroup;
     private attackHitbox!: Phaser.Types.Physics.Arcade.ImageWithDynamicBody;
     private wasd!: {
         W: Phaser.Input.Keyboard.Key;
@@ -12,14 +13,15 @@ class MainScene extends Phaser.Scene {
         S: Phaser.Input.Keyboard.Key;
         D: Phaser.Input.Keyboard.Key;
     };
-    private keyF!: Phaser.Input.Keyboard.Key;
-    private keyK!: Phaser.Input.Keyboard.Key;
 
     // Player Stats
-    private playerDamage: number = 20;
-    private playerBaseSpeed: number = 250;
-    private playerAttackCooldown: number = 150;
-    private playerKnockbackForce: number = 400;
+    private playerDamage!: number;
+    private playerBaseSpeed!: number;
+    private playerAttackCooldown!: number;
+    private playerKnockbackForce!: number;
+    private isInvincible: boolean = false;
+    private isKnockedBack: boolean = false;
+    private invincibilityDuration: number = 1000;
 
     constructor() {
         super('MainScene');
@@ -50,6 +52,13 @@ class MainScene extends Phaser.Scene {
     }
 
     create() {
+        // Reset Player Stats to Defaults
+        this.playerDamage = 20;
+        this.playerBaseSpeed = 250;
+        this.playerAttackCooldown = 150;
+        this.playerKnockbackForce = 400;
+        this.isInvincible = false;
+        this.isKnockedBack = false;
 
         // Match player stats in registry (for React UI access)
         this.registry.set('playerHP', 100);
@@ -83,6 +92,9 @@ class MainScene extends Phaser.Scene {
         const floor = this.add.tileSprite(mapWidth / 2, mapHeight / 2, mapWidth, mapHeight, 'tiles-grass');
         floor.setDepth(-100);
 
+        // Initialize Obstacles
+        this.obstacles = this.physics.add.staticGroup();
+
         // 2. Terrain Patches (Stone Ground)
         for (let i = 0; i < 15; i++) {
             const rx = Phaser.Math.Between(200, mapWidth - 200);
@@ -95,45 +107,60 @@ class MainScene extends Phaser.Scene {
             patch.setAlpha(0.8);
         }
 
-        // 3. Structures and Ruins (Points of Interest)
-        for (let i = 0; i < 8; i++) {
+        // 3. Structures and Ruins (Points of Interest / Tactical Cover)
+        for (let i = 0; i < 12; i++) {
             const rx = Phaser.Math.Between(300, mapWidth - 300);
             const ry = Phaser.Math.Between(300, mapHeight - 300);
 
-            // RUINS: Cluster of structure blocks
-            for (let j = 0; j < 5; j++) {
-                const ox = Phaser.Math.Between(-32, 32);
-                const oy = Phaser.Math.Between(-32, 32);
-                const frame = Phaser.Math.Between(0, 20);
+            // Avoid spawning in player starting area
+            if (Phaser.Math.Distance.Between(rx, ry, mapWidth / 2, mapHeight / 2) < 200) continue;
+
+            // RUINS: Cluster of structure blocks in a semi-tactical layout (e.g. L-shapes or corridors)
+            const isHorizontal = Math.random() > 0.5;
+            for (let j = 0; j < 6; j++) {
+                const ox = isHorizontal ? j * 32 : Phaser.Math.Between(-10, 10);
+                const oy = isHorizontal ? Phaser.Math.Between(-10, 10) : j * 32;
+                const frame = Phaser.Math.Between(0, 5);
+
+                const wx = rx + ox;
+                const wy = ry + oy;
 
                 // Add shadow
-                const shadow = this.add.image(rx + ox + 4, ry + oy + 8, 'shadows', 0);
+                const shadow = this.add.image(wx + 4, wy + 8, 'shadows', 0);
                 shadow.setAlpha(0.3);
-                shadow.setDepth(ry + oy - 1);
+                shadow.setDepth(wy - 1);
 
-                const wall = this.add.image(rx + ox, ry + oy, 'struct', frame);
-                wall.setDepth(ry + oy);
+                const wall = this.obstacles.create(wx, wy, 'struct', frame);
                 wall.setScale(2);
+                wall.setDepth(wy);
+                wall.refreshBody();
+                // Set solid wall collision area
+                wall.body.setSize(30, 24);
+                wall.body.setOffset(1, 4);
             }
         }
 
-        // 4. Clustered Props (Plants & Rocks)
-        for (let i = 0; i < 30; i++) {
+        // 4. Clustered Props (Denser Forests & Rocks)
+        for (let i = 0; i < 70; i++) {
             const clusterX = Phaser.Math.Between(100, mapWidth - 100);
             const clusterY = Phaser.Math.Between(100, mapHeight - 100);
-            const clusterSize = Phaser.Math.Between(3, 8);
+
+            // Avoid spawning in player starting area
+            if (Phaser.Math.Distance.Between(clusterX, clusterY, mapWidth / 2, mapHeight / 2) < 150) continue;
+
+            const clusterSize = Phaser.Math.Between(5, 12);
 
             for (let j = 0; j < clusterSize; j++) {
-                const ox = Phaser.Math.Between(-60, 60);
-                const oy = Phaser.Math.Between(-60, 60);
-                const isPlant = Math.random() > 0.4;
+                const ox = Phaser.Math.Between(-100, 100);
+                const oy = Phaser.Math.Between(-100, 100);
+                const isPlant = Math.random() > 0.3;
                 const tex = isPlant ? 'plants' : 'props';
                 const frame = Phaser.Math.Between(0, 10);
 
                 const rx = clusterX + ox;
                 const ry = clusterY + oy;
 
-                // Shadow for plant
+                // Shadow
                 if (isPlant) {
                     const shadow = this.add.image(rx, ry + 10, 'shadows-plant', 0);
                     shadow.setAlpha(0.2);
@@ -144,9 +171,25 @@ class MainScene extends Phaser.Scene {
                     shadow.setDepth(ry - 1);
                 }
 
-                const prop = this.add.image(rx, ry, tex, frame);
+                const prop = this.obstacles.create(rx, ry, tex, frame);
                 prop.setDepth(ry);
                 prop.setScale(2);
+                prop.refreshBody();
+
+                // Specific collision boxes
+                if (isPlant && frame <= 2) { // LARGE TREES
+                    prop.body.setCircle(8, 8, 16); // Small circle at the base
+                } else if (isPlant && frame <= 8) { // BUSHES
+                    prop.body.setSize(24, 16);
+                    prop.body.setOffset(4, 16);
+                } else if (!isPlant && frame <= 5) { // ROCKS / PROPS
+                    prop.body.setSize(28, 20);
+                    prop.body.setOffset(2, 6);
+                } else {
+                    // Small props or decorative only
+                    prop.body.setSize(10, 10);
+                    prop.body.setOffset(11, 11);
+                }
             }
         }
 
@@ -155,14 +198,16 @@ class MainScene extends Phaser.Scene {
         const player = this.physics.add.sprite(mapWidth / 2, mapHeight / 2, 'player-idle');
         player.setCollideWorldBounds(true);
         player.setScale(2);
-        player.setBodySize(30, 40);
+        player.setBodySize(20, 20);
+        player.setOffset(40, 70);
+        player.setMass(2); // Make player a bit heavier than enemies
         player.play('player-idle');
 
         // Camera follow
         this.cameras.main.startFollow(player, true, 0.1, 0.1);
 
-        // Attack Hitbox (invisible)
-        this.attackHitbox = this.add.rectangle(0, 0, 60, 60, 0xff0000, 0) as any;
+        // Attack Hitbox (invisible) - Increased width and closer to player for better reach with collisions
+        this.attackHitbox = this.add.rectangle(0, 0, 100, 60, 0xff0000, 0) as any;
         this.physics.add.existing(this.attackHitbox);
         this.attackHitbox.body!.setEnable(false);
 
@@ -179,27 +224,22 @@ class MainScene extends Phaser.Scene {
         });
 
         // Collisions
+        this.physics.add.collider(player, this.enemies);
+        this.physics.add.collider(this.enemies, this.enemies);
+        this.physics.add.collider(player, this.obstacles);
+        this.physics.add.collider(this.enemies, this.obstacles);
+
         this.physics.add.overlap(this.attackHitbox, this.enemies, (_hitbox, enemy) => {
             const e = enemy as Enemy;
             e.takeDamage(this.playerDamage);
             e.pushback(player.x, player.y, this.playerKnockbackForce);
         });
 
-        this.physics.add.overlap(player, this.enemies, (_playerSprite, enemy) => {
-            const e = enemy as Enemy;
-            if (!e.active || e.hasHit) return;
-
-            // Damage only during specific frame of orc-attack
-            if (e.anims.currentAnim?.key === 'orc-attack' && e.anims.currentFrame?.index === 3) {
-                e.hasHit = true;
-                this.takePlayerDamage(10);
-            }
-        });
+        // REMOVED: this.physics.add.overlap(player, this.enemies, ...) 
+        // Collision separates entities, preventing reliable overlap.
+        // Replaced with distance check in update()
 
         const cursors = this.input.keyboard?.createCursorKeys();
-        const spaceBar = this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
-        this.keyF = this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.F) as Phaser.Input.Keyboard.Key;
-        this.keyK = this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.K) as Phaser.Input.Keyboard.Key;
 
         this.wasd = this.input.keyboard?.addKeys({
             W: Phaser.Input.Keyboard.KeyCodes.W,
@@ -208,9 +248,10 @@ class MainScene extends Phaser.Scene {
             D: Phaser.Input.Keyboard.KeyCodes.D
         }) as any;
 
+        this.input.mouse?.disableContextMenu();
+
         this.data.set('player', player);
         this.data.set('cursors', cursors);
-        this.data.set('spaceBar', spaceBar);
         this.data.set('isAttacking', false);
         this.data.set('isBlocking', false);
 
@@ -223,6 +264,7 @@ class MainScene extends Phaser.Scene {
         });
 
         // Listen for Upgrades
+        this.events.off('apply-upgrade');
         this.events.on('apply-upgrade', (upgradeId: string) => {
             this.applyUpgrade(upgradeId);
         });
@@ -369,9 +411,12 @@ class MainScene extends Phaser.Scene {
         });
     }
 
-    private takePlayerDamage(amount: number) {
+    private takePlayerDamage(amount: number, source?: Phaser.GameObjects.Components.Transform) {
+        if (this.isInvincible) return;
+
         let hp = this.registry.get('playerHP');
         const isBlocking = this.data.get('isBlocking') as boolean;
+        const player = this.data.get('player') as Phaser.Physics.Arcade.Sprite;
 
         // Block reduces damage by 80%
         const actualDamage = isBlocking ? amount * 0.2 : amount;
@@ -379,37 +424,100 @@ class MainScene extends Phaser.Scene {
         hp -= actualDamage;
         this.registry.set('playerHP', Math.max(0, hp));
 
-        const player = this.data.get('player') as Phaser.Physics.Arcade.Sprite;
+        // Screen Shake
+        this.cameras.main.shake(150, 0.005);
+
+        // Visual Impact (Blood)
+        const bloodKey = `blood_${Phaser.Math.Between(1, 5)}`;
+        const blood = this.add.sprite(player.x, player.y, bloodKey);
+        blood.setScale(1.5);
+        blood.setDepth(player.depth + 1);
+        blood.play(bloodKey);
+        blood.on('animationcomplete', () => blood.destroy());
+
+        // Damage Number
+        const damageText = this.add.text(player.x, player.y - 40, `-${Math.round(actualDamage)}`, {
+            fontSize: '24px',
+            color: '#ff0000',
+            fontStyle: 'bold',
+            stroke: '#000',
+            strokeThickness: 4
+        }).setOrigin(0.5);
+        damageText.setDepth(2000);
+
+        this.tweens.add({
+            targets: damageText,
+            y: player.y - 100,
+            alpha: 0,
+            duration: 800,
+            ease: 'Power2',
+            onComplete: () => damageText.destroy()
+        });
 
         if (!isBlocking) {
-            player.setTint(0xff0000);
+            // Knockback
+            if (source) {
+                this.isKnockedBack = true;
+                const angle = Phaser.Math.Angle.Between(source.x, source.y, player.x, player.y);
+                player.setVelocity(
+                    Math.cos(angle) * this.playerKnockbackForce,
+                    Math.sin(angle) * this.playerKnockbackForce
+                );
+
+                // End knockback after a short duration
+                this.time.delayedCall(200, () => {
+                    this.isKnockedBack = false;
+                });
+            }
+
+            // I-Frames starts
+            this.isInvincible = true;
+
+            // Blinking effect
+            const blinkCount = Math.floor(this.invincibilityDuration / 200);
+            this.tweens.add({
+                targets: player,
+                alpha: 0.2,
+                duration: 100,
+                yoyo: true,
+                repeat: blinkCount - 1,
+                onComplete: () => {
+                    player.setAlpha(1);
+                    this.isInvincible = false;
+                }
+            });
+        } else {
+            // Block feedback
+            player.setTint(0xffffff);
             this.time.delayedCall(100, () => player.clearTint());
         }
 
         if (hp <= 0) {
             this.scene.pause();
-            this.add.text(this.scale.width / 2, this.scale.height / 2, 'GAME OVER', {
-                fontSize: '64px',
-                color: '#f00',
-                fontStyle: 'bold'
-            }).setOrigin(0.5);
         }
     }
 
     update() {
         const player = this.data.get('player') as Phaser.Physics.Arcade.Sprite;
         const cursors = this.data.get('cursors') as Phaser.Types.Input.Keyboard.CursorKeys;
-        const spaceBar = this.data.get('spaceBar') as Phaser.Input.Keyboard.Key;
         const isAttacking = this.data.get('isAttacking') as boolean;
+        const pointer = this.input.activePointer;
         let speed = this.playerBaseSpeed;
 
-        if (isAttacking) {
-            player.setVelocity(0, 0);
+        if (isAttacking || this.isKnockedBack) {
+            if (isAttacking) player.setVelocity(0, 0);
             return;
         }
 
-        // Handle Block
-        const blockPressed = this.keyF.isDown || this.keyK.isDown;
+        // Handle Orientation (Face Mouse)
+        if (pointer.worldX > player.x) {
+            player.setFlipX(false);
+        } else if (pointer.worldX < player.x) {
+            player.setFlipX(true);
+        }
+
+        // Handle Block (Right Click)
+        const blockPressed = pointer.rightButtonDown();
         if (blockPressed) {
             this.data.set('isBlocking', true);
             speed = 80; // Walk slow while blocking
@@ -421,12 +529,17 @@ class MainScene extends Phaser.Scene {
             this.data.set('isBlocking', false);
         }
 
-        // Update attack hitbox position
-        const offsetX = player.flipX ? -50 : 50;
-        this.attackHitbox.setPosition(player.x + offsetX, player.y);
+        // Update attack hitbox position based on mouse angle (360 degrees)
+        const angle = Phaser.Math.Angle.Between(player.x, player.y, pointer.worldX, pointer.worldY);
+        const radius = 40; // Distance from player center
+        this.attackHitbox.setPosition(
+            player.x + Math.cos(angle) * radius,
+            player.y + Math.sin(angle) * radius
+        );
+        this.attackHitbox.setRotation(angle);
 
-        // Handle Attack
-        if (Phaser.Input.Keyboard.JustDown(spaceBar) && !blockPressed) {
+        // Handle Attack (Left Click)
+        if (pointer.leftButtonDown() && !blockPressed) {
             this.data.set('isAttacking', true);
             player.play('player-attack');
 
@@ -448,21 +561,32 @@ class MainScene extends Phaser.Scene {
         let vx = 0;
         let vy = 0;
 
-        if (cursors && (cursors.left.isDown || this.wasd?.A?.isDown)) {
+        // WASD Movement
+        if (this.wasd?.A?.isDown || cursors?.left?.isDown) {
             vx = -speed;
-            player.setFlipX(true);
-        } else if (cursors && (cursors.right.isDown || this.wasd?.D?.isDown)) {
+        } else if (this.wasd?.D?.isDown || cursors?.right?.isDown) {
             vx = speed;
-            player.setFlipX(false);
         }
 
-        if (cursors && (cursors.up.isDown || this.wasd?.W?.isDown)) {
+        if (this.wasd?.W?.isDown || cursors?.up?.isDown) {
             vy = -speed;
-        } else if (cursors && (cursors.down.isDown || this.wasd?.S?.isDown)) {
+        } else if (this.wasd?.S?.isDown || cursors?.down?.isDown) {
             vy = speed;
         }
 
         player.setVelocity(vx, vy);
+
+        // Enemy Damage Detection (Distance-based to work with colliders)
+        this.enemies.getChildren().forEach((enemy) => {
+            const e = enemy as Enemy;
+            if (e.active && e.isOnDamageFrame && !e.hasHit) {
+                const dist = Phaser.Math.Distance.Between(player.x, player.y, e.x, e.y);
+                if (dist < 85) { // Reach of the orc attack
+                    e.hasHit = true;
+                    this.takePlayerDamage(10, e);
+                }
+            }
+        });
 
         if (vx !== 0 || vy !== 0) {
             if (player.anims.currentAnim?.key !== 'player-walk') {

@@ -10,11 +10,11 @@ type Upgrade = {
 };
 
 const UPGRADES: Upgrade[] = [
-    { id: 'damage', title: 'Brute Force', description: '+20% Attack Damage', icon: '⚔️' },
-    { id: 'speed', title: 'Flash', description: '+15% Movement Speed', icon: '⚡' },
-    { id: 'health', title: 'Vitality', description: '+20 Max HP & Heal 20', icon: '❤️' },
-    { id: 'cooldown', title: 'Quick Strike', description: '-15% Attack Cooldown', icon: '⏱️' },
-    { id: 'knockback', title: 'Heavy Hitter', description: '+25% Knockback Force', icon: '💥' }
+    { id: 'damage', title: 'Brute Force', description: '+20% Angrepsstyrke', icon: 'm-icon-sword' },
+    { id: 'speed', title: 'Lynrask', description: '+15% Bevegelseshastighet', icon: 'm-icon-plus-small' },
+    { id: 'health', title: 'Vitalitet', description: '+20 Maks HP & Helbred 20', icon: 'm-icon-plus-small' },
+    { id: 'cooldown', title: 'Raskt Angrep', description: '-15% Nedkjøling', icon: 'm-icon-plus-small' },
+    { id: 'knockback', title: 'Tungt Slag', description: '+25% Tilbakeslag', icon: 'm-icon-sword' }
 ];
 
 export const GameContainer = () => {
@@ -84,45 +84,72 @@ export const GameContainer = () => {
         setIsLeveling(false);
     };
 
+    const handleRestart = () => {
+        if (!gameInstanceRef.current) {
+            window.location.reload();
+            return;
+        }
+
+        const mainScene = gameInstanceRef.current.scene.getScene('MainScene');
+        if (mainScene) {
+            // Restart the Phaser scene
+            mainScene.scene.restart();
+
+            // Explicitly reset React state to default values
+            setHp(100);
+            setMaxHp(100);
+            setXp(0);
+            setMaxXp(100);
+            setLevel(1);
+            setIsLeveling(false);
+        } else {
+            window.location.reload();
+        }
+    };
+
     return (
         <div id="game-container" ref={gameContainerRef} className="w-full h-full relative overflow-hidden bg-slate-950 font-sans selection:bg-cyan-500/30">
             {/* UI Overlay */}
-            <div className={`absolute top-24 left-16 z-10 medieval-pixel transition-all duration-500 overflow-visible ${isLeveling ? 'blur-md grayscale opacity-50' : ''}`}>
-                <div className="relative overflow-visible">
-                    {/* Hanging Sign Background */}
-                    <div className="m-sign-hanging m-scale-4 origin-top-left m-float" />
+            <div className={`absolute top-6 left-6 z-10 medieval-pixel transition-all duration-500 overflow-visible ${isLeveling || hp <= 0 ? 'blur-md grayscale opacity-50' : ''}`}>
+                <div className="relative group">
+                    {/* Premium Medieval Panel Background */}
+                    <div className="absolute inset-[-12px] m-panel-medieval rounded-sm -z-10" />
 
-                    {/* Content Overlay - Shifted down to clear the chains and hinge */}
-                    <div className="absolute top-[120px] left-0 w-[256px] px-8 text-center space-y-8 pointer-events-none">
-                        <div className="space-y-1">
-                            <h1 className="m-text-hud m-text-gold text-2xl tracking-tight leading-none">
+                    {/* Header Wood Board (Wide Sign Corrected) */}
+                    <div className="relative mb-2">
+                        <div className="m-sign-wide m-scale-[4] origin-top-left drop-shadow-lg" />
+                        <div className="absolute inset-0 flex flex-col items-center justify-center -translate-y-1 pointer-events-none">
+                            <h1 className="m-text-hud m-text-gold text-base tracking-widest leading-none uppercase">
                                 Kringsringen
                             </h1>
-                            <div className="m-text-stats text-amber-900/40">
-                                Nivå {level}
+                            <div className="m-text-stats font-bold text-[8px] mt-0.5 opacity-80 translate-y-0.5">
+                                NIVÅ {level}
                             </div>
                         </div>
+                    </div>
 
+                    {/* Stats Container - Clean & Premium */}
+                    <div className="flex flex-col gap-4 py-2 px-1">
                         {/* HP Bar */}
-                        <div className="flex flex-col items-center gap-1">
-                            <div className="m-progress-container m-scale-3 origin-center">
+                        <div className="flex items-center gap-4">
+                            <div className="m-icon-candle m-scale-2 drop-shadow-md" />
+                            <div className="m-progress-container m-scale-[2.8] origin-left">
                                 <div
-                                    className="m-progress-fill"
-                                    style={{ width: `${56 * (hp / maxHp)}px` }}
+                                    className="m-progress-fill transition-all duration-300"
+                                    style={{ width: `${56 * Math.max(0, hp / maxHp)}px` }}
                                 />
                             </div>
-                            <span className="m-text-stats pt-2">Helse</span>
                         </div>
 
                         {/* XP Bar */}
-                        <div className="flex flex-col items-center gap-1">
-                            <div className="m-progress-container m-scale-3 origin-center grayscale brightness-125 sepia">
+                        <div className="flex items-center gap-4">
+                            <div className="m-icon-plus-small m-scale-2 drop-shadow-md" />
+                            <div className="m-progress-container m-scale-[2.8] origin-left grayscale brightness-125 sepia">
                                 <div
-                                    className="m-progress-fill !bg-sky-600"
+                                    className="m-progress-fill !bg-sky-600 transition-all duration-500"
                                     style={{ width: `${56 * (xp / maxXp)}px` }}
                                 />
                             </div>
-                            <span className="m-text-stats pt-2">Erfaring</span>
                         </div>
                     </div>
                 </div>
@@ -130,26 +157,29 @@ export const GameContainer = () => {
 
             {/* Death Screen */}
             {hp <= 0 && (
-                <div className="absolute inset-0 z-[100] flex items-center justify-center bg-slate-950/40 backdrop-blur-sm animate-in fade-in duration-1000 medieval-pixel overflow-hidden">
+                <div className="absolute inset-0 z-[100] flex items-center justify-center bg-slate-950/60 backdrop-blur-md animate-in fade-in duration-1000 medieval-pixel overflow-hidden">
                     <div className="m-vignette" />
 
                     <div className="relative flex flex-col items-center scale-up-center">
-                        {/* Sign Background */}
-                        <div className="m-sign-hanging m-scale-5 m-float" />
+                        {/* Removed m-float and lowered opacity slighty for better readability */}
+                        <div className="m-sign-hanging m-scale-5 opacity-90 pointer-events-none" />
 
-                        {/* Content centered on sign */}
-                        <div className="absolute inset-0 flex flex-col items-center justify-center pt-32 gap-10">
+                        {/* Content centered on wood part - Adjusted top offset [110px] for scale 5 */}
+                        <div className="absolute top-[110px] left-0 w-full flex flex-col items-center gap-12 pointer-events-none">
                             <div className="text-center space-y-4">
-                                <h2 className="m-text-hud m-text-gold text-7xl leading-none">FALNET</h2>
-                                <p className="m-text-stats text-amber-100/60 lowercase italic">Din saga ender her</p>
+                                <h2 className="m-text-blood text-8xl leading-none drop-shadow-2xl">FALNET</h2>
+                                <p className="m-text-hud text-amber-900/40 text-xl italic lowercase">Din saga ender her...</p>
                             </div>
 
                             <button
-                                onClick={() => window.location.reload()}
-                                className="group flex flex-col items-center gap-4 transition-all hover:scale-110"
+                                onClick={handleRestart}
+                                className="group pointer-events-auto flex flex-col items-center gap-4 transition-all hover:scale-110 active:scale-95 z-50"
                             >
-                                <div className="m-btn m-btn-plus m-scale-4 shadow-xl" />
-                                <span className="m-text-hud text-white text-2xl filter drop-shadow-lg">Prøv Igjen</span>
+                                <div className="relative">
+                                    <div className="m-btn m-btn-plus m-scale-4 shadow-2xl" />
+                                    <div className="absolute inset-0 bg-white/10 rounded-full blur-xl opacity-0 group-hover:opacity-100 transition-opacity" />
+                                </div>
+                                <span className="m-text-hud text-white text-3xl tracking-widest uppercase filter drop-shadow-[0_0_10px_rgba(255,255,255,0.5)]">Prøv Igjen</span>
                             </button>
                         </div>
                     </div>
@@ -158,36 +188,36 @@ export const GameContainer = () => {
 
             {/* Level Up Overlay */}
             {isLeveling && (
-                <div className="absolute inset-0 z-[100] flex items-center justify-center bg-slate-950/70 backdrop-blur-2xl animate-in fade-in zoom-in duration-500 medieval-pixel">
-                    <div className="max-w-6xl w-full px-12 text-center space-y-20">
-                        <div className="space-y-6">
-                            <h2 className="m-text-hud m-text-gold text-8xl text-white">Forberedelse</h2>
-                            <p className="m-text-stats text-2xl text-amber-200/50">Velg din skjebne</p>
+                <div className="absolute inset-0 z-[100] flex items-center justify-center bg-slate-950/80 backdrop-blur-xl animate-in fade-in zoom-in duration-500 medieval-pixel">
+                    <div className="max-w-6xl w-full px-12 text-center space-y-24">
+                        <div className="space-y-8">
+                            <h2 className="m-text-gold text-9xl tracking-tighter uppercase drop-shadow-2xl">Forberedelse</h2>
+                            <p className="m-text-hud text-amber-200/40 text-3xl italic">Velg din neste sti</p>
                         </div>
 
-                        <div className="flex flex-wrap justify-center gap-16">
+                        <div className="flex flex-wrap justify-center gap-20">
                             {availableUpgrades.map((upgrade, idx) => (
                                 <button
                                     key={upgrade.id}
                                     onClick={() => selectUpgrade(upgrade.id)}
                                     style={{ animationDelay: `${idx * 150}ms` }}
-                                    className="group relative flex flex-col items-center gap-8 animate-in slide-in-from-bottom-12 fill-mode-both"
+                                    className="group relative flex flex-col items-center gap-10 animate-in slide-in-from-bottom-12 fill-mode-both"
                                 >
-                                    {/* Choice Plate */}
-                                    <div className="relative m-card-shine rounded-lg">
-                                        <div className="m-sign-wood m-scale-4 group-hover:scale-[4.5] transition-all duration-300 ease-out" />
+                                    {/* Choice Plate with Glassmorphism */}
+                                    <div className="relative p-8 rounded-2xl bg-white/[0.03] border border-white/[0.05] backdrop-blur-sm group-hover:bg-white/[0.08] group-hover:border-white/[0.1] transition-all duration-300">
+                                        <div className="m-sign-small m-scale-4 group-hover:scale-[4.2] transition-transform duration-300 ease-out" />
                                         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                                            <span className="text-5xl group-hover:scale-125 transition-transform filter drop-shadow-2xl">{upgrade.icon}</span>
+                                            <div className={`${upgrade.icon} m-scale-3 group-hover:scale-[3.5] transition-transform drop-shadow-2xl`} />
                                         </div>
                                     </div>
 
-                                    <div className="text-center max-w-[240px] space-y-3">
-                                        <h3 className="m-text-hud text-3xl text-white group-hover:text-amber-400 transition-colors uppercase">{upgrade.title}</h3>
-                                        <p className="m-text-stats text-sm leading-relaxed opacity-60 italic">{upgrade.description}</p>
+                                    <div className="text-center max-w-[280px] space-y-4">
+                                        <h3 className="m-text-hud text-3xl text-amber-100/90 group-hover:text-amber-400 transition-colors uppercase tracking-tight">{upgrade.title}</h3>
+                                        <p className="m-text-stats text-sm leading-relaxed text-amber-50/40 font-medium">{upgrade.description}</p>
                                     </div>
 
                                     {/* Select Button */}
-                                    <div className="m-btn m-btn-check m-scale-3 group-hover:brightness-125 group-hover:scale-110 shadow-lg" />
+                                    <div className="m-btn m-btn-check m-scale-3 group-hover:scale-125 transition-transform shadow-[0_0_20px_rgba(0,0,0,0.5)]" />
                                 </button>
                             ))}
                         </div>

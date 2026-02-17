@@ -3,7 +3,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Inter:wght@400;600;800&display=swap');
 
 :root {
-    --ui-sprite: url('/Kringsringen/assets/sprites/ui/MediavelFree.png');
+    --ui-sprite: url('/assets/sprites/ui/MediavelFree.png');
     --color-wood: #5d3a2e;
     --color-amber: #d9a066;
     --color-gold: #ffcc00;
@@ -67,6 +67,58 @@
     image-rendering: pixelated;
 }
 
+/* Small Wooden Sign (approx 40x24 in sprite) */
+.m-sign-small {
+    width: 40px;
+    height: 32px;
+    background: var(--ui-sprite) -280px -88px no-repeat;
+    image-rendering: pixelated;
+}
+
+/* Wide Wooden Sign (Corrected coordinates for the board asset) */
+.m-sign-wide {
+    width: 64px;
+    height: 48px;
+    background: var(--ui-sprite) -272px -88px no-repeat;
+    image-rendering: pixelated;
+}
+
+/* Premium Medieval Panel - Avant-Garde Edition */
+.m-panel-medieval {
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    backdrop-filter: blur(12px);
+    border-radius: 4px;
+    box-shadow:
+        0 10px 30px rgba(0, 0, 0, 0.5),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+
+/* Icon Sprites */
+.m-icon-sword {
+    width: 16px;
+    height: 16px;
+    background: var(--ui-sprite) -264px 0px no-repeat;
+}
+
+.m-icon-candle {
+    width: 16px;
+    height: 16px;
+    background: var(--ui-sprite) -264px -24px no-repeat;
+}
+
+.m-icon-plus-small {
+    width: 16px;
+    height: 16px;
+    background: var(--ui-sprite) -264px -72px no-repeat;
+}
+
+.m-icon-check-small {
+    width: 16px;
+    height: 16px;
+    background: var(--ui-sprite) -284px -72px no-repeat;
+}
+
 /* Progress Bar - Container 64x16 */
 .m-progress-container {
     width: 64px;
@@ -75,17 +127,50 @@
     image-rendering: pixelated;
     position: relative;
     box-sizing: border-box;
-    filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.3));
 }
 
-.m-progress-fill {
+.m-progress-fill-red {
     position: absolute;
-    left: 4px;
-    top: 2px;
-    height: 10px;
-    background: linear-gradient(to bottom, #ff4444, #c32422);
-    box-shadow: inset 1px 1px 2px rgba(255, 255, 255, 0.2);
+    left: 8px;
+    top: 6px;
+    height: 4px;
+    background: var(--ui-sprite) -8px -102px no-repeat;
     transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* For XP, we'll try to find a blue segment or use a slight tint IF blue isn't in sprite, 
+   but for now let's use the red one to be "sprite pure" or find the blue one.
+   Searching sprite... Ah, I don't see blue. I will use the red one for now 
+   and maybe the user will guide if they want a different one from the sprite. */
+.m-progress-fill-blue {
+    position: absolute;
+    left: 8px;
+    top: 6px;
+    height: 4px;
+    background: var(--ui-sprite) -8px -102px no-repeat;
+    filter: hue-rotate(240deg);
+    /* Minimal cheat to get blue while keeping sprite texture */
+    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* 9-Slice Panel System (Mapping corners and sides) */
+.m-panel-medieval {
+    position: relative;
+    background: #5d3a2e;
+    /* Base wood color from sprite */
+    border: 8px solid transparent;
+    border-image: var(--ui-sprite) 104 104 152 152 slice;
+    /* Approximating slice from central part */
+    /* Wait, border-image is complex with sprites. Let's use a simpler 9-slice mapping if possible or just the sign */
+}
+
+/* Since 9-slice in CSS is tricky with a single sprite sheet, 
+   I will use the "Large Board" if I can find it, or the hanging sign scaled up. */
+.m-board-large {
+    width: 64px;
+    height: 64px;
+    background: var(--ui-sprite) 0px -16px no-repeat;
+    image-rendering: pixelated;
 }
 
 /* Circular Wooden Buttons - 16x16 */
@@ -136,8 +221,9 @@
     font-family: 'Cinzel', serif;
     color: var(--color-wood);
     font-weight: 900;
-    text-shadow: 1px 1px 0 rgba(255, 255, 255, 0.2), -0.5px -0.5px 0 rgba(0, 0, 0, 0.1);
-    letter-spacing: -0.02em;
+    text-shadow: 1px 1px 0 rgba(255, 255, 255, 0.1);
+    letter-spacing: -0.01em;
+    -webkit-font-smoothing: antialiased;
 }
 
 .m-text-stats {
@@ -153,9 +239,17 @@
 .m-text-gold {
     color: var(--color-gold);
     text-shadow:
-        0.5px 0.5px 0 rgba(255, 255, 255, 0.3),
-        2px 2px 4px rgba(0, 0, 0, 0.5),
-        0 0 12px rgba(255, 204, 0, 0.4);
+        1px 1px 2px rgba(0, 0, 0, 0.8),
+        0 0 10px rgba(255, 204, 0, 0.2);
+}
+
+.m-text-blood {
+    color: #ff3333;
+    text-shadow:
+        1px 1px 0 rgba(0, 0, 0, 0.8),
+        0 0 20px rgba(255, 0, 0, 0.4);
+    font-family: 'Cinzel', serif;
+    font-weight: 900;
 }
 
 /* Scale Utility (Sets --m-scale for animations to inherit) */

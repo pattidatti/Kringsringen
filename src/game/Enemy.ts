@@ -6,11 +6,12 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     private maxHP: number = 50;
     private hpBar: Phaser.GameObjects.Graphics;
     private isDead: boolean = false;
-    private attackRange: number = 60;
+    private attackRange: number = 80;
     private attackCooldown: number = 1500;
     private lastAttackTime: number = 0;
     private isAttacking: boolean = false;
     public hasHit: boolean = false;
+    public isOnDamageFrame: boolean = false;
     private isPushingBack: boolean = false;
 
     constructor(scene: Phaser.Scene, x: number, y: number, target: Phaser.GameObjects.Components.Transform) {
@@ -22,7 +23,8 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 
         this.setScale(2);
         this.setCollideWorldBounds(true);
-        this.setBodySize(30, 40);
+        this.setBodySize(20, 20);
+        this.setOffset(40, 70);
 
         this.play('orc-walk');
 
@@ -55,16 +57,86 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         if (this.isAttacking) {
             this.setVelocity(0, 0);
         } else {
-            // Simple follow AI
+            // Smarter Pathing: Context Steering
             const speed = 100;
-            const angle = Phaser.Math.Angle.Between(this.x, this.y, (this.target as any).x, (this.target as any).y);
+            const numRays = 8;
+            const rayLength = 80;
+            const interests = new Array(numRays).fill(0);
+            const dangers = new Array(numRays).fill(0);
 
-            this.setVelocity(
-                Math.cos(angle) * speed,
-                Math.sin(angle) * speed
-            );
+            const targetAngle = Phaser.Math.Angle.Between(this.x, this.y, (this.target as any).x, (this.target as any).y);
+
+            // 1. Calculate Interest (towards target)
+            for (let i = 0; i < numRays; i++) {
+                const angle = (i / numRays) * Math.PI * 2;
+                let dot = Math.cos(angle - targetAngle);
+                interests[i] = Math.max(0, dot);
+            }
+
+            // 2. Calculate Danger (obstacles)
+            const obstacles = (this.scene as any).obstacles as Phaser.Physics.Arcade.StaticGroup;
+            if (obstacles) {
+                obstacles.getChildren().forEach((obs: any) => {
+                    const dist = Phaser.Math.Distance.Between(this.x, this.y, obs.x, obs.y);
+                    if (dist < rayLength) {
+                        const ang = Phaser.Math.Angle.Between(this.x, this.y, obs.x, obs.y);
+                        for (let i = 0; i < numRays; i++) {
+                            const rayAngle = (i / numRays) * Math.PI * 2;
+                            let dot = Math.cos(rayAngle - ang);
+                            if (dot > 0.7) { // Narrow detection for obstacles
+                                dangers[i] = Math.max(dangers[i], dot * (1 - dist / rayLength));
+                            }
+                        }
+                    }
+                });
+            }
+
+            // 3. Calculate Separation (other enemies)
+            const enemies = (this.scene as any).enemies as Phaser.Physics.Arcade.Group;
+            if (enemies) {
+                enemies.getChildren().forEach((enemy: any) => {
+                    if (enemy === this) return;
+                    const dist = Phaser.Math.Distance.Between(this.x, this.y, enemy.x, enemy.y);
+                    if (dist < 40) { // Separation radius
+                        const ang = Phaser.Math.Angle.Between(this.x, this.y, enemy.x, enemy.y);
+                        for (let i = 0; i < numRays; i++) {
+                            const rayAngle = (i / numRays) * Math.PI * 2;
+                            let dot = Math.cos(rayAngle - ang);
+                            if (dot > 0.5) {
+                                dangers[i] = Math.max(dangers[i], dot * 0.5); // Add danger from other enemies
+                            }
+                        }
+                    }
+                });
+            }
+
+            // 4. Choose best direction
+            let bestDir = -1;
+            let maxScore = -1;
+
+            for (let i = 0; i < numRays; i++) {
+                const score = interests[i] - dangers[i];
+                if (score > maxScore) {
+                    maxScore = score;
+                    bestDir = i;
+                }
+            }
+
+            if (bestDir !== -1) {
+                const moveAngle = (bestDir / numRays) * Math.PI * 2;
+                this.setVelocity(
+                    Math.cos(moveAngle) * speed,
+                    Math.sin(moveAngle) * speed
+                );
+            }
 
             this.setFlipX(this.body!.velocity.x < 0);
+        }
+
+        if (this.isAttacking && this.anims.currentAnim?.key === 'orc-attack') {
+            this.isOnDamageFrame = this.anims.currentFrame?.index === 3;
+        } else {
+            this.isOnDamageFrame = false;
         }
 
         this.updateHPBar();
@@ -95,6 +167,25 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         this.hp -= amount;
         this.setTint(0xff0000);
         this.scene.time.delayedCall(100, () => this.clearTint());
+
+        // Floating Damage Number
+        const damageText = this.scene.add.text(this.x, this.y - 30, `${Math.round(amount)}`, {
+            fontSize: '20px',
+            color: '#ffffff',
+            fontStyle: 'bold',
+            stroke: '#000000',
+            strokeThickness: 3
+        }).setOrigin(0.5);
+        damageText.setDepth(2000);
+
+        this.scene.tweens.add({
+            targets: damageText,
+            y: this.y - 80,
+            alpha: 0,
+            duration: 600,
+            ease: 'Cubic.out',
+            onComplete: () => damageText.destroy()
+        });
 
         if (this.hp <= 0) {
             this.die();
