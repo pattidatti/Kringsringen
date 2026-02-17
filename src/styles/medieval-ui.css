@@ -83,6 +83,28 @@
     image-rendering: pixelated;
 }
 
+/* Flexible Hanging Sign Parts */
+.m-sign-top {
+    width: 64px;
+    height: 24px;
+    background: var(--ui-sprite) 0px 0px no-repeat;
+    image-rendering: pixelated;
+}
+
+.m-sign-middle {
+    width: 64px;
+    height: 32px;
+    background: var(--ui-sprite) 0px -24px no-repeat;
+    image-rendering: pixelated;
+}
+
+.m-sign-bottom {
+    width: 64px;
+    height: 24px;
+    background: var(--ui-sprite) 0px -56px no-repeat;
+    image-rendering: pixelated;
+}
+
 /* Premium Medieval Panel - Avant-Garde Edition */
 .m-panel-medieval {
     background: var(--glass-bg);
@@ -214,6 +236,43 @@
 
 .m-btn-help {
     background-position-x: -144px;
+}
+
+/* Wide Button (64x48) based on Sign Wide */
+.m-btn-wide {
+    width: 64px;
+    height: 48px;
+    background: var(--ui-sprite) -272px -88px no-repeat;
+    image-rendering: pixelated;
+    border: none;
+    cursor: pointer;
+    transition: all 0.1s step-end;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding-bottom: 8px;
+    /* Offset for text due to 3D look */
+    color: #3e2723;
+    font-family: 'Cinzel', serif;
+    font-weight: 900;
+    text-transform: uppercase;
+    font-size: 10px;
+}
+
+.m-btn-wide:hover {
+    transform: scale(1.05);
+    filter: brightness(1.1);
+}
+
+.m-btn-wide:active {
+    transform: scale(0.95);
+    filter: brightness(0.9);
+}
+
+.m-text-outline {
+    text-shadow:
+        2px 0 #000, -2px 0 #000, 0 2px #000, 0 -2px #000,
+        1px 1px #000, -1px -1px #000, 1px -1px #000, -1px 1px #000;
 }
 
 /* Typography */

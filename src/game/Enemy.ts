@@ -24,7 +24,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         this.setScale(2);
         this.setCollideWorldBounds(true);
         this.setBodySize(20, 15, true);
-        this.setOffset(this.body!.offset.x, 75); // Keep centered X, move Y to feet
+        this.setOffset(this.body!.offset.x, 33); // Move Y offset up from 75 to 33
 
         this.play('orc-walk');
 
@@ -194,7 +194,8 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 
     private die() {
         this.isDead = true;
-        this.setVelocity(0);
+        this.setDrag(1000); // Add friction for sliding death
+        // this.setVelocity(0); // Removed to allow pushback velocity
         this.hpBar.destroy();
         this.setTint(0x444444);
 
@@ -218,10 +219,12 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     }
 
     public pushback(sourceX: number, sourceY: number, force: number = 400) {
-        if (this.isDead) return;
+        // Allow pushback even if dead for impact
 
         this.isPushingBack = true;
         this.isAttacking = false;
+
+        // Visual Feedback
         this.clearTint();
         this.setTint(0xffffff); // Flash white
 
@@ -233,8 +236,14 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 
         this.scene.time.delayedCall(200, () => {
             this.isPushingBack = false;
-            this.clearTint();
-            if (!this.isDead) this.play('orc-walk');
+
+            // Restore proper tint based on state
+            if (this.isDead) {
+                this.setTint(0x444444);
+            } else {
+                this.clearTint();
+                this.play('orc-walk');
+            }
         });
     }
 }

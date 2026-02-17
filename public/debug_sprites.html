@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Prefab Grid Search</title>
+    <style>
+        body {
+            font-family: monospace;
+            background: #222;
+            color: #fff;
+            padding: 20px;
+        }
+
+        h1,
+        h2 {
+            color: #eee;
+        }
+
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 10px;
+            margin-bottom: 40px;
+        }
+
+        .cell {
+            text-align: center;
+            border: 1px solid #444;
+            padding: 5px;
+        }
+
+        .center-cell {
+            border: 2px solid red;
+            background: #330000;
+        }
+
+        canvas {
+            background: rgba(0, 0, 0, 0.5);
+            image-rendering: pixelated;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Prefab Grid Search</h1>
+    <p>Showing 5x5 spread around current coordinates (Center is RED).</p>
+    <div id="composites"></div>
+
+    <script>
+        const targets = {
+            'rock_large (2x2)': { src: 'assets/textures/TX Props.png', x: 8, y: 10, w: 2, h: 2 },
+            'statue (1x2)': { src: 'assets/textures/TX Props.png', x: 11, y: 10, w: 1, h: 2 },
+            'tree_large_1 (4x5)': { src: 'assets/textures/TX Plant.png', x: 1, y: 2, w: 4, h: 5 },
+            'tree_mid (3x4)': { src: 'assets/textures/TX Plant.png', x: 9, y: 2, w: 3, h: 4 }
+        };
+
+        const previewContainer = document.getElementById('composites');
+        const loadImg = (src) => new Promise(res => { const i = new Image(); i.onload = () => res(i); i.src = src; });
+
+        (async () => {
+            const images = {};
+            for (const t of Object.values(targets)) {
+                if (!images[t.src]) images[t.src] = await loadImg(t.src);
+            }
+
+            for (const [key, base] of Object.entries(targets)) {
+                const section = document.createElement('div');
+                section.innerHTML = `<h2>Searching: ${key}</h2>`;
+
+                const grid = document.createElement('div');
+                grid.className = 'grid-container';
+
+                // Search Range: x-2 to x+2, y-2 to y+2
+                for (let dy = -2; dy <= 2; dy++) {
+                    for (let dx = -2; dx <= 2; dx++) {
+                        const tx = base.x + dx;
+                        const ty = base.y + dy;
+
+                        const wrapper = document.createElement('div');
+                        wrapper.className = 'cell ' + (dx === 0 && dy === 0 ? 'center-cell' : '');
+
+                        const label = document.createElement('div');
+                        label.innerText = `x:${tx}, y:${ty}`;
+                        wrapper.appendChild(label);
+
+                        const canvas = document.createElement('canvas');
+                        const scale = 2;
+                        canvas.width = base.w * 32 * scale;
+                        canvas.height = base.h * 32 * scale;
+                        const ctx = canvas.getContext('2d');
+                        ctx.imageSmoothingEnabled = false;
+
+                        // Draw
+                        for (let r = 0; r < base.h; r++) {
+                            for (let c = 0; c < base.w; c++) {
+                                ctx.drawImage(images[base.src],
+                                    (tx + c) * 32, (ty + r) * 32, 32, 32,
+                                    c * 32 * scale, r * 32 * scale, 32 * scale, 32 * scale
+                                );
+
+                                // Grid overlay
+                                ctx.strokeStyle = 'rgba(0,255,0,0.2)';
+                                ctx.strokeRect(c * 32 * scale, r * 32 * scale, 32 * scale, 32 * scale);
+                            }
+                        }
+                        wrapper.appendChild(canvas);
+                        grid.appendChild(wrapper);
+                    }
+                }
+                section.appendChild(grid);
+                previewContainer.appendChild(section);
+            }
+        })();
+    </script>
+</body>
+
+</html>

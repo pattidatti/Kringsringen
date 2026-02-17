@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { createGame } from '../game/main';
 import '../styles/medieval-ui.css';
+import { MedievalPanel } from './ui/MedievalPanel';
+import { MedievalButton } from './ui/MedievalButton';
 
 type Upgrade = {
     id: string;
@@ -155,33 +157,36 @@ export const GameContainer = () => {
                 </div>
             </div>
 
-            {/* Death Screen */}
+            {/* Death Screen - Polished Pixel Art */}
+            {/* Death Screen - Polished Pixel Art */}
             {hp <= 0 && (
-                <div className="absolute inset-0 z-[100] flex items-center justify-center bg-slate-950/60 backdrop-blur-md animate-in fade-in duration-1000 medieval-pixel overflow-hidden">
+                <div className="absolute inset-0 z-[100] flex items-center justify-center bg-slate-950/90 animate-in fade-in duration-1000 medieval-pixel overflow-hidden">
                     <div className="m-vignette" />
 
-                    <div className="relative flex flex-col items-center scale-up-center">
-                        {/* Removed m-float and lowered opacity slighty for better readability */}
-                        <div className="m-sign-hanging m-scale-5 opacity-90 pointer-events-none" />
+                    <div className="relative flex flex-col items-center scale-up-center gap-8 z-50">
+                        {/* Text Group */}
+                        <div className="text-center space-y-2 mb-4">
+                            <h2 className="m-text-blood text-6xl tracking-widest leading-none m-text-outline drop-shadow-xl animate-pulse">FALNET</h2>
+                            <p className="m-text-hud text-amber-500 text-sm tracking-widest uppercase opacity-80">Din saga ender her</p>
+                        </div>
 
-                        {/* Content centered on wood part - Adjusted top offset [110px] for scale 5 */}
-                        <div className="absolute top-[110px] left-0 w-full flex flex-col items-center gap-12 pointer-events-none">
-                            <div className="text-center space-y-4">
-                                <h2 className="m-text-blood text-8xl leading-none drop-shadow-2xl">FALNET</h2>
-                                <p className="m-text-hud text-amber-900/40 text-xl italic lowercase">Din saga ender her...</p>
+                        {/* New Component-Based Panel */}
+                        <MedievalPanel className="w-64 p-4 items-center gap-6 shadow-2xl drop-shadow-[0_10px_10px_rgba(0,0,0,0.8)] scale-150">
+                            <div className="flex flex-col items-center gap-2 text-center">
+                                <p className="text-[10px] text-amber-900/60 font-serif italic">
+                                    "Even the mightiest fall..."
+                                </p>
                             </div>
 
-                            <button
-                                onClick={handleRestart}
-                                className="group pointer-events-auto flex flex-col items-center gap-4 transition-all hover:scale-110 active:scale-95 z-50"
-                            >
-                                <div className="relative">
-                                    <div className="m-btn m-btn-plus m-scale-4 shadow-2xl" />
-                                    <div className="absolute inset-0 bg-white/10 rounded-full blur-xl opacity-0 group-hover:opacity-100 transition-opacity" />
-                                </div>
-                                <span className="m-text-hud text-white text-3xl tracking-widest uppercase filter drop-shadow-[0_0_10px_rgba(255,255,255,0.5)]">Prøv Igjen</span>
-                            </button>
-                        </div>
+                            <div className="flex gap-4 mt-2">
+                                <MedievalButton
+                                    label="Prøv Igjen"
+                                    onClick={handleRestart}
+                                    variant="primary"
+                                    className="scale-125"
+                                />
+                            </div>
+                        </MedievalPanel>
                     </div>
                 </div>
             )}

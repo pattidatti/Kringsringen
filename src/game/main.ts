@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { Enemy } from './Enemy';
 import { XPGem } from './XPGem';
 import { MapGenerator } from './MapGenerator';
+import { FantasyMapGenerator } from './FantasyMapGenerator';
 
 class MainScene extends Phaser.Scene {
     public enemies!: Phaser.Physics.Arcade.Group;
@@ -36,6 +37,12 @@ class MainScene extends Phaser.Scene {
         this.load.spritesheet('orc-idle', 'assets/sprites/orc/Orc-Idle.png', { frameWidth: 100, frameHeight: 100 });
         this.load.spritesheet('orc-walk', 'assets/sprites/orc/Orc-Walk.png', { frameWidth: 100, frameHeight: 100 });
         this.load.spritesheet('orc-attack', 'assets/sprites/orc/Orc-Attack01.png', { frameWidth: 100, frameHeight: 100 });
+
+        // Fantasy Tileset Assets
+        this.load.spritesheet('fantasy-ground', 'assets/fantasy/Art/Ground Tileset/Tileset_Ground.png', { frameWidth: 16, frameHeight: 16 });
+        this.load.spritesheet('fantasy-buildings', 'assets/fantasy/Art/Buildings/Atlas/Buildings.png', { frameWidth: 16, frameHeight: 16 });
+        this.load.spritesheet('fantasy-props', 'assets/fantasy/Art/Props/Atlas/Props.png', { frameWidth: 16, frameHeight: 16 });
+        this.load.spritesheet('fantasy-trees', 'assets/fantasy/Art/Trees and Bushes/Atlas/Trees_Bushes.png', { frameWidth: 16, frameHeight: 16 });
 
         // Map Assets
         this.load.image('tiles-grass', 'assets/textures/TX Tileset Grass.png');
@@ -90,27 +97,20 @@ class MainScene extends Phaser.Scene {
         this.cameras.main.setBounds(0, 0, mapWidth, mapHeight);
 
         // 1. Base Layer (Grass)
-        const floor = this.add.tileSprite(mapWidth / 2, mapHeight / 2, mapWidth, mapHeight, 'tiles-grass');
-        floor.setDepth(-100);
+        // const floor = this.add.tileSprite(mapWidth / 2, mapHeight / 2, mapWidth, mapHeight, 'tiles-grass');
+        // floor.setDepth(-100);
 
         // Initialize Obstacles
         this.obstacles = this.physics.add.staticGroup();
 
-        // 2. Terrain Patches (Stone Ground)
-        for (let i = 0; i < 15; i++) {
-            const rx = Phaser.Math.Between(200, mapWidth - 200);
-            const ry = Phaser.Math.Between(200, mapHeight - 200);
-            const pWidth = Phaser.Math.Between(200, 500);
-            const pHeight = Phaser.Math.Between(200, 500);
-
-            const patch = this.add.tileSprite(rx, ry, pWidth, pHeight, 'tiles-stone');
-            patch.setDepth(-90);
-            patch.setAlpha(0.8);
-        }
-
         // 3. Procedural Map Generation (Map Engine)
-        const mapGenerator = new MapGenerator(this, this.obstacles, mapWidth, mapHeight);
-        mapGenerator.generate();
+        // const mapGenerator = new MapGenerator(this, this.obstacles, mapWidth, mapHeight);
+        // mapGenerator.generate();
+        // mapGenerator.generateTestLevel();
+
+        // FANTASY DEMO
+        const fantasyMap = new FantasyMapGenerator(this, this.obstacles, mapWidth, mapHeight);
+        fantasyMap.generate();
 
         this.setupAnimations();
 
@@ -118,7 +118,7 @@ class MainScene extends Phaser.Scene {
         player.setCollideWorldBounds(true);
         player.setScale(2);
         player.setBodySize(20, 15, true);
-        player.setOffset(player.body!.offset.x, 75); // Center X automatically, move Y to feet
+        player.setOffset(player.body!.offset.x, 33); // Move Y offset up from 75 to 33 (near center)
         player.setMass(2); // Make player a bit heavier than enemies
         player.play('player-idle');
 
@@ -154,10 +154,6 @@ class MainScene extends Phaser.Scene {
             e.takeDamage(this.playerDamage);
             e.pushback(player.x, player.y, this.playerKnockbackForce);
         });
-
-        // REMOVED: this.physics.add.overlap(player, this.enemies, ...) 
-        // Collision separates entities, preventing reliable overlap.
-        // Replaced with distance check in update()
 
         const cursors = this.input.keyboard?.createCursorKeys();
 
@@ -534,7 +530,7 @@ export const createGame = (containerId: string) => {
             default: 'arcade',
             arcade: {
                 gravity: { x: 0, y: 0 },
-                debug: true
+                debug: false
             }
         },
         scene: MainScene,
