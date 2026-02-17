@@ -157,7 +157,29 @@ export const GameContainer = () => {
                 </div>
             </div>
 
-            {/* Death Screen - Polished Pixel Art */}
+            {/* UI Overlays */}
+            <div className="absolute inset-0 z-[60] pointer-events-none">
+                {/* LOREM IPSUM DEBUG PANEL */}
+                {hp > 0 && (
+                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-auto">
+                        <MedievalPanel className="w-80 shadow-2xl scale-125">
+                            <div className="p-4 text-center">
+                                <h2 className="text-amber-900 font-serif font-bold text-lg mb-2">Trepanel Test</h2>
+                                <p className="text-[11px] text-amber-900/90 leading-tight font-sans">
+                                    Lorem ipsum dolor sit amet, consectetur adipiscing elit.
+                                    Dette panelet er bygget med 9 individuelle biter for
+                                    å sikre at tre-teksturen vises perfekt uten "bleeding"
+                                    fra andre sprites. Din saga fortsetter her!
+                                </p>
+                                <div className="mt-4 opacity-50 flex justify-center">
+                                    <MedievalButton label="Bare en test" onClick={() => { }} variant="secondary" />
+                                </div>
+                            </div>
+                        </MedievalPanel>
+                    </div>
+                )}
+            </div>
+
             {/* Death Screen - Polished Pixel Art */}
             {hp <= 0 && (
                 <div className="absolute inset-0 z-[100] flex items-center justify-center bg-slate-950/90 animate-in fade-in duration-1000 medieval-pixel overflow-hidden">

@@ -3,6 +3,7 @@ import { Enemy } from './Enemy';
 import { XPGem } from './XPGem';
 import { MapGenerator } from './MapGenerator';
 import { FantasyMapGenerator } from './FantasyMapGenerator';
+import { FantasyAssetManifest } from './FantasyAssetManifest';
 
 class MainScene extends Phaser.Scene {
     public enemies!: Phaser.Physics.Arcade.Group;
@@ -40,9 +41,16 @@ class MainScene extends Phaser.Scene {
 
         // Fantasy Tileset Assets
         this.load.spritesheet('fantasy-ground', 'assets/fantasy/Art/Ground Tileset/Tileset_Ground.png', { frameWidth: 16, frameHeight: 16 });
-        this.load.spritesheet('fantasy-buildings', 'assets/fantasy/Art/Buildings/Atlas/Buildings.png', { frameWidth: 16, frameHeight: 16 });
-        this.load.spritesheet('fantasy-props', 'assets/fantasy/Art/Props/Atlas/Props.png', { frameWidth: 16, frameHeight: 16 });
-        this.load.spritesheet('fantasy-trees', 'assets/fantasy/Art/Trees and Bushes/Atlas/Trees_Bushes.png', { frameWidth: 16, frameHeight: 16 });
+        this.load.spritesheet('fantasy-road', 'assets/fantasy/Art/Ground Tileset/Tileset_Road.png', { frameWidth: 16, frameHeight: 16 });
+
+        // Load all assets from manifest
+        FantasyAssetManifest.forEach(asset => {
+            this.load.image(asset.id, asset.path);
+        });
+
+        // Keeping atlases for potential use
+        this.load.spritesheet('fantasy-props-atlas', 'assets/fantasy/Art/Props/Atlas/Props.png', { frameWidth: 16, frameHeight: 16 });
+        this.load.spritesheet('fantasy-trees-atlas', 'assets/fantasy/Art/Trees and Bushes/Atlas/Trees_Bushes.png', { frameWidth: 16, frameHeight: 16 });
 
         // Map Assets
         this.load.image('tiles-grass', 'assets/textures/TX Tileset Grass.png');
