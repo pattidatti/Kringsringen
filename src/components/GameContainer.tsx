@@ -6,21 +6,9 @@ import { MedievalButton } from './ui/MedievalButton';
 import { Hotbar } from './ui/Hotbar';
 import { CoinCounter } from './ui/CoinCounter';
 import { UpgradeShop } from './ui/UpgradeShop';
-
-type Upgrade = {
-    id: string;
-    title: string;
-    description: string;
-    icon: string;
-};
-
-const UPGRADES: Upgrade[] = [
-    { id: 'damage', title: 'Brute Force', description: '+20% Angrepsstyrke', icon: 'm-icon-sword' },
-    { id: 'speed', title: 'Lynrask', description: '+15% Bevegelseshastighet', icon: 'm-icon-plus-small' },
-    { id: 'health', title: 'Vitalitet', description: '+20 Maks HP & Helbred 20', icon: 'm-icon-plus-small' },
-    { id: 'cooldown', title: 'Raskt Angrep', description: '-15% Nedkjøling', icon: 'm-icon-plus-small' },
-    { id: 'knockback', title: 'Tungt Slag', description: '+25% Tilbakeslag', icon: 'm-icon-sword' }
-];
+import { StatsPanel } from './ui/StatsPanel';
+import { PlayerHUD } from './ui/PlayerHUD';
+import { UPGRADES, type UpgradeConfig } from '../config/upgrades';
 
 export const GameContainer = () => {
     const gameContainerRef = useRef<HTMLDivElement>(null);
@@ -34,10 +22,27 @@ export const GameContainer = () => {
     const [currentWeapon, setCurrentWeapon] = useState('sword');
     const [isLeveling, setIsLeveling] = useState(false);
     const [isShopping, setIsShopping] = useState(false);
-    const [availableUpgrades, setAvailableUpgrades] = useState<Upgrade[]>([]);
+    const [availableUpgrades, setAvailableUpgrades] = useState<UpgradeConfig[]>([]);
     const [stageLevel, setStageLevel] = useState(1);
     const [wave, setWave] = useState(1);
     const [maxWaves, setMaxWaves] = useState(1);
+
+    // Upgrade Levels State
+    const [upgradeLevels, setUpgradeLevels] = useState<Record<string, number>>({});
+
+    // Stats State
+    const [isStatsOpen, setIsStatsOpen] = useState(false);
+    const [playerStats, setPlayerStats] = useState({
+        damage: 0,
+        attackSpeed: 0,
+        speed: 0,
+        armor: 0,
+        regen: 0,
+        critChance: 0,
+        projectiles: 0,
+        luck: 0,
+        maxHp: 100
+    });
 
     useEffect(() => {
         if (gameContainerRef.current && !gameInstanceRef.current) {
@@ -56,6 +61,23 @@ export const GameContainer = () => {
                 setStageLevel(game.registry.get('gameLevel') ?? 1);
                 setWave(game.registry.get('currentWave') ?? 1);
                 setMaxWaves(game.registry.get('maxWaves') ?? 1);
+
+                // Sync Upgrade Levels
+                const levels = game.registry.get('upgradeLevels') || {};
+                setUpgradeLevels({ ...levels });
+
+                // Advanced Stats Sync
+                setPlayerStats({
+                    damage: game.registry.get('playerDamage') ?? 0,
+                    attackSpeed: game.registry.get('playerAttackSpeed') ?? 1,
+                    speed: game.registry.get('playerSpeed') ?? 0,
+                    armor: game.registry.get('playerArmor') ?? 0,
+                    regen: game.registry.get('playerRegen') ?? 0,
+                    critChance: game.registry.get('playerCritChance') ?? 0,
+                    projectiles: game.registry.get('playerProjectiles') ?? 1,
+                    luck: game.registry.get('playerLuck') ?? 0,
+                    maxHp: game.registry.get('playerMaxHP') ?? 100
+                });
             };
 
             game.registry.events.on('changedata-playerHP', syncStats);
@@ -68,6 +90,19 @@ export const GameContainer = () => {
             game.registry.events.on('changedata-gameLevel', syncStats);
             game.registry.events.on('changedata-currentWave', syncStats);
             game.registry.events.on('changedata-maxWaves', syncStats);
+            // Listen for all stat changes
+            game.registry.events.on('changedata-playerDamage', syncStats);
+            game.registry.events.on('changedata-playerArmor', syncStats);
+            game.registry.events.on('changedata-playerProjectiles', syncStats);
+            game.registry.events.on('changedata-upgradeLevels', syncStats);
+
+            // Hotkey Listener for 'C' (Character Stats)
+            const handleKeyDown = (e: KeyboardEvent) => {
+                if (e.key.toLowerCase() === 'c') {
+                    setIsStatsOpen(prev => !prev);
+                }
+            };
+            window.addEventListener('keydown', handleKeyDown);
 
             // Handle Level Up - Need to wait for scene to be ready
             const setupSceneListeners = () => {
@@ -75,8 +110,15 @@ export const GameContainer = () => {
                 if (mainScene) {
                     mainScene.events.on('level-up', () => {
                         game.scene.pause('MainScene');
-                        const shuffled = [...UPGRADES].sort(() => 0.5 - Math.random());
-                        setAvailableUpgrades(shuffled.slice(0, 3));
+
+                        // Filter available upgrades (not maxed)
+                        const currentLevels = game.registry.get('upgradeLevels') || {};
+                        const available = UPGRADES.filter(u => {
+                            const lvl = currentLevels[u.id] || 0;
+                            return lvl < u.maxLevel && u.category !== 'Magi'; // Hide magic for now
+                        });
+
+                        const shuffled = [...available].sort(() => 0.5 - Math.random());
                         setAvailableUpgrades(shuffled.slice(0, 3));
                         setIsLeveling(true);
                     });
@@ -92,14 +134,15 @@ export const GameContainer = () => {
 
             setupSceneListeners();
             syncStats();
-        }
 
-        return () => {
-            if (gameInstanceRef.current) {
-                gameInstanceRef.current.destroy(true);
-                gameInstanceRef.current = null;
-            }
-        };
+            return () => {
+                if (gameInstanceRef.current) {
+                    gameInstanceRef.current.destroy(true);
+                    gameInstanceRef.current = null;
+                }
+                window.removeEventListener('keydown', handleKeyDown); // Cleanup
+            };
+        }
     }, []);
 
     const selectUpgrade = (upgradeId: string) => {
@@ -118,7 +161,7 @@ export const GameContainer = () => {
         const currentCoins = gameInstanceRef.current.registry.get('playerCoins') || 0;
         gameInstanceRef.current.registry.set('playerCoins', currentCoins - cost);
 
-        // Apply stats in Phaser
+        // Apply stats in Phaser (will also increment level)
         mainScene.events.emit('apply-upgrade', upgradeId);
     };
 
@@ -163,61 +206,14 @@ export const GameContainer = () => {
     return (
         <div id="game-container" ref={gameContainerRef} className="w-full h-full relative overflow-hidden bg-slate-950 font-sans selection:bg-cyan-500/30">
             {/* UI Overlay */}
-            <div className={`absolute top-6 left-6 z-10 transition-all duration-500 ${isLeveling || hp <= 0 ? 'blur-md grayscale opacity-50' : ''}`}>
-                <MedievalPanel className="w-72 drop-shadow-[0_20px_20px_rgba(0,0,0,0.8)]">
-                    <div className="flex flex-col gap-6 w-full">
-                        {/* Header Section */}
-                        <div className="flex flex-col items-center gap-1 border-b border-amber-900/20 pb-4">
-                            <h1 className="m-text-hud m-text-gold text-2xl tracking-[0.2em] uppercase leading-tight">
-                                Kringsringen
-                            </h1>
-                            <div className="flex items-center gap-3">
-                                <div className="h-[1px] w-8 bg-gradient-to-r from-transparent to-amber-900/40" />
-                                <span className="m-text-stats font-bold text-xs tracking-[0.3em] opacity-80 decoration-amber-600/20 underline">
-                                    NIVÅ {level}
-                                </span>
-                                <div className="h-[1px] w-8 bg-gradient-to-l from-transparent to-amber-900/40" />
-                            </div>
-                        </div>
-
-                        {/* Stats Section */}
-                        <div className="space-y-6 px-2">
-                            {/* HP Bar */}
-                            <div className="group/stat flex flex-col gap-2">
-                                <div className="flex justify-between items-end px-1">
-                                    <span className="m-text-stats text-[9px] tracking-widest opacity-40 group-hover/stat:opacity-80 transition-opacity">Vitalitet</span>
-                                    <span className="m-text-stats text-[9px] font-black">{Math.ceil(hp)} / {maxHp}</span>
-                                </div>
-                                <div className="flex items-center gap-3">
-                                    <div className="m-icon-candle m-scale-2 drop-shadow-md" />
-                                    <div className="flex-1 h-4 bg-slate-950/40 rounded-sm overflow-hidden border border-amber-900/10 relative">
-                                        <div
-                                            className="h-full bg-gradient-to-r from-red-900 via-red-600 to-red-400 transition-all duration-300 shadow-[0_0_10px_rgba(239,68,68,0.3)]"
-                                            style={{ width: `${(hp / maxHp) * 100}%` }}
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* XP Bar */}
-                            <div className="group/stat flex flex-col gap-2">
-                                <div className="flex justify-between items-end px-1">
-                                    <span className="m-text-stats text-[9px] tracking-widest opacity-40 group-hover/stat:opacity-80 transition-opacity">Erfaring</span>
-                                    <span className="m-text-stats text-[9px] font-black">{Math.floor((xp / maxXp) * 100)}%</span>
-                                </div>
-                                <div className="flex items-center gap-3">
-                                    <div className="m-icon-plus-small m-scale-2 drop-shadow-md brightness-150" />
-                                    <div className="flex-1 h-3 bg-slate-950/40 rounded-sm overflow-hidden border border-amber-900/10 relative mt-0.5">
-                                        <div
-                                            className="h-full bg-gradient-to-r from-sky-900 via-sky-500 to-sky-300 transition-all duration-700 shadow-[0_0_10px_rgba(14,165,233,0.3)]"
-                                            style={{ width: `${(xp / maxXp) * 100}%` }}
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </MedievalPanel>
+            <div className={`absolute top-6 left-6 z-10 transition-all duration-500 origin-top-left ${isLeveling || hp <= 0 ? 'blur-md grayscale opacity-50' : ''}`}>
+                <PlayerHUD
+                    hp={hp}
+                    maxHp={maxHp}
+                    xp={xp}
+                    maxXp={maxXp}
+                    level={level}
+                />
             </div>
 
             {/* Coin & Progress Header - Top Center */}
@@ -254,8 +250,12 @@ export const GameContainer = () => {
             </div>
 
             {/* UI Overlays */}
-            {/* UI Overlays */}
             <div className="absolute inset-0 z-[60] pointer-events-none">
+                <StatsPanel
+                    stats={playerStats}
+                    isOpen={isStatsOpen}
+                    onClose={() => setIsStatsOpen(false)}
+                />
             </div>
 
             {/* Death Screen - Polished Pixel Art */}
@@ -301,7 +301,7 @@ export const GameContainer = () => {
                         </div>
 
                         <div className="flex flex-wrap justify-center gap-20">
-                            {availableUpgrades.map((upgrade, idx) => (
+                            {availableUpgrades.length > 0 ? availableUpgrades.map((upgrade, idx) => (
                                 <button
                                     key={upgrade.id}
                                     onClick={() => selectUpgrade(upgrade.id)}
@@ -318,13 +318,18 @@ export const GameContainer = () => {
 
                                     <div className="text-center max-w-[280px] space-y-4">
                                         <h3 className="m-text-hud text-3xl text-amber-100/90 group-hover:text-amber-400 transition-colors uppercase tracking-tight">{upgrade.title}</h3>
-                                        <p className="m-text-stats text-sm leading-relaxed text-amber-50/40 font-medium">{upgrade.description}</p>
+                                        <p className="m-text-stats text-sm leading-relaxed text-amber-50/40 font-medium">
+                                            {/* Show NEXT level description */}
+                                            {upgrade.description((upgradeLevels[upgrade.id] || 0) + 1)}
+                                        </p>
                                     </div>
 
                                     {/* Select Button */}
                                     <div className="m-btn m-btn-check m-scale-3 group-hover:scale-125 transition-transform shadow-[0_0_20px_rgba(0,0,0,0.5)]" />
                                 </button>
-                            ))}
+                            )) : (
+                                <div className="text-amber-500 m-text-hud">Ingen flere oppgraderinger tilgjengelig!</div>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -334,8 +339,8 @@ export const GameContainer = () => {
             {isShopping && (
                 <UpgradeShop
                     coins={coins}
-                    level={level}
-                    onApplyUpgrade={applyShopUpgrade}
+                    upgradeLevels={upgradeLevels}
+                    onBuyUpgrade={applyShopUpgrade}
                     onContinue={handleContinue}
                 />
             )}

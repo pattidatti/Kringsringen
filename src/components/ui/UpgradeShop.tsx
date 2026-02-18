@@ -1,50 +1,21 @@
 import React, { useState } from 'react';
 import { MedievalPanel } from './MedievalPanel';
 import { MedievalButton } from './MedievalButton';
-
-export type UpgradeCategory = 'Karakter' | 'Sverd' | 'Bue' | 'Magi';
-
-export interface ShopUpgrade {
-    id: string;
-    title: string;
-    description: string;
-    icon: string;
-    basePrice: number;
-    category: UpgradeCategory;
-}
-
-const UPGRADES: ShopUpgrade[] = [
-    // KARAKTER
-    { id: 'health', title: 'Vitalitet', description: '+20 Maks HP & Helbred 20', icon: 'm-icon-plus-small', basePrice: 20, category: 'Karakter' },
-    { id: 'speed', title: 'Lynrask', description: '+15% Bevegelseshastighet', icon: 'm-icon-plus-small', basePrice: 25, category: 'Karakter' },
-
-    // SVERD
-    { id: 'damage', title: 'Skarpt Stål', description: '+20% Skade med sverd', icon: 'm-icon-sword', basePrice: 25, category: 'Sverd' },
-    { id: 'knockback', title: 'Tungt Slag', description: '+25% Tilbakeslagseffekt', icon: 'm-icon-sword', basePrice: 20, category: 'Sverd' },
-
-    // BUE
-    { id: 'cooldown', title: 'Rask Trekking', description: '-15% Nedkjøling på bue', icon: 'm-icon-bow', basePrice: 30, category: 'Bue' },
-
-    // MAGI (Upcoming)
-    { id: 'magic_bolt', title: 'Ukjent Kraft', description: 'Du føler en magisk tilstedeværelse...', icon: 'm-icon-candle', basePrice: 999, category: 'Magi' },
-];
+import { UPGRADES, type UpgradeCategory } from '../../config/upgrades';
 
 interface UpgradeShopProps {
     coins: number;
-    level: number;
-    onApplyUpgrade: (upgradeId: string, cost: number) => void;
+    upgradeLevels: Record<string, number>;
+    onBuyUpgrade: (upgradeId: string, cost: number) => void;
     onContinue: () => void;
 }
 
-export const UpgradeShop: React.FC<UpgradeShopProps> = ({ coins, level, onApplyUpgrade, onContinue }) => {
-    const [purchasedIds, setPurchasedIds] = useState<string[]>([]);
+export const UpgradeShop: React.FC<UpgradeShopProps> = ({ coins, upgradeLevels, onBuyUpgrade, onContinue }) => {
     const [activeCategory, setActiveCategory] = useState<UpgradeCategory>('Karakter');
 
-    const handleBuy = (upgrade: ShopUpgrade) => {
-        const price = Math.floor(upgrade.basePrice * (1 + (level - 1) * 0.15));
-        if (coins >= price && !purchasedIds.includes(upgrade.id)) {
-            onApplyUpgrade(upgrade.id, price);
-            setPurchasedIds([...purchasedIds, upgrade.id]);
+    const handleBuy = (upgradeId: string, price: number) => {
+        if (coins >= price) {
+            onBuyUpgrade(upgradeId, price);
         }
     };
 
@@ -77,8 +48,8 @@ export const UpgradeShop: React.FC<UpgradeShopProps> = ({ coins, level, onApplyU
                             key={cat}
                             onClick={() => setActiveCategory(cat)}
                             className={`relative px-8 py-3 rounded-xl m-text-hud text-base tracking-[0.2em] uppercase transition-all duration-500 overflow-hidden ${activeCategory === cat
-                                    ? 'text-white m-text-glow-white bg-amber-600/30 border border-amber-400/30 translate-y-[-2px]'
-                                    : 'text-white/20 hover:text-white/60 hover:bg-white/5'
+                                ? 'text-white m-text-glow-white bg-amber-600/30 border border-amber-400/30 translate-y-[-2px]'
+                                : 'text-white/20 hover:text-white/60 hover:bg-white/5'
                                 }`}
                         >
                             <span className="relative z-10">{cat}</span>
@@ -89,10 +60,11 @@ export const UpgradeShop: React.FC<UpgradeShopProps> = ({ coins, level, onApplyU
                 {/* Main Content Area */}
                 <div className="flex flex-wrap justify-center gap-10 w-full animate-in slide-in-from-bottom-12 duration-1000 delay-300">
                     {filteredUpgrades.map((upgrade, idx) => {
-                        const price = Math.floor(upgrade.basePrice * (1 + (level - 1) * 0.15));
+                        const currentLevel = upgradeLevels[upgrade.id] || 0;
+                        const isMaxed = currentLevel >= upgrade.maxLevel;
+                        const price = Math.floor(upgrade.basePrice * Math.pow(upgrade.priceScale, currentLevel));
                         const canAfford = coins >= price;
-                        const isPurchased = purchasedIds.includes(upgrade.id);
-                        const isMagic = upgrade.category === 'Magi';
+                        const isMagic = upgrade.category === 'Magi'; // Placeholder lock logic
 
                         return (
                             <div
@@ -100,50 +72,58 @@ export const UpgradeShop: React.FC<UpgradeShopProps> = ({ coins, level, onApplyU
                                 style={{ animationDelay: `${idx * 100}ms` }}
                                 className="group relative w-full sm:w-[340px]"
                             >
-                                <MedievalPanel className={`relative p-8 flex flex-col transition-all duration-500 min-h-[420px] ${!canAfford && !isPurchased ? 'opacity-30 grayscale-[0.9]' : 'hover:translate-y-[-8px]'} ${isPurchased ? 'border-amber-400/40 ring-1 ring-amber-400/20' : ''} ${isMagic ? 'pointer-events-none' : ''}`}>
+                                <MedievalPanel className={`relative p-8 flex flex-col transition-all duration-500 min-h-[420px] ${!canAfford && !isMaxed ? 'opacity-30 grayscale-[0.9]' : 'hover:translate-y-[-8px]'} ${isMaxed ? 'border-amber-400/40 ring-1 ring-amber-400/20' : ''} ${isMagic ? 'pointer-events-none' : ''}`}>
 
                                     <div className="flex flex-col items-center gap-6 flex-grow">
-                                        {/* Icon Container with Radiant Background */}
+                                        {/* Icon Container */}
                                         <div className="relative">
                                             <div className="absolute inset-0 bg-amber-500/10 blur-2xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
                                             <div className="relative w-24 h-24 flex items-center justify-center bg-black/80 border border-white/10 rounded-2xl shadow-[inset_0_2px_10px_rgba(0,0,0,0.8)] group-hover:bg-black transition-colors">
                                                 <div className={`${upgrade.icon} m-scale-3 m-golden-glow group-hover:scale-[3.3] transition-transform duration-700 ease-out`} />
-                                                {isPurchased && (
+                                                {isMaxed && (
                                                     <div className="absolute inset-0 bg-amber-500/10 backdrop-blur-[1px] flex items-center justify-center">
                                                         <div className="m-icon-check-small m-scale-2 brightness-200 drop-shadow-lg" />
                                                     </div>
                                                 )}
+                                                {/* Level Badge */}
+                                                <div className="absolute -bottom-3 bg-black/90 border border-amber-900/50 px-3 py-1 rounded-full">
+                                                    <span className="text-[10px] text-amber-500 font-bold tracking-widest">{currentLevel} / {upgrade.maxLevel}</span>
+                                                </div>
                                             </div>
                                         </div>
 
                                         <div className="text-center w-full space-y-4">
                                             <h3 className="text-white text-3xl font-black tracking-tight m-text-shadow-strong uppercase group-hover:text-amber-400 transition-colors drop-shadow-md">{upgrade.title}</h3>
-                                            <div className="m-card-inset-dark px-6 py-4 rounded-xl border border-white/5 flex items-center justify-center text-center">
-                                                <p className="text-amber-50 font-bold text-xs leading-relaxed uppercase tracking-widest drop-shadow-sm">{upgrade.description}</p>
+                                            <div className="m-card-inset-dark px-6 py-4 rounded-xl border border-white/5 flex items-center justify-center text-center h-20">
+                                                <p className="text-amber-50 font-bold text-xs leading-relaxed uppercase tracking-widest drop-shadow-sm">
+                                                    {upgrade.description(currentLevel + 1)}
+                                                </p>
                                             </div>
                                         </div>
                                     </div>
 
                                     {/* Footer with Price Tag */}
                                     <div className="flex flex-col items-center gap-6 mt-6 pt-6 border-t border-white/5">
-                                        <div className={`flex items-center gap-3 py-2 px-6 rounded-full bg-black/80 border ${canAfford ? 'border-amber-500/20 shadow-[0_0_15px_rgba(251,191,36,0.1)]' : 'border-red-900/30 grayscale shadow-none'}`}>
-                                            <div className={`m-icon-coin m-scale-2 ${canAfford ? 'brightness-125' : 'brightness-50 opacity-40'}`} />
-                                            <span className={`text-2xl font-black italic tracking-tighter tabular-nums ${canAfford ? 'text-amber-400 m-text-glow-white !text-amber-400' : 'text-red-900 opacity-30'}`}>
-                                                {isMagic ? '???' : price}
-                                            </span>
-                                        </div>
+                                        {!isMaxed && (
+                                            <div className={`flex items-center gap-3 py-2 px-6 rounded-full bg-black/80 border ${canAfford ? 'border-amber-500/20 shadow-[0_0_15px_rgba(251,191,36,0.1)]' : 'border-red-900/30 grayscale shadow-none'}`}>
+                                                <div className={`m-icon-coin m-scale-2 ${canAfford ? 'brightness-125' : 'brightness-50 opacity-40'}`} />
+                                                <span className={`text-2xl font-black italic tracking-tighter tabular-nums ${canAfford ? 'text-amber-400 m-text-glow-white !text-amber-400' : 'text-red-900 opacity-30'}`}>
+                                                    {price}
+                                                </span>
+                                            </div>
+                                        )}
 
                                         <button
-                                            disabled={!canAfford || isPurchased || isMagic}
-                                            onClick={() => handleBuy(upgrade)}
-                                            className={`relative w-full group/btn overflow-hidden transition-all duration-300 ${isPurchased ? 'cursor-default' : 'active:scale-95'}`}
+                                            disabled={!canAfford || isMaxed || isMagic}
+                                            onClick={() => handleBuy(upgrade.id, price)}
+                                            className={`relative w-full group/btn overflow-hidden transition-all duration-300 ${isMaxed ? 'cursor-default' : 'active:scale-95'}`}
                                         >
                                             <MedievalButton
-                                                label={isPurchased ? "EID" : (isMagic ? "LÅST" : "KJØP OPPGRADERING")}
+                                                label={isMaxed ? "MAKS. NIVÅ" : (isMagic ? "LÅST" : "KJØP NIVÅ")}
                                                 onClick={() => { }}
-                                                disabled={!canAfford || isPurchased || isMagic}
+                                                disabled={!canAfford || isMaxed || isMagic}
                                                 variant="primary"
-                                                className={`w-full scale-110 !h-14 ${isPurchased ? 'opacity-20 grayscale' : ''}`}
+                                                className={`w-full scale-110 !h-14 ${isMaxed ? 'opacity-20 grayscale' : ''}`}
                                             />
                                         </button>
                                     </div>

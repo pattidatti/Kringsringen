@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { ENEMY_TYPES, type EnemyConfig } from '../config/enemies';
 
 export class Enemy extends Phaser.Physics.Arcade.Sprite {
     private target: Phaser.GameObjects.Components.Transform;
@@ -6,7 +7,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     private maxHP: number = 50;
     private hpBar: Phaser.GameObjects.Graphics;
     private isDead: boolean = false;
-    private attackRange: number = 80;
+    private attackRange: number = 60;
     private attackCooldown: number = 1500;
     private lastAttackTime: number = 0;
     private isAttacking: boolean = false;
@@ -14,50 +15,81 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     public isOnDamageFrame: boolean = false;
     private isPushingBack: boolean = false;
     private movementSpeed: number = 100;
+    private config: EnemyConfig;
 
-    constructor(scene: Phaser.Scene, x: number, y: number, target: Phaser.GameObjects.Components.Transform, multiplier: number = 1.0) {
-        super(scene, x, y, 'orc-idle');
+    public get damage(): number {
+        return this.config.baseDamage;
+    }
+
+    constructor(scene: Phaser.Scene, x: number, y: number, target: Phaser.GameObjects.Components.Transform, multiplier: number = 1.0, type: string = 'orc') {
+        const config = ENEMY_TYPES[type] || ENEMY_TYPES['orc'];
+
+        super(scene, x, y, config.spriteInfo.texture);
+        this.config = config;
         this.target = target;
 
         // Scale stats
-        this.maxHP = Math.floor(50 * multiplier);
+        this.maxHP = Math.floor(config.baseHP * multiplier);
         this.hp = this.maxHP;
-        this.movementSpeed = 100 * (1 + (multiplier - 1) * 0.5); // Speed scales slower than HP
+        this.movementSpeed = config.baseSpeed * (1 + (multiplier - 1) * 0.2);
 
         scene.add.existing(this);
         scene.physics.add.existing(this);
 
-        this.setScale(2);
+        this.setScale(config.scale);
         this.setCollideWorldBounds(true);
-        this.setBodySize(20, 15, true);
-        this.setOffset(this.body!.offset.x, 33); // Move Y offset up from 75 to 33
+        this.setBodySize(config.bodySize.width, config.bodySize.height, true);
 
-        this.play('orc-walk');
+        const offsetY = (this.height * 0.5) - (config.bodySize.height * 0.5);
+        this.setOffset(this.body!.offset.x, offsetY + 10);
+
+        // Animation Handling
+        if (config.spriteInfo.type === 'spritesheet' && config.spriteInfo.anims) {
+            this.play(config.spriteInfo.anims.walk);
+        } else {
+            this.scene.tweens.add({
+                targets: this,
+                scaleY: config.scale * 0.9,
+                scaleX: config.scale * 1.1,
+                duration: 500,
+                yoyo: true,
+                repeat: -1,
+                ease: 'Sine.easeInOut'
+            });
+        }
 
         this.hpBar = scene.add.graphics();
         this.updateHPBar();
 
-        this.on('animationstart-orc-attack', () => {
-            this.hasHit = false;
-        });
+        if (config.spriteInfo.anims?.attack) {
+            this.on(`animationstart-${config.spriteInfo.anims.attack}`, () => {
+                this.hasHit = false;
+            });
 
-        this.on('animationcomplete-orc-attack', () => {
-            this.isAttacking = false;
-            if (!this.isDead) this.play('orc-walk');
-        });
+            this.on(`animationcomplete-${config.spriteInfo.anims.attack}`, () => {
+                this.isAttacking = false;
+                if (!this.isDead && config.spriteInfo.anims?.walk) {
+                    this.play(config.spriteInfo.anims.walk);
+                }
+            });
+        }
     }
 
     preUpdate(time: number, delta: number) {
         super.preUpdate(time, delta);
         if (this.isDead || this.isPushingBack) return;
+        if (!this.body) return;
 
         const distance = Phaser.Math.Distance.Between(this.x, this.y, (this.target as any).x, (this.target as any).y);
+        const hasAttackAnim = this.config.spriteInfo.type === 'spritesheet' && this.config.spriteInfo.anims?.attack;
 
-        if (distance < this.attackRange && time > this.lastAttackTime + this.attackCooldown) {
+        if (hasAttackAnim && distance < this.attackRange && time > this.lastAttackTime + this.attackCooldown) {
             this.isAttacking = true;
             this.lastAttackTime = time;
             this.setVelocity(0, 0);
-            this.play('orc-attack');
+            if (this.config.spriteInfo.anims?.attack) {
+                this.play(this.config.spriteInfo.anims.attack);
+            }
         }
 
         if (this.isAttacking) {
@@ -72,14 +104,14 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 
             const targetAngle = Phaser.Math.Angle.Between(this.x, this.y, (this.target as any).x, (this.target as any).y);
 
-            // 1. Calculate Interest (towards target)
+            // 1. Interest
             for (let i = 0; i < numRays; i++) {
                 const angle = (i / numRays) * Math.PI * 2;
                 let dot = Math.cos(angle - targetAngle);
                 interests[i] = Math.max(0, dot);
             }
 
-            // 2. Calculate Danger (obstacles)
+            // 2. Danger (Obstacles)
             const obstacles = (this.scene as any).obstacles as Phaser.Physics.Arcade.StaticGroup;
             if (obstacles) {
                 obstacles.getChildren().forEach((obs: any) => {
@@ -89,7 +121,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
                         for (let i = 0; i < numRays; i++) {
                             const rayAngle = (i / numRays) * Math.PI * 2;
                             let dot = Math.cos(rayAngle - ang);
-                            if (dot > 0.7) { // Narrow detection for obstacles
+                            if (dot > 0.7) {
                                 dangers[i] = Math.max(dangers[i], dot * (1 - dist / rayLength));
                             }
                         }
@@ -97,26 +129,26 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
                 });
             }
 
-            // 3. Calculate Separation (other enemies)
+            // 3. Separation
             const enemies = (this.scene as any).enemies as Phaser.Physics.Arcade.Group;
             if (enemies) {
                 enemies.getChildren().forEach((enemy: any) => {
                     if (enemy === this) return;
                     const dist = Phaser.Math.Distance.Between(this.x, this.y, enemy.x, enemy.y);
-                    if (dist < 40) { // Separation radius
+                    if (dist < 40) {
                         const ang = Phaser.Math.Angle.Between(this.x, this.y, enemy.x, enemy.y);
                         for (let i = 0; i < numRays; i++) {
                             const rayAngle = (i / numRays) * Math.PI * 2;
                             let dot = Math.cos(rayAngle - ang);
                             if (dot > 0.5) {
-                                dangers[i] = Math.max(dangers[i], dot * 0.5); // Add danger from other enemies
+                                dangers[i] = Math.max(dangers[i], dot * 0.5);
                             }
                         }
                     }
                 });
             }
 
-            // 4. Choose best direction
+            // 4. Direction
             let bestDir = -1;
             let maxScore = -1;
 
@@ -139,10 +171,11 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
             this.setFlipX(this.body!.velocity.x < 0);
         }
 
-        if (this.isAttacking && this.anims.currentAnim?.key === 'orc-attack') {
+        // Damage Frame
+        if (this.isAttacking && hasAttackAnim && this.anims.currentAnim?.key === this.config.spriteInfo.anims?.attack) {
             this.isOnDamageFrame = this.anims.currentFrame?.index === 3;
         } else {
-            this.isOnDamageFrame = false;
+            this.isOnDamageFrame = !hasAttackAnim;
         }
 
         this.updateHPBar();
@@ -155,14 +188,12 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         const width = 40;
         const height = 5;
         const x = this.x - width / 2;
-        const y = this.y - 40;
+        const y = this.y - (this.height / 2 * this.scaleX) - 10;
 
-        // Background
         this.hpBar.fillStyle(0x000000, 0.5);
         this.hpBar.fillRect(x, y, width, height);
 
-        // Health
-        const healthWidth = (this.hp / this.maxHP) * width;
+        const healthWidth = (Math.max(0, this.hp) / this.maxHP) * width;
         this.hpBar.fillStyle(0xff0000, 1);
         this.hpBar.fillRect(x, y, healthWidth, height);
     }
@@ -174,7 +205,6 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         this.setTint(0xff0000);
         this.scene.time.delayedCall(100, () => this.clearTint());
 
-        // Floating Damage Number
         const damageText = this.scene.add.text(this.x, this.y - 30, `${Math.round(amount)}`, {
             fontSize: '20px',
             color: '#ffffff',
@@ -200,19 +230,16 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 
     private die() {
         this.isDead = true;
-        this.setDrag(1000); // Add friction for sliding death
-        // this.setVelocity(0); // Removed to allow pushback velocity
+        this.setDrag(1000);
         this.hpBar.destroy();
         this.setTint(0x444444);
 
-        // Blood effect
         const bloodKey = `blood_${Phaser.Math.Between(1, 5)}`;
         const blood = this.scene.add.sprite(this.x, this.y, bloodKey);
-        blood.setScale(1.5); // Slightly larger than enemy for visibility
+        blood.setScale(1.5);
         blood.play(bloodKey);
         blood.on('animationcomplete', () => blood.destroy());
 
-        // Simple fade out
         this.emit('dead', this.x, this.y);
         this.scene.tweens.add({
             targets: this,
@@ -225,30 +252,36 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     }
 
     public pushback(sourceX: number, sourceY: number, force: number = 400) {
-        // Allow pushback even if dead for impact
+        // Calculate Resistance
+        const resistance = this.config.knockbackResistance || 0;
+        // Reduce force by resistance
+        const netForce = Math.max(0, force * (1 - resistance));
+
+        if (netForce < 10) return; // Immune to small forces
 
         this.isPushingBack = true;
         this.isAttacking = false;
 
-        // Visual Feedback
         this.clearTint();
-        this.setTint(0xffffff); // Flash white
+        this.setTint(0xffffff);
 
         const angle = Phaser.Math.Angle.Between(sourceX, sourceY, this.x, this.y);
         this.setVelocity(
-            Math.cos(angle) * force,
-            Math.sin(angle) * force
+            Math.cos(angle) * netForce,
+            Math.sin(angle) * netForce
         );
 
         this.scene.time.delayedCall(200, () => {
+            if (!this.active) return;
             this.isPushingBack = false;
 
-            // Restore proper tint based on state
             if (this.isDead) {
                 this.setTint(0x444444);
             } else {
                 this.clearTint();
-                this.play('orc-walk');
+                if (this.config.spriteInfo.anims?.walk) {
+                    this.play(this.config.spriteInfo.anims.walk);
+                }
             }
         });
     }

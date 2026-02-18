@@ -5,6 +5,8 @@ import { CircularForestMapGenerator } from './CircularForestMapGenerator';
 import { FantasyAssetManifest } from './FantasyAssetManifest';
 import { Arrow } from './Arrow';
 import { Coin } from './Coin';
+import { UPGRADES } from '../config/upgrades';
+import { SaveManager } from './SaveManager';
 
 
 class MainScene extends Phaser.Scene {
@@ -38,11 +40,24 @@ class MainScene extends Phaser.Scene {
         { waves: 5, enemiesPerWave: 20, multiplier: 3.0 }   // Level 5+
     ];
 
-    // Player Stats
+    // Player Base Stats
+    private baseDamage: number = 20;
+    private baseSpeed: number = 250;
+    private baseMaxHP: number = 100;
+    private baseCooldown: number = 500;
+    private baseKnockback: number = 400;
+    private baseRegen: number = 0;
+    private baseArmor: number = 0;
+    private baseCritChance: number = 0.05;
+    private baseProjectiles: number = 1;
+
+    // Current Stats (Calculated)
     private playerDamage!: number;
-    private playerBaseSpeed!: number;
-    private playerAttackCooldown!: number;
-    private playerKnockbackForce!: number;
+    private playerSpeed!: number;
+    private playerMaxHP!: number;
+    private playerCooldown!: number;
+    private playerKnockback!: number;
+
     private isInvincible: boolean = false;
     private isKnockedBack: boolean = false;
     private invincibilityDuration: number = 1000;
@@ -61,6 +76,17 @@ class MainScene extends Phaser.Scene {
         this.load.spritesheet('orc-idle', 'assets/sprites/orc/Orc-Idle.png', { frameWidth: 100, frameHeight: 100 });
         this.load.spritesheet('orc-walk', 'assets/sprites/orc/Orc-Walk.png', { frameWidth: 100, frameHeight: 100 });
         this.load.spritesheet('orc-attack', 'assets/sprites/orc/Orc-Attack01.png', { frameWidth: 100, frameHeight: 100 });
+
+        // New Enemies - Loading as 100x100 Spritesheets (Full Sheets)
+        this.load.spritesheet('slime', 'assets/sprites/slime.png', { frameWidth: 100, frameHeight: 100 });
+        this.load.spritesheet('skeleton', 'assets/sprites/skeleton.png', { frameWidth: 100, frameHeight: 100 });
+        this.load.spritesheet('greatsword_skeleton', 'assets/sprites/greatsword_skeleton.png', { frameWidth: 100, frameHeight: 100 });
+        this.load.spritesheet('werewolf', 'assets/sprites/werewolf.png', { frameWidth: 100, frameHeight: 100 });
+
+        // Elite Variants
+        this.load.spritesheet('armored_skeleton', 'assets/sprites/armored_skeleton.png', { frameWidth: 100, frameHeight: 100 });
+        this.load.spritesheet('elite_orc', 'assets/sprites/elite_orc.png', { frameWidth: 100, frameHeight: 100 });
+        this.load.spritesheet('armored_orc', 'assets/sprites/armored_orc.png', { frameWidth: 100, frameHeight: 100 });
 
         // Fantasy Tileset Assets
         this.load.spritesheet('fantasy-ground', 'assets/fantasy/Art/Ground Tileset/Tileset_Ground.png', { frameWidth: 16, frameHeight: 16 });
@@ -91,22 +117,22 @@ class MainScene extends Phaser.Scene {
     }
 
     create() {
-        // Reset Player Stats to Defaults
-        this.playerDamage = 20;
-        this.playerBaseSpeed = 250;
-        this.playerAttackCooldown = 150;
-        this.playerKnockbackForce = 400;
-        this.isInvincible = false;
-        this.isKnockedBack = false;
+        // Load Saved Data
+        const saveData = SaveManager.load();
 
-        // Match player stats in registry (for React UI access)
+        // Initialize Registry State
         this.registry.set('playerHP', 100);
-        this.registry.set('playerMaxHP', 100);
         this.registry.set('playerXP', 0);
         this.registry.set('playerMaxXP', 100);
         this.registry.set('playerLevel', 1);
-        this.registry.set('playerCoins', 0);
+        this.registry.set('playerCoins', saveData.coins);
         this.registry.set('currentWeapon', 'sword');
+        this.registry.set('upgradeLevels', saveData.upgradeLevels);
+        this.registry.set('highStage', saveData.highStage);
+        this.registry.set('unlockedWeapons', saveData.unlockedWeapons);
+
+        // Calculate Initial Stats
+        this.recalculateStats();
 
         // Create Gem Texture (Small Diamond)
         const graphics = this.add.graphics();
@@ -137,17 +163,8 @@ class MainScene extends Phaser.Scene {
         this.physics.world.setBounds(0, 0, mapWidth, mapHeight);
         this.cameras.main.setBounds(0, 0, mapWidth, mapHeight);
 
-        // 1. Base Layer (Grass)
-        // const floor = this.add.tileSprite(mapWidth / 2, mapHeight / 2, mapWidth, mapHeight, 'tiles-grass');
-        // floor.setDepth(-100);
-
         // Initialize Obstacles
         this.obstacles = this.physics.add.staticGroup();
-
-        // 3. Procedural Map Generation (Map Engine)
-        // const mapGenerator = new MapGenerator(this, this.obstacles, mapWidth, mapHeight);
-        // mapGenerator.generate();
-        // mapGenerator.generateTestLevel();
 
         // FANTASY DEMO
         const fantasyMap = new CircularForestMapGenerator(this, this.obstacles, mapWidth, mapHeight);
@@ -159,14 +176,14 @@ class MainScene extends Phaser.Scene {
         player.setCollideWorldBounds(true);
         player.setScale(2);
         player.setBodySize(20, 15, true);
-        player.setOffset(player.body!.offset.x, 33); // Move Y offset up from 75 to 33 (near center)
-        player.setMass(2); // Make player a bit heavier than enemies
+        player.setOffset(player.body!.offset.x, 33);
+        player.setMass(2);
         player.play('player-idle');
 
         // Camera follow
         this.cameras.main.startFollow(player, true, 0.1, 0.1);
 
-        // Attack Hitbox (invisible circle) - Better for 360-degree detection
+        // Attack Hitbox (invisible circle)
         this.attackHitbox = this.add.rectangle(0, 0, 60, 60, 0xff0000, 0) as any;
         this.physics.add.existing(this.attackHitbox);
         this.attackHitbox.body!.setCircle(30);
@@ -205,7 +222,7 @@ class MainScene extends Phaser.Scene {
         this.physics.add.overlap(this.attackHitbox, this.enemies, (_hitbox, enemy) => {
             const e = enemy as Enemy;
             e.takeDamage(this.playerDamage);
-            e.pushback(player.x, player.y, this.playerKnockbackForce);
+            e.pushback(player.x, player.y, this.playerKnockback);
         });
 
         const cursors = this.input.keyboard?.createCursorKeys();
@@ -291,7 +308,56 @@ class MainScene extends Phaser.Scene {
             repeat: 0
         });
 
-        // Blood Animations
+        // New Enemy Animations
+        this.anims.create({
+            key: 'slime-walk',
+            frames: this.anims.generateFrameNumbers('slime', { start: 12, end: 23 }), // Assuming Row 1 is Walk
+            frameRate: 12,
+            repeat: -1
+        });
+
+        this.anims.create({
+            key: 'skeleton-walk',
+            frames: this.anims.generateFrameNumbers('skeleton', { start: 8, end: 15 }), // Assuming Row 1 is Walk
+            frameRate: 10,
+            repeat: -1
+        });
+
+        this.anims.create({
+            key: 'werewolf-walk',
+            frames: this.anims.generateFrameNumbers('werewolf', { start: 13, end: 25 }), // Assuming Row 1 is Walk
+            frameRate: 12,
+            repeat: -1
+        });
+
+        this.anims.create({
+            key: 'greatsword-walk',
+            frames: this.anims.generateFrameNumbers('greatsword_skeleton', { start: 12, end: 23 }), // Assuming Row 1 is Walk
+            frameRate: 8,
+            repeat: -1
+        });
+
+        // Elite Enemies
+        this.anims.create({
+            key: 'armored-skeleton-walk',
+            frames: this.anims.generateFrameNumbers('armored_skeleton', { start: 8, end: 15 }), // Assuming Row 1 is Walk
+            frameRate: 10,
+            repeat: -1
+        });
+
+        this.anims.create({
+            key: 'elite-orc-walk',
+            frames: this.anims.generateFrameNumbers('elite_orc', { start: 8, end: 15 }), // Assuming Row 1 is Walk
+            frameRate: 10,
+            repeat: -1
+        });
+
+        this.anims.create({
+            key: 'armored-orc-walk',
+            frames: this.anims.generateFrameNumbers('armored_orc', { start: 8, end: 15 }), // Assuming Row 1 is Walk
+            frameRate: 10,
+            repeat: -1
+        });
         for (let i = 1; i <= 5; i++) {
             this.anims.create({
                 key: `blood_${i}`,
@@ -352,7 +418,7 @@ class MainScene extends Phaser.Scene {
         const mapHeight = 3000;
         const centerX = mapWidth / 2;
         const centerY = mapHeight / 2;
-        const radius = 800; // Match CircularForestMapGenerator clearingRadius
+        const radius = 800;
 
         const angle = Math.random() * Math.PI * 2;
         const x = centerX + Math.cos(angle) * radius;
@@ -361,7 +427,29 @@ class MainScene extends Phaser.Scene {
         const player = this.data.get('player') as Phaser.Physics.Arcade.Sprite;
         const config = this.LEVEL_CONFIG[Math.min(this.currentLevel - 1, this.LEVEL_CONFIG.length - 1)];
 
-        const enemy = new Enemy(this, x, y, player, config.multiplier);
+        // Select Enemy Type based on level/wave
+        let allowedTypes: string[] = ['orc', 'slime']; // Default Level 1
+
+        if (this.currentLevel >= 2) {
+            allowedTypes.push('skeleton');
+            allowedTypes.push('armored_skeleton');
+        }
+
+        if (this.currentLevel >= 3) {
+            allowedTypes.push('werewolf');
+            allowedTypes.push('armored_orc');
+        }
+
+        if (this.currentLevel >= 4) {
+            allowedTypes.push('elite_orc');
+            allowedTypes.push('greatsword_skeleton');
+        }
+
+        // Simple weighted random (prefer basic enemies)
+        let type = Phaser.Utils.Array.GetRandom(allowedTypes);
+
+        // Spawn
+        const enemy = new Enemy(this, x, y, player, config.multiplier, type);
         this.enemies.add(enemy);
         this.enemiesAlive++;
 
@@ -398,6 +486,14 @@ class MainScene extends Phaser.Scene {
             } else {
                 // Level Complete
                 this.isLevelActive = false;
+
+                // Save High Stage
+                const currentStage = this.registry.get('gameLevel');
+                const highStage = this.registry.get('highStage') || 1;
+                if (currentStage >= highStage) {
+                    SaveManager.save({ highStage: currentStage + 1 });
+                }
+
                 this.time.delayedCall(1500, () => {
                     this.events.emit('level-complete');
                     this.scene.pause();
@@ -410,6 +506,10 @@ class MainScene extends Phaser.Scene {
         let coins = this.registry.get('playerCoins') || 0;
         coins += amount;
         this.registry.set('playerCoins', coins);
+
+        if (coins % 10 === 0) {
+            SaveManager.save({ coins });
+        }
     }
 
     private addXP(amount: number) {
@@ -432,39 +532,91 @@ class MainScene extends Phaser.Scene {
         this.registry.set('playerXP', xp);
     }
 
-    private applyUpgrade(upgradeId: string) {
-        const player = this.data.get('player') as Phaser.Physics.Arcade.Sprite;
+    private recalculateStats() {
+        const levels = this.registry.get('upgradeLevels') || {};
 
-        switch (upgradeId) {
-            case 'damage':
-                this.playerDamage *= 1.2;
-                break;
-            case 'speed':
-                this.playerBaseSpeed *= 1.15;
-                break;
-            case 'health': {
-                const maxHP = this.registry.get('playerMaxHP') + 20;
-                let currentHP = this.registry.get('playerHP') + 20;
-                currentHP = Math.min(currentHP, maxHP);
-                this.registry.set('playerMaxHP', maxHP);
-                this.registry.set('playerHP', currentHP);
-                break;
-            }
-            case 'cooldown':
-                this.playerAttackCooldown *= 0.85;
-                break;
-            case 'knockback':
-                this.playerKnockbackForce *= 1.25;
-                break;
+        // Damage
+        const dmgLvl = levels['damage'] || 0;
+        this.playerDamage = this.baseDamage * (1 + (dmgLvl * 0.1));
+        this.registry.set('playerDamage', this.playerDamage);
+
+        // Speed
+        const speedLvl = levels['speed'] || 0;
+        this.playerSpeed = this.baseSpeed + (speedLvl * 10);
+        this.registry.set('playerSpeed', this.playerSpeed);
+
+        // Max HP
+        const hpLvl = levels['health'] || 0;
+        const newMaxHP = this.baseMaxHP + (hpLvl * 20);
+        this.playerMaxHP = newMaxHP;
+        this.registry.set('playerMaxHP', this.playerMaxHP);
+
+        // Cooldown
+        const cdLvl = levels['bow_cooldown'] || 0;
+        this.playerCooldown = this.baseCooldown * (1 - (cdLvl * 0.1));
+
+        // Attack Speed (Sword)
+        const atkSpdLvl = levels['attack_speed'] || 0;
+        const attackSpeedMult = 1 + (atkSpdLvl * 0.1);
+        this.registry.set('playerAttackSpeed', attackSpeedMult);
+
+        // Knockback
+        const kbLvl = levels['knockback'] || 0;
+        this.playerKnockback = this.baseKnockback * (1 + (kbLvl * 0.15));
+
+        // Armor
+        const armorLvl = levels['armor'] || 0;
+        const currentArmor = this.baseArmor + armorLvl;
+        this.registry.set('playerArmor', currentArmor);
+
+        // Regen
+        const regenLvl = levels['regen'] || 0;
+        const currentRegen = this.baseRegen + regenLvl;
+        this.registry.set('playerRegen', currentRegen);
+
+        // Projectiles
+        const multiLvl = levels['multishot'] || 0;
+        const currentProjectiles = this.baseProjectiles + multiLvl;
+        this.registry.set('playerProjectiles', currentProjectiles);
+
+        // Misc
+        this.registry.set('playerLuck', 1.0);
+        this.registry.set('playerCritChance', this.baseCritChance);
+    }
+
+    private applyUpgrade(upgradeId: string) {
+        const levels = this.registry.get('upgradeLevels') || {};
+        const config = UPGRADES.find(u => u.id === upgradeId);
+
+        if (!config) return;
+
+        const currentLvl = levels[upgradeId] || 0;
+        if (currentLvl >= config.maxLevel) return;
+
+        // Increment Level
+        levels[upgradeId] = currentLvl + 1;
+        this.registry.set('upgradeLevels', { ...levels });
+
+        // Save Upgrades
+        SaveManager.save({ upgradeLevels: levels });
+
+        // Special On-Purchase Effects (like Healing)
+        if (upgradeId === 'health') {
+            let currentHP = this.registry.get('playerHP');
+            this.registry.set('playerHP', currentHP + 20); // Heal 20 on purchase
         }
 
+        // Recalculate all stats
+        this.recalculateStats();
+
         // Visual feedback
+        const player = this.data.get('player') as Phaser.Physics.Arcade.Sprite;
         this.tweens.add({
             targets: player,
-            scale: 2.2,
-            duration: 200,
+            scale: 2.5,
+            duration: 250,
             yoyo: true,
-            ease: 'Power2'
+            ease: 'Back.out'
         });
     }
 
@@ -474,9 +626,13 @@ class MainScene extends Phaser.Scene {
         let hp = this.registry.get('playerHP');
         const isBlocking = this.data.get('isBlocking') as boolean;
         const player = this.data.get('player') as Phaser.Physics.Arcade.Sprite;
+        const armor = this.registry.get('playerArmor') || 0;
+
+        // Armor Reduction: Damage - Armor (min 1)
+        let damageAfterArmor = Math.max(1, amount - armor);
 
         // Block reduces damage by 80%
-        const actualDamage = isBlocking ? amount * 0.2 : amount;
+        const actualDamage = isBlocking ? damageAfterArmor * 0.2 : damageAfterArmor;
 
         hp -= actualDamage;
         this.registry.set('playerHP', Math.max(0, hp));
@@ -517,8 +673,8 @@ class MainScene extends Phaser.Scene {
                 this.isKnockedBack = true;
                 const angle = Phaser.Math.Angle.Between(source.x, source.y, player.x, player.y);
                 player.setVelocity(
-                    Math.cos(angle) * this.playerKnockbackForce,
-                    Math.sin(angle) * this.playerKnockbackForce
+                    Math.cos(angle) * this.playerKnockback, // Use calculated knockback
+                    Math.sin(angle) * this.playerKnockback
                 );
 
                 // End knockback after a short duration
@@ -559,7 +715,7 @@ class MainScene extends Phaser.Scene {
         const cursors = this.data.get('cursors') as Phaser.Types.Input.Keyboard.CursorKeys;
         const isAttacking = this.data.get('isAttacking') as boolean;
         const pointer = this.input.activePointer;
-        let speed = this.playerBaseSpeed;
+        let speed = this.playerSpeed; // Use calculated speed
 
         if (isAttacking || this.isKnockedBack) {
             if (isAttacking) player.setVelocity(0, 0);
@@ -612,9 +768,13 @@ class MainScene extends Phaser.Scene {
 
             if (currentWeapon === 'sword') {
                 player.play('player-attack');
+                const attackSpeedMult = this.registry.get('playerAttackSpeed') || 1;
+
+                // Adjust cooldown based on stats (faster attack speed = lower cooldown)
+                const cooldown = 500 / attackSpeedMult;
 
                 // Enable hitbox during middle of animation
-                this.time.delayedCall(this.playerAttackCooldown, () => {
+                this.time.delayedCall(Math.max(100, cooldown * 0.3), () => {
                     this.attackHitbox.body!.setEnable(true);
                     this.time.delayedCall(100, () => {
                         this.attackHitbox.body!.setEnable(false);
@@ -628,11 +788,24 @@ class MainScene extends Phaser.Scene {
             } else if (currentWeapon === 'bow') {
                 player.play('player-bow');
 
-                // Spawn arrow during animation (frame 3-4 is usually the release)
-                this.time.delayedCall(250, () => {
+                // Spawn arrow during animation
+                this.time.delayedCall(this.playerCooldown * 0.5, () => {
                     const arrow = this.arrows.get(player.x, player.y) as Arrow;
                     if (arrow) {
                         arrow.fire(player.x, player.y, angle, this.playerDamage * 0.8);
+
+                        // Multishot logic (Cone)
+                        const projectiles = this.registry.get('playerProjectiles') || 1;
+                        if (projectiles > 1) {
+                            for (let i = 1; i < projectiles; i++) {
+                                // Alternating sides: +10deg, -10deg, +20deg...
+                                const offset = Math.ceil(i / 2) * 10 * (Math.PI / 180) * (i % 2 === 0 ? -1 : 1);
+                                const subArrow = this.arrows.get(player.x, player.y) as Arrow;
+                                if (subArrow) {
+                                    subArrow.fire(player.x, player.y, angle + offset, this.playerDamage * 0.8);
+                                }
+                            }
+                        }
                     }
                 });
 
@@ -671,9 +844,9 @@ class MainScene extends Phaser.Scene {
                 const enemyFeetY = e.y + 33;
                 const dist = Phaser.Math.Distance.Between(player.x, playerFeetY, e.x, enemyFeetY);
 
-                if (dist < 75) { // Reach of the orc attack
+                if (dist < 75) { // Reach of the orc/enemy attack
                     e.hasHit = true;
-                    this.takePlayerDamage(10, e);
+                    this.takePlayerDamage(e.damage, e);
                 }
             }
         });

@@ -1,0 +1,30 @@
+@font-face {
+    font-family: 'CuteFantasy';
+    src: url('/src/assets/fonts/CuteFantasy-5x9.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+}
+
+/* Global pixel art settings */
+:root {
+    --font-fantasy: 'CuteFantasy', sans-serif;
+    --pixel-scale: 4;
+    /* Adjust as needed */
+}
+
+.pixel-art {
+    image-rendering: pixelated;
+    image-rendering: -moz-crisp-edges;
+    image-rendering: crisp-edges;
+}
+
+.font-fantasy {
+    font-family: var(--font-fantasy);
+}
+
+/* Smooth transitions for UI elements */
+.ui-transition {
+    transition-property: transform, opacity, background-color, border-color;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 150ms;
+}
