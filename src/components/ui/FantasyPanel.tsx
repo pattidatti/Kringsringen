@@ -4,13 +4,15 @@ import { twMerge } from 'tailwind-merge';
 import { UI_ATLAS } from '../../config/ui-atlas';
 
 interface FantasyPanelProps extends React.HTMLAttributes<HTMLDivElement> {
-    variant?: 'wood' | 'paper';
+    variant?: 'wood' | 'paper' | 'stone' | 'green' | 'blue' | 'gold' | 'red' | 'purple';
+    scale?: number;
 }
 
 export const FantasyPanel: React.FC<FantasyPanelProps> = ({
     children,
     className,
     variant = 'wood',
+    scale = 1,
     style,
     ...props
 }) => {
@@ -24,9 +26,9 @@ export const FantasyPanel: React.FC<FantasyPanelProps> = ({
     const borderImageStyle = frame ? {
         borderImageSource: `url(${source})`,
         borderImageSlice: frame.slice || 16,
-        borderImageWidth: `${frame.slice || 16}px`,
+        borderImageWidth: `${(frame.slice || 16) * scale}px`,
         borderImageRepeat: 'stretch', // or 'round' or 'repeat'
-        borderWidth: `${frame.slice || 16}px`,
+        borderWidth: `${(frame.slice || 16) * scale}px`,
     } : {};
 
     return (

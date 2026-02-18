@@ -2,6 +2,8 @@ import React from 'react';
 import { twMerge } from 'tailwind-merge';
 
 
+import { UI_ATLAS } from '../../config/ui-atlas';
+
 interface FantasyProgressBarProps {
     value: number;
     max: number;
@@ -21,10 +23,20 @@ export const FantasyProgressBar: React.FC<FantasyProgressBarProps> = ({
     width = '100%',
     className,
 }) => {
-    // We use the health frame for all bars for now, but colors differ
-    // If we had bar_xp_frame, we'd use that.
-    // If we had bar_xp_frame, we'd use that.
+    // 9-slice implementation for the bar frame
+    const frame = UI_ATLAS.frames.bar_health_frame;
+    const source = UI_ATLAS.sources.bars;
+    const scale = 2; // Scale up the small bar frame
 
+    const frameStyle = {
+        borderImageSource: `url(${source})`,
+        borderImageSlice: frame.slice || 5, // Default to 5 from atlas
+        borderImageWidth: `${(frame.slice || 5) * scale}px`,
+        borderImageRepeat: 'stretch',
+        borderWidth: `${(frame.slice || 5) * scale}px`,
+        borderStyle: 'solid',
+        backgroundClip: 'padding-box', // Ensure background doesn't bleed under translucent border
+    };
 
     // Calculate percentage
     const percent = Math.min(100, Math.max(0, (value / max) * 100));
@@ -85,9 +97,11 @@ export const FantasyProgressBar: React.FC<FantasyProgressBarProps> = ({
                Actually, let's try to use the sprite as a background but allow it to stretch horizontally.
             */}
             <div
-                className="relative h-5 bg-slate-950/60 rounded-sm overflow-hidden border border-amber-900/30"
+                className="relative h-6 bg-slate-950/60 overflow-hidden" // Increase height slightly for frame
                 style={{
-                    boxShadow: `0 0 10px ${getShadowColor()}`
+                    ...frameStyle,
+                    boxShadow: `0 0 10px ${getShadowColor()}`,
+                    imageRendering: 'pixelated',
                 }}
             >
                 {/* Background Pattern/Texture (Optional) */}

@@ -21,7 +21,7 @@ export const PlayerHUD: React.FC<PlayerHUDProps> = ({
     return (
         <div className="flex flex-col gap-2 w-72 pointer-events-none select-none">
             {/* Main Panel */}
-            <FantasyPanel variant="wood" className="pointer-events-auto p-5 pb-6 shadow-2xl drop-shadow-2xl">
+            <FantasyPanel variant="gold" scale={3} className="pointer-events-auto p-5 pb-6 shadow-2xl drop-shadow-2xl">
                 <div className="flex flex-col gap-4">
                     {/* Header: Title & Level */}
                     <div className="flex flex-col items-center border-b-2 border-amber-900/20 pb-3 mb-1">
