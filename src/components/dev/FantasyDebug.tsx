@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
 import framesImg from '../../assets/ui/fantasy/UI_Frames.png';
+import buttonsImg from '../../assets/ui/fantasy/UI_Buttons.png';
+import bookImg from '../../assets/ui/fantasy/Book_UI.png';
+import iconsImg from '../../assets/ui/fantasy/UI_Icons.png';
 
 /**
  * FantasyDebug Component
@@ -9,6 +12,7 @@ import framesImg from '../../assets/ui/fantasy/UI_Frames.png';
  * test 9-slice borders and button states live.
  */
 export const FantasyDebug = () => {
+    const [currentImage, setCurrentImage] = useState<'frames' | 'buttons' | 'icons' | 'book'>('frames');
     const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
     const [sliceConfig, setSliceConfig] = useState({
         x: 10,
@@ -22,10 +26,14 @@ export const FantasyDebug = () => {
         scale: 4,
     });
 
-    // Load images
-    // Load images // Fallback / or verify if we need to pass the imported one.
-    // actually, let's use the imported one, but I need to move the import statement UP first.
-    // efficient way: remove this line here, and add it at the top.
+    const images = {
+        frames: framesImg,
+        buttons: buttonsImg,
+        icons: iconsImg,
+        book: bookImg
+    };
+
+    const activeImg = images[currentImage];
 
     // const buttonsImg = '/assets/ui/fantasy/UI_Buttons.png'; // Not used yet
     // const iconsImg = '/assets/ui/fantasy/UI_Icons.png'; // Not used yet
@@ -75,13 +83,40 @@ export const FantasyDebug = () => {
 
     return (
         <div className="min-h-screen bg-slate-900 text-white p-8 font-mono overflow-auto">
-            <h1 className="text-3xl mb-6 text-amber-500 font-bold">Cute_Fantasy_UI Debugger</h1>
+            <div className="flex justify-between items-center mb-6">
+                <h1 className="text-3xl text-amber-500 font-bold">Cute_Fantasy_UI Debugger</h1>
+                <button
+                    onClick={() => {
+                        window.location.hash = '';
+                        window.location.reload();
+                    }}
+                    className="px-4 py-2 bg-slate-800 border border-slate-600 rounded text-amber-400 hover:bg-slate-700 hover:text-white transition-colors uppercase font-bold text-sm"
+                >
+                    Back to Demo
+                </button>
+            </div>
 
-            <div className="grid grid-cols-[1fr_400px] gap-8">
+            <div className="flex flex-col gap-8">
                 {/* Sprite Sheet Viewer */}
                 <div className="space-y-4">
                     <div className="flex justify-between items-end">
-                        <h2 className="text-xl font-semibold">Sprite Sheet</h2>
+                        <div className="flex gap-2">
+                            <h2 className="text-xl font-semibold">Sprite Sheet</h2>
+                            <div className="flex bg-slate-800 rounded p-1 gap-1 border border-slate-700">
+                                {(Object.keys(images) as Array<keyof typeof images>).map(key => (
+                                    <button
+                                        key={key}
+                                        onClick={() => setCurrentImage(key)}
+                                        className={`px-3 py-1 text-xs rounded uppercase font-bold transition-colors ${currentImage === key
+                                            ? 'bg-amber-500 text-slate-900'
+                                            : 'text-slate-400 hover:text-white hover:bg-slate-700'
+                                            }`}
+                                    >
+                                        {key}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
                         <span className="text-xs text-slate-400">Use Arrows to Nudge, Shift+Arrow for 10px</span>
                     </div>
                     <div className="relative overflow-auto border border-slate-700 bg-slate-800 max-h-[800px] max-w-full">
@@ -90,7 +125,7 @@ export const FantasyDebug = () => {
                             onMouseMove={handleMouseMove}
                             onClick={handleClick}
                         >
-                            <img src={framesImg} alt="Frames" className="image-rendering-pixelated max-w-none" />
+                            <img src={activeImg} alt="Frames" className="image-rendering-pixelated max-w-none" />
                             {/* Cursor Guide */}
                             <div
                                 className="absolute pointer-events-none border border-red-500/50"
@@ -130,7 +165,7 @@ export const FantasyDebug = () => {
 
                 {/* Configuration & Preview */}
                 <div className="space-y-6">
-                    <div className="bg-slate-800 p-6 rounded-lg space-y-4 sticky top-4">
+                    <div className="bg-slate-800 p-6 rounded-lg space-y-4">
                         <h3 className="text-lg font-bold border-b border-slate-700 pb-2">Slice Configuration</h3>
 
                         <div className="grid grid-cols-2 gap-4">
@@ -241,7 +276,7 @@ export const FantasyDebug = () => {
                             >
                                 {/* Top Left */}
                                 <div style={{
-                                    backgroundImage: `url(${framesImg})`,
+                                    backgroundImage: `url(${activeImg})`,
                                     backgroundPosition: bgPos(0, 0),
                                     width: sliceConfig.left,
                                     height: sliceConfig.top,
@@ -250,7 +285,7 @@ export const FantasyDebug = () => {
 
                                 {/* Top Center */}
                                 <div style={{
-                                    backgroundImage: `url(${framesImg})`,
+                                    backgroundImage: `url(${activeImg})`,
                                     backgroundPosition: bgPos(sliceConfig.left, 0),
                                     height: sliceConfig.top,
                                     imageRendering: 'pixelated',
@@ -259,7 +294,7 @@ export const FantasyDebug = () => {
 
                                 {/* Top Right */}
                                 <div style={{
-                                    backgroundImage: `url(${framesImg})`,
+                                    backgroundImage: `url(${activeImg})`,
                                     backgroundPosition: bgPos(sliceConfig.width - sliceConfig.right, 0),
                                     width: sliceConfig.right,
                                     height: sliceConfig.top,
@@ -268,7 +303,7 @@ export const FantasyDebug = () => {
 
                                 {/* Middle Left */}
                                 <div style={{
-                                    backgroundImage: `url(${framesImg})`,
+                                    backgroundImage: `url(${activeImg})`,
                                     backgroundPosition: bgPos(0, sliceConfig.top),
                                     width: sliceConfig.left,
                                     imageRendering: 'pixelated',
@@ -277,18 +312,18 @@ export const FantasyDebug = () => {
 
                                 {/* Center */}
                                 <div style={{
-                                    backgroundImage: `url(${framesImg})`,
+                                    backgroundImage: `url(${activeImg})`,
                                     backgroundPosition: bgPos(sliceConfig.left, sliceConfig.top),
                                     imageRendering: 'pixelated',
                                     // backgroundRepeat: 'repeat' 
-                                    backgroundColor: 'rgba(0,0,0,0.5)' // content bg
+                                    // backgroundColor: 'rgba(0,0,0,0.5)' // Removed to avoid "blue jank"
                                 }} className="flex items-center justify-center text-white/50 text-[10px]">
                                     Content
                                 </div>
 
                                 {/* Middle Right */}
                                 <div style={{
-                                    backgroundImage: `url(${framesImg})`,
+                                    backgroundImage: `url(${activeImg})`,
                                     backgroundPosition: bgPos(sliceConfig.width - sliceConfig.right, sliceConfig.top),
                                     width: sliceConfig.right,
                                     imageRendering: 'pixelated',
@@ -297,7 +332,7 @@ export const FantasyDebug = () => {
 
                                 {/* Bottom Left */}
                                 <div style={{
-                                    backgroundImage: `url(${framesImg})`,
+                                    backgroundImage: `url(${activeImg})`,
                                     backgroundPosition: bgPos(0, sliceConfig.height - sliceConfig.bottom),
                                     width: sliceConfig.left,
                                     height: sliceConfig.bottom,
@@ -306,7 +341,7 @@ export const FantasyDebug = () => {
 
                                 {/* Bottom Center */}
                                 <div style={{
-                                    backgroundImage: `url(${framesImg})`,
+                                    backgroundImage: `url(${activeImg})`,
                                     backgroundPosition: bgPos(sliceConfig.left, sliceConfig.height - sliceConfig.bottom),
                                     height: sliceConfig.bottom,
                                     imageRendering: 'pixelated',
@@ -315,7 +350,7 @@ export const FantasyDebug = () => {
 
                                 {/* Bottom Right */}
                                 <div style={{
-                                    backgroundImage: `url(${framesImg})`,
+                                    backgroundImage: `url(${activeImg})`,
                                     backgroundPosition: bgPos(sliceConfig.width - sliceConfig.right, sliceConfig.height - sliceConfig.bottom),
                                     width: sliceConfig.right,
                                     height: sliceConfig.bottom,

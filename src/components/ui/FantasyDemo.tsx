@@ -4,8 +4,12 @@ import { FantasyButton } from './FantasyButton';
 import { FantasyPanel } from './FantasyPanel';
 import { FantasyIcon } from './FantasyIcon';
 import framesImg from '../../assets/ui/fantasy/UI_Frames.png';
+import { FantasyBook } from './FantasyBook';
+import { useState } from 'react';
 
 const FantasyDemo: React.FC = () => {
+    const [isBookOpen, setIsBookOpen] = useState(false);
+
     return (
         <div className="min-h-screen bg-slate-900 p-8 flex flex-col items-center gap-8 font-fantasy text-white">
             <div className="flex flex-col gap-2 w-full max-w-4xl text-center">
@@ -41,9 +45,14 @@ const FantasyDemo: React.FC = () => {
                     <div className="flex flex-wrap gap-4">
                         <FantasyButton label="Start Game" onClick={() => alert('Start!')} />
                         <FantasyButton variant="secondary" label="Settings" />
+                        <FantasyButton label="Start Game" onClick={() => alert('Start!')} />
+                        <FantasyButton variant="secondary" label="Settings" />
                         <FantasyButton disabled label="Load Game" />
+                        <FantasyButton label="Open Journal" onClick={() => setIsBookOpen(true)} className="bg-amber-700 text-amber-100 border-amber-900" />
                     </div>
                 </section>
+
+                <FantasyBook isOpen={isBookOpen} onClose={() => setIsBookOpen(false)} />
 
                 {/* Icons Section */}
                 <section className="flex flex-col gap-4">
