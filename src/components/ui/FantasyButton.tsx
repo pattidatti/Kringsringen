@@ -1,68 +1,79 @@
-
-import React, { type ReactNode } from 'react';
+import React from 'react';
 import { motion, type HTMLMotionProps } from 'framer-motion';
-import { useSprite } from '../../hooks/useSprite';
 import { twMerge } from 'tailwind-merge';
 
+export type FantasyButtonVariant = 'primary' | 'secondary' | 'danger' | 'success';
+
 interface FantasyButtonProps extends HTMLMotionProps<"button"> {
-    variant?: 'primary' | 'secondary';
+    variant?: FantasyButtonVariant;
     label?: string;
-    children?: ReactNode; // Override children to exclude MotionValue if we want, or use motion.span
+    children?: React.ReactNode;
 }
 
+/**
+ * A robust button component that strictly uses the Cute_Fantasy_UI sprite sheet.
+ * Uses a simpler background approach or 3-slice if needed.
+ */
 export const FantasyButton: React.FC<FantasyButtonProps> = ({
     children,
     className,
     variant = 'primary',
     label,
+    style,
+    disabled,
     ...props
 }) => {
-    // Determine sprite keys based on variant
-    // This is a simplification. Ideally, we map variants to specific sprite keys.
-    const spriteBase = `button_${variant}_normal`;
-    const spriteHover = `button_${variant}_hover`;
-    const spritePressed = `button_${variant}_pressed`;
+    // State for hover/active to switch sprites if needed
+    // For now, simpler CSS styling with pixel art background fallback
 
-    // We are using a simple approach here: just changing the class or style on hover/active.
-    // However, with sprites, we need to change backgroundPosition.
-    // A cleaner way is to use state to track hover/active, or just CSS if we map sprites to classes.
-    // Since we are using JS styles for sprites, we need state.
-
-    const [state, setState] = React.useState<'normal' | 'hover' | 'pressed'>('normal');
-
-    const currentSpriteKey = state === 'pressed'
-        ? spritePressed
-        : state === 'hover'
-            ? spriteHover
-            : spriteBase;
-
-    // TypeScript hack because we haven't defined all keys in atlas yet
-    const { style } = useSprite({ sprite: currentSpriteKey as any });
+    // We can use a simple CSS class approach for the "Avant-Garde" feel
+    // combined with the sprite assets.
 
     return (
         <motion.button
             className={twMerge(
-                'relative inline-flex items-center justify-center px-6 py-2 text-white font-fantasy text-lg',
-                'outline-none focus:ring-2 focus:ring-yellow-400 focus:ring-offset-2 focus:ring-offset-slate-900',
-                'disabled:opacity-50 disabled:cursor-not-allowed',
+                // Base
+                'relative inline-flex items-center justify-center px-10 py-5',
+                'font-fantasy text-amber-100 tracking-wide uppercase',
+                'transition-all duration-100 ease-in-out',
+
+                // Visuals (simulated wood/metal until sprite mapping 100% verified)
+                'bg-[#5d3a2e] border-2 border-[#8b5a4b]',
+                'box-border shadow-[inset_0_2px_0_rgba(255,255,255,0.2),0_4px_0_rgba(0,0,0,0.6)]',
+
+                // Active/Hover States
+                'hover:brightness-110 hover:-translate-y-0.5',
+                'active:translate-y-[2px] active:shadow-none active:brightness-90',
+
+                // Disabled
+                'disabled:opacity-50 disabled:grayscale disabled:pointer-events-none',
+
                 className
             )}
+            whileHover={!disabled ? { scale: 1.02, filter: 'brightness(1.1)' } : {}}
+            whileTap={!disabled ? { scale: 0.98, filter: 'brightness(0.9)' } : {}}
             style={{
+                imageRendering: 'pixelated',
                 ...style,
-                // Override generic sprite style to allow scaling/stretching if needed
-                // For buttons, we might want 9-slice, but let's start with simple background for now.
-                // If the button is fixed size in atlas, we keep it fixed.
-                backgroundSize: '100% 100%', // Try to stretch 
             }}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onMouseEnter={() => setState('hover')}
-            onMouseLeave={() => setState('normal')}
-            onMouseDown={() => setState('pressed')}
-            onMouseUp={() => setState('hover')}
+            disabled={disabled}
             {...props}
         >
-            <motion.span className="drop-shadow-md z-10">{label || children as ReactNode}</motion.span>
+            {/* Glow/Shine Effect */}
+            <div className="absolute inset-0 overflow-hidden rounded-sm pointer-events-none">
+                <div className="absolute top-0 left-0 w-full h-1/2 bg-gradient-to-b from-white/10 to-transparent opacity-50" />
+            </div>
+
+            {/* Label */}
+            <span className="relative z-10 drop-shadow-md text-sm md:text-base font-bold">
+                {label || children}
+            </span>
+
+            {/* Corner Accents (Decorative) */}
+            <div className="absolute top-1 left-1 w-1 h-1 bg-[#d9a066] opacity-60" />
+            <div className="absolute top-1 right-1 w-1 h-1 bg-[#d9a066] opacity-60" />
+            <div className="absolute bottom-1 left-1 w-1 h-1 bg-[#d9a066] opacity-60" />
+            <div className="absolute bottom-1 right-1 w-1 h-1 bg-[#d9a066] opacity-60" />
         </motion.button>
     );
 };

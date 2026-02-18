@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { GameContainer } from './components/GameContainer'
 import FantasyDemo from './components/ui/FantasyDemo'
 import { FantasyButton } from './components/ui/FantasyButton'
+import { FantasyDebug } from './components/dev/FantasyDebug'
 import './index.css'
 import './styles/pixel-ui.css'
 
@@ -20,7 +21,9 @@ function App() {
         />
       </div>
 
-      {showDemo ? <FantasyDemo /> : <GameContainer />}
+      {showDemo ? (
+        window.location.hash === '#debug' ? <FantasyDebug /> : <FantasyDemo />
+      ) : <GameContainer />}
     </div>
   )
 }

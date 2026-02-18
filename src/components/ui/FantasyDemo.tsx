@@ -3,11 +3,36 @@ import React from 'react';
 import { FantasyButton } from './FantasyButton';
 import { FantasyPanel } from './FantasyPanel';
 import { FantasyIcon } from './FantasyIcon';
+import framesImg from '../../assets/ui/fantasy/UI_Frames.png';
 
 const FantasyDemo: React.FC = () => {
     return (
         <div className="min-h-screen bg-slate-900 p-8 flex flex-col items-center gap-8 font-fantasy text-white">
-            <h1 className="text-4xl text-amber-400 drop-shadow-lg">Cute Fantasy UI Demo</h1>
+            <div className="flex flex-col gap-2 w-full max-w-4xl text-center">
+                <h1 className="text-4xl text-amber-400 drop-shadow-lg">Cute Fantasy UI Demo</h1>
+                {/* Debug: Check if image loads raw */}
+                <div className="bg-white/10 p-2 rounded">
+                    <p className="text-xs mb-1">Raw Image Check:</p>
+                    <img
+                        src={framesImg}
+                        alt="Debug Check"
+                        className="h-16 mx-auto border border-red-500"
+                        onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.style.display = 'none';
+                            target.parentElement!.innerHTML += '<span class="text-red-500 font-bold">❌ Image Failed to Load</span>';
+                        }}
+                    />
+                </div>
+                <FantasyButton
+                    label="Open Sprite Debugger"
+                    className="text-xs bg-slate-800 border border-slate-600"
+                    onClick={() => {
+                        window.location.hash = '#debug';
+                        window.location.reload(); // Simple reload to pick up hash change in App.tsx logic
+                    }}
+                />
+            </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 w-full max-w-4xl">
                 {/* Buttons Section */}

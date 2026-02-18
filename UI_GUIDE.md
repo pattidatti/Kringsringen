@@ -7,21 +7,28 @@ Denne guiden definerer retningslinjene for å opprettholde det "Avant-Garde" mid
 - **Glassmorphism**: Kombiner tunge tre-elementer med transparens (`backdrop-blur-xl` og `bg-white/[0.03]`) for å skape dybde.
 - **Lesbarhet over alt**: Bruk sterke skygger og kontrastrike farger (Gull for viktige ting, Blodrødt for død) mot mørk bakgrunn.
 
-## 1. Sprite-koordinater (Best Practice)
-Alle UI-elementer i `medieval-ui.css` er basert på koordinater fra `assets/sprites/ui/MediavelFree.png`.
+## 1. Sprite-koordinater (Cute_Fantasy_UI)
+Alle UI-elementer i det nye systemet hentes fra `public/assets/ui/fantasy/`.
 
-> [!IMPORTANT]
-> **Premium Panel System**: 
-> For komplekse UI-elementer som HUD, bruk `.m-panel-medieval`. Dette gir en glass-bakgrunn (`backdrop-blur-xl`) bak spritene for å sikre 100% lesbarhet mot en travel spillbakgrunn.
+### FantasyPanel (9-Slice Grid)
+Vi bruker et 3x3 grid system for å unngå bleeding. Koordinater er hentet fra `UI_Frames.png`.
 
+| Variant | X | Y | W | H | Slice |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **Wood** | 10 | 10 | 28 | 31 | 10 |
+| **Paper** | 58 | 10 | 28 | 31 | 10 |
+| **Stone** | 106 | 10 | 28 | 31 | 10 |
+| **Gold** | 154 | 10 | 28 | 31 | 10 |
+| **Obsidian** | 202 | 10 | 28 | 31 | 10 |
+
+> [!NOTE]
+> Bruk `/fantasy-debug` routen i appen for å finne koordinater for nye elementer.
+
+### Gamle Assets (Deprecated)
+Tabellen under gjelder kun det gamle systemet som fases ut.
 | Element | Klasse | Bruk |
 | :--- | :--- | :--- |
 | **Hengende Skilt** | `.m-sign-hanging` | Hovedmenyer, Store overskrifter |
-| **Bredt Skilt (HUD)** | `.m-sign-wide` | HUD Header (`-272px -88px`) |
-| **Lite Treskilt** | `.m-sign-small` | Knapper, Valgkort |
-| **Sverd-ikon** | `.m-icon-sword` | Kamp-stats, Styrke-oppgraderinger |
-| **Pluss-ikon** | `.m-icon-plus-small` | Helse, Generelle bonuser |
-| **Progress-bar** | `.m-progress-container` | Helse og XP-målere |
 
 ## 2. Typografi & Farger
 Vi bruker en hierarkisk tilnærming til tekst:

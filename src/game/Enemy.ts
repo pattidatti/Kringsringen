@@ -188,7 +188,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         const width = 40;
         const height = 5;
         const x = this.x - width / 2;
-        const y = this.y - (this.height / 2 * this.scaleX) - 10;
+        const y = this.y - (this.height / 2 * this.scaleX) - 5;
 
         this.hpBar.fillStyle(0x000000, 0.5);
         this.hpBar.fillRect(x, y, width, height);

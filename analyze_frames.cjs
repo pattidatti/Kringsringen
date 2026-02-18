@@ -49,10 +49,11 @@ async function analyze(filePath) {
             }
         }
 
-        console.log('Detected Frames (w > 10, h > 10):');
-        console.log('Detected Frames (w > 40, h > 40):');
-        rects.filter(r => r.w > 40 && r.h > 40).forEach((r, i) => {
-            console.log(`Frame ${i}: { x: ${r.x}, y: ${r.y}, w: ${r.w}, h: ${r.h}, slice: 16 }, // center: ${r.x + r.w / 2}, ${r.y + r.h / 2}`);
+        console.log(`Found ${rects.length} frames.`);
+        rects.forEach((r, i) => {
+            if (r.w > 20 && r.h > 20) {
+                console.log(`Frame ${i}: { x: ${r.x}, y: ${r.y}, w: ${r.w}, h: ${r.h} }`);
+            }
         });
 
     } catch (err) {
