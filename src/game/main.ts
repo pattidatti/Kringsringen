@@ -1,13 +1,16 @@
 import Phaser from 'phaser';
 import { Enemy } from './Enemy';
 import { XPGem } from './XPGem';
-import { MapGenerator } from './MapGenerator';
-import { FantasyMapGenerator } from './FantasyMapGenerator';
+import { CircularForestMapGenerator } from './CircularForestMapGenerator';
 import { FantasyAssetManifest } from './FantasyAssetManifest';
+import { Arrow } from './Arrow';
+import { Coin } from './Coin';
+
 
 class MainScene extends Phaser.Scene {
     public enemies!: Phaser.Physics.Arcade.Group;
     private gems!: Phaser.Physics.Arcade.Group;
+    private coins!: Phaser.Physics.Arcade.Group;
     public obstacles!: Phaser.Physics.Arcade.StaticGroup;
     private attackHitbox!: Phaser.Types.Physics.Arcade.ImageWithDynamicBody;
     private wasd!: {
@@ -16,6 +19,24 @@ class MainScene extends Phaser.Scene {
         S: Phaser.Input.Keyboard.Key;
         D: Phaser.Input.Keyboard.Key;
     };
+    private hotkeys!: {
+        [key: string]: Phaser.Input.Keyboard.Key;
+    };
+
+    private arrows!: Phaser.Physics.Arcade.Group;
+    private currentLevel: number = 1;
+    private currentWave: number = 1;
+    private enemiesToSpawn: number = 0;
+    private enemiesAlive: number = 0;
+    private isLevelActive: boolean = false;
+
+    private readonly LEVEL_CONFIG = [
+        { waves: 2, enemiesPerWave: 6, multiplier: 1.0 },   // Level 1
+        { waves: 3, enemiesPerWave: 8, multiplier: 1.2 },   // Level 2
+        { waves: 3, enemiesPerWave: 12, multiplier: 1.5 },  // Level 3
+        { waves: 4, enemiesPerWave: 15, multiplier: 2.0 },  // Level 4
+        { waves: 5, enemiesPerWave: 20, multiplier: 3.0 }   // Level 5+
+    ];
 
     // Player Stats
     private playerDamage!: number;
@@ -34,6 +55,8 @@ class MainScene extends Phaser.Scene {
         this.load.spritesheet('player-idle', 'assets/sprites/soldier/Soldier-Idle.png', { frameWidth: 100, frameHeight: 100 });
         this.load.spritesheet('player-walk', 'assets/sprites/soldier/Soldier-Walk.png', { frameWidth: 100, frameHeight: 100 });
         this.load.spritesheet('player-attack', 'assets/sprites/soldier/Soldier-Attack01.png', { frameWidth: 100, frameHeight: 100 });
+        this.load.spritesheet('player-full', 'assets/sprites/soldier/Soldier.png', { frameWidth: 100, frameHeight: 100 });
+        this.load.image('arrow', 'assets/sprites/projectile/arrow.png');
 
         this.load.spritesheet('orc-idle', 'assets/sprites/orc/Orc-Idle.png', { frameWidth: 100, frameHeight: 100 });
         this.load.spritesheet('orc-walk', 'assets/sprites/orc/Orc-Walk.png', { frameWidth: 100, frameHeight: 100 });
@@ -82,6 +105,8 @@ class MainScene extends Phaser.Scene {
         this.registry.set('playerXP', 0);
         this.registry.set('playerMaxXP', 100);
         this.registry.set('playerLevel', 1);
+        this.registry.set('playerCoins', 0);
+        this.registry.set('currentWeapon', 'sword');
 
         // Create Gem Texture (Small Diamond)
         const graphics = this.add.graphics();
@@ -94,6 +119,14 @@ class MainScene extends Phaser.Scene {
         graphics.closePath();
         graphics.fillPath();
         graphics.generateTexture('xp-gem', 10, 10);
+
+        // Create Coin Texture (Yellow Circle)
+        graphics.clear();
+        graphics.fillStyle(0xffcc00);
+        graphics.fillCircle(5, 5, 5);
+        graphics.lineStyle(1, 0x000000, 0.5);
+        graphics.strokeCircle(5, 5, 5);
+        graphics.generateTexture('coin', 10, 10);
         graphics.destroy();
 
         // Background: Map Generation with Variety
@@ -117,7 +150,7 @@ class MainScene extends Phaser.Scene {
         // mapGenerator.generateTestLevel();
 
         // FANTASY DEMO
-        const fantasyMap = new FantasyMapGenerator(this, this.obstacles, mapWidth, mapHeight);
+        const fantasyMap = new CircularForestMapGenerator(this, this.obstacles, mapWidth, mapHeight);
         fantasyMap.generate();
 
         this.setupAnimations();
@@ -151,6 +184,18 @@ class MainScene extends Phaser.Scene {
             runChildUpdate: true
         });
 
+        // Arrow Group
+        this.arrows = this.physics.add.group({
+            classType: Arrow,
+            runChildUpdate: true
+        });
+
+        // Coin Group
+        this.coins = this.physics.add.group({
+            classType: Coin,
+            runChildUpdate: true
+        });
+
         // Collisions
         this.physics.add.collider(player, this.enemies);
         this.physics.add.collider(this.enemies, this.enemies);
@@ -172,6 +217,14 @@ class MainScene extends Phaser.Scene {
             D: Phaser.Input.Keyboard.KeyCodes.D
         }) as any;
 
+        this.hotkeys = this.input.keyboard?.addKeys({
+            '1': Phaser.Input.Keyboard.KeyCodes.ONE,
+            '2': Phaser.Input.Keyboard.KeyCodes.TWO,
+            '3': Phaser.Input.Keyboard.KeyCodes.THREE,
+            '4': Phaser.Input.Keyboard.KeyCodes.FOUR,
+            '5': Phaser.Input.Keyboard.KeyCodes.FIVE
+        }) as any;
+
         this.input.mouse?.disableContextMenu();
 
         this.data.set('player', player);
@@ -179,19 +232,20 @@ class MainScene extends Phaser.Scene {
         this.data.set('isAttacking', false);
         this.data.set('isBlocking', false);
 
-        // Spawn timer
-        this.time.addEvent({
-            delay: 2000,
-            callback: this.spawnWave,
-            callbackScope: this,
-            loop: true
-        });
 
         // Listen for Upgrades
         this.events.off('apply-upgrade');
         this.events.on('apply-upgrade', (upgradeId: string) => {
             this.applyUpgrade(upgradeId);
         });
+
+        // Listen for Next Level
+        this.events.on('start-next-level', () => {
+            this.startLevel(this.currentLevel + 1);
+        });
+
+        // Initial Start
+        this.startLevel(1);
     }
 
     private setupAnimations() {
@@ -212,6 +266,13 @@ class MainScene extends Phaser.Scene {
         this.anims.create({
             key: 'player-attack',
             frames: this.anims.generateFrameNumbers('player-attack', { start: 0, end: 5 }),
+            frameRate: 15,
+            repeat: 0
+        });
+
+        this.anims.create({
+            key: 'player-bow',
+            frames: this.anims.generateFrameNumbers('player-full', { start: 36, end: 44 }),
             frameRate: 15,
             repeat: 0
         });
@@ -241,42 +302,114 @@ class MainScene extends Phaser.Scene {
         }
     }
 
-    private spawnWave() {
-        const { width, height } = this.scale;
-        const cam = this.cameras.main;
-        const side = Phaser.Math.Between(0, 3);
-        let x, y;
+    private startLevel(level: number) {
+        this.currentLevel = level;
+        this.currentWave = 1;
+        this.isLevelActive = true;
+        this.registry.set('gameLevel', this.currentLevel);
+        this.startWave();
+    }
 
-        switch (side) {
-            case 0: // Top
-                x = Phaser.Math.Between(cam.scrollX, cam.scrollX + width);
-                y = cam.scrollY - 50;
-                break;
-            case 1: // Right
-                x = cam.scrollX + width + 50;
-                y = Phaser.Math.Between(cam.scrollY, cam.scrollY + height);
-                break;
-            case 2: // Bottom
-                x = Phaser.Math.Between(cam.scrollX, cam.scrollX + width);
-                y = cam.scrollY + height + 50;
-                break;
-            default: // Left
-                x = cam.scrollX - 50;
-                y = Phaser.Math.Between(cam.scrollY, cam.scrollY + height);
-                break;
-        }
+    private startWave() {
+        const config = this.LEVEL_CONFIG[Math.min(this.currentLevel - 1, this.LEVEL_CONFIG.length - 1)];
+        this.enemiesToSpawn = config.enemiesPerWave;
+
+        // Sync to registry
+        this.registry.set('currentWave', this.currentWave);
+        this.registry.set('maxWaves', config.waves);
+
+        // Visual Announcement
+        const topText = this.add.text(this.cameras.main.centerX, this.cameras.main.centerY - 100, `LEVEL ${this.currentLevel} - WAVE ${this.currentWave}`, {
+            fontSize: '48px',
+            color: '#fbbf24',
+            fontStyle: 'bold',
+            stroke: '#000',
+            strokeThickness: 6
+        }).setOrigin(0.5).setScrollFactor(0);
+
+        this.tweens.add({
+            targets: topText,
+            alpha: { from: 1, to: 0 },
+            y: this.cameras.main.centerY - 150,
+            duration: 2000,
+            ease: 'Power2',
+            onComplete: () => topText.destroy()
+        });
+
+        // Start spawning
+        this.time.addEvent({
+            delay: 1500,
+            callback: this.spawnEnemyInWave,
+            callbackScope: this,
+            repeat: this.enemiesToSpawn - 1
+        });
+    }
+
+    private spawnEnemyInWave() {
+        if (!this.isLevelActive) return;
+
+        const mapWidth = 3000;
+        const mapHeight = 3000;
+        const centerX = mapWidth / 2;
+        const centerY = mapHeight / 2;
+        const radius = 800; // Match CircularForestMapGenerator clearingRadius
+
+        const angle = Math.random() * Math.PI * 2;
+        const x = centerX + Math.cos(angle) * radius;
+        const y = centerY + Math.sin(angle) * radius;
 
         const player = this.data.get('player') as Phaser.Physics.Arcade.Sprite;
-        const enemy = new Enemy(this, x, y, player);
+        const config = this.LEVEL_CONFIG[Math.min(this.currentLevel - 1, this.LEVEL_CONFIG.length - 1)];
+
+        const enemy = new Enemy(this, x, y, player, config.multiplier);
         this.enemies.add(enemy);
+        this.enemiesAlive++;
 
         enemy.on('dead', (ex: number, ey: number) => {
+            this.enemiesAlive--;
+            this.checkWaveProgress();
+
+            // Spawn XP Gem
             const gem = new XPGem(this, ex, ey, player);
             this.gems.add(gem);
             gem.on('collected', () => {
                 this.addXP(10);
             });
+
+            // Spawn Coins (1-5)
+            const coinCount = Phaser.Math.Between(1, 5);
+            for (let i = 0; i < coinCount; i++) {
+                const coin = new Coin(this, ex, ey, player);
+                this.coins.add(coin);
+                coin.on('collected', () => {
+                    this.addCoins(1);
+                });
+            }
         });
+    }
+
+    private checkWaveProgress() {
+        const config = this.LEVEL_CONFIG[Math.min(this.currentLevel - 1, this.LEVEL_CONFIG.length - 1)];
+
+        if (this.enemiesAlive === 0) {
+            if (this.currentWave < config.waves) {
+                this.currentWave++;
+                this.time.delayedCall(2000, () => this.startWave());
+            } else {
+                // Level Complete
+                this.isLevelActive = false;
+                this.time.delayedCall(1500, () => {
+                    this.events.emit('level-complete');
+                    this.scene.pause();
+                });
+            }
+        }
+    }
+
+    private addCoins(amount: number) {
+        let coins = this.registry.get('playerCoins') || 0;
+        coins += amount;
+        this.registry.set('playerCoins', coins);
     }
 
     private addXP(amount: number) {
@@ -433,6 +566,16 @@ class MainScene extends Phaser.Scene {
             return;
         }
 
+        // Handle Weapon Switching
+        if (this.hotkeys['1']?.isDown && this.registry.get('currentWeapon') !== 'sword') {
+            console.log('Switching to sword');
+            this.registry.set('currentWeapon', 'sword');
+        }
+        if (this.hotkeys['2']?.isDown && this.registry.get('currentWeapon') !== 'bow') {
+            console.log('Switching to bow');
+            this.registry.set('currentWeapon', 'bow');
+        }
+
         // Handle Orientation (Face Mouse)
         if (pointer.worldX > player.x) {
             player.setFlipX(false);
@@ -454,31 +597,50 @@ class MainScene extends Phaser.Scene {
         }
 
         // Update attack hitbox position based on mouse angle (360 degrees)
-        const angle = Phaser.Math.Angle.Between(player.x, player.y + 33, pointer.worldX, pointer.worldY);
-        const radius = 50; // Reach from feet center
+        const angle = Phaser.Math.Angle.Between(player.x, player.y, pointer.worldX, pointer.worldY);
+        const radius = 50; // Reach from body center
         this.attackHitbox.setPosition(
             player.x + Math.cos(angle) * radius,
-            player.y + 33 + Math.sin(angle) * radius
+            player.y + Math.sin(angle) * radius
         );
         this.attackHitbox.setRotation(angle);
 
         // Handle Attack (Left Click)
         if (pointer.leftButtonDown() && !blockPressed) {
+            const currentWeapon = this.registry.get('currentWeapon');
             this.data.set('isAttacking', true);
-            player.play('player-attack');
 
-            // Enable hitbox during middle of animation
-            this.time.delayedCall(this.playerAttackCooldown, () => {
-                this.attackHitbox.body!.setEnable(true);
-                this.time.delayedCall(100, () => {
-                    this.attackHitbox.body!.setEnable(false);
+            if (currentWeapon === 'sword') {
+                player.play('player-attack');
+
+                // Enable hitbox during middle of animation
+                this.time.delayedCall(this.playerAttackCooldown, () => {
+                    this.attackHitbox.body!.setEnable(true);
+                    this.time.delayedCall(100, () => {
+                        this.attackHitbox.body!.setEnable(false);
+                    });
                 });
-            });
 
-            player.once('animationcomplete-player-attack', () => {
-                this.data.set('isAttacking', false);
-                player.play('player-idle');
-            });
+                player.once('animationcomplete-player-attack', () => {
+                    this.data.set('isAttacking', false);
+                    player.play('player-idle');
+                });
+            } else if (currentWeapon === 'bow') {
+                player.play('player-bow');
+
+                // Spawn arrow during animation (frame 3-4 is usually the release)
+                this.time.delayedCall(250, () => {
+                    const arrow = this.arrows.get(player.x, player.y) as Arrow;
+                    if (arrow) {
+                        arrow.fire(player.x, player.y, angle, this.playerDamage * 0.8);
+                    }
+                });
+
+                player.once('animationcomplete-player-bow', () => {
+                    this.data.set('isAttacking', false);
+                    player.play('player-idle');
+                });
+            }
             return;
         }
 

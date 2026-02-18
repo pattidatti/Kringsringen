@@ -13,10 +13,16 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     public hasHit: boolean = false;
     public isOnDamageFrame: boolean = false;
     private isPushingBack: boolean = false;
+    private movementSpeed: number = 100;
 
-    constructor(scene: Phaser.Scene, x: number, y: number, target: Phaser.GameObjects.Components.Transform) {
+    constructor(scene: Phaser.Scene, x: number, y: number, target: Phaser.GameObjects.Components.Transform, multiplier: number = 1.0) {
         super(scene, x, y, 'orc-idle');
         this.target = target;
+
+        // Scale stats
+        this.maxHP = Math.floor(50 * multiplier);
+        this.hp = this.maxHP;
+        this.movementSpeed = 100 * (1 + (multiplier - 1) * 0.5); // Speed scales slower than HP
 
         scene.add.existing(this);
         scene.physics.add.existing(this);
@@ -58,7 +64,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
             this.setVelocity(0, 0);
         } else {
             // Smarter Pathing: Context Steering
-            const speed = 100;
+            const speed = this.movementSpeed;
             const numRays = 8;
             const rayLength = 80;
             const interests = new Array(numRays).fill(0);

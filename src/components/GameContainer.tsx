@@ -3,6 +3,9 @@ import { createGame } from '../game/main';
 import '../styles/medieval-ui.css';
 import { MedievalPanel } from './ui/MedievalPanel';
 import { MedievalButton } from './ui/MedievalButton';
+import { Hotbar } from './ui/Hotbar';
+import { CoinCounter } from './ui/CoinCounter';
+import { UpgradeShop } from './ui/UpgradeShop';
 
 type Upgrade = {
     id: string;
@@ -27,8 +30,14 @@ export const GameContainer = () => {
     const [xp, setXp] = useState(0);
     const [maxXp, setMaxXp] = useState(100);
     const [level, setLevel] = useState(1);
+    const [coins, setCoins] = useState(0);
+    const [currentWeapon, setCurrentWeapon] = useState('sword');
     const [isLeveling, setIsLeveling] = useState(false);
+    const [isShopping, setIsShopping] = useState(false);
     const [availableUpgrades, setAvailableUpgrades] = useState<Upgrade[]>([]);
+    const [stageLevel, setStageLevel] = useState(1);
+    const [wave, setWave] = useState(1);
+    const [maxWaves, setMaxWaves] = useState(1);
 
     useEffect(() => {
         if (gameContainerRef.current && !gameInstanceRef.current) {
@@ -42,6 +51,11 @@ export const GameContainer = () => {
                 setXp(game.registry.get('playerXP') ?? 0);
                 setMaxXp(game.registry.get('playerMaxXP') ?? 100);
                 setLevel(game.registry.get('playerLevel') ?? 1);
+                setCoins(game.registry.get('playerCoins') ?? 0);
+                setCurrentWeapon(game.registry.get('currentWeapon') ?? 'sword');
+                setStageLevel(game.registry.get('gameLevel') ?? 1);
+                setWave(game.registry.get('currentWave') ?? 1);
+                setMaxWaves(game.registry.get('maxWaves') ?? 1);
             };
 
             game.registry.events.on('changedata-playerHP', syncStats);
@@ -49,6 +63,11 @@ export const GameContainer = () => {
             game.registry.events.on('changedata-playerXP', syncStats);
             game.registry.events.on('changedata-playerMaxXP', syncStats);
             game.registry.events.on('changedata-playerLevel', syncStats);
+            game.registry.events.on('changedata-playerCoins', syncStats);
+            game.registry.events.on('changedata-currentWeapon', syncStats);
+            game.registry.events.on('changedata-gameLevel', syncStats);
+            game.registry.events.on('changedata-currentWave', syncStats);
+            game.registry.events.on('changedata-maxWaves', syncStats);
 
             // Handle Level Up - Need to wait for scene to be ready
             const setupSceneListeners = () => {
@@ -58,7 +77,12 @@ export const GameContainer = () => {
                         game.scene.pause('MainScene');
                         const shuffled = [...UPGRADES].sort(() => 0.5 - Math.random());
                         setAvailableUpgrades(shuffled.slice(0, 3));
+                        setAvailableUpgrades(shuffled.slice(0, 3));
                         setIsLeveling(true);
+                    });
+
+                    mainScene.events.on('level-complete', () => {
+                        setIsShopping(true);
                     });
                 } else {
                     // Try again in a bit if scene isn't ready yet
@@ -86,6 +110,26 @@ export const GameContainer = () => {
         setIsLeveling(false);
     };
 
+    const applyShopUpgrade = (upgradeId: string, cost: number) => {
+        if (!gameInstanceRef.current) return;
+        const mainScene = gameInstanceRef.current.scene.getScene('MainScene');
+
+        // Deduct coins in Phaser
+        const currentCoins = gameInstanceRef.current.registry.get('playerCoins') || 0;
+        gameInstanceRef.current.registry.set('playerCoins', currentCoins - cost);
+
+        // Apply stats in Phaser
+        mainScene.events.emit('apply-upgrade', upgradeId);
+    };
+
+    const handleContinue = () => {
+        if (!gameInstanceRef.current) return;
+        const mainScene = gameInstanceRef.current.scene.getScene('MainScene');
+        mainScene.events.emit('start-next-level');
+        gameInstanceRef.current.scene.resume('MainScene');
+        setIsShopping(false);
+    };
+
     const handleRestart = () => {
         if (!gameInstanceRef.current) {
             window.location.reload();
@@ -103,81 +147,115 @@ export const GameContainer = () => {
             setXp(0);
             setMaxXp(100);
             setLevel(1);
+            setCoins(0);
             setIsLeveling(false);
         } else {
             window.location.reload();
         }
     };
 
+    const selectWeapon = (weaponId: string) => {
+        if (gameInstanceRef.current) {
+            gameInstanceRef.current.registry.set('currentWeapon', weaponId);
+        }
+    };
+
     return (
         <div id="game-container" ref={gameContainerRef} className="w-full h-full relative overflow-hidden bg-slate-950 font-sans selection:bg-cyan-500/30">
             {/* UI Overlay */}
-            <div className={`absolute top-6 left-6 z-10 medieval-pixel transition-all duration-500 overflow-visible ${isLeveling || hp <= 0 ? 'blur-md grayscale opacity-50' : ''}`}>
-                <div className="relative group">
-                    {/* Premium Medieval Panel Background */}
-                    <div className="absolute inset-[-12px] m-panel-medieval rounded-sm -z-10" />
-
-                    {/* Header Wood Board (Wide Sign Corrected) */}
-                    <div className="relative mb-2">
-                        <div className="m-sign-wide m-scale-[4] origin-top-left drop-shadow-lg" />
-                        <div className="absolute inset-0 flex flex-col items-center justify-center -translate-y-1 pointer-events-none">
-                            <h1 className="m-text-hud m-text-gold text-base tracking-widest leading-none uppercase">
+            <div className={`absolute top-6 left-6 z-10 transition-all duration-500 ${isLeveling || hp <= 0 ? 'blur-md grayscale opacity-50' : ''}`}>
+                <MedievalPanel className="w-72 drop-shadow-[0_20px_20px_rgba(0,0,0,0.8)]">
+                    <div className="flex flex-col gap-6 w-full">
+                        {/* Header Section */}
+                        <div className="flex flex-col items-center gap-1 border-b border-amber-900/20 pb-4">
+                            <h1 className="m-text-hud m-text-gold text-2xl tracking-[0.2em] uppercase leading-tight">
                                 Kringsringen
                             </h1>
-                            <div className="m-text-stats font-bold text-[8px] mt-0.5 opacity-80 translate-y-0.5">
-                                NIVÅ {level}
+                            <div className="flex items-center gap-3">
+                                <div className="h-[1px] w-8 bg-gradient-to-r from-transparent to-amber-900/40" />
+                                <span className="m-text-stats font-bold text-xs tracking-[0.3em] opacity-80 decoration-amber-600/20 underline">
+                                    NIVÅ {level}
+                                </span>
+                                <div className="h-[1px] w-8 bg-gradient-to-l from-transparent to-amber-900/40" />
+                            </div>
+                        </div>
+
+                        {/* Stats Section */}
+                        <div className="space-y-6 px-2">
+                            {/* HP Bar */}
+                            <div className="group/stat flex flex-col gap-2">
+                                <div className="flex justify-between items-end px-1">
+                                    <span className="m-text-stats text-[9px] tracking-widest opacity-40 group-hover/stat:opacity-80 transition-opacity">Vitalitet</span>
+                                    <span className="m-text-stats text-[9px] font-black">{Math.ceil(hp)} / {maxHp}</span>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    <div className="m-icon-candle m-scale-2 drop-shadow-md" />
+                                    <div className="flex-1 h-4 bg-slate-950/40 rounded-sm overflow-hidden border border-amber-900/10 relative">
+                                        <div
+                                            className="h-full bg-gradient-to-r from-red-900 via-red-600 to-red-400 transition-all duration-300 shadow-[0_0_10px_rgba(239,68,68,0.3)]"
+                                            style={{ width: `${(hp / maxHp) * 100}%` }}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* XP Bar */}
+                            <div className="group/stat flex flex-col gap-2">
+                                <div className="flex justify-between items-end px-1">
+                                    <span className="m-text-stats text-[9px] tracking-widest opacity-40 group-hover/stat:opacity-80 transition-opacity">Erfaring</span>
+                                    <span className="m-text-stats text-[9px] font-black">{Math.floor((xp / maxXp) * 100)}%</span>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    <div className="m-icon-plus-small m-scale-2 drop-shadow-md brightness-150" />
+                                    <div className="flex-1 h-3 bg-slate-950/40 rounded-sm overflow-hidden border border-amber-900/10 relative mt-0.5">
+                                        <div
+                                            className="h-full bg-gradient-to-r from-sky-900 via-sky-500 to-sky-300 transition-all duration-700 shadow-[0_0_10px_rgba(14,165,233,0.3)]"
+                                            style={{ width: `${(xp / maxXp) * 100}%` }}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </MedievalPanel>
+            </div>
+
+            {/* Coin & Progress Header - Top Center */}
+            <div className={`absolute top-6 left-1/2 -translate-x-1/2 z-10 transition-all duration-500 flex flex-col items-center gap-2 ${isLeveling || isShopping || hp <= 0 ? 'blur-md grayscale opacity-50' : ''}`}>
+                <div className="flex flex-col items-center bg-slate-900/60 backdrop-blur-sm border border-amber-900/20 px-6 py-2 rounded-lg shadow-2xl">
+                    <div className="flex items-center gap-6">
+                        <div className="flex flex-col items-center">
+                            <span className="m-text-stats text-[10px] tracking-[0.3em] uppercase opacity-60">Level</span>
+                            <span className="m-text-gold text-2xl font-black">{stageLevel}</span>
+                        </div>
+
+                        <div className="w-[1px] h-8 bg-amber-900/30" />
+
+                        <div className="flex flex-col items-center min-w-[100px]">
+                            <span className="m-text-stats text-[10px] tracking-[0.3em] uppercase opacity-60">Fase</span>
+                            <div className="flex items-center gap-2">
+                                <span className="m-text-hud text-xl text-amber-100">{wave}</span>
+                                <span className="m-text-stats text-sm opacity-40">/</span>
+                                <span className="m-text-stats text-sm opacity-40">{maxWaves}</span>
                             </div>
                         </div>
                     </div>
 
-                    {/* Stats Container - Clean & Premium */}
-                    <div className="flex flex-col gap-4 py-2 px-1">
-                        {/* HP Bar */}
-                        <div className="flex items-center gap-4">
-                            <div className="m-icon-candle m-scale-2 drop-shadow-md" />
-                            <div className="m-progress-container m-scale-[2.8] origin-left">
-                                <div
-                                    className="m-progress-fill transition-all duration-300"
-                                    style={{ width: `${56 * Math.max(0, hp / maxHp)}px` }}
-                                />
-                            </div>
-                        </div>
-
-                        {/* XP Bar */}
-                        <div className="flex items-center gap-4">
-                            <div className="m-icon-plus-small m-scale-2 drop-shadow-md" />
-                            <div className="m-progress-container m-scale-[2.8] origin-left grayscale brightness-125 sepia">
-                                <div
-                                    className="m-progress-fill !bg-sky-600 transition-all duration-500"
-                                    style={{ width: `${56 * (xp / maxXp)}px` }}
-                                />
-                            </div>
-                        </div>
+                    {/* Wave Progress Micro-bar */}
+                    <div className="w-full h-1 bg-amber-900/10 rounded-full mt-2 overflow-hidden">
+                        <div
+                            className="h-full bg-amber-500/50 transition-all duration-500"
+                            style={{ width: `${(wave / maxWaves) * 100}%` }}
+                        />
                     </div>
                 </div>
+
+                <CoinCounter coins={coins} />
             </div>
 
             {/* UI Overlays */}
+            {/* UI Overlays */}
             <div className="absolute inset-0 z-[60] pointer-events-none">
-                {/* LOREM IPSUM DEBUG PANEL */}
-                {hp > 0 && (
-                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-auto">
-                        <MedievalPanel className="w-80 shadow-2xl scale-125">
-                            <div className="p-4 text-center">
-                                <h2 className="text-amber-900 font-serif font-bold text-lg mb-2">Trepanel Test</h2>
-                                <p className="text-[11px] text-amber-900/90 leading-tight font-sans">
-                                    Lorem ipsum dolor sit amet, consectetur adipiscing elit.
-                                    Dette panelet er bygget med 9 individuelle biter for
-                                    å sikre at tre-teksturen vises perfekt uten "bleeding"
-                                    fra andre sprites. Din saga fortsetter her!
-                                </p>
-                                <div className="mt-4 opacity-50 flex justify-center">
-                                    <MedievalButton label="Bare en test" onClick={() => { }} variant="secondary" />
-                                </div>
-                            </div>
-                        </MedievalPanel>
-                    </div>
-                )}
             </div>
 
             {/* Death Screen - Polished Pixel Art */}
@@ -251,6 +329,21 @@ export const GameContainer = () => {
                     </div>
                 </div>
             )}
+
+            {/* Shop Overlay */}
+            {isShopping && (
+                <UpgradeShop
+                    coins={coins}
+                    level={level}
+                    onApplyUpgrade={applyShopUpgrade}
+                    onContinue={handleContinue}
+                />
+            )}
+
+            {/* Hotbar - Bottom Center */}
+            <div className={`absolute bottom-6 left-1/2 -translate-x-1/2 z-50 medieval-pixel transition-all duration-500 ${isLeveling || hp <= 0 ? 'blur-md grayscale opacity-20' : ''}`}>
+                <Hotbar currentWeapon={currentWeapon} onSelectWeapon={selectWeapon} />
+            </div>
         </div>
     );
 };

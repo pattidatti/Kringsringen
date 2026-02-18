@@ -135,6 +135,25 @@
     background: var(--ui-sprite) -264px -72px no-repeat;
 }
 
+.m-icon-bow {
+    width: 64px;
+    height: 64px;
+    background: var(--ui-sprite) -344px -8px no-repeat;
+}
+
+.m-icon-coin {
+    width: 16px;
+    height: 16px;
+    background: var(--ui-sprite) -284px -24px no-repeat;
+    filter: sepia(1) saturate(100) hue-rotate(10deg) brightness(1.2);
+}
+
+.m-icon-sword-large {
+    width: 64px;
+    height: 64px;
+    background: var(--ui-sprite) -344px -88px no-repeat;
+}
+
 .m-icon-check-small {
     width: 16px;
     height: 16px;
@@ -175,16 +194,39 @@
     transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* 9-Slice Panel System (Mapping corners and sides) */
-.m-panel-medieval {
-    position: relative;
-    background: #5d3a2e;
-    /* Base wood color from sprite */
-    border: 8px solid transparent;
-    border-image: var(--ui-sprite) 104 104 152 152 slice;
-    /* Approximating slice from central part */
-    /* Wait, border-image is complex with sprites. Let's use a simpler 9-slice mapping if possible or just the sign */
+/* Robust 9-Slice Panel System (Direct Sprite Sheet Reference - Stretched) */
+.m-panel-9slice {
+    border: 24px solid transparent;
+    border-width: 24px 16px 24px 16px;
+    border-image-source: var(--ui-sprite);
+
+    /* 
+       Slices for Hanging Sign (0, 0, 64, 80) on 256x128 sheet
+       Top: 24 (chains)
+       Right: 256 - 48 = 208 (x=48 boundary)
+       Bottom: 128 - 56 = 72 (y=56 boundary)
+       Left: 16 (x=16 boundary)
+    */
+    border-image-slice: 24 208 72 16 fill;
+
+    border-image-repeat: stretch;
+    /* User: "Ikke repeter" */
+    image-rendering: pixelated;
+    filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.6));
 }
+
+.m-panel-content {
+    /* Offset content to clear the chains at the top */
+    padding: 0 10px 10px 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    box-sizing: border-box;
+    width: 100%;
+}
+
+
+
 
 /* Since 9-slice in CSS is tricky with a single sprite sheet, 
    I will use the "Large Board" if I can find it, or the hanging sign scaled up. */
@@ -196,6 +238,41 @@
 }
 
 /* Circular Wooden Buttons - 16x16 */
+.m-hotbar-slot {
+    width: 80px;
+    height: 80px;
+    background: var(--ui-sprite) -192px -8px no-repeat;
+    image-rendering: pixelated;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.m-hotbar-slot.active {
+    filter: drop-shadow(0 0 10px rgba(255, 204, 0, 0.5));
+    transform: scale(1.1) translateY(-10px);
+}
+
+.m-hotbar-slot.active::after {
+    content: '';
+    position: absolute;
+    inset: -4px;
+    background: var(--ui-sprite) -192px -96px no-repeat;
+    pointer-events: none;
+}
+
+.m-hotkey-label {
+    position: absolute;
+    bottom: 4px;
+    right: 8px;
+    font-family: 'Inter', sans-serif;
+    font-size: 10px;
+    color: rgba(255, 255, 255, 0.5);
+    font-weight: 800;
+}
+
 .m-btn {
     width: 16px;
     height: 16px;
@@ -237,6 +314,32 @@
 .m-btn-help {
     background-position-x: -144px;
 }
+
+/* Tactical Icons (Bottom Right) */
+.m-icon-house {
+    width: 16px;
+    height: 16px;
+    background: var(--ui-sprite) -128px -64px no-repeat;
+}
+
+.m-icon-settings {
+    width: 16px;
+    height: 16px;
+    background: var(--ui-sprite) -144px -72px no-repeat;
+}
+
+.m-icon-audio {
+    width: 16px;
+    height: 16px;
+    background: var(--ui-sprite) -168px -64px no-repeat;
+}
+
+.m-icon-mute {
+    width: 16px;
+    height: 16px;
+    background: var(--ui-sprite) -168px -72px no-repeat;
+}
+
 
 /* Wide Button (64x48) based on Sign Wide */
 .m-btn-wide {
