@@ -1,17 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FantasyButton } from './FantasyButton';
-import bookOpen from '../../assets/ui/fantasy/panels/book_open.png';
+import bookOpen from '../../assets/ui/fantasy/containers/book_open.png';
 // Using existing tabs for new purposes:
 // Red = Status
 // Yellow = Grimoire (Level Up)
 // Green = Merchant (Shop)
 // Blue = Bestiary (Compendium - Future)
-import tabRed from '../../assets/ui/fantasy/panels/tab_red.png';
-import tabYellow from '../../assets/ui/fantasy/panels/tab_yellow.png';
-import tabGreen from '../../assets/ui/fantasy/panels/tab_green.png';
+import tabRed from '../../assets/ui/fantasy/tabs/red.png';
+import tabYellow from '../../assets/ui/fantasy/tabs/yellow.png';
+import tabGreen from '../../assets/ui/fantasy/tabs/green.png';
 import { UPGRADES, type UpgradeConfig } from '../../config/upgrades';
 import { useGameRegistry } from '../../hooks/useGameRegistry';
+// import { type FantasyTabVariant } from '../../types/fantasy-ui.generated';
 
 export type BookMode = 'view' | 'level_up' | 'shop';
 
@@ -32,6 +33,13 @@ interface FantasyBookProps {
 }
 
 type TabKey = 'status' | 'grimoire' | 'merchant';
+
+// Map logical tabs to visual assets
+// const TAB_ASSETS: Record<TabKey, FantasyTabVariant> = {
+//     status: 'red',
+//     grimoire: 'yellow',
+//     merchant: 'green'
+// };
 
 const TABS: Record<TabKey, { title: string; icon: string; color: string; locked?: boolean }> = {
     status: { title: 'Status', icon: tabRed, color: 'text-red-900' },

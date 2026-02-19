@@ -326,7 +326,7 @@ class MainScene extends Phaser.Scene {
         // New Enemy Animations
         this.anims.create({
             key: 'slime-walk',
-            frames: this.anims.generateFrameNumbers('slime', { start: 0, end: 7 }), // Row 0 is likely the correct walk cycle
+            frames: this.anims.generateFrameNumbers('slime', { start: 0, end: 5 }), // User confirmed: 6 frames (0-5)
             frameRate: 12,
             repeat: -1
         });

@@ -1,32 +1,28 @@
 import React from 'react';
 import { twMerge } from 'tailwind-merge';
 
-// Import extracted assets directly
-import panelWood from '../../assets/ui/fantasy/panels/panel_wood.png';
-import panelPaper from '../../assets/ui/fantasy/panels/panel_paper.png';
-import panelStone from '../../assets/ui/fantasy/panels/panel_stone.png';
-import panelGold from '../../assets/ui/fantasy/panels/panel_gold.png';
-import panelObsidian from '../../assets/ui/fantasy/panels/panel_obsidian.png';
+import { FANTASY_UI_CONFIG, type FantasyPanelVariant } from '../../types/fantasy-ui.generated';
 
-export type FantasyPanelVariant = 'wood' | 'paper' | 'stone' | 'gold' | 'obsidian';
+// Import extracted assets directly
+// Note: In a larger app, we might want to lazy load these or use a dynamic import map,
+// but for standard UI elements, direct imports ensure they are bundled.
+import panelWood from '../../assets/ui/fantasy/panels/wood.png';
+import panelPaper from '../../assets/ui/fantasy/panels/paper.png';
+import panelStone from '../../assets/ui/fantasy/panels/stone.png';
+import panelGold from '../../assets/ui/fantasy/panels/gold.png';
+import panelObsidian from '../../assets/ui/fantasy/panels/obsidian.png';
 
 // Slice config per variant (extracted images are smaller now, but slice logic is same relative to edges)
 // The extracted images are 28x31 (based on wood).
 // The slice values need to match the new image dimensions.
 // Wood was 10,10 top/left.
+
 const PANEL_ASSETS: Record<FantasyPanelVariant, string> = {
     wood: panelWood,
     paper: panelPaper,
     stone: panelStone,
     gold: panelGold,
     obsidian: panelObsidian,
-};
-
-const SLICE_CONFIG = {
-    top: 10,
-    right: 10,
-    bottom: 10,
-    left: 10
 };
 
 interface FantasyPanelProps extends React.HTMLAttributes<HTMLDivElement> {
@@ -51,6 +47,9 @@ export const FantasyPanel: React.FC<FantasyPanelProps> = ({
 }) => {
     const bgImage = PANEL_ASSETS[variant] || PANEL_ASSETS.wood;
 
+    // Get slice config from generated atlas or default to 10
+    const slice = (FANTASY_UI_CONFIG.panels as any)[variant] || { top: 10, right: 10, bottom: 10, left: 10 };
+
     return (
         <div
             className={twMerge(
@@ -59,10 +58,10 @@ export const FantasyPanel: React.FC<FantasyPanelProps> = ({
             )}
             style={{
                 borderStyle: 'solid',
-                borderWidth: `${SLICE_CONFIG.top * scale}px`,
+                borderWidth: `${slice.top * scale}px`,
                 borderImageSource: `url(${bgImage})`,
-                borderImageSlice: `${SLICE_CONFIG.top} ${SLICE_CONFIG.right} ${SLICE_CONFIG.bottom} ${SLICE_CONFIG.left} fill`,
-                borderImageWidth: `${SLICE_CONFIG.top * scale}px`,
+                borderImageSlice: `${slice.top} ${slice.right} ${slice.bottom} ${slice.left} fill`,
+                borderImageWidth: `${slice.top * scale}px`,
                 borderImageRepeat: 'stretch', // or 'round'
                 imageRendering: 'pixelated',
                 ...style,

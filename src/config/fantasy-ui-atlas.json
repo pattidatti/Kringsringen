@@ -1,0 +1,127 @@
+{
+    "meta": {
+        "version": "1.0",
+        "generated": false
+    },
+    "sources": {
+        "frames": "src/assets/ui/fantasy/UI_Frames.png",
+        "book": "src/assets/ui/fantasy/Book_UI.png",
+        "buttons": "src/assets/ui/fantasy/UI_Buttons.png"
+    },
+    "panels": {
+        "wood": {
+            "source": "frames",
+            "x": 10,
+            "y": 10,
+            "w": 28,
+            "h": 31,
+            "slice": {
+                "top": 10,
+                "right": 10,
+                "bottom": 10,
+                "left": 10
+            },
+            "fallback": "#5d3a2e"
+        },
+        "paper": {
+            "source": "frames",
+            "x": 58,
+            "y": 10,
+            "w": 28,
+            "h": 31,
+            "slice": {
+                "top": 10,
+                "right": 10,
+                "bottom": 10,
+                "left": 10
+            },
+            "fallback": "#e3dac9"
+        },
+        "stone": {
+            "source": "frames",
+            "x": 106,
+            "y": 10,
+            "w": 28,
+            "h": 31,
+            "slice": {
+                "top": 10,
+                "right": 10,
+                "bottom": 10,
+                "left": 10
+            },
+            "fallback": "#7c7c7c"
+        },
+        "gold": {
+            "source": "frames",
+            "x": 154,
+            "y": 10,
+            "w": 28,
+            "h": 31,
+            "slice": {
+                "top": 10,
+                "right": 10,
+                "bottom": 10,
+                "left": 10
+            },
+            "fallback": "#ffd700"
+        },
+        "obsidian": {
+            "source": "frames",
+            "x": 202,
+            "y": 10,
+            "w": 28,
+            "h": 31,
+            "slice": {
+                "top": 10,
+                "right": 10,
+                "bottom": 10,
+                "left": 10
+            },
+            "fallback": "#2c2c2c"
+        }
+    },
+    "containers": {
+        "book_open": {
+            "source": "book",
+            "x": 7,
+            "y": 5,
+            "w": 227,
+            "h": 134,
+            "fallback": "#3e2723"
+        }
+    },
+    "tabs": {
+        "red": {
+            "source": "book",
+            "x": 750,
+            "y": 80,
+            "w": 34,
+            "h": 18,
+            "fallback": "#ef4444"
+        },
+        "blue": {
+            "source": "book",
+            "x": 800,
+            "y": 80,
+            "w": 34,
+            "h": 18,
+            "fallback": "#3b82f6"
+        },
+        "green": {
+            "source": "book",
+            "x": 850,
+            "y": 80,
+            "w": 34,
+            "h": 18,
+            "fallback": "#10b981"
+        },
+        "yellow": {
+            "source": "book",
+            "x": 900,
+            "y": 80,
+            "w": 34,
+            "h": 18,
+            "fallback": "#f59e0b"
+        }
+    }
+}
