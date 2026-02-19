@@ -8,6 +8,7 @@ import { Coin } from './Coin';
 import { UPGRADES } from '../config/upgrades';
 import { SaveManager } from './SaveManager';
 import { ObjectPoolManager } from './ObjectPoolManager';
+import { GAME_CONFIG } from '../config/GameConfig';
 
 
 class MainScene extends Phaser.Scene {
@@ -42,15 +43,15 @@ class MainScene extends Phaser.Scene {
     ];
 
     // Player Base Stats
-    private baseDamage: number = 20;
-    private baseSpeed: number = 250;
-    private baseMaxHP: number = 100;
-    private baseCooldown: number = 500;
-    private baseKnockback: number = 400;
+    private baseDamage: number = GAME_CONFIG.PLAYER.BASE_DAMAGE;
+    private baseSpeed: number = GAME_CONFIG.PLAYER.BASE_SPEED;
+    private baseMaxHP: number = GAME_CONFIG.PLAYER.BASE_MAX_HP;
+    private baseCooldown: number = GAME_CONFIG.PLAYER.BASE_COOLDOWN;
+    private baseKnockback: number = GAME_CONFIG.PLAYER.BASE_KNOCKBACK;
     private baseRegen: number = 0;
     private baseArmor: number = 0;
-    private baseCritChance: number = 0.05;
-    private baseProjectiles: number = 1;
+    private baseCritChance: number = GAME_CONFIG.PLAYER.BASE_CRIT_CHANCE;
+    private baseProjectiles: number = GAME_CONFIG.PLAYER.BASE_PROJECTILES;
 
     // Current Stats (Calculated)
     private playerDamage!: number;
@@ -198,25 +199,28 @@ class MainScene extends Phaser.Scene {
         // Enemy Group
         this.enemies = this.physics.add.group({
             classType: Enemy,
-            runChildUpdate: false
+            runChildUpdate: true, // Auto-update for pooling
+            maxSize: 100 // Cap enemies to prevent lag
         });
 
         // Gem Group
         this.gems = this.physics.add.group({
             classType: XPGem,
-            runChildUpdate: false
+            runChildUpdate: true,
+            maxSize: 300
         });
 
         // Arrow Group
         this.arrows = this.physics.add.group({
             classType: Arrow,
-            runChildUpdate: false
+            runChildUpdate: false // Arrow handles its own update? No, Arrow has update() method.
         });
 
         // Coin Group
         this.coins = this.physics.add.group({
             classType: Coin,
-            runChildUpdate: false
+            runChildUpdate: true,
+            maxSize: 100
         });
 
         // Collisions
@@ -419,7 +423,7 @@ class MainScene extends Phaser.Scene {
 
         // Start spawning
         this.time.addEvent({
-            delay: 1500,
+            delay: GAME_CONFIG.WAVES.SPAWN_DELAY,
             callback: this.spawnEnemyInWave,
             callbackScope: this,
             repeat: this.enemiesToSpawn - 1
@@ -433,7 +437,7 @@ class MainScene extends Phaser.Scene {
         const mapHeight = 3000;
         const centerX = mapWidth / 2;
         const centerY = mapHeight / 2;
-        const radius = 800;
+        const radius = 800; // Could move to config?
 
         const angle = Math.random() * Math.PI * 2;
         const x = centerX + Math.cos(angle) * radius;
@@ -463,30 +467,53 @@ class MainScene extends Phaser.Scene {
         // Simple weighted random (prefer basic enemies)
         let type = Phaser.Utils.Array.GetRandom(allowedTypes);
 
-        // Spawn
-        const enemy = new Enemy(this, x, y, player, config.multiplier, type);
-        this.enemies.add(enemy);
+        // Spawn using Pool
+        let enemy = this.enemies.get(x, y) as Enemy;
+        if (!enemy) return; // Pool full
+
+        // Reset/Spawn Logic
+        enemy.reset(x, y, player, config.multiplier, type);
+
+        // Count alive
+        // Note: enemiesAlive tracking is now tricky if we rely on 'new'. 
+        // We should increment here.
         this.enemiesAlive++;
+
+        // Clear previous listeners to avoid stacking
+        enemy.removeAllListeners('dead');
 
         enemy.on('dead', (ex: number, ey: number) => {
             this.enemiesAlive--;
             this.checkWaveProgress();
 
-            // Spawn XP Gem
-            const gem = new XPGem(this, ex, ey, player);
-            this.gems.add(gem);
-            gem.on('collected', () => {
-                this.addXP(10);
-            });
+            // Spawn XP Gem (Pooled)
+            const gem = this.gems.get(ex, ey) as XPGem;
+            if (gem) {
+                gem.spawn(ex, ey);
+                gem.removeAllListeners('collected');
+                gem.on('collected', () => {
+                    // XP Value should ideally come from enemy config, but we'll use flat 10 or lookup
+                    // For now, let's look up the XP value if possible, or default
+                    // We can access 'enemy.config.xpValue' but enemy is dead/disabled.
+                    // We'll trust XPGem to be generic for now, or pass value to spawn.
+                    // Implementation Plan didn't specify dynamic XP. Keeping explicit '10' or improving?
+                    // Let's use GameConfig 'baseXP' from 'orc' as default or improve XPGem later.
+                    // For now, keep logical behavior same:
+                    this.addXP(10);
+                });
+            }
 
-            // Spawn Coins (1-5)
+            // Spawn Coins (1-5) (Pooled)
             const coinCount = Phaser.Math.Between(1, 5);
             for (let i = 0; i < coinCount; i++) {
-                const coin = new Coin(this, ex, ey, player);
-                this.coins.add(coin);
-                coin.on('collected', () => {
-                    this.addCoins(1);
-                });
+                const coin = this.coins.get(ex, ey) as Coin;
+                if (coin) {
+                    coin.spawn(ex, ey);
+                    coin.removeAllListeners('collected');
+                    coin.on('collected', () => {
+                        this.addCoins(1);
+                    });
+                }
             }
         });
     }
@@ -497,7 +524,7 @@ class MainScene extends Phaser.Scene {
         if (this.enemiesAlive === 0) {
             if (this.currentWave < config.waves) {
                 this.currentWave++;
-                this.time.delayedCall(2000, () => this.startWave());
+                this.time.delayedCall(GAME_CONFIG.WAVES.WAVE_DELAY, () => this.startWave());
             } else {
                 // Level Complete
                 this.isLevelActive = false;
@@ -509,7 +536,7 @@ class MainScene extends Phaser.Scene {
                     SaveManager.save({ highStage: currentStage + 1 });
                 }
 
-                this.time.delayedCall(1500, () => {
+                this.time.delayedCall(GAME_CONFIG.WAVES.LEVEL_COMPLETE_DELAY, () => {
                     this.events.emit('level-complete');
                     this.scene.pause();
                 });

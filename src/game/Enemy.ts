@@ -1,8 +1,9 @@
 import Phaser from 'phaser';
 import { ENEMY_TYPES, type EnemyConfig } from '../config/enemies';
+import { GAME_CONFIG, type EnemyType } from '../config/GameConfig';
 
 export class Enemy extends Phaser.Physics.Arcade.Sprite {
-    private target: Phaser.GameObjects.Components.Transform;
+    private targetStart: Phaser.GameObjects.Components.Transform; // Renamed to avoid confusion with internal target
     public hp: number = 50;
     private maxHP: number = 50;
     private hpBar: Phaser.GameObjects.Graphics;
@@ -15,75 +16,98 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     public isOnDamageFrame: boolean = false;
     private isPushingBack: boolean = false;
     private movementSpeed: number = 100;
+    private enemyType: string = 'orc';
     private config: EnemyConfig;
 
     public get damage(): number {
-        return this.config.baseDamage;
+        return this.config.baseDamage; // Will be updated in reset
     }
 
     constructor(scene: Phaser.Scene, x: number, y: number, target: Phaser.GameObjects.Components.Transform, multiplier: number = 1.0, type: string = 'orc') {
-        const config = ENEMY_TYPES[type] || ENEMY_TYPES['orc'];
+        super(scene, x, y, 'orc-idle'); // Default texture, will be set in reset
 
-        super(scene, x, y, config.spriteInfo.texture);
-        this.config = config;
-        this.target = target;
-
-        // Scale stats
-        this.maxHP = Math.floor(config.baseHP * multiplier);
-        this.hp = this.maxHP;
-        this.movementSpeed = config.baseSpeed * (1 + (multiplier - 1) * 0.2);
+        // Temporary init to satisfy TS, real init happens in reset() or if created via new (legacy support)
+        this.targetStart = target;
+        this.config = ENEMY_TYPES['orc'];
 
         scene.add.existing(this);
         scene.physics.add.existing(this);
-
-        this.setScale(config.scale);
-        this.setCollideWorldBounds(true);
-        this.setBodySize(config.bodySize.width, config.bodySize.height, true);
-
-        const offsetY = (this.height * 0.5) - (config.bodySize.height * 0.5);
-        this.setOffset(this.body!.offset.x, offsetY + 10);
-
-        // Animation Handling
-        if (config.spriteInfo.type === 'spritesheet' && config.spriteInfo.anims) {
-            this.play(config.spriteInfo.anims.walk);
-        } else {
-            this.scene.tweens.add({
-                targets: this,
-                scaleY: config.scale * 0.9,
-                scaleX: config.scale * 1.1,
-                duration: 500,
-                yoyo: true,
-                repeat: -1,
-                ease: 'Sine.easeInOut'
-            });
-        }
-
         this.hpBar = scene.add.graphics();
-        this.updateHPBar();
 
-        if (config.spriteInfo.anims?.attack) {
-            this.on(`animationstart-${config.spriteInfo.anims.attack}`, () => {
-                this.hasHit = false;
-            });
+        // If called with new(), we should initialize. If pooled, reset() will be called.
+        // For now, we assume this might be called directly or via pool.
+        // Best practice for Phaser pooling: Constructor does minimal setup, Spawn/Reset does logic.
 
-            this.on(`animationcomplete-${config.spriteInfo.anims.attack}`, () => {
-                this.isAttacking = false;
-                if (!this.isDead && config.spriteInfo.anims?.walk) {
-                    this.play(config.spriteInfo.anims.walk);
-                }
-            });
+        this.reset(x, y, target, multiplier, type);
+    }
+
+    public reset(x: number, y: number, target: Phaser.GameObjects.Components.Transform, multiplier: number = 1.0, type: string = 'orc') {
+        this.setActive(true);
+        this.setVisible(true);
+        this.body!.enable = true;
+        this.setPosition(x, y);
+        this.setAlpha(1);
+        this.setTint(0xffffff);
+        this.clearTint();
+        this.setRotation(0);
+
+        this.targetStart = target;
+        this.enemyType = type;
+        this.config = ENEMY_TYPES[type] || ENEMY_TYPES['orc'];
+
+        // Get Balance Config from GameConfig
+        const configKey = type.toUpperCase() as EnemyType;
+        const balanceStats = GAME_CONFIG.ENEMIES[configKey] || GAME_CONFIG.ENEMIES.ORC;
+
+        // Apply Stats
+        this.maxHP = Math.floor(balanceStats.baseHP * multiplier);
+        this.hp = this.maxHP;
+        this.movementSpeed = balanceStats.baseSpeed * (1 + (multiplier - 1) * 0.1); // Slightly less scaling on speed
+        this.attackRange = balanceStats.attackRange;
+        this.attackCooldown = balanceStats.attackCooldown;
+
+        // Physics & Scale
+        this.setScale(balanceStats.scale);
+        this.setBodySize(balanceStats.bodySize.width, balanceStats.bodySize.height, true);
+        const offsetY = (this.height * 0.5) - (balanceStats.bodySize.height * 0.5);
+        this.setOffset(this.body!.offset.x, offsetY + 10);
+        this.setDrag(0);
+
+        // State Flags
+        this.isDead = false;
+        this.isAttacking = false;
+        this.hasHit = false;
+        this.isPushingBack = false;
+        this.isOnDamageFrame = false;
+        this.lastAttackTime = 0;
+        this.lastAIUpdate = 0;
+
+        // Animation
+        this.setTexture(this.config.spriteInfo.texture);
+        if (this.config.spriteInfo.type === 'spritesheet' && this.config.spriteInfo.anims) {
+            this.play(this.config.spriteInfo.anims.walk);
         }
+
+        // Animation Listeners (Clean previous listeners to avoid duplicates if not careful, 
+        // but Phaser usually handles 'on' by adding. We should check if listener exists or just use internal flags)
+        // Better: Define one-time listeners in constructor, but their logic needs to check current state.
+
+        // Reset HP Bar
+        this.updateHPBar();
     }
 
     private lastAIUpdate: number = 0;
-    private readonly AI_UPDATE_INTERVAL: number = 100; // Run AI every 100ms
+    private readonly AI_UPDATE_INTERVAL: number = 100;
 
     preUpdate(time: number, delta: number) {
+        // Pooling Check
+        if (!this.active) return;
+
         super.preUpdate(time, delta);
         if (this.isDead || this.isPushingBack) return;
         if (!this.body) return;
 
-        const distance = Phaser.Math.Distance.Between(this.x, this.y, (this.target as any).x, (this.target as any).y);
+        const distance = Phaser.Math.Distance.Between(this.x, this.y, (this.targetStart as any).x, (this.targetStart as any).y);
         const hasAttackAnim = this.config.spriteInfo.type === 'spritesheet' && this.config.spriteInfo.anims?.attack;
 
         if (hasAttackAnim && distance < this.attackRange && time > this.lastAttackTime + this.attackCooldown) {
@@ -92,25 +116,39 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
             this.setVelocity(0, 0);
             if (this.config.spriteInfo.anims?.attack) {
                 this.play(this.config.spriteInfo.anims.attack);
+
+                // Attack animation completion handler
+                this.once(`animationcomplete-${this.config.spriteInfo.anims.attack}`, () => {
+                    if (this.active) {
+                        this.isAttacking = false;
+                        if (!this.isDead && this.config.spriteInfo.anims?.walk) {
+                            this.play(this.config.spriteInfo.anims.walk);
+                        }
+                    }
+                });
+
+                // Attack start handler
+                this.once(`animationstart-${this.config.spriteInfo.anims.attack}`, () => {
+                    this.hasHit = false;
+                });
             }
         }
 
         if (this.isAttacking) {
             this.setVelocity(0, 0);
         } else {
-            // Throttled AI Update
+            // Throttled AI
             if (time > this.lastAIUpdate + this.AI_UPDATE_INTERVAL) {
                 this.lastAIUpdate = time;
                 this.updateAIPathing();
             }
 
-            // Allow flipX to update every frame for visual responsiveness
             if (this.body.velocity.x !== 0) {
                 this.setFlipX(this.body.velocity.x < 0);
             }
         }
 
-        // Damage Frame
+        // Damage Frame Logic
         if (this.isAttacking && hasAttackAnim && this.anims.currentAnim?.key === this.config.spriteInfo.anims?.attack) {
             this.isOnDamageFrame = this.anims.currentFrame?.index === 3;
         } else {
@@ -121,26 +159,27 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     }
 
     private updateAIPathing() {
-        // Smarter Pathing: Context Steering
+        if (!this.active) return;
         const speed = this.movementSpeed;
         const numRays = 8;
         const rayLength = 80;
         const interests = new Array(numRays).fill(0);
         const dangers = new Array(numRays).fill(0);
 
-        const targetAngle = Phaser.Math.Angle.Between(this.x, this.y, (this.target as any).x, (this.target as any).y);
+        const targetAngle = Phaser.Math.Angle.Between(this.x, this.y, (this.targetStart as any).x, (this.targetStart as any).y);
 
-        // 1. Interest
+        // Interest
         for (let i = 0; i < numRays; i++) {
             const angle = (i / numRays) * Math.PI * 2;
             let dot = Math.cos(angle - targetAngle);
             interests[i] = Math.max(0, dot);
         }
 
-        // 2. Danger (Obstacles)
+        // Dangers (Obstacles)
         const obstacles = (this.scene as any).obstacles as Phaser.Physics.Arcade.StaticGroup;
         if (obstacles) {
             obstacles.getChildren().forEach((obs: any) => {
+                if (!obs.active) return;
                 const dist = Phaser.Math.Distance.Between(this.x, this.y, obs.x, obs.y);
                 if (dist < rayLength) {
                     const ang = Phaser.Math.Angle.Between(this.x, this.y, obs.x, obs.y);
@@ -155,11 +194,11 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
             });
         }
 
-        // 3. Separation
+        // Separation
         const enemies = (this.scene as any).enemies as Phaser.Physics.Arcade.Group;
         if (enemies) {
             enemies.getChildren().forEach((enemy: any) => {
-                if (enemy === this) return;
+                if (enemy === this || !enemy.active) return;
                 const dist = Phaser.Math.Distance.Between(this.x, this.y, enemy.x, enemy.y);
                 if (dist < 40) {
                     const ang = Phaser.Math.Angle.Between(this.x, this.y, enemy.x, enemy.y);
@@ -174,7 +213,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
             });
         }
 
-        // 4. Direction
+        // Direction
         let bestDir = -1;
         let maxScore = -1;
 
@@ -197,7 +236,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 
     private updateHPBar() {
         this.hpBar.clear();
-        if (this.isDead) return;
+        if (this.isDead || !this.active) return;
 
         const width = 40;
         const height = 5;
@@ -213,13 +252,14 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     }
 
     takeDamage(amount: number) {
-        if (this.isDead) return;
+        if (this.isDead || !this.active) return;
 
         this.hp -= amount;
         this.setTint(0xff0000);
-        this.scene.time.delayedCall(100, () => this.clearTint());
+        this.scene.time.delayedCall(100, () => {
+            if (this.active && !this.isDead) this.clearTint();
+        });
 
-        // Use Object Pool for Damage Text
         if ((this.scene as any).poolManager) {
             (this.scene as any).poolManager.getDamageText(this.x, this.y - 30, amount);
         }
@@ -232,10 +272,9 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     private die() {
         this.isDead = true;
         this.setDrag(1000);
-        this.hpBar.destroy();
+        this.hpBar.clear();
         this.setTint(0x444444);
 
-        // Use Object Pool for Blood
         if ((this.scene as any).poolManager) {
             (this.scene as any).poolManager.spawnBloodEffect(this.x, this.y);
         }
@@ -246,18 +285,27 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
             alpha: 0,
             duration: 500,
             onComplete: () => {
-                this.destroy();
+                this.disable();
             }
         });
     }
 
+    private disable() {
+        this.setActive(false);
+        this.setVisible(false);
+        if (this.body) this.body.enable = false;
+        // Do not destroy, keep in pool
+    }
+
     public pushback(sourceX: number, sourceY: number, force: number = 400) {
-        // Calculate Resistance
-        const resistance = this.config.knockbackResistance || 0;
-        // Reduce force by resistance
+        if (!this.active || this.isDead) return;
+
+        const balanceStats = GAME_CONFIG.ENEMIES[this.enemyType.toUpperCase() as EnemyType];
+        const resistance = balanceStats ? balanceStats.knockbackResistance : 0;
+
         const netForce = Math.max(0, force * (1 - resistance));
 
-        if (netForce < 10) return; // Immune to small forces
+        if (netForce < 10) return;
 
         this.isPushingBack = true;
         this.isAttacking = false;
