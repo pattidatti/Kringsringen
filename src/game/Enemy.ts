@@ -75,6 +75,9 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         }
     }
 
+    private lastAIUpdate: number = 0;
+    private readonly AI_UPDATE_INTERVAL: number = 100; // Run AI every 100ms
+
     preUpdate(time: number, delta: number) {
         super.preUpdate(time, delta);
         if (this.isDead || this.isPushingBack) return;
@@ -95,80 +98,16 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         if (this.isAttacking) {
             this.setVelocity(0, 0);
         } else {
-            // Smarter Pathing: Context Steering
-            const speed = this.movementSpeed;
-            const numRays = 8;
-            const rayLength = 80;
-            const interests = new Array(numRays).fill(0);
-            const dangers = new Array(numRays).fill(0);
-
-            const targetAngle = Phaser.Math.Angle.Between(this.x, this.y, (this.target as any).x, (this.target as any).y);
-
-            // 1. Interest
-            for (let i = 0; i < numRays; i++) {
-                const angle = (i / numRays) * Math.PI * 2;
-                let dot = Math.cos(angle - targetAngle);
-                interests[i] = Math.max(0, dot);
+            // Throttled AI Update
+            if (time > this.lastAIUpdate + this.AI_UPDATE_INTERVAL) {
+                this.lastAIUpdate = time;
+                this.updateAIPathing();
             }
 
-            // 2. Danger (Obstacles)
-            const obstacles = (this.scene as any).obstacles as Phaser.Physics.Arcade.StaticGroup;
-            if (obstacles) {
-                obstacles.getChildren().forEach((obs: any) => {
-                    const dist = Phaser.Math.Distance.Between(this.x, this.y, obs.x, obs.y);
-                    if (dist < rayLength) {
-                        const ang = Phaser.Math.Angle.Between(this.x, this.y, obs.x, obs.y);
-                        for (let i = 0; i < numRays; i++) {
-                            const rayAngle = (i / numRays) * Math.PI * 2;
-                            let dot = Math.cos(rayAngle - ang);
-                            if (dot > 0.7) {
-                                dangers[i] = Math.max(dangers[i], dot * (1 - dist / rayLength));
-                            }
-                        }
-                    }
-                });
+            // Allow flipX to update every frame for visual responsiveness
+            if (this.body.velocity.x !== 0) {
+                this.setFlipX(this.body.velocity.x < 0);
             }
-
-            // 3. Separation
-            const enemies = (this.scene as any).enemies as Phaser.Physics.Arcade.Group;
-            if (enemies) {
-                enemies.getChildren().forEach((enemy: any) => {
-                    if (enemy === this) return;
-                    const dist = Phaser.Math.Distance.Between(this.x, this.y, enemy.x, enemy.y);
-                    if (dist < 40) {
-                        const ang = Phaser.Math.Angle.Between(this.x, this.y, enemy.x, enemy.y);
-                        for (let i = 0; i < numRays; i++) {
-                            const rayAngle = (i / numRays) * Math.PI * 2;
-                            let dot = Math.cos(rayAngle - ang);
-                            if (dot > 0.5) {
-                                dangers[i] = Math.max(dangers[i], dot * 0.5);
-                            }
-                        }
-                    }
-                });
-            }
-
-            // 4. Direction
-            let bestDir = -1;
-            let maxScore = -1;
-
-            for (let i = 0; i < numRays; i++) {
-                const score = interests[i] - dangers[i];
-                if (score > maxScore) {
-                    maxScore = score;
-                    bestDir = i;
-                }
-            }
-
-            if (bestDir !== -1) {
-                const moveAngle = (bestDir / numRays) * Math.PI * 2;
-                this.setVelocity(
-                    Math.cos(moveAngle) * speed,
-                    Math.sin(moveAngle) * speed
-                );
-            }
-
-            this.setFlipX(this.body!.velocity.x < 0);
         }
 
         // Damage Frame
@@ -179,6 +118,81 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         }
 
         this.updateHPBar();
+    }
+
+    private updateAIPathing() {
+        // Smarter Pathing: Context Steering
+        const speed = this.movementSpeed;
+        const numRays = 8;
+        const rayLength = 80;
+        const interests = new Array(numRays).fill(0);
+        const dangers = new Array(numRays).fill(0);
+
+        const targetAngle = Phaser.Math.Angle.Between(this.x, this.y, (this.target as any).x, (this.target as any).y);
+
+        // 1. Interest
+        for (let i = 0; i < numRays; i++) {
+            const angle = (i / numRays) * Math.PI * 2;
+            let dot = Math.cos(angle - targetAngle);
+            interests[i] = Math.max(0, dot);
+        }
+
+        // 2. Danger (Obstacles)
+        const obstacles = (this.scene as any).obstacles as Phaser.Physics.Arcade.StaticGroup;
+        if (obstacles) {
+            obstacles.getChildren().forEach((obs: any) => {
+                const dist = Phaser.Math.Distance.Between(this.x, this.y, obs.x, obs.y);
+                if (dist < rayLength) {
+                    const ang = Phaser.Math.Angle.Between(this.x, this.y, obs.x, obs.y);
+                    for (let i = 0; i < numRays; i++) {
+                        const rayAngle = (i / numRays) * Math.PI * 2;
+                        let dot = Math.cos(rayAngle - ang);
+                        if (dot > 0.7) {
+                            dangers[i] = Math.max(dangers[i], dot * (1 - dist / rayLength));
+                        }
+                    }
+                }
+            });
+        }
+
+        // 3. Separation
+        const enemies = (this.scene as any).enemies as Phaser.Physics.Arcade.Group;
+        if (enemies) {
+            enemies.getChildren().forEach((enemy: any) => {
+                if (enemy === this) return;
+                const dist = Phaser.Math.Distance.Between(this.x, this.y, enemy.x, enemy.y);
+                if (dist < 40) {
+                    const ang = Phaser.Math.Angle.Between(this.x, this.y, enemy.x, enemy.y);
+                    for (let i = 0; i < numRays; i++) {
+                        const rayAngle = (i / numRays) * Math.PI * 2;
+                        let dot = Math.cos(rayAngle - ang);
+                        if (dot > 0.5) {
+                            dangers[i] = Math.max(dangers[i], dot * 0.5);
+                        }
+                    }
+                }
+            });
+        }
+
+        // 4. Direction
+        let bestDir = -1;
+        let maxScore = -1;
+
+        for (let i = 0; i < numRays; i++) {
+            const score = interests[i] - dangers[i];
+            if (score > maxScore) {
+                maxScore = score;
+                bestDir = i;
+            }
+        }
+
+        if (bestDir !== -1) {
+            const moveAngle = (bestDir / numRays) * Math.PI * 2;
+            this.setVelocity(
+                Math.cos(moveAngle) * speed,
+                Math.sin(moveAngle) * speed
+            );
+        }
     }
 
     private updateHPBar() {
@@ -205,23 +219,10 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         this.setTint(0xff0000);
         this.scene.time.delayedCall(100, () => this.clearTint());
 
-        const damageText = this.scene.add.text(this.x, this.y - 30, `${Math.round(amount)}`, {
-            fontSize: '20px',
-            color: '#ffffff',
-            fontStyle: 'bold',
-            stroke: '#000000',
-            strokeThickness: 3
-        }).setOrigin(0.5);
-        damageText.setDepth(2000);
-
-        this.scene.tweens.add({
-            targets: damageText,
-            y: this.y - 80,
-            alpha: 0,
-            duration: 600,
-            ease: 'Cubic.out',
-            onComplete: () => damageText.destroy()
-        });
+        // Use Object Pool for Damage Text
+        if ((this.scene as any).poolManager) {
+            (this.scene as any).poolManager.getDamageText(this.x, this.y - 30, amount);
+        }
 
         if (this.hp <= 0) {
             this.die();
@@ -234,11 +235,10 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         this.hpBar.destroy();
         this.setTint(0x444444);
 
-        const bloodKey = `blood_${Phaser.Math.Between(1, 5)}`;
-        const blood = this.scene.add.sprite(this.x, this.y, bloodKey);
-        blood.setScale(1.5);
-        blood.play(bloodKey);
-        blood.on('animationcomplete', () => blood.destroy());
+        // Use Object Pool for Blood
+        if ((this.scene as any).poolManager) {
+            (this.scene as any).poolManager.spawnBloodEffect(this.x, this.y);
+        }
 
         this.emit('dead', this.x, this.y);
         this.scene.tweens.add({

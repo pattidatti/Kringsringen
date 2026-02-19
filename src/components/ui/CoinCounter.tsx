@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useGameRegistry } from '../../hooks/useGameRegistry';
 
-export const CoinCounter = () => {
+export const CoinCounter = React.memo(() => {
     const coins = useGameRegistry('playerCoins', 0);
     const [displayCoins, setDisplayCoins] = useState(coins);
 
@@ -33,4 +33,4 @@ export const CoinCounter = () => {
             </div>
         </div>
     );
-};
+});

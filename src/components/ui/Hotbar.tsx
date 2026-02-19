@@ -2,7 +2,7 @@ import React from 'react';
 import { useGameRegistry } from '../../hooks/useGameRegistry';
 import { getGameInstance } from '../../hooks/useGameRegistry';
 
-export const Hotbar: React.FC = () => {
+export const Hotbar: React.FC = React.memo(() => {
     const currentWeapon = useGameRegistry('currentWeapon', 'sword');
 
     const handleSelectWeapon = (weaponId: string) => {
@@ -36,4 +36,4 @@ export const Hotbar: React.FC = () => {
             ))}
         </div>
     );
-};
+});

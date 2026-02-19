@@ -4,7 +4,7 @@ import { FantasyProgressBar } from './FantasyProgressBar';
 import { FantasyIcon } from './FantasyIcon';
 import { useGameRegistry } from '../../hooks/useGameRegistry';
 
-export const PlayerHUD: React.FC = () => {
+export const PlayerHUD: React.FC = React.memo(() => {
     const hp = useGameRegistry('playerHP', 100);
     const maxHp = useGameRegistry('playerMaxHP', 100);
     const xp = useGameRegistry('playerXP', 0);
@@ -67,4 +67,4 @@ export const PlayerHUD: React.FC = () => {
             {/* Optional: Add active buffs or other small indicators below */}
         </div>
     );
-};
+});

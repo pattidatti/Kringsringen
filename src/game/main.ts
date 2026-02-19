@@ -7,6 +7,7 @@ import { Arrow } from './Arrow';
 import { Coin } from './Coin';
 import { UPGRADES } from '../config/upgrades';
 import { SaveManager } from './SaveManager';
+import { ObjectPoolManager } from './ObjectPoolManager';
 
 
 class MainScene extends Phaser.Scene {
@@ -57,6 +58,8 @@ class MainScene extends Phaser.Scene {
     private playerMaxHP!: number;
     private playerCooldown!: number;
     private playerKnockback!: number;
+
+    public poolManager!: ObjectPoolManager;
 
     private isInvincible: boolean = false;
     private isKnockedBack: boolean = false;
@@ -134,6 +137,9 @@ class MainScene extends Phaser.Scene {
         // Calculate Initial Stats
         this.recalculateStats();
 
+        // Initialize Object Pool
+        this.poolManager = new ObjectPoolManager(this);
+
         // Create Gem Texture (Small Diamond)
         const graphics = this.add.graphics();
         graphics.fillStyle(0xffffff);
@@ -192,25 +198,25 @@ class MainScene extends Phaser.Scene {
         // Enemy Group
         this.enemies = this.physics.add.group({
             classType: Enemy,
-            runChildUpdate: true
+            runChildUpdate: false
         });
 
         // Gem Group
         this.gems = this.physics.add.group({
             classType: XPGem,
-            runChildUpdate: true
+            runChildUpdate: false
         });
 
         // Arrow Group
         this.arrows = this.physics.add.group({
             classType: Arrow,
-            runChildUpdate: true
+            runChildUpdate: false
         });
 
         // Coin Group
         this.coins = this.physics.add.group({
             classType: Coin,
-            runChildUpdate: true
+            runChildUpdate: false
         });
 
         // Collisions
@@ -223,6 +229,15 @@ class MainScene extends Phaser.Scene {
             const e = enemy as Enemy;
             e.takeDamage(this.playerDamage);
             e.pushback(player.x, player.y, this.playerKnockback);
+        });
+
+        // Player Hit Logic (Overlap instead of manual check)
+        this.physics.add.overlap(player, this.enemies, (_player, enemy) => {
+            const e = enemy as Enemy;
+            if (e.active && e.isOnDamageFrame && !e.hasHit) {
+                e.hasHit = true;
+                this.takePlayerDamage(e.damage, e);
+            }
         });
 
         const cursors = this.input.keyboard?.createCursorKeys();
@@ -640,32 +655,11 @@ class MainScene extends Phaser.Scene {
         // Screen Shake
         this.cameras.main.shake(150, 0.005);
 
-        // Visual Impact (Blood)
-        const bloodKey = `blood_${Phaser.Math.Between(1, 5)}`;
-        const blood = this.add.sprite(player.x, player.y, bloodKey);
-        blood.setScale(1.5);
-        blood.setDepth(player.depth + 1);
-        blood.play(bloodKey);
-        blood.on('animationcomplete', () => blood.destroy());
+        // Visual Impact (Blood) - Pooled
+        this.poolManager.spawnBloodEffect(player.x, player.y);
 
-        // Damage Number
-        const damageText = this.add.text(player.x, player.y - 40, `-${Math.round(actualDamage)}`, {
-            fontSize: '24px',
-            color: '#ff0000',
-            fontStyle: 'bold',
-            stroke: '#000',
-            strokeThickness: 4
-        }).setOrigin(0.5);
-        damageText.setDepth(2000);
-
-        this.tweens.add({
-            targets: damageText,
-            y: player.y - 100,
-            alpha: 0,
-            duration: 800,
-            ease: 'Power2',
-            onComplete: () => damageText.destroy()
-        });
+        // Damage Number - Pooled
+        this.poolManager.getDamageText(player.x, player.y - 40, actualDamage);
 
         if (!isBlocking) {
             // Knockback
@@ -835,21 +829,7 @@ class MainScene extends Phaser.Scene {
 
         player.setVelocity(vx, vy);
 
-        // Enemy Damage Detection (Distance-based to work with colliders)
-        this.enemies.getChildren().forEach((enemy) => {
-            const e = enemy as Enemy;
-            if (e.active && e.isOnDamageFrame && !e.hasHit) {
-                // Calculate distance between "feet" where collision happens
-                const playerFeetY = player.y + 33;
-                const enemyFeetY = e.y + 33;
-                const dist = Phaser.Math.Distance.Between(player.x, playerFeetY, e.x, enemyFeetY);
-
-                if (dist < 75) { // Reach of the orc/enemy attack
-                    e.hasHit = true;
-                    this.takePlayerDamage(e.damage, e);
-                }
-            }
-        });
+        // Enemy Damage Detection MOVED TO PHYSICS OVERLAP
 
         if (vx !== 0 || vy !== 0) {
             if (player.anims.currentAnim?.key !== 'player-walk') {
