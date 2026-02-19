@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { createGame } from '../game/main';
 import '../styles/medieval-ui.css';
-import { MedievalPanel } from './ui/MedievalPanel';
-import { MedievalButton } from './ui/MedievalButton';
+import { GameOverOverlay } from './ui/GameOverOverlay';
 import { Hotbar } from './ui/Hotbar';
 import { CoinCounter } from './ui/CoinCounter';
 import { PlayerHUD } from './ui/PlayerHUD';
@@ -23,10 +22,7 @@ export const GameContainer = () => {
     const [isBookOpen, setIsBookOpen] = useState(false);
     const [bookMode, setBookMode] = useState<BookMode>('view');
 
-    // Subscribe to critical events for layout changes (e.g. Death Screen)
-    // We use the hook here just for the Death Screen condition
-    const hp = useGameRegistry('playerHP', 100);
-    const currentWeapon = useGameRegistry('currentWeapon', 'sword');
+    // Stats for Header (Infrequent updates)
     const stageLevel = useGameRegistry('gameLevel', 1);
     const wave = useGameRegistry('currentWave', 1);
     const maxWaves = useGameRegistry('maxWaves', 1);
@@ -136,31 +132,6 @@ export const GameContainer = () => {
         });
     }, []);
 
-    const handleRestart = useCallback(() => {
-        if (!gameInstanceRef.current) {
-            window.location.reload();
-            return;
-        }
-
-        const mainScene = gameInstanceRef.current.scene.getScene('MainScene');
-        if (mainScene) {
-            // Restart the Phaser scene
-            mainScene.scene.restart();
-
-            // Explicitly update registry to default values if needed, 
-            // though restarting scene usually resets registry if configured so.
-            // For safety, reload page as it's cleaner for now
-            window.location.reload();
-        } else {
-            window.location.reload();
-        }
-    }, []);
-
-    const selectWeapon = useCallback((weaponId: string) => {
-        if (gameInstanceRef.current) {
-            gameInstanceRef.current.registry.set('currentWeapon', weaponId);
-        }
-    }, []);
 
     const handleBookClose = useCallback(() => {
         if (bookMode === 'level_up') return; // Cannot close while leveling
@@ -184,12 +155,12 @@ export const GameContainer = () => {
     return (
         <div id="game-container" ref={gameContainerRef} className="w-full h-full relative overflow-hidden bg-slate-950 font-sans selection:bg-cyan-500/30">
             {/* UI Overlay */}
-            <div className={`absolute top-6 left-6 z-10 transition-all duration-500 origin-top-left ${isLeveling || hp <= 0 ? 'blur-md grayscale opacity-50' : ''}`}>
+            <div className={`absolute top-6 left-6 z-10 transition-all duration-500 origin-top-left ${isLeveling ? 'blur-md grayscale opacity-50' : ''}`}>
                 <PlayerHUD />
             </div>
 
             {/* Coin & Progress Header - Top Center */}
-            <div className={`absolute top-6 left-1/2 -translate-x-1/2 z-10 transition-all duration-500 flex flex-col items-center gap-2 ${isLeveling || isShopping || hp <= 0 ? 'blur-md grayscale opacity-50' : ''}`}>
+            <div className={`absolute top-6 left-1/2 -translate-x-1/2 z-10 transition-all duration-500 flex flex-col items-center gap-2 ${isLeveling || isShopping ? 'blur-md grayscale opacity-50' : ''}`}>
                 <div className="flex flex-col items-center bg-slate-900/60 backdrop-blur-sm border border-amber-900/20 px-6 py-2 rounded-lg shadow-2xl">
                     <div className="flex items-center gap-6">
                         <div className="flex flex-col items-center">
@@ -235,44 +206,13 @@ export const GameContainer = () => {
                 </div>
             </div>
 
-            {/* Death Screen - Polished Pixel Art */}
-            {hp <= 0 && (
-                <div className="absolute inset-0 z-[100] flex items-center justify-center bg-slate-950/90 animate-in fade-in duration-1000 medieval-pixel overflow-hidden">
-                    <div className="m-vignette" />
-
-                    <div className="relative flex flex-col items-center scale-up-center gap-8 z-50">
-                        {/* Text Group */}
-                        <div className="text-center space-y-2 mb-4">
-                            <h2 className="m-text-blood text-6xl tracking-widest leading-none m-text-outline drop-shadow-xl animate-pulse">FALNET</h2>
-                            <p className="m-text-hud text-amber-500 text-sm tracking-widest uppercase opacity-80">Din saga ender her</p>
-                        </div>
-
-                        {/* New Component-Based Panel */}
-                        <MedievalPanel className="w-64 p-4 items-center gap-6 shadow-2xl drop-shadow-[0_10px_10px_rgba(0,0,0,0.8)] scale-150">
-                            <div className="flex flex-col items-center gap-2 text-center">
-                                <p className="text-[10px] text-amber-900/60 font-serif italic">
-                                    "Even the mightiest fall..."
-                                </p>
-                            </div>
-
-                            <div className="flex gap-4 mt-2">
-                                <MedievalButton
-                                    label="Prøv Igjen"
-                                    onClick={handleRestart}
-                                    variant="primary"
-                                    className="scale-125"
-                                />
-                            </div>
-                        </MedievalPanel>
-                    </div>
-                </div>
-            )}
+            {/* Game Over Overlay - Decoupled */}
+            <GameOverOverlay />
 
             {/* Hotbar - Bottom Center */}
-            <div className={`absolute bottom-6 left-1/2 -translate-x-1/2 z-50 medieval-pixel transition-all duration-500 ${isLeveling || hp <= 0 ? 'blur-md grayscale opacity-20' : ''}`}>
-                <Hotbar currentWeapon={currentWeapon} onSelectWeapon={selectWeapon} />
+            <div className={`absolute bottom-6 left-1/2 -translate-x-1/2 z-50 medieval-pixel transition-all duration-500 ${isLeveling ? 'blur-md grayscale opacity-20' : ''}`}>
+                <Hotbar />
             </div>
         </div>
     );
 };
-

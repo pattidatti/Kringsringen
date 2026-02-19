@@ -50,22 +50,24 @@ export class CircularForestMapGenerator {
             // If inside the clearing, skip
             if (dist < this.clearingRadius) continue;
 
+            const usePhysics = dist <= (this.clearingRadius + 100); // 100px buffer for physics
+
             // Higher probability of placing something near the edge to make it look dense
             const edgeBonus = Math.max(0, 1 - (dist - this.clearingRadius) / 400);
             const roll = Math.random();
 
             if (roll < 0.6 + (edgeBonus * 0.3)) {
                 const tree = trees[Phaser.Math.Between(0, trees.length - 1)];
-                this.placeAsset(x, y, tree);
+                this.placeAsset(x, y, tree, usePhysics);
 
                 // Occasional bush next to tree
                 if (Math.random() > 0.7) {
                     const bush = bushes[Phaser.Math.Between(0, bushes.length - 1)];
-                    this.placeAsset(x + 20, y + 20, bush);
+                    this.placeAsset(x + 20, y + 20, bush, usePhysics);
                 }
             } else if (roll < 0.9) {
                 const bush = bushes[Phaser.Math.Between(0, bushes.length - 1)];
-                this.placeAsset(x, y, bush);
+                this.placeAsset(x, y, bush, usePhysics);
             }
         }
     }
@@ -94,19 +96,25 @@ export class CircularForestMapGenerator {
         sprite.setDepth(depth);
     }
 
-    private placeAsset(x: number, y: number, asset: FantasyAsset) {
+    private placeAsset(x: number, y: number, asset: FantasyAsset, usePhysics: boolean) {
         if (!asset) return;
-        const sprite = this.obstacles.create(x, y, asset.id);
+
+        let sprite;
+        if (usePhysics) {
+            sprite = this.obstacles.create(x, y, asset.id);
+            // Round off body for better movement
+            if (sprite.body) {
+                sprite.refreshBody();
+            }
+        } else {
+            sprite = this.scene.add.image(x, y, asset.id);
+        }
+
         sprite.setScale(this.scale);
 
         // Depth sorting: baseline strategy
         const baselineY = y + (asset.height * this.scale) / 2;
         sprite.setDepth(baselineY);
-
-        // Round off body for better movement
-        if (sprite.body) {
-            sprite.refreshBody();
-        }
     }
 
     public getClearingRadius(): number {

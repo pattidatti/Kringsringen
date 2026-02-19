@@ -1,11 +1,17 @@
 import React from 'react';
+import { useGameRegistry } from '../../hooks/useGameRegistry';
+import { getGameInstance } from '../../hooks/useGameRegistry';
 
-interface HotbarProps {
-    currentWeapon: string;
-    onSelectWeapon: (weapon: string) => void;
-}
+export const Hotbar: React.FC = () => {
+    const currentWeapon = useGameRegistry('currentWeapon', 'sword');
 
-export const Hotbar: React.FC<HotbarProps> = ({ currentWeapon, onSelectWeapon }) => {
+    const handleSelectWeapon = (weaponId: string) => {
+        const game = getGameInstance();
+        if (game) {
+            game.registry.set('currentWeapon', weaponId);
+        }
+    };
+
     const slots = [
         { id: 'sword', icon: 'm-icon-sword-large', label: '1' },
         { id: 'bow', icon: 'm-icon-bow', label: '2' },
@@ -20,7 +26,7 @@ export const Hotbar: React.FC<HotbarProps> = ({ currentWeapon, onSelectWeapon })
                 <div
                     key={slot.id}
                     className={`m-hotbar-slot ${currentWeapon === slot.id ? 'active' : ''} cursor-pointer hover:brightness-110 active:scale-95 transition-all`}
-                    onClick={() => slot.icon && onSelectWeapon(slot.id)}
+                    onClick={() => slot.icon && handleSelectWeapon(slot.id)}
                 >
                     {slot.icon && (
                         <div className={`${slot.icon} m-scale-1 group-hover:scale-110 transition-transform`} />

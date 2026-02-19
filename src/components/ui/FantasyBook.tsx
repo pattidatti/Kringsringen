@@ -50,7 +50,7 @@ const StatRow = ({ label, value, icon }: { label: string, value: string | number
     </div>
 );
 
-export const FantasyBook: React.FC<FantasyBookProps> = ({
+export const FantasyBook: React.FC<FantasyBookProps> = React.memo(({
     isOpen,
     mode,
     onClose,
@@ -307,4 +307,4 @@ export const FantasyBook: React.FC<FantasyBookProps> = ({
             )}
         </AnimatePresence>
     );
-};
+});
