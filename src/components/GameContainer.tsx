@@ -20,15 +20,28 @@ export const GameContainer = () => {
     const [isBookOpen, setIsBookOpen] = useState(false);
     const [bookMode, setBookMode] = useState<BookMode>('view');
 
+    const isBookOpenRef = useRef(isBookOpen);
+    const bookModeRef = useRef(bookMode);
+
+    useEffect(() => {
+        isBookOpenRef.current = isBookOpen;
+    }, [isBookOpen]);
+
+    useEffect(() => {
+        bookModeRef.current = bookMode;
+    }, [bookMode]);
+
     // Robust Hotkey Listener for 'B' and 'Escape'
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             const key = e.key.toLowerCase();
+            const currentIsOpen = isBookOpenRef.current;
+            const currentMode = bookModeRef.current;
 
             // Toggle Book
             if (key === 'b') {
-                if (isBookOpen) {
-                    if (bookMode === 'view') {
+                if (currentIsOpen) {
+                    if (currentMode === 'view') {
                         setIsBookOpen(false);
                     }
                 } else {
@@ -39,7 +52,7 @@ export const GameContainer = () => {
 
             // Close with Escape
             if (key === 'escape') {
-                if (isBookOpen && bookMode === 'view') {
+                if (currentIsOpen && currentMode === 'view') {
                     setIsBookOpen(false);
                 }
             }
@@ -47,7 +60,7 @@ export const GameContainer = () => {
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [isBookOpen, bookMode]);
+    }, []); // Empty dependency array for stable listener
 
     useEffect(() => {
         if (gameContainerRef.current && !gameInstanceRef.current) {

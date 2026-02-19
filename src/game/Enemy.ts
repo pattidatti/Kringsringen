@@ -13,6 +13,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     private lastAttackTime: number = 0;
     private isAttacking: boolean = false;
     public hasHit: boolean = false;
+    private readonly DAMAGE_FRAME: number = 3; // Frame where damage occurs
     public isOnDamageFrame: boolean = false;
     private isPushingBack: boolean = false;
     private movementSpeed: number = 100;
@@ -115,6 +116,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
             this.lastAttackTime = time;
             this.setVelocity(0, 0);
             if (this.config.spriteInfo.anims?.attack) {
+                this.hasHit = false;
                 this.play(this.config.spriteInfo.anims.attack);
 
                 // Attack animation completion handler
@@ -148,11 +150,22 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
             }
         }
 
-        // Damage Frame Logic
+        // Damage Frame Logic (Decoupled from Physics)
         if (this.isAttacking && hasAttackAnim && this.anims.currentAnim?.key === this.config.spriteInfo.anims?.attack) {
-            this.isOnDamageFrame = this.anims.currentFrame?.index === 3;
-        } else {
-            this.isOnDamageFrame = !hasAttackAnim;
+            const currentFrameIndex = this.anims.currentFrame?.index || 0;
+
+            // Check for Damage Frame
+            if (currentFrameIndex === this.DAMAGE_FRAME && !this.hasHit) {
+                const target = this.targetStart as any;
+                if (target && target.active) {
+                    const distance = Phaser.Math.Distance.Between(this.x, this.y, target.x, target.y);
+                    // Allow slightly more range than attackRange to feel fair (the swing has reach)
+                    if (distance <= this.attackRange + 10) {
+                        this.hasHit = true;
+                        this.scene.events.emit('enemy-hit-player', this.damage, this.enemyType, this.x, this.y);
+                    }
+                }
+            }
         }
 
         this.updateHPBar();
@@ -194,14 +207,25 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
             });
         }
 
-        // Separation
-        const enemies = (this.scene as any).enemies as Phaser.Physics.Arcade.Group;
-        if (enemies) {
-            enemies.getChildren().forEach((enemy: any) => {
-                if (enemy === this || !enemy.active) return;
-                const dist = Phaser.Math.Distance.Between(this.x, this.y, enemy.x, enemy.y);
+        // Separation using Spatial Grid
+        const grid = (this.scene as any).spatialGrid; // Access grid from scene
+        if (grid) {
+            const neighbors = grid.findNearby({
+                x: this.x,
+                y: this.y,
+                width: this.body!.width,
+                height: this.body!.height
+            }, 50); // Look for neighbors within 50px
+
+            for (const neighbor of neighbors) {
+                // Approximate distance check since grid returns candidates
+
+                // Skip self check is hard without ID, but valid coordinates check works
+                if (Math.abs(neighbor.x - this.x) < 1 && Math.abs(neighbor.y - this.y) < 1) continue;
+
+                const dist = Phaser.Math.Distance.Between(this.x, this.y, neighbor.x, neighbor.y);
                 if (dist < 40) {
-                    const ang = Phaser.Math.Angle.Between(this.x, this.y, enemy.x, enemy.y);
+                    const ang = Phaser.Math.Angle.Between(this.x, this.y, neighbor.x, neighbor.y);
                     for (let i = 0; i < numRays; i++) {
                         const rayAngle = (i / numRays) * Math.PI * 2;
                         let dot = Math.cos(rayAngle - ang);
@@ -210,7 +234,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
                         }
                     }
                 }
-            });
+            }
         }
 
         // Direction

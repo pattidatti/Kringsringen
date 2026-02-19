@@ -20,14 +20,15 @@ export class XPGem extends Phaser.Physics.Arcade.Sprite {
         this.setScale(1.5);
         this.setTint(0x00ffff); // Cyan gem
 
-        this.spawn(x, y);
+        this.spawn(x, y, target);
     }
 
-    public spawn(x: number, y: number) {
+    public spawn(x: number, y: number, target: Phaser.GameObjects.Components.Transform) {
         this.setActive(true);
         this.setVisible(true);
         this.body!.enable = true;
         this.setPosition(x, y);
+        this.targetStart = target;
         this.isCollected = false;
         this.spawnTime = this.scene.time.now;
 
@@ -50,7 +51,7 @@ export class XPGem extends Phaser.Physics.Arcade.Sprite {
     preUpdate(time: number, delta: number) {
         if (!this.active) return;
         super.preUpdate(time, delta);
-        if (this.isCollected) return;
+        if (this.isCollected || !this.targetStart) return;
 
         // Lifetime
         if (time > this.spawnTime + this.lifespan) {

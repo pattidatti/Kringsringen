@@ -9,10 +9,12 @@ import { UPGRADES } from '../config/upgrades';
 import { SaveManager } from './SaveManager';
 import { ObjectPoolManager } from './ObjectPoolManager';
 import { GAME_CONFIG } from '../config/GameConfig';
+import { SpatialHashGrid } from './SpatialGrid';
 
 
 class MainScene extends Phaser.Scene {
     public enemies!: Phaser.Physics.Arcade.Group;
+    public spatialGrid!: SpatialHashGrid;
     private gems!: Phaser.Physics.Arcade.Group;
     private coins!: Phaser.Physics.Arcade.Group;
     public obstacles!: Phaser.Physics.Arcade.StaticGroup;
@@ -170,6 +172,9 @@ class MainScene extends Phaser.Scene {
         this.physics.world.setBounds(0, 0, mapWidth, mapHeight);
         this.cameras.main.setBounds(0, 0, mapWidth, mapHeight);
 
+        // Initialize Spatial Grid (Cell Size 150px)
+        this.spatialGrid = new SpatialHashGrid(150);
+
         // Initialize Obstacles
         this.obstacles = this.physics.add.staticGroup();
 
@@ -235,13 +240,10 @@ class MainScene extends Phaser.Scene {
             e.pushback(player.x, player.y, this.playerKnockback);
         });
 
-        // Player Hit Logic (Overlap instead of manual check)
-        this.physics.add.overlap(player, this.enemies, (_player, enemy) => {
-            const e = enemy as Enemy;
-            if (e.active && e.isOnDamageFrame && !e.hasHit) {
-                e.hasHit = true;
-                this.takePlayerDamage(e.damage, e);
-            }
+        // Player Hit Logic (Event-Driven)
+        // Player Hit Logic (Event-Driven)
+        this.events.on('enemy-hit-player', (damage: number, _type: string, x?: number, y?: number) => {
+            this.takePlayerDamage(damage, x, y);
         });
 
         const cursors = this.input.keyboard?.createCursorKeys();
@@ -486,10 +488,14 @@ class MainScene extends Phaser.Scene {
             this.enemiesAlive--;
             this.checkWaveProgress();
 
+            // Get player reference for drops
+            const player = this.data.get('player') as Phaser.Physics.Arcade.Sprite;
+            if (!player) return; // Should not happen, but safety check
+
             // Spawn XP Gem (Pooled)
             const gem = this.gems.get(ex, ey) as XPGem;
             if (gem) {
-                gem.spawn(ex, ey);
+                gem.spawn(ex, ey, player);
                 gem.removeAllListeners('collected');
                 gem.on('collected', () => {
                     // XP Value should ideally come from enemy config, but we'll use flat 10 or lookup
@@ -508,7 +514,7 @@ class MainScene extends Phaser.Scene {
             for (let i = 0; i < coinCount; i++) {
                 const coin = this.coins.get(ex, ey) as Coin;
                 if (coin) {
-                    coin.spawn(ex, ey);
+                    coin.spawn(ex, ey, player);
                     coin.removeAllListeners('collected');
                     coin.on('collected', () => {
                         this.addCoins(1);
@@ -662,7 +668,7 @@ class MainScene extends Phaser.Scene {
         });
     }
 
-    private takePlayerDamage(amount: number, source?: Phaser.GameObjects.Components.Transform) {
+    private takePlayerDamage(amount: number, srcX?: number, srcY?: number) {
         if (this.isInvincible) return;
 
         let hp = this.registry.get('playerHP');
@@ -690,9 +696,9 @@ class MainScene extends Phaser.Scene {
 
         if (!isBlocking) {
             // Knockback
-            if (source) {
+            if (srcX !== undefined && srcY !== undefined) {
                 this.isKnockedBack = true;
-                const angle = Phaser.Math.Angle.Between(source.x, source.y, player.x, player.y);
+                const angle = Phaser.Math.Angle.Between(srcX, srcY, player.x, player.y);
                 player.setVelocity(
                     Math.cos(angle) * this.playerKnockback, // Use calculated knockback
                     Math.sin(angle) * this.playerKnockback
@@ -738,18 +744,33 @@ class MainScene extends Phaser.Scene {
         const pointer = this.input.activePointer;
         let speed = this.playerSpeed; // Use calculated speed
 
+        // Update Spatial Grid
+        this.spatialGrid.clear();
+        this.enemies.children.iterate((enemy: any) => {
+            if (enemy.active && !enemy.isDead) { // Only add active enemies
+                // Assuming enemy is 40x40 roughly, or use body size
+                this.spatialGrid.insert({
+                    x: enemy.x,
+                    y: enemy.y,
+                    width: enemy.body?.width || 40,
+                    height: enemy.body?.height || 40,
+                    id: (enemy as any).id // Optional if we need to ID them
+                });
+            }
+            return true;
+        });
+
         if (isAttacking || this.isKnockedBack) {
             if (isAttacking) player.setVelocity(0, 0);
             return;
         }
 
         // Handle Weapon Switching
-        if (this.hotkeys['1']?.isDown && this.registry.get('currentWeapon') !== 'sword') {
-            console.log('Switching to sword');
+        const unlocked = this.registry.get('unlockedWeapons') || ['sword'];
+        if (this.hotkeys['1']?.isDown && this.registry.get('currentWeapon') !== 'sword' && unlocked.includes('sword')) {
             this.registry.set('currentWeapon', 'sword');
         }
-        if (this.hotkeys['2']?.isDown && this.registry.get('currentWeapon') !== 'bow') {
-            console.log('Switching to bow');
+        if (this.hotkeys['2']?.isDown && this.registry.get('currentWeapon') !== 'bow' && unlocked.includes('bow')) {
             this.registry.set('currentWeapon', 'bow');
         }
 

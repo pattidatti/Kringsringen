@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FantasyButton } from './FantasyButton';
+import { PerkCard } from './PerkCard';
 import bookOpen from '../../assets/ui/fantasy/containers/book_open.png';
 // Using existing tabs for new purposes:
 // Red = Status
@@ -66,6 +67,7 @@ export const FantasyBook: React.FC<FantasyBookProps> = React.memo(({
     actions
 }) => {
     const [activeTab, setActiveTab] = useState<TabKey>('status');
+    const [activeShopCategory, setActiveShopCategory] = useState<UpgradeConfig['category']>('Sverd');
 
     // Subscribe to Registry for Real-Time Updates
     const level = useGameRegistry('playerLevel', 1);
@@ -109,7 +111,7 @@ export const FantasyBook: React.FC<FantasyBookProps> = React.memo(({
     };
 
     const renderStatusPage = () => (
-        <div className="space-y-4 font-serif text-slate-800">
+        <div className="space-y-4 font-serif text-slate-800 animate-in fade-in duration-300">
             <div className="flex items-center gap-4 mb-4 border-b border-red-900/20 pb-2">
                 <div className="w-16 h-16 bg-slate-200 border-2 border-slate-400 rounded-full flex items-center justify-center overflow-hidden">
                     {/* Placeholder Portrait */}
@@ -142,10 +144,13 @@ export const FantasyBook: React.FC<FantasyBookProps> = React.memo(({
         </div>
     );
 
-    const renderGrimoirePage = () => {
+
+
+    // --- GRIMOIRE (LEVEL UP) LEFT PAGE: Hero's Growth ---
+    const renderGrimoireLeftPage = () => {
         if (mode !== 'level_up') {
             return (
-                <div className="flex flex-col items-center justify-center h-full text-center p-8 opacity-60">
+                <div className="flex flex-col items-center justify-center h-full text-center p-8 opacity-60 animate-in fade-in duration-500">
                     <div className="text-4xl mb-4 text-amber-900">🔒</div>
                     <p className="font-medieval text-xl text-amber-900">The pages are blank...</p>
                     <p className="text-sm italic mt-2">Gain experience to reveal new powers.</p>
@@ -154,30 +159,64 @@ export const FantasyBook: React.FC<FantasyBookProps> = React.memo(({
         }
 
         return (
-            <div className="flex flex-col h-full">
-                <p className="text-center italic text-amber-800/60 mb-4 text-sm">Choose your destiny...</p>
-                <div className="flex flex-col gap-2">
-                    {availablePerks.map((perk) => {
+            <div className="flex flex-col h-full items-center justify-center text-center animate-in fade-in duration-500 bg-amber-50/30 rounded-lg border border-amber-900/5 p-4 mx-2 my-4">
+                <div className="mb-2">
+                    <span className="text-6xl">✨</span>
+                </div>
+
+                <h2 className="font-medieval text-4xl text-amber-900 mb-1">Level {level}</h2>
+                <div className="w-16 h-1 bg-amber-900/20 rounded-full mb-4 mx-auto" />
+
+                <p className="font-serif italic text-amber-800/80 text-lg mb-6 leading-relaxed">
+                    "The cosmos aligns. <br />A new power awakens within you."
+                </p>
+
+                <div className="grid grid-cols-2 gap-2 text-xs text-amber-900/60 w-full max-w-[200px] text-left opacity-70">
+                    <div>HP: {Math.round(maxHp)}</div>
+                    <div>DMG: {Math.round(damage)}</div>
+                    <div>SPD: {speed}</div>
+                    <div>DEF: {armor}</div>
+                </div>
+            </div>
+        );
+    };
+
+    // --- GRIMOIRE (LEVEL UP) RIGHT PAGE: The Choice ---
+    const renderGrimoireRightPage = () => {
+        if (mode !== 'level_up') {
+            return (
+                <div className="flex flex-col items-center justify-center h-full p-8 opacity-40">
+                    <p className="font-medieval text-lg text-amber-900/50">Awaiting destiny...</p>
+                </div>
+            );
+        }
+
+        if (availablePerks.length === 0) {
+            return (
+                <div className="flex flex-col items-center justify-center h-full text-center p-8 animate-in fade-in">
+                    <div className="text-4xl mb-4">🏆</div>
+                    <h3 className="font-medieval text-2xl text-amber-900">Mastery Achieved</h3>
+                    <p className="italic text-amber-800/70 mt-2">You have learned all there is to know.</p>
+                </div>
+            );
+        }
+
+        return (
+            <div className="flex flex-col h-full justify-center">
+                <h3 className="font-medieval text-xl text-center text-amber-900 mb-4 opacity-80 border-b border-amber-900/10 pb-2">
+                    Choose Your Path
+                </h3>
+                <div className="flex flex-col gap-3 overflow-y-auto custom-scrollbar pr-1 -mr-1 pb-2">
+                    {availablePerks.map((perk, index) => {
                         const currentLvl = (upgradeLevels[perk.id] || 0) + 1;
                         return (
-                            <button
+                            <PerkCard
                                 key={perk.id}
+                                perk={perk}
+                                level={currentLvl}
                                 onClick={() => actions.onSelectPerk(perk.id)}
-                                className="group relative flex items-center gap-3 p-2 bg-amber-50 border border-amber-900/20 hover:bg-amber-100 hover:border-amber-600 hover:-translate-y-0.5 transition-all rounded text-left w-full shadow-sm"
-                            >
-                                <div className="p-1.5 bg-amber-200/50 rounded border border-amber-900/10 group-hover:bg-amber-300 shrink-0">
-                                    <div className={`${perk.icon} text-amber-900 text-lg`} />
-                                </div>
-                                <div className="flex-1 min-w-0 flex items-center justify-between gap-4">
-                                    <div className="min-w-0">
-                                        <h4 className="font-bold text-amber-900 font-medieval truncate text-sm">{perk.title} <span className="text-[10px] opacity-60 font-sans">Lvl {currentLvl}</span></h4>
-                                        <p className="text-[10px] text-amber-800 leading-tight mt-0.5 truncate opacity-80">{perk.description(currentLvl)}</p>
-                                    </div>
-                                    <div className="text-[10px] font-bold text-amber-700 bg-amber-200/50 px-2 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-                                        SELECT
-                                    </div>
-                                </div>
-                            </button>
+                                index={index}
+                            />
                         );
                     })}
                 </div>
@@ -185,59 +224,146 @@ export const FantasyBook: React.FC<FantasyBookProps> = React.memo(({
         );
     };
 
-    const renderMerchantPage = () => {
-        // Filter out "Magi" category for now as per config
-        const shopItems = UPGRADES.filter(u => u.category !== 'Magi');
+    // Keeping original function for reference/deletion but effectively replacing usage below
+    // const renderGrimoirePage = ... (Deleted)
+
+    // --- MERCHANT LEFTS PAGE: Categories ---
+    const renderMerchantCategories = () => {
+        const categories: { key: UpgradeConfig['category']; label: string; icon: string }[] = [
+            { key: 'Sverd', label: 'Sverd', icon: 'm-icon-sword' },
+            { key: 'Bue', label: 'Bue', icon: 'm-icon-bow' },
+            { key: 'Karakter', label: 'Karakter', icon: 'm-icon-plus-small' }, // Using plus as general character/vitality icon
+            { key: 'Magi', label: 'Magi', icon: 'm-icon-candle' },
+        ];
 
         return (
-            <div className="flex flex-col h-full">
-                <div className="flex justify-between items-center mb-4 pb-2 border-b border-emerald-900/20 sticky top-10 bg-[#e3dac9] z-10">
-                    <span className="font-medieval text-emerald-900 text-lg">Wares</span>
-                    <div className="flex items-center gap-1 font-bold text-amber-600 bg-amber-50 px-2 py-1 rounded border border-amber-200 shadow-sm">
-                        <span>{coins}</span>
-                        <div className="w-3 h-3 rounded-full bg-amber-400 border border-amber-600" />
+            <div className="flex flex-col h-full font-serif animate-in fade-in duration-300">
+                <div className="mb-6 text-center border-b border-emerald-900/20 pb-4">
+                    <div className="text-xs uppercase tracking-widest text-emerald-800/60 mb-1">Merchant's Purse</div>
+                    <div className="flex items-center justify-center gap-2 font-bold text-emerald-900 bg-emerald-50/50 py-2 rounded border border-emerald-900/10">
+                        <span className="text-xl">{coins}</span>
+                        <div className="w-4 h-4 rounded-full bg-amber-400 border border-amber-600 shadow-sm" />
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 gap-2 pb-10">
-                    {shopItems.map(item => {
-                        const lvl = upgradeLevels[item.id] || 0;
-                        const cost = Math.floor(item.basePrice * Math.pow(item.priceScale, lvl));
-                        const canAfford = coins >= cost;
-                        const isMaxed = lvl >= item.maxLevel;
-
-                        return (
-                            <div key={item.id} className="flex items-center justify-between p-2 bg-emerald-50/50 border border-emerald-900/10 rounded hover:bg-emerald-100/50 transition-colors">
-                                <div className="flex items-center gap-3 min-w-0">
-                                    <div className={`w-8 h-8 flex items-center justify-center bg-white rounded border border-emerald-900/20 shrink-0`}>
-                                        <div className={item.icon} />
-                                    </div>
-                                    <div className="min-w-0">
-                                        <div className="font-bold text-sm text-emerald-900 truncate">{item.title} <span className="text-[10px] opacity-60 ml-1">Lvl {lvl}</span></div>
-                                        <div className="text-[10px] text-emerald-800/60 truncate">{item.description(lvl + 1)}</div>
-                                    </div>
-                                </div>
-
-                                <div className="shrink-0 ml-2">
-                                    {isMaxed ? (
-                                        <span className="text-xs font-bold text-emerald-600 px-2 py-1 bg-emerald-100 rounded">MAX</span>
-                                    ) : (
-                                        <button
-                                            onClick={() => actions.onBuyUpgrade(item.id, cost)}
-                                            disabled={!canAfford}
-                                            className={`px-3 py-1 text-xs font-bold border rounded transition-all flex items-center gap-1 shadow-sm
-                                                ${canAfford
-                                                    ? 'bg-amber-400 border-amber-600 text-amber-900 hover:bg-amber-300 active:translate-y-0.5'
-                                                    : 'bg-slate-200 border-slate-300 text-slate-400 cursor-not-allowed'}
-                                            `}
-                                        >
-                                            {cost} <div className="w-2 h-2 rounded-full bg-current opacity-80" />
-                                        </button>
-                                    )}
-                                </div>
+                <div className="space-y-3 flex-1 px-1">
+                    {categories.map((cat) => (
+                        <button
+                            key={cat.key}
+                            onClick={() => setActiveShopCategory(cat.key)}
+                            className={`w-full flex items-center gap-4 p-3 rounded border transition-all duration-200 group relative overflow-hidden
+                                ${activeShopCategory === cat.key
+                                    ? 'bg-emerald-100 border-emerald-600 shadow-inner'
+                                    : 'bg-transparent border-transparent hover:bg-emerald-50/50 hover:border-emerald-200/50 hover:translate-x-1'
+                                }
+                            `}
+                        >
+                            <div className={`w-8 h-8 flex items-center justify-center rounded border transition-colors
+                                ${activeShopCategory === cat.key
+                                    ? 'bg-emerald-200 border-emerald-500 text-emerald-900'
+                                    : 'bg-slate-100 border-slate-300 text-slate-400 group-hover:border-emerald-300 group-hover:text-emerald-700'
+                                }
+                            `}>
+                                <span className={`${cat.icon} text-lg`} />
                             </div>
-                        )
-                    })}
+                            <span className={`font-medieval text-lg ${activeShopCategory === cat.key ? 'text-emerald-900 font-bold' : 'text-slate-600 group-hover:text-emerald-800'}`}>
+                                {cat.label}
+                            </span>
+                            {activeShopCategory === cat.key && (
+                                <motion.div
+                                    layoutId="active-indicator"
+                                    className="ml-auto w-2 h-2 rounded-full bg-emerald-600"
+                                />
+                            )}
+                        </button>
+                    ))}
+                </div>
+            </div>
+        );
+    };
+
+    // --- MERCHANT RIGHT PAGE: Items ---
+    const renderMerchantItems = () => {
+        const shopItems = UPGRADES.filter(u => u.category === activeShopCategory);
+
+        return (
+            <div className="flex flex-col h-full animate-in fade-in duration-300">
+                <div className="flex justify-between items-center mb-4 pb-2 border-b border-emerald-900/20">
+                    <span className="font-medieval text-emerald-900 text-lg">{activeShopCategory} Wares</span>
+                    <span className="text-xs text-emerald-800/50 italic">{shopItems.length} items</span>
+                </div>
+
+                <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 -mr-2">
+                    <AnimatePresence mode="popLayout" initial={false}>
+                        {shopItems.length === 0 ? (
+                            <motion.div
+                                key="empty"
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                className="flex flex-col items-center justify-center h-48 text-center text-emerald-800/40"
+                            >
+                                <span className="text-4xl mb-2 opacity-50">🕸️</span>
+                                <p className="italic text-sm">Nothing to see here yet...</p>
+                            </motion.div>
+                        ) : (
+                            <motion.div
+                                className="grid grid-cols-1 gap-2 pb-2"
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                            >
+                                {shopItems.map(item => {
+                                    const lvl = upgradeLevels[item.id] || 0;
+                                    const cost = Math.floor(item.basePrice * Math.pow(item.priceScale, lvl));
+                                    const canAfford = coins >= cost;
+                                    const isMaxed = lvl >= item.maxLevel;
+
+                                    return (
+                                        <motion.div
+                                            key={item.id}
+                                            initial={{ opacity: 0, x: 10 }}
+                                            animate={{ opacity: 1, x: 0 }}
+                                            className="flex flex-col p-3 bg-emerald-50/30 border border-emerald-900/10 rounded hover:bg-emerald-50 hover:border-emerald-900/30 transition-all group"
+                                        >
+                                            <div className="flex items-center justify-between mb-2">
+                                                <div className="flex items-center gap-3">
+                                                    <div className={`w-8 h-8 flex items-center justify-center bg-white rounded border border-emerald-900/10 group-hover:border-emerald-500/30 transition-colors`}>
+                                                        <div className={`${item.icon} text-emerald-800 text-sm`} />
+                                                    </div>
+                                                    <span className="font-bold text-base text-emerald-900">{item.title}</span>
+                                                </div>
+                                                <span className="text-xs font-bold text-emerald-700/60 bg-emerald-100/50 px-2 py-0.5 rounded">Lvl {lvl}/{item.maxLevel}</span>
+                                            </div>
+
+                                            <div className="text-xs text-emerald-800/80 mb-3 pl-11 leading-snug">
+                                                {item.description(lvl + 1)}
+                                            </div>
+
+                                            <div className="flex justify-end pl-11">
+                                                {isMaxed ? (
+                                                    <span className="text-xs font-bold text-emerald-600 px-3 py-1 bg-emerald-100 rounded border border-emerald-200 w-full text-center">MAXED</span>
+                                                ) : (
+                                                    <button
+                                                        onClick={() => actions.onBuyUpgrade(item.id, cost)}
+                                                        disabled={!canAfford}
+                                                        className={`w-full py-1.5 text-xs font-bold border rounded transition-all flex items-center justify-center gap-2 shadow-sm
+                                                            ${canAfford
+                                                                ? 'bg-amber-400 border-amber-600 text-amber-900 hover:bg-amber-300 hover:-translate-y-0.5 active:translate-y-0'
+                                                                : 'bg-slate-200 border-slate-300 text-slate-400 cursor-not-allowed opacity-70'}
+                                                        `}
+                                                    >
+                                                        <span>Buy for {cost}</span>
+                                                        <div className="w-2 h-2 rounded-full bg-current opacity-80" />
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </motion.div>
+                                    )
+                                })}
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
                 </div>
             </div>
         );
@@ -261,7 +387,7 @@ export const FantasyBook: React.FC<FantasyBookProps> = React.memo(({
                         <img
                             src={bookOpen}
                             alt="Open Book"
-                            className="absolute inset-0 w-full h-full object-contain image-rendering-pixelated"
+                            className="absolute inset-0 w-full h-full object-contain image-rendering-pixelated pointer-events-none"
                         />
 
                         {/* Tabs */}
@@ -272,42 +398,45 @@ export const FantasyBook: React.FC<FantasyBookProps> = React.memo(({
                         {/* Content Layer */}
                         <div className="absolute inset-0 grid grid-cols-2 p-[6%] gap-[4%] pt-[8%] pb-[8%] font-serif text-slate-900 overflow-hidden">
                             {/* Left Page: Main Content Area */}
-                            <div className="px-5 py-3 overflow-y-auto custom-scrollbar h-full pr-4">
-                                <h2 className={`text-2xl font-bold mb-4 font-medieval border-b-2 pb-2 ${TABS[activeTab].color} border-current opacity-80 sticky top-0 bg-[#e3dac9] z-10`}>
-                                    {TABS[activeTab].title}
-                                </h2>
+                            <div className="px-5 py-3 overflow-y-auto custom-scrollbar h-full pr-4 relative overflow-x-hidden">
+                                {/* Title only for non-merchant pages, as merchant has custom layout */}
+                                {activeTab !== 'merchant' && (
+                                    <h2 className={`text-2xl font-bold mb-4 font-medieval border-b-2 pb-2 ${TABS[activeTab].color} border-current opacity-80 sticky top-0 bg-[#e3dac9] z-10`}>
+                                        {TABS[activeTab].title}
+                                    </h2>
+                                )}
 
                                 {activeTab === 'status' && renderStatusPage()}
-                                {activeTab === 'grimoire' && renderGrimoirePage()}
-                                {activeTab === 'merchant' && renderMerchantPage()}
+                                {activeTab === 'grimoire' && renderGrimoireLeftPage()}
+                                {activeTab === 'merchant' && renderMerchantCategories()}
                             </div>
 
-                            {/* Right Page: Supplemental / Notes / Controls */}
-                            <div className="px-5 py-3 h-full flex flex-col justify-between">
-                                <div className="space-y-4">
-                                    <h3 className="text-lg font-bold text-amber-900/70 font-medieval border-b border-amber-900/10 pb-1">Notes</h3>
-                                    <div className="text-sm italic text-slate-600 font-handwriting leading-relaxed opacity-80">
-                                        {mode === 'level_up' && "Great power flows through you. Choose wisely, for the path shapes the walker."}
-                                        {mode === 'shop' && "Ah, a customer! Standard exchange rates apply. No refunds on cursed items."}
-                                        {mode === 'view' && "\"To defeat the darkness, one must first understand their own strength.\""}
-                                    </div>
-                                </div>
+                            {/* Right Page: Supplemental / Notes / Controls / Merchant Items */}
+                            <div className="px-5 py-3 h-full flex flex-col justify-between relative overflow-x-hidden">
+                                {activeTab === 'merchant' && renderMerchantItems()}
+                                {activeTab === 'grimoire' && renderGrimoireRightPage()}
 
-                                <div className="flex justify-end pt-4 border-t border-amber-900/10">
-                                    {(mode === 'view' || mode === 'shop') && (
-                                        <FantasyButton
-                                            variant="danger"
-                                            onClick={onClose}
-                                            className="scale-90 origin-bottom-right"
-                                            label="Close Book"
-                                        />
-                                    )}
-                                    {mode === 'level_up' && (
-                                        <div className="text-xs text-amber-800 animate-pulse">
-                                            Select an upgrade to continue...
+                                {activeTab === 'status' && (
+                                    <>
+                                        <div className="space-y-4">
+                                            <h3 className="text-lg font-bold text-amber-900/70 font-medieval border-b border-amber-900/10 pb-1">Notes</h3>
+                                            <div className="text-sm italic text-slate-600 font-handwriting leading-relaxed opacity-80">
+                                                {mode === 'level_up' && "Great power flows through you. Choose wisely, for the path shapes the walker."}
+                                                {mode === 'shop' && "Ah, a customer! Standard exchange rates apply. No refunds on cursed items."}
+                                                {mode === 'view' && "\"To defeat the darkness, one must first understand their own strength.\""}
+                                            </div>
                                         </div>
-                                    )}
-                                </div>
+
+                                        <div className="flex justify-end pt-4 border-t border-amber-900/10">
+                                            <FantasyButton
+                                                variant="danger"
+                                                onClick={onClose}
+                                                className="scale-90 origin-bottom-right"
+                                                label="Close Book"
+                                            />
+                                        </div>
+                                    </>
+                                )}
                             </div>
                         </div>
                     </motion.div>
