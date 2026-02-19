@@ -52,7 +52,15 @@ const FantasyDemo: React.FC = () => {
                     </div>
                 </section>
 
-                <FantasyBook isOpen={isBookOpen} onClose={() => setIsBookOpen(false)} />
+                <FantasyBook
+                    isOpen={isBookOpen}
+                    mode="view"
+                    onClose={() => setIsBookOpen(false)}
+                    actions={{
+                        onSelectPerk: (id) => console.log('Demo: Select Perk', id),
+                        onBuyUpgrade: (id, cost) => console.log('Demo: Buy Upgrade', id, cost)
+                    }}
+                />
 
                 {/* Icons Section */}
                 <section className="flex flex-col gap-4">

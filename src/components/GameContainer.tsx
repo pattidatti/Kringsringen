@@ -1,105 +1,58 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { createGame } from '../game/main';
 import '../styles/medieval-ui.css';
 import { MedievalPanel } from './ui/MedievalPanel';
 import { MedievalButton } from './ui/MedievalButton';
 import { Hotbar } from './ui/Hotbar';
 import { CoinCounter } from './ui/CoinCounter';
-import { UpgradeShop } from './ui/UpgradeShop';
-import { StatsPanel } from './ui/StatsPanel';
 import { PlayerHUD } from './ui/PlayerHUD';
+import { FantasyBook, type BookMode } from './ui/FantasyBook';
 import { UPGRADES, type UpgradeConfig } from '../config/upgrades';
+import { setGameInstance, useGameRegistry } from '../hooks/useGameRegistry';
 
 export const GameContainer = () => {
     const gameContainerRef = useRef<HTMLDivElement>(null);
     const gameInstanceRef = useRef<Phaser.Game | null>(null);
-    const [hp, setHp] = useState(100);
-    const [maxHp, setMaxHp] = useState(100);
-    const [xp, setXp] = useState(0);
-    const [maxXp, setMaxXp] = useState(100);
-    const [level, setLevel] = useState(1);
-    const [coins, setCoins] = useState(0);
-    const [currentWeapon, setCurrentWeapon] = useState('sword');
+
+    // We only keep state that affects layout/modals, NOT game stats
     const [isLeveling, setIsLeveling] = useState(false);
     const [isShopping, setIsShopping] = useState(false);
-    const [availableUpgrades, setAvailableUpgrades] = useState<UpgradeConfig[]>([]);
-    const [stageLevel, setStageLevel] = useState(1);
-    const [wave, setWave] = useState(1);
-    const [maxWaves, setMaxWaves] = useState(1);
+    const [availablePerks, setAvailablePerks] = useState<UpgradeConfig[]>([]);
 
-    // Upgrade Levels State
-    const [upgradeLevels, setUpgradeLevels] = useState<Record<string, number>>({});
+    // Book State
+    const [isBookOpen, setIsBookOpen] = useState(false);
+    const [bookMode, setBookMode] = useState<BookMode>('view');
 
-    // Stats State
-    const [isStatsOpen, setIsStatsOpen] = useState(false);
-    const [playerStats, setPlayerStats] = useState({
-        damage: 0,
-        attackSpeed: 0,
-        speed: 0,
-        armor: 0,
-        regen: 0,
-        critChance: 0,
-        projectiles: 0,
-        luck: 0,
-        maxHp: 100
-    });
+    // Subscribe to critical events for layout changes (e.g. Death Screen)
+    // We use the hook here just for the Death Screen condition
+    const hp = useGameRegistry('playerHP', 100);
+    const currentWeapon = useGameRegistry('currentWeapon', 'sword');
+    const stageLevel = useGameRegistry('gameLevel', 1);
+    const wave = useGameRegistry('currentWave', 1);
+    const maxWaves = useGameRegistry('maxWaves', 1);
 
     useEffect(() => {
         if (gameContainerRef.current && !gameInstanceRef.current) {
             const game = createGame(gameContainerRef.current.id);
             gameInstanceRef.current = game;
 
-            // Sync Stats from Phaser Registry
-            const syncStats = () => {
-                setHp(game.registry.get('playerHP') ?? 100);
-                setMaxHp(game.registry.get('playerMaxHP') ?? 100);
-                setXp(game.registry.get('playerXP') ?? 0);
-                setMaxXp(game.registry.get('playerMaxXP') ?? 100);
-                setLevel(game.registry.get('playerLevel') ?? 1);
-                setCoins(game.registry.get('playerCoins') ?? 0);
-                setCurrentWeapon(game.registry.get('currentWeapon') ?? 'sword');
-                setStageLevel(game.registry.get('gameLevel') ?? 1);
-                setWave(game.registry.get('currentWave') ?? 1);
-                setMaxWaves(game.registry.get('maxWaves') ?? 1);
+            // Initialize the singleton for hooks
+            setGameInstance(game);
 
-                // Sync Upgrade Levels
-                const levels = game.registry.get('upgradeLevels') || {};
-                setUpgradeLevels({ ...levels });
-
-                // Advanced Stats Sync
-                setPlayerStats({
-                    damage: game.registry.get('playerDamage') ?? 0,
-                    attackSpeed: game.registry.get('playerAttackSpeed') ?? 1,
-                    speed: game.registry.get('playerSpeed') ?? 0,
-                    armor: game.registry.get('playerArmor') ?? 0,
-                    regen: game.registry.get('playerRegen') ?? 0,
-                    critChance: game.registry.get('playerCritChance') ?? 0,
-                    projectiles: game.registry.get('playerProjectiles') ?? 1,
-                    luck: game.registry.get('playerLuck') ?? 0,
-                    maxHp: game.registry.get('playerMaxHP') ?? 100
-                });
-            };
-
-            game.registry.events.on('changedata-playerHP', syncStats);
-            game.registry.events.on('changedata-playerMaxHP', syncStats);
-            game.registry.events.on('changedata-playerXP', syncStats);
-            game.registry.events.on('changedata-playerMaxXP', syncStats);
-            game.registry.events.on('changedata-playerLevel', syncStats);
-            game.registry.events.on('changedata-playerCoins', syncStats);
-            game.registry.events.on('changedata-currentWeapon', syncStats);
-            game.registry.events.on('changedata-gameLevel', syncStats);
-            game.registry.events.on('changedata-currentWave', syncStats);
-            game.registry.events.on('changedata-maxWaves', syncStats);
-            // Listen for all stat changes
-            game.registry.events.on('changedata-playerDamage', syncStats);
-            game.registry.events.on('changedata-playerArmor', syncStats);
-            game.registry.events.on('changedata-playerProjectiles', syncStats);
-            game.registry.events.on('changedata-upgradeLevels', syncStats);
-
-            // Hotkey Listener for 'C' (Character Stats)
+            // Hotkey Listener for 'B' (Book/Status)
             const handleKeyDown = (e: KeyboardEvent) => {
-                if (e.key.toLowerCase() === 'c') {
-                    setIsStatsOpen(prev => !prev);
+                const key = e.key.toLowerCase();
+                if (key === 'b') {
+                    // Use functional update to avoid stale closure if we relied on state directly
+                    // but here we just toggle based on prev
+                    setIsBookOpen(prev => {
+                        if (!prev) setBookMode('view');
+                        return !prev;
+                    });
+                }
+                // Close with Escape
+                if (key === 'escape') {
+                    setIsBookOpen(false);
                 }
             };
             window.addEventListener('keydown', handleKeyDown);
@@ -111,19 +64,21 @@ export const GameContainer = () => {
                     mainScene.events.on('level-up', () => {
                         game.scene.pause('MainScene');
 
-                        // Filter available upgrades (not maxed)
-                        const currentLevels = game.registry.get('upgradeLevels') || {};
-                        const available = UPGRADES.filter(u => {
-                            const lvl = currentLevels[u.id] || 0;
-                            return lvl < u.maxLevel && u.category !== 'Magi'; // Hide magic for now
-                        });
+                        // Generate Random Perks
+                        // Simple shuffle for now
+                        const shuffled = [...UPGRADES].sort(() => 0.5 - Math.random());
+                        setAvailablePerks(shuffled.slice(0, 3));
 
-                        const shuffled = [...available].sort(() => 0.5 - Math.random());
-                        setAvailableUpgrades(shuffled.slice(0, 3));
+                        // Open Book in Level Up Mode
+                        setBookMode('level_up');
+                        setIsBookOpen(true);
                         setIsLeveling(true);
                     });
 
                     mainScene.events.on('level-complete', () => {
+                        // Open Book in Shop Mode
+                        setBookMode('shop');
+                        setIsBookOpen(true);
                         setIsShopping(true);
                     });
                 } else {
@@ -133,7 +88,6 @@ export const GameContainer = () => {
             };
 
             setupSceneListeners();
-            syncStats();
 
             return () => {
                 if (gameInstanceRef.current) {
@@ -145,15 +99,20 @@ export const GameContainer = () => {
         }
     }, []);
 
-    const selectUpgrade = (upgradeId: string) => {
+    const selectUpgrade = useCallback((upgradeId: string) => {
         if (!gameInstanceRef.current) return;
         const mainScene = gameInstanceRef.current.scene.getScene('MainScene');
         mainScene.events.emit('apply-upgrade', upgradeId);
-        gameInstanceRef.current.scene.resume('MainScene');
-        setIsLeveling(false);
-    };
 
-    const applyShopUpgrade = (upgradeId: string, cost: number) => {
+        // Close Book and Resume
+        setIsBookOpen(false);
+        setIsLeveling(false);
+        mainScene.time.delayedCall(100, () => {
+            gameInstanceRef.current?.scene.resume('MainScene');
+        });
+    }, []);
+
+    const applyShopUpgrade = useCallback((upgradeId: string, cost: number) => {
         if (!gameInstanceRef.current) return;
         const mainScene = gameInstanceRef.current.scene.getScene('MainScene');
 
@@ -163,17 +122,21 @@ export const GameContainer = () => {
 
         // Apply stats in Phaser (will also increment level)
         mainScene.events.emit('apply-upgrade', upgradeId);
-    };
+    }, []);
 
-    const handleContinue = () => {
+    const handleContinue = useCallback(() => {
         if (!gameInstanceRef.current) return;
         const mainScene = gameInstanceRef.current.scene.getScene('MainScene');
         mainScene.events.emit('start-next-level');
-        gameInstanceRef.current.scene.resume('MainScene');
-        setIsShopping(false);
-    };
 
-    const handleRestart = () => {
+        setIsBookOpen(false);
+        setIsShopping(false);
+        mainScene.time.delayedCall(100, () => {
+            gameInstanceRef.current?.scene.resume('MainScene');
+        });
+    }, []);
+
+    const handleRestart = useCallback(() => {
         if (!gameInstanceRef.current) {
             window.location.reload();
             return;
@@ -184,36 +147,45 @@ export const GameContainer = () => {
             // Restart the Phaser scene
             mainScene.scene.restart();
 
-            // Explicitly reset React state to default values
-            setHp(100);
-            setMaxHp(100);
-            setXp(0);
-            setMaxXp(100);
-            setLevel(1);
-            setCoins(0);
-            setIsLeveling(false);
+            // Explicitly update registry to default values if needed, 
+            // though restarting scene usually resets registry if configured so.
+            // For safety, reload page as it's cleaner for now
+            window.location.reload();
         } else {
             window.location.reload();
         }
-    };
+    }, []);
 
-    const selectWeapon = (weaponId: string) => {
+    const selectWeapon = useCallback((weaponId: string) => {
         if (gameInstanceRef.current) {
             gameInstanceRef.current.registry.set('currentWeapon', weaponId);
         }
-    };
+    }, []);
+
+    const handleBookClose = useCallback(() => {
+        if (bookMode === 'level_up') return; // Cannot close while leveling
+
+        if (bookMode === 'shop') {
+            handleContinue(); // Trigger next level
+        } else {
+            setIsBookOpen(false);
+            if (gameInstanceRef.current) {
+                gameInstanceRef.current.scene.resume('MainScene');
+            }
+        }
+    }, [bookMode, handleContinue]);
+
+    // Memoize actions to prevent re-renders in children
+    const bookActions = useMemo(() => ({
+        onSelectPerk: selectUpgrade,
+        onBuyUpgrade: applyShopUpgrade
+    }), [selectUpgrade, applyShopUpgrade]);
 
     return (
         <div id="game-container" ref={gameContainerRef} className="w-full h-full relative overflow-hidden bg-slate-950 font-sans selection:bg-cyan-500/30">
             {/* UI Overlay */}
             <div className={`absolute top-6 left-6 z-10 transition-all duration-500 origin-top-left ${isLeveling || hp <= 0 ? 'blur-md grayscale opacity-50' : ''}`}>
-                <PlayerHUD
-                    hp={hp}
-                    maxHp={maxHp}
-                    xp={xp}
-                    maxXp={maxXp}
-                    level={level}
-                />
+                <PlayerHUD />
             </div>
 
             {/* Coin & Progress Header - Top Center */}
@@ -246,16 +218,21 @@ export const GameContainer = () => {
                     </div>
                 </div>
 
-                <CoinCounter coins={coins} />
+                <CoinCounter />
             </div>
 
             {/* UI Overlays */}
             <div className="absolute inset-0 z-[60] pointer-events-none">
-                <StatsPanel
-                    stats={playerStats}
-                    isOpen={isStatsOpen}
-                    onClose={() => setIsStatsOpen(false)}
-                />
+                <div className="pointer-events-auto">
+                    <FantasyBook
+                        isOpen={isBookOpen}
+                        mode={bookMode}
+                        onClose={handleBookClose}
+                        isGamePaused={isBookOpen}
+                        availablePerks={availablePerks}
+                        actions={bookActions}
+                    />
+                </div>
             </div>
 
             {/* Death Screen - Polished Pixel Art */}
@@ -291,60 +268,6 @@ export const GameContainer = () => {
                 </div>
             )}
 
-            {/* Level Up Overlay */}
-            {isLeveling && (
-                <div className="absolute inset-0 z-[100] flex items-center justify-center bg-slate-950/80 backdrop-blur-xl animate-in fade-in zoom-in duration-500 medieval-pixel">
-                    <div className="max-w-6xl w-full px-12 text-center space-y-24">
-                        <div className="space-y-8">
-                            <h2 className="m-text-gold text-9xl tracking-tighter uppercase drop-shadow-2xl">Forberedelse</h2>
-                            <p className="m-text-hud text-amber-200/40 text-3xl italic">Velg din neste sti</p>
-                        </div>
-
-                        <div className="flex flex-wrap justify-center gap-20">
-                            {availableUpgrades.length > 0 ? availableUpgrades.map((upgrade, idx) => (
-                                <button
-                                    key={upgrade.id}
-                                    onClick={() => selectUpgrade(upgrade.id)}
-                                    style={{ animationDelay: `${idx * 150}ms` }}
-                                    className="group relative flex flex-col items-center gap-10 animate-in slide-in-from-bottom-12 fill-mode-both"
-                                >
-                                    {/* Choice Plate with Glassmorphism */}
-                                    <div className="relative p-8 rounded-2xl bg-white/[0.03] border border-white/[0.05] backdrop-blur-sm group-hover:bg-white/[0.08] group-hover:border-white/[0.1] transition-all duration-300">
-                                        <div className="m-sign-small m-scale-4 group-hover:scale-[4.2] transition-transform duration-300 ease-out" />
-                                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                                            <div className={`${upgrade.icon} m-scale-3 group-hover:scale-[3.5] transition-transform drop-shadow-2xl`} />
-                                        </div>
-                                    </div>
-
-                                    <div className="text-center max-w-[280px] space-y-4">
-                                        <h3 className="m-text-hud text-3xl text-amber-100/90 group-hover:text-amber-400 transition-colors uppercase tracking-tight">{upgrade.title}</h3>
-                                        <p className="m-text-stats text-sm leading-relaxed text-amber-50/40 font-medium">
-                                            {/* Show NEXT level description */}
-                                            {upgrade.description((upgradeLevels[upgrade.id] || 0) + 1)}
-                                        </p>
-                                    </div>
-
-                                    {/* Select Button */}
-                                    <div className="m-btn m-btn-check m-scale-3 group-hover:scale-125 transition-transform shadow-[0_0_20px_rgba(0,0,0,0.5)]" />
-                                </button>
-                            )) : (
-                                <div className="text-amber-500 m-text-hud">Ingen flere oppgraderinger tilgjengelig!</div>
-                            )}
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Shop Overlay */}
-            {isShopping && (
-                <UpgradeShop
-                    coins={coins}
-                    upgradeLevels={upgradeLevels}
-                    onBuyUpgrade={applyShopUpgrade}
-                    onContinue={handleContinue}
-                />
-            )}
-
             {/* Hotbar - Bottom Center */}
             <div className={`absolute bottom-6 left-1/2 -translate-x-1/2 z-50 medieval-pixel transition-all duration-500 ${isLeveling || hp <= 0 ? 'blur-md grayscale opacity-20' : ''}`}>
                 <Hotbar currentWeapon={currentWeapon} onSelectWeapon={selectWeapon} />
@@ -352,3 +275,4 @@ export const GameContainer = () => {
         </div>
     );
 };
+

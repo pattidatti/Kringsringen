@@ -2,22 +2,15 @@ import React from 'react';
 import { FantasyPanel } from './FantasyPanel';
 import { FantasyProgressBar } from './FantasyProgressBar';
 import { FantasyIcon } from './FantasyIcon';
+import { useGameRegistry } from '../../hooks/useGameRegistry';
 
-interface PlayerHUDProps {
-    hp: number;
-    maxHp: number;
-    xp: number;
-    maxXp: number;
-    level: number;
-}
+export const PlayerHUD: React.FC = () => {
+    const hp = useGameRegistry('playerHP', 100);
+    const maxHp = useGameRegistry('playerMaxHP', 100);
+    const xp = useGameRegistry('playerXP', 0);
+    const maxXp = useGameRegistry('playerMaxXP', 100);
+    const level = useGameRegistry('playerLevel', 1);
 
-export const PlayerHUD: React.FC<PlayerHUDProps> = ({
-    hp,
-    maxHp,
-    xp,
-    maxXp,
-    level,
-}) => {
     return (
         <div className="flex flex-col gap-2 w-72 pointer-events-none select-none">
             {/* Main Panel */}

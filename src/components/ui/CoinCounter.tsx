@@ -1,22 +1,23 @@
 import { useEffect, useState } from 'react';
+import { useGameRegistry } from '../../hooks/useGameRegistry';
 
-interface CoinCounterProps {
-    coins: number;
-}
-
-export const CoinCounter = ({ coins }: CoinCounterProps) => {
+export const CoinCounter = () => {
+    const coins = useGameRegistry('playerCoins', 0);
     const [displayCoins, setDisplayCoins] = useState(coins);
 
     // Simple counter animation
     useEffect(() => {
         if (displayCoins !== coins) {
             const timer = setTimeout(() => {
+                const diff = coins - displayCoins;
+                const step = Math.ceil(Math.abs(diff) / 10); // Animate faster if gap is large
+
                 if (displayCoins < coins) {
-                    setDisplayCoins(prev => Math.min(prev + 1, coins));
+                    setDisplayCoins(prev => Math.min(prev + step, coins));
                 } else if (displayCoins > coins) {
-                    setDisplayCoins(prev => Math.max(prev - 1, coins));
+                    setDisplayCoins(prev => Math.max(prev - step, coins));
                 }
-            }, 50);
+            }, 30);
             return () => clearTimeout(timer);
         }
     }, [coins, displayCoins]);
