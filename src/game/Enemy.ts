@@ -20,6 +20,11 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     private enemyType: string = 'orc';
     private config: EnemyConfig;
 
+    // Static Buffers for AI (GC Hardening)
+    private static readonly NUM_RAYS = 8;
+    private static readonly INTEREST_BUFFER = new Array(Enemy.NUM_RAYS).fill(0);
+    private static readonly DANGER_BUFFER = new Array(Enemy.NUM_RAYS).fill(0);
+
     public get damage(): number {
         return this.config.baseDamage; // Will be updated in reset
     }
@@ -174,10 +179,17 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     private updateAIPathing() {
         if (!this.active) return;
         const speed = this.movementSpeed;
-        const numRays = 8;
+        const numRays = Enemy.NUM_RAYS;
         const rayLength = 80;
-        const interests = new Array(numRays).fill(0);
-        const dangers = new Array(numRays).fill(0);
+
+        // Zero out the static buffers instead of allocating `new Array()`
+        for (let i = 0; i < numRays; i++) {
+            Enemy.INTEREST_BUFFER[i] = 0;
+            Enemy.DANGER_BUFFER[i] = 0;
+        }
+
+        const interests = Enemy.INTEREST_BUFFER;
+        const dangers = Enemy.DANGER_BUFFER;
 
         const targetAngle = Phaser.Math.Angle.Between(this.x, this.y, (this.targetStart as any).x, (this.targetStart as any).y);
 

@@ -36,6 +36,12 @@ class MainScene extends Phaser.Scene {
     private enemiesAlive: number = 0;
     private isLevelActive: boolean = false;
 
+    // Throttle / Batched Economy Updates (GC Hardening & React Bridge)
+    private pendingEconomy = {
+        coins: 0,
+        xp: 0
+    };
+
     private readonly LEVEL_CONFIG = [
         { waves: 2, enemiesPerWave: 6, multiplier: 1.0 },   // Level 1
         { waves: 3, enemiesPerWave: 8, multiplier: 1.2 },   // Level 2
@@ -280,6 +286,14 @@ class MainScene extends Phaser.Scene {
         // Listen for Next Level
         this.events.on('start-next-level', () => {
             this.startLevel(this.currentLevel + 1);
+        });
+
+        // Economy Throttler (React Bridge Batching)
+        this.time.addEvent({
+            delay: 50,
+            callback: this.flushEconomy,
+            callbackScope: this,
+            loop: true
         });
 
         // Initial Start
@@ -551,33 +565,53 @@ class MainScene extends Phaser.Scene {
     }
 
     private addCoins(amount: number) {
-        let coins = this.registry.get('playerCoins') || 0;
-        coins += amount;
-        this.registry.set('playerCoins', coins);
-
-        if (coins % 10 === 0) {
-            SaveManager.save({ coins });
-        }
+        this.pendingEconomy.coins += amount;
     }
 
     private addXP(amount: number) {
-        let xp = this.registry.get('playerXP');
-        let maxXp = this.registry.get('playerMaxXP');
-        let level = this.registry.get('playerLevel');
+        this.pendingEconomy.xp += amount;
+    }
 
-        xp += amount;
+    private flushEconomy() {
+        if (!this.scene.isActive()) return;
 
-        if (xp >= maxXp) {
-            xp -= maxXp;
-            level++;
-            maxXp = Math.floor(maxXp * 1.2);
+        // Flush Coins
+        if (this.pendingEconomy.coins > 0) {
+            let coins = this.registry.get('playerCoins') || 0;
+            coins += this.pendingEconomy.coins;
+            this.registry.set('playerCoins', coins);
 
-            this.registry.set('playerLevel', level);
-            this.registry.set('playerMaxXP', maxXp);
-            this.events.emit('level-up');
+            // Optional: Too frequent saves can stutter. We should use larger intervals.
+            // Currently saving every logic tick where coins cross 10s... Let's just limit.
+            if (coins % 10 === 0) {
+                SaveManager.save({ coins });
+            }
+
+            this.pendingEconomy.coins = 0;
         }
 
-        this.registry.set('playerXP', xp);
+        // Flush XP
+        if (this.pendingEconomy.xp > 0) {
+            let xp = this.registry.get('playerXP');
+            let maxXp = this.registry.get('playerMaxXP');
+            let level = this.registry.get('playerLevel');
+
+            xp += this.pendingEconomy.xp;
+
+            // Handle massive XP gains blowing past multiple levels
+            while (xp >= maxXp) {
+                xp -= maxXp;
+                level++;
+                maxXp = Math.floor(maxXp * 1.2);
+
+                this.registry.set('playerLevel', level);
+                this.registry.set('playerMaxXP', maxXp);
+                this.events.emit('level-up');
+            }
+
+            this.registry.set('playerXP', xp);
+            this.pendingEconomy.xp = 0;
+        }
     }
 
     private recalculateStats() {

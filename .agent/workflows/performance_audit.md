@@ -1,33 +1,30 @@
 ---
-description: Performs a comprehensive performance audit of the codebase and runtime.
+description: Den kompromissløse ytelsesrevisjonen for Hybrid-apper (React UI + WebGL Game Engine). Jakter på mikrostutter, minnelekkasjer og render-kollisjoner.
 ---
 
-# Performance Audit Workflow
+# Performance Audit Workflow (The "Ultrathink" Master class)
 
-This workflow assesses the application for performance bottlenecks, both in code structure and runtime behavior.
+Denne arbeidsflyten evaluerer applikasjonen med et ekstremt fokus på *Garbage Collection (GC)*, *The React-Canvas Bridge*, og opplevd latens.
 
-## Steps
+## Steg
 
-1.  **Static Code Analysis**
-    -   **Bundle Size**: Check `package.json` for heavy dependencies (e.g., Lodash where native methods suffice, moment.js vs date-fns).
-    -   **Asset Check**: List all images in `public/` or `src/assets`. Flag any images > 500KB or non-WebP/AVIF formats.
-    -   **React Patterns**: Scan for:
-        -   Inline object/array definitions in `useEffect` dependencies (causes infinite loops).
-        -   Missing `key` props in lists.
-        -   Lack of `React.memo` or `useMemo` in computationally expensive components.
+1. **The WebGL & Canvas Engine (Spill-kjernen)**
+    - **Draw Call Profiling**: Hvor mange draw calls gjøres per frame? (Mål: Batching av sprites, bruke Texture Atlases konsekvent).
+    - **Garbage Collection (GC) Stutter**: Identifiser "Object Churn" (Kortlivede objekter). Er Object Pooling implementert for *absolutt alt* som spawner/despawner ofte? (Fiender, projectiler, partikler, flytende tekst).
+    - **Texture Memory Allocation**: Sjekk at store bilder ikke lastes inn usynkronisert midt i gameplay (forårsaker harde frys).
 
-2.  **Runtime Analysis (Mental Simulation)**
-    -   **Render Cycles**: Identify components that likely re-render too often (e.g., global state context providers wrapping the entire app without memoization).
-    -   **Event Listeners**: Check for `addEventListener` without cleanup in `useEffect`.
-    -   **Animation Performance**: Verify animations use `transform` and `opacity` (GPU accelerated) rather than `top`, `left`, `width`, or `height` (triggers layout thrashing).
+2. **The React-Canvas Bridge (Den Kritiske Grensen)**
+    - **State Desyncs**: Sjekk hvordan spillets status (HP, XP) sendes til React. Brukes event-emitters, eller poller React spillet hver frame? (Krev Event-Driven, throttled oppdateringer til UI, feks. max 10fps for UI-ticks).
+    - **Overlapping Renders**: Sørg for at React IKKE oppdaterer DOM-en i samme millisekund som Canvas gjør sin `renderer.render()`. 
 
-3.  **Report Generation**
-    -   Create or update `performance_audit.md` in the artifacts directory.
-    -   Structure:
-        -   **Executive Summary**: High-level health check.
-        -   **Critical Issues**: Immediate fixes required.
-        -   **Warnings**: Potential future problems.
-        -   **Optimizations**: Specific code snippets to improve performance.
+3. **React Arkitektur & Perceptuell Ytelse (UI)**
+    - **Render-propageringssjekk**: Er globale Context-providere plassert for høyt? (Zustand anbefales for granularitet for å unngå kaskade-renders).
+    - **Optimistisk UI & Skeletons**: Handlinger mot server skal maskeres med optimistiske oppdateringer. *UIet skal aldri vente på nettverket.*
+    - **Layout Thrashing**: Tvinger UI-animasjoner nettleseren til å kalkulere layout på nytt hver frame? (Krev `transform` og `opacity` for CSS animasjoner).
 
-4.  **Action Plan**
-    -   Propose a set of refactoring tasks to address the findings.
+4. **Karantene & Pre-Mortem (The Stress Test)**
+    - **6x CPU Slowdown**: Test spillet med DevTools CPU throttling. Feiler delta-time kalkuleringene slik at kollisjoner brytes? (The "Quantum Tunneling" bug).
+    - **Rapport (Code of Action)**: Generer `performance_audit.md` med:
+        - *Critical System Failures* (Memory leaks, GC spikes).
+        - *The "Cost of Ownership"* (Er en feature verdt ytelsestapet?).
+        - *Boy Scout Mandates* (Konkrete linjer kode som skal refaktoreres).
