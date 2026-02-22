@@ -1,6 +1,5 @@
 import Phaser from 'phaser';
 import { Enemy } from './Enemy';
-import { XPGem } from './XPGem';
 import { CircularForestMapGenerator } from './CircularForestMapGenerator';
 import { FantasyAssetManifest } from './FantasyAssetManifest';
 import { Arrow } from './Arrow';
@@ -10,12 +9,12 @@ import { SaveManager } from './SaveManager';
 import { ObjectPoolManager } from './ObjectPoolManager';
 import { GAME_CONFIG } from '../config/GameConfig';
 import { SpatialHashGrid } from './SpatialGrid';
+import { AudioManager } from './AudioManager';
 
 
 class MainScene extends Phaser.Scene {
     public enemies!: Phaser.Physics.Arcade.Group;
     public spatialGrid!: SpatialHashGrid;
-    private gems!: Phaser.Physics.Arcade.Group;
     private coins!: Phaser.Physics.Arcade.Group;
     public obstacles!: Phaser.Physics.Arcade.StaticGroup;
     private attackHitbox!: Phaser.Types.Physics.Arcade.ImageWithDynamicBody;
@@ -38,8 +37,7 @@ class MainScene extends Phaser.Scene {
 
     // Throttle / Batched Economy Updates (GC Hardening & React Bridge)
     private pendingEconomy = {
-        coins: 0,
-        xp: 0
+        coins: 0
     };
 
     private readonly LEVEL_CONFIG = [
@@ -126,6 +124,9 @@ class MainScene extends Phaser.Scene {
         for (let i = 1; i <= 5; i++) {
             this.load.spritesheet(`blood_${i}`, `assets/sprites/effects/blood/blood_${i}.png`, { frameWidth: 100, frameHeight: 100 });
         }
+
+        // Preload Audio
+        AudioManager.instance.preload(this);
     }
 
     create() {
@@ -134,14 +135,14 @@ class MainScene extends Phaser.Scene {
 
         // Initialize Registry State
         this.registry.set('playerHP', 100);
-        this.registry.set('playerXP', 0);
-        this.registry.set('playerMaxXP', 100);
-        this.registry.set('playerLevel', 1);
         this.registry.set('playerCoins', saveData.coins);
         this.registry.set('currentWeapon', 'sword');
         this.registry.set('upgradeLevels', saveData.upgradeLevels);
         this.registry.set('highStage', saveData.highStage);
         this.registry.set('unlockedWeapons', saveData.unlockedWeapons);
+
+        // Initialize Audio Manager
+        AudioManager.instance.setScene(this);
 
         // Calculate Initial Stats
         this.recalculateStats();
@@ -214,17 +215,10 @@ class MainScene extends Phaser.Scene {
             maxSize: 100 // Cap enemies to prevent lag
         });
 
-        // Gem Group
-        this.gems = this.physics.add.group({
-            classType: XPGem,
-            runChildUpdate: true,
-            maxSize: 300
-        });
-
         // Arrow Group
         this.arrows = this.physics.add.group({
             classType: Arrow,
-            runChildUpdate: false // Arrow handles its own update? No, Arrow has update() method.
+            runChildUpdate: false
         });
 
         // Coin Group
@@ -298,6 +292,14 @@ class MainScene extends Phaser.Scene {
 
         // Initial Start
         this.startLevel(1);
+
+        // Resume audio context and play music
+        this.input.on('pointerdown', () => AudioManager.instance.resumeContext());
+        AudioManager.instance.playBGM('meadow_theme');
+
+        // Global Sound Listeners
+        this.events.on('enemy-hit', () => AudioManager.instance.playSFX('hit'));
+        this.events.on('player-swing', () => AudioManager.instance.playSFX('swing'));
     }
 
     private setupAnimations() {
@@ -408,6 +410,14 @@ class MainScene extends Phaser.Scene {
         this.currentWave = 1;
         this.isLevelActive = true;
         this.registry.set('gameLevel', this.currentLevel);
+
+        // Switch music based on level
+        if (this.currentLevel === 3) {
+            AudioManager.instance.playBGM('dragons_fury');
+        } else if (this.currentLevel === 2) {
+            AudioManager.instance.playBGM('exploration_theme');
+        }
+
         this.startWave();
     }
 
@@ -506,23 +516,6 @@ class MainScene extends Phaser.Scene {
             const player = this.data.get('player') as Phaser.Physics.Arcade.Sprite;
             if (!player) return; // Should not happen, but safety check
 
-            // Spawn XP Gem (Pooled)
-            const gem = this.gems.get(ex, ey) as XPGem;
-            if (gem) {
-                gem.spawn(ex, ey, player);
-                gem.removeAllListeners('collected');
-                gem.on('collected', () => {
-                    // XP Value should ideally come from enemy config, but we'll use flat 10 or lookup
-                    // For now, let's look up the XP value if possible, or default
-                    // We can access 'enemy.config.xpValue' but enemy is dead/disabled.
-                    // We'll trust XPGem to be generic for now, or pass value to spawn.
-                    // Implementation Plan didn't specify dynamic XP. Keeping explicit '10' or improving?
-                    // Let's use GameConfig 'baseXP' from 'orc' as default or improve XPGem later.
-                    // For now, keep logical behavior same:
-                    this.addXP(10);
-                });
-            }
-
             // Spawn Coins (1-5) (Pooled)
             const coinCount = Phaser.Math.Between(1, 5);
             for (let i = 0; i < coinCount; i++) {
@@ -532,6 +525,7 @@ class MainScene extends Phaser.Scene {
                     coin.removeAllListeners('collected');
                     coin.on('collected', () => {
                         this.addCoins(1);
+                        AudioManager.instance.playSFX('coin_collect');
                     });
                 }
             }
@@ -568,10 +562,6 @@ class MainScene extends Phaser.Scene {
         this.pendingEconomy.coins += amount;
     }
 
-    private addXP(amount: number) {
-        this.pendingEconomy.xp += amount;
-    }
-
     private flushEconomy() {
         if (!this.scene.isActive()) return;
 
@@ -588,29 +578,6 @@ class MainScene extends Phaser.Scene {
             }
 
             this.pendingEconomy.coins = 0;
-        }
-
-        // Flush XP
-        if (this.pendingEconomy.xp > 0) {
-            let xp = this.registry.get('playerXP');
-            let maxXp = this.registry.get('playerMaxXP');
-            let level = this.registry.get('playerLevel');
-
-            xp += this.pendingEconomy.xp;
-
-            // Handle massive XP gains blowing past multiple levels
-            while (xp >= maxXp) {
-                xp -= maxXp;
-                level++;
-                maxXp = Math.floor(maxXp * 1.2);
-
-                this.registry.set('playerLevel', level);
-                this.registry.set('playerMaxXP', maxXp);
-                this.events.emit('level-up');
-            }
-
-            this.registry.set('playerXP', xp);
-            this.pendingEconomy.xp = 0;
         }
     }
 
@@ -844,6 +811,7 @@ class MainScene extends Phaser.Scene {
 
             if (currentWeapon === 'sword') {
                 player.play('player-attack');
+                this.events.emit('player-swing');
                 const attackSpeedMult = this.registry.get('playerAttackSpeed') || 1;
 
                 // Adjust cooldown based on stats (faster attack speed = lower cooldown)
@@ -869,6 +837,7 @@ class MainScene extends Phaser.Scene {
                     const arrow = this.arrows.get(player.x, player.y) as Arrow;
                     if (arrow) {
                         arrow.fire(player.x, player.y, angle, this.playerDamage * 0.8);
+                        this.events.emit('player-swing');
 
                         // Multishot logic (Cone)
                         const projectiles = this.registry.get('playerProjectiles') || 1;

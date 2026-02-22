@@ -3,6 +3,7 @@ export interface SaveData {
     upgradeLevels: Record<string, number>;
     highStage: number;
     unlockedWeapons: string[];
+    audioSettings?: any; // Avoiding circular dependency, will be typed in AudioManager
 }
 
 export class SaveManager {
@@ -17,7 +18,8 @@ export class SaveManager {
                     coins: parsed.coins || 0,
                     upgradeLevels: parsed.upgradeLevels || {},
                     highStage: parsed.highStage || 1,
-                    unlockedWeapons: parsed.unlockedWeapons || ['sword']
+                    unlockedWeapons: parsed.unlockedWeapons || ['sword'],
+                    audioSettings: parsed.audioSettings
                 };
             }
         } catch (e) {

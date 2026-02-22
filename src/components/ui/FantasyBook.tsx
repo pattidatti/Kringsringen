@@ -1,15 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FantasyButton } from './FantasyButton';
-import { PerkCard } from './PerkCard';
 import bookOpen from '../../assets/ui/fantasy/containers/book_open.png';
-// Using existing tabs for new purposes:
-// Red = Status
-// Yellow = Grimoire (Level Up)
-// Green = Merchant (Shop)
-// Blue = Bestiary (Compendium - Future)
 import tabRed from '../../assets/ui/fantasy/tabs/red.png';
-import tabYellow from '../../assets/ui/fantasy/tabs/yellow.png';
 import tabGreen from '../../assets/ui/fantasy/tabs/green.png';
 import { UPGRADES, type UpgradeConfig } from '../../config/upgrades';
 import { useGameRegistry } from '../../hooks/useGameRegistry';
@@ -33,19 +26,18 @@ interface FantasyBookProps {
     }
 }
 
-type TabKey = 'status' | 'grimoire' | 'merchant';
-
-// Map logical tabs to visual assets
-// const TAB_ASSETS: Record<TabKey, FantasyTabVariant> = {
-//     status: 'red',
-//     grimoire: 'yellow',
-//     merchant: 'green'
-// };
+type TabKey = 'character' | 'upgrades';
 
 const TABS: Record<TabKey, { title: string; icon: string; color: string; locked?: boolean }> = {
-    status: { title: 'Status', icon: tabRed, color: 'text-red-900' },
-    grimoire: { title: 'Grimoire', icon: tabYellow, color: 'text-amber-900' },
-    merchant: { title: 'Merchant', icon: tabGreen, color: 'text-emerald-900' },
+    character: { title: 'Character', icon: tabRed, color: 'text-red-900' },
+    upgrades: { title: 'Upgrades', icon: tabGreen, color: 'text-emerald-900' },
+};
+
+const CATEGORY_THEMES: Record<string, { primary: string; secondary: string; border: string; bg: string; text: string }> = {
+    'Karakter': { primary: '#fbbf24', secondary: '#f59e0b', border: 'border-amber-500/30', bg: 'bg-amber-950/40', text: 'text-amber-100' },
+    'Sverd': { primary: '#f87171', secondary: '#ef4444', border: 'border-red-500/30', bg: 'bg-red-950/40', text: 'text-red-100' },
+    'Bue': { primary: '#34d399', secondary: '#10b981', border: 'border-emerald-500/30', bg: 'bg-emerald-950/40', text: 'text-emerald-100' },
+    'Magi': { primary: '#818cf8', secondary: '#6366f1', border: 'border-indigo-500/30', bg: 'bg-indigo-950/40', text: 'text-indigo-100' },
 };
 
 const StatRow = ({ label, value, icon }: { label: string, value: string | number, icon: string }) => (
@@ -63,14 +55,13 @@ export const FantasyBook: React.FC<FantasyBookProps> = React.memo(({
     isOpen,
     mode,
     onClose,
-    availablePerks = [],
     actions
 }) => {
-    const [activeTab, setActiveTab] = useState<TabKey>('status');
+    const [activeTab, setActiveTab] = useState<TabKey>('character');
     const [activeShopCategory, setActiveShopCategory] = useState<UpgradeConfig['category']>('Sverd');
 
     // Subscribe to Registry for Real-Time Updates
-    const level = useGameRegistry('playerLevel', 1);
+    const level = useGameRegistry('gameLevel', 1);
     const coins = useGameRegistry('playerCoins', 0);
     const upgradeLevels = useGameRegistry<Record<string, number>>('upgradeLevels', {});
 
@@ -85,9 +76,8 @@ export const FantasyBook: React.FC<FantasyBookProps> = React.memo(({
     // Auto-switch tab based on mode when opening
     useEffect(() => {
         if (isOpen) {
-            if (mode === 'level_up') setActiveTab('grimoire');
-            else if (mode === 'shop') setActiveTab('merchant');
-            else setActiveTab('status');
+            if (mode === 'shop') setActiveTab('upgrades');
+            else setActiveTab('character');
         }
     }, [isOpen, mode]);
 
@@ -98,15 +88,21 @@ export const FantasyBook: React.FC<FantasyBookProps> = React.memo(({
         return (
             <button
                 onClick={() => setActiveTab(key)}
-                className={`absolute right-[-28px] w-[34px] h-[18px] flex items-center justify-center transition-transform ${isActive ? 'translate-x-[-2px]' : 'hover:translate-x-[-1px]'}`}
+                className={`absolute right-[-74px] w-[80px] h-[32px] flex items-center pl-3 transition-all duration-200 
+                    ${isActive ? 'translate-x-[-4px] brightness-110' : 'hover:translate-x-[-2px] opacity-80'}`}
                 style={{
                     top: `${topOffset}%`,
                     backgroundImage: `url(${config.icon})`,
+                    backgroundSize: '100% 100%',
                     imageRendering: 'pixelated',
                     zIndex: isActive ? 10 : 0
                 }}
-                title={config.title}
-            />
+            >
+                <span className={`font-medieval text-[10px] uppercase tracking-tighter ${config.color} 
+                    ${isActive ? 'font-bold' : 'opacity-70'}`}>
+                    {config.title}
+                </span>
+            </button>
         );
     };
 
@@ -118,7 +114,7 @@ export const FantasyBook: React.FC<FantasyBookProps> = React.memo(({
                     <span className="text-2xl">👤</span>
                 </div>
                 <div>
-                    <h3 className="text-xl font-bold font-medieval text-red-900">Hero Level {level}</h3>
+                    <h3 className="text-xl font-bold font-medieval text-red-900">Map Level {level}</h3>
                     <p className="text-xs italic text-slate-500">The Kringsjå Defender</p>
                 </div>
             </div>
@@ -146,83 +142,7 @@ export const FantasyBook: React.FC<FantasyBookProps> = React.memo(({
 
 
 
-    // --- GRIMOIRE (LEVEL UP) LEFT PAGE: Hero's Growth ---
-    const renderGrimoireLeftPage = () => {
-        if (mode !== 'level_up') {
-            return (
-                <div className="flex flex-col items-center justify-center h-full text-center p-8 opacity-60 animate-in fade-in duration-500">
-                    <div className="text-4xl mb-4 text-amber-900">🔒</div>
-                    <p className="font-medieval text-xl text-amber-900">The pages are blank...</p>
-                    <p className="text-sm italic mt-2">Gain experience to reveal new powers.</p>
-                </div>
-            );
-        }
-
-        return (
-            <div className="flex flex-col h-full items-center justify-center text-center animate-in fade-in duration-500 bg-amber-50/30 rounded-lg border border-amber-900/5 p-4 mx-2 my-4">
-                <div className="mb-2">
-                    <span className="text-6xl">✨</span>
-                </div>
-
-                <h2 className="font-medieval text-4xl text-amber-900 mb-1">Level {level}</h2>
-                <div className="w-16 h-1 bg-amber-900/20 rounded-full mb-4 mx-auto" />
-
-                <p className="font-serif italic text-amber-800/80 text-lg mb-6 leading-relaxed">
-                    "The cosmos aligns. <br />A new power awakens within you."
-                </p>
-
-                <div className="grid grid-cols-2 gap-2 text-xs text-amber-900/60 w-full max-w-[200px] text-left opacity-70">
-                    <div>HP: {Math.round(maxHp)}</div>
-                    <div>DMG: {Math.round(damage)}</div>
-                    <div>SPD: {speed}</div>
-                    <div>DEF: {armor}</div>
-                </div>
-            </div>
-        );
-    };
-
-    // --- GRIMOIRE (LEVEL UP) RIGHT PAGE: The Choice ---
-    const renderGrimoireRightPage = () => {
-        if (mode !== 'level_up') {
-            return (
-                <div className="flex flex-col items-center justify-center h-full p-8 opacity-40">
-                    <p className="font-medieval text-lg text-amber-900/50">Awaiting destiny...</p>
-                </div>
-            );
-        }
-
-        if (availablePerks.length === 0) {
-            return (
-                <div className="flex flex-col items-center justify-center h-full text-center p-8 animate-in fade-in">
-                    <div className="text-4xl mb-4">🏆</div>
-                    <h3 className="font-medieval text-2xl text-amber-900">Mastery Achieved</h3>
-                    <p className="italic text-amber-800/70 mt-2">You have learned all there is to know.</p>
-                </div>
-            );
-        }
-
-        return (
-            <div className="flex flex-col h-full justify-center">
-                <h3 className="font-medieval text-xl text-center text-amber-900 mb-4 opacity-80 border-b border-amber-900/10 pb-2">
-                    Choose Your Path
-                </h3>
-                <div className="flex flex-col gap-3 overflow-y-auto custom-scrollbar pr-1 -mr-1 pb-2">
-                    {availablePerks.map((perk, index) => {
-                        const currentLvl = (upgradeLevels[perk.id] || 0) + 1;
-                        return (
-                            <PerkCard
-                                key={perk.id}
-                                perk={perk}
-                                level={currentLvl}
-                                onClick={() => actions.onSelectPerk(perk.id)}
-                                index={index}
-                            />
-                        );
-                    })}
-                </div>
-            </div>
-        );
-    };
+    // Grimoire (Level Up) logic removed as per GDD - XP replaced by Gold economy
 
     // Keeping original function for reference/deletion but effectively replacing usage below
     // const renderGrimoirePage = ... (Deleted)
@@ -232,51 +152,72 @@ export const FantasyBook: React.FC<FantasyBookProps> = React.memo(({
         const categories: { key: UpgradeConfig['category']; label: string; icon: string }[] = [
             { key: 'Sverd', label: 'Sverd', icon: 'm-icon-sword' },
             { key: 'Bue', label: 'Bue', icon: 'm-icon-bow' },
-            { key: 'Karakter', label: 'Karakter', icon: 'm-icon-plus-small' }, // Using plus as general character/vitality icon
+            { key: 'Karakter', label: 'Karakter', icon: 'm-icon-plus-small' },
             { key: 'Magi', label: 'Magi', icon: 'm-icon-candle' },
         ];
 
         return (
             <div className="flex flex-col h-full font-serif animate-in fade-in duration-300">
-                <div className="mb-6 text-center border-b border-emerald-900/20 pb-4">
-                    <div className="text-xs uppercase tracking-widest text-emerald-800/60 mb-1">Merchant's Purse</div>
-                    <div className="flex items-center justify-center gap-2 font-bold text-emerald-900 bg-emerald-50/50 py-2 rounded border border-emerald-900/10">
-                        <span className="text-xl">{coins}</span>
-                        <div className="w-4 h-4 rounded-full bg-amber-400 border border-amber-600 shadow-sm" />
+                {/* Purse: High-Contrast Sovereign Panel */}
+                <div className="mb-8">
+                    <div className="relative overflow-hidden bg-slate-950/60 backdrop-blur-xl border border-amber-500/30 rounded-2xl p-5 shadow-2xl group hover:bg-slate-900/70 transition-all duration-500">
+                        {/* Dynamic Background Glow */}
+                        <div className="absolute -top-12 -right-12 w-32 h-32 bg-amber-400/10 blur-3xl rounded-full" />
+
+                        <div className="text-[10px] uppercase tracking-[0.3em] text-amber-400/80 mb-3 font-bold m-text-shadow-strong">Merchant's Sovereign Purse</div>
+                        <div className="flex items-center gap-5">
+                            <div className="relative">
+                                <div className="w-12 h-12 rounded-full bg-amber-400 border-2 border-amber-600 shadow-[0_0_20px_rgba(251,191,36,0.6)] flex items-center justify-center m-icon-coin scale-150" />
+                                <motion.div
+                                    animate={{ scale: [1, 1.3, 1], opacity: [0.4, 0.7, 0.4] }}
+                                    transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
+                                    className="absolute inset-0 rounded-full bg-amber-500 blur-md -z-10"
+                                />
+                            </div>
+                            <div className="flex flex-col">
+                                <span className="text-4xl font-black text-amber-50 m-text-shadow-strong tracking-tighter tabular-nums leading-none">{coins}</span>
+                                <span className="text-[9px] text-amber-400/70 uppercase font-black tracking-widest mt-1">Total Gold Holdings</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                <div className="space-y-3 flex-1 px-1">
-                    {categories.map((cat) => (
-                        <button
-                            key={cat.key}
-                            onClick={() => setActiveShopCategory(cat.key)}
-                            className={`w-full flex items-center gap-4 p-3 rounded border transition-all duration-200 group relative overflow-hidden
-                                ${activeShopCategory === cat.key
-                                    ? 'bg-emerald-100 border-emerald-600 shadow-inner'
-                                    : 'bg-transparent border-transparent hover:bg-emerald-50/50 hover:border-emerald-200/50 hover:translate-x-1'
-                                }
-                            `}
-                        >
-                            <div className={`w-8 h-8 flex items-center justify-center rounded border transition-colors
-                                ${activeShopCategory === cat.key
-                                    ? 'bg-emerald-200 border-emerald-500 text-emerald-900'
-                                    : 'bg-slate-100 border-slate-300 text-slate-400 group-hover:border-emerald-300 group-hover:text-emerald-700'
-                                }
-                            `}>
-                                <span className={`${cat.icon} text-lg`} />
-                            </div>
-                            <span className={`font-medieval text-lg ${activeShopCategory === cat.key ? 'text-emerald-900 font-bold' : 'text-slate-600 group-hover:text-emerald-800'}`}>
-                                {cat.label}
-                            </span>
-                            {activeShopCategory === cat.key && (
-                                <motion.div
-                                    layoutId="active-indicator"
-                                    className="ml-auto w-2 h-2 rounded-full bg-emerald-600"
-                                />
-                            )}
-                        </button>
-                    ))}
+                <div className="space-y-2 flex-1 px-1">
+                    {categories.map((cat) => {
+                        const theme = CATEGORY_THEMES[cat.key] || CATEGORY_THEMES['Karakter'];
+                        const isActive = activeShopCategory === cat.key;
+
+                        return (
+                            <button
+                                key={cat.key}
+                                onClick={() => setActiveShopCategory(cat.key)}
+                                className={`w-full flex items-center gap-4 p-3 rounded border transition-all duration-200 group relative overflow-hidden
+                                    ${isActive
+                                        ? `${theme.bg} border-${theme.primary} shadow-inner`
+                                        : 'bg-transparent border-transparent hover:bg-slate-100/50 hover:translate-x-1'
+                                    }
+                                `}
+                            >
+                                <div className={`w-10 h-10 flex items-center justify-center rounded border transition-colors
+                                    ${isActive
+                                        ? `bg-${theme.primary}/20 border-${theme.primary} text-${theme.primary}`
+                                        : `bg-slate-100 border-slate-300 text-slate-400 group-hover:border-slate-400 group-hover:text-slate-600`
+                                    }
+                                `}>
+                                    <span className={`${cat.icon} text-xl`} />
+                                </div>
+                                <span className={`font-medieval text-xl ${isActive ? `${theme.text} font-bold` : 'text-slate-600 group-hover:text-slate-800'}`}>
+                                    {cat.label}
+                                </span>
+                                {isActive && (
+                                    <motion.div
+                                        layoutId="active-indicator"
+                                        className={`ml-auto w-2 h-2 rounded-full bg-${theme.primary}`}
+                                    />
+                                )}
+                            </button>
+                        );
+                    })}
                 </div>
             </div>
         );
@@ -285,14 +226,10 @@ export const FantasyBook: React.FC<FantasyBookProps> = React.memo(({
     // --- MERCHANT RIGHT PAGE: Items ---
     const renderMerchantItems = () => {
         const shopItems = UPGRADES.filter(u => u.category === activeShopCategory);
+        const theme = CATEGORY_THEMES[activeShopCategory] || CATEGORY_THEMES['Karakter'];
 
         return (
             <div className="flex flex-col h-full animate-in fade-in duration-300">
-                <div className="flex justify-between items-center mb-4 pb-2 border-b border-emerald-900/20">
-                    <span className="font-medieval text-emerald-900 text-lg">{activeShopCategory} Wares</span>
-                    <span className="text-xs text-emerald-800/50 italic">{shopItems.length} items</span>
-                </div>
-
                 <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 -mr-2">
                     <AnimatePresence mode="popLayout" initial={false}>
                         {shopItems.length === 0 ? (
@@ -301,14 +238,14 @@ export const FantasyBook: React.FC<FantasyBookProps> = React.memo(({
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
                                 exit={{ opacity: 0 }}
-                                className="flex flex-col items-center justify-center h-48 text-center text-emerald-800/40"
+                                className={`flex flex-col items-center justify-center h-48 text-center ${theme.text} opacity-40`}
                             >
-                                <span className="text-4xl mb-2 opacity-50">🕸️</span>
+                                <span className="text-4xl mb-2">🕸️</span>
                                 <p className="italic text-sm">Nothing to see here yet...</p>
                             </motion.div>
                         ) : (
                             <motion.div
-                                className="grid grid-cols-1 gap-2 pb-2"
+                                className="grid grid-cols-1 gap-3 pb-2"
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
                                 exit={{ opacity: 0 }}
@@ -324,37 +261,39 @@ export const FantasyBook: React.FC<FantasyBookProps> = React.memo(({
                                             key={item.id}
                                             initial={{ opacity: 0, x: 10 }}
                                             animate={{ opacity: 1, x: 0 }}
-                                            className="flex flex-col p-3 bg-emerald-50/30 border border-emerald-900/10 rounded hover:bg-emerald-50 hover:border-emerald-900/30 transition-all group"
+                                            className={`flex flex-col p-4 ${theme.bg} border ${theme.border} rounded-lg hover:brightness-105 transition-all group relative overflow-hidden`}
                                         >
                                             <div className="flex items-center justify-between mb-2">
                                                 <div className="flex items-center gap-3">
-                                                    <div className={`w-8 h-8 flex items-center justify-center bg-white rounded border border-emerald-900/10 group-hover:border-emerald-500/30 transition-colors`}>
-                                                        <div className={`${item.icon} text-emerald-800 text-sm`} />
+                                                    <div className={`w-10 h-10 flex items-center justify-center bg-white/50 rounded-lg border ${theme.border}`}>
+                                                        <div className={`${item.icon} ${theme.text} text-lg`} />
                                                     </div>
-                                                    <span className="font-bold text-base text-emerald-900">{item.title}</span>
+                                                    <span className={`font-bold text-lg ${theme.text}`}>{item.title}</span>
                                                 </div>
-                                                <span className="text-xs font-bold text-emerald-700/60 bg-emerald-100/50 px-2 py-0.5 rounded">Lvl {lvl}/{item.maxLevel}</span>
+                                                <span className={`text-xs font-bold ${theme.text} bg-${theme.primary}/20 px-2 py-1 rounded`}>Lvl {lvl}/{item.maxLevel}</span>
                                             </div>
 
-                                            <div className="text-xs text-emerald-800/80 mb-3 pl-11 leading-snug">
+                                            <div className={`text-sm ${theme.text} opacity-80 mb-4 pl-1 leading-snug font-serif`}>
                                                 {item.description(lvl + 1)}
                                             </div>
 
-                                            <div className="flex justify-end pl-11">
+                                            <div className="mt-auto">
                                                 {isMaxed ? (
-                                                    <span className="text-xs font-bold text-emerald-600 px-3 py-1 bg-emerald-100 rounded border border-emerald-200 w-full text-center">MAXED</span>
+                                                    <div className={`w-full py-2 text-xs font-bold ${theme.text} bg-${theme.primary}/10 rounded border ${theme.border} text-center uppercase tracking-widest`}>
+                                                        Mastered
+                                                    </div>
                                                 ) : (
                                                     <button
                                                         onClick={() => actions.onBuyUpgrade(item.id, cost)}
                                                         disabled={!canAfford}
-                                                        className={`w-full py-1.5 text-xs font-bold border rounded transition-all flex items-center justify-center gap-2 shadow-sm
+                                                        className={`w-full py-2.5 text-sm font-bold border rounded-lg transition-all flex items-center justify-center gap-2 shadow-md
                                                             ${canAfford
-                                                                ? 'bg-amber-400 border-amber-600 text-amber-900 hover:bg-amber-300 hover:-translate-y-0.5 active:translate-y-0'
-                                                                : 'bg-slate-200 border-slate-300 text-slate-400 cursor-not-allowed opacity-70'}
+                                                                ? 'bg-amber-400 border-amber-600 text-amber-900 hover:bg-amber-300 hover:-translate-y-0.5 active:translate-y-0 active:shadow-inner'
+                                                                : 'bg-slate-200 border-slate-300 text-slate-400 cursor-not-allowed grayscale'}
                                                         `}
                                                     >
                                                         <span>Buy for {cost}</span>
-                                                        <div className="w-2 h-2 rounded-full bg-current opacity-80" />
+                                                        <div className="w-2.5 h-2.5 rounded-full bg-amber-600 shadow-[0_0_5px_rgba(180,83,9,0.5)]" />
                                                     </button>
                                                 )}
                                             </div>
@@ -391,37 +330,33 @@ export const FantasyBook: React.FC<FantasyBookProps> = React.memo(({
                         />
 
                         {/* Tabs */}
-                        {renderTabButton('status', 15)}
-                        {renderTabButton('grimoire', 25)}
-                        {renderTabButton('merchant', 35)}
+                        {renderTabButton('character', 15)}
+                        {renderTabButton('upgrades', 30)}
 
                         {/* Content Layer */}
-                        <div className="absolute inset-0 grid grid-cols-2 p-[6%] gap-[4%] pt-[8%] pb-[8%] font-serif text-slate-900 overflow-hidden">
+                        <div className="absolute inset-0 grid grid-cols-2 p-[6%] gap-[4%] pt-[3%] pb-[8%] font-serif text-slate-900 overflow-hidden">
                             {/* Left Page: Main Content Area */}
                             <div className="px-5 py-3 overflow-y-auto custom-scrollbar h-full pr-4 relative overflow-x-hidden">
-                                {/* Title only for non-merchant pages, as merchant has custom layout */}
-                                {activeTab !== 'merchant' && (
-                                    <h2 className={`text-2xl font-bold mb-4 font-medieval border-b-2 pb-2 ${TABS[activeTab].color} border-current opacity-80 sticky top-0 bg-[#e3dac9] z-10`}>
-                                        {TABS[activeTab].title}
-                                    </h2>
+                                {activeTab === 'character' && (
+                                    <>
+                                        <h2 className={`text-2xl font-bold mb-4 font-medieval border-b-2 pb-2 ${TABS[activeTab].color} border-current opacity-80 sticky top-0 bg-[#e3dac9] z-10`}>
+                                            {TABS[activeTab].title}
+                                        </h2>
+                                        {renderStatusPage()}
+                                    </>
                                 )}
-
-                                {activeTab === 'status' && renderStatusPage()}
-                                {activeTab === 'grimoire' && renderGrimoireLeftPage()}
-                                {activeTab === 'merchant' && renderMerchantCategories()}
+                                {activeTab === 'upgrades' && renderMerchantCategories()}
                             </div>
 
                             {/* Right Page: Supplemental / Notes / Controls / Merchant Items */}
                             <div className="px-5 py-3 h-full flex flex-col justify-between relative overflow-x-hidden">
-                                {activeTab === 'merchant' && renderMerchantItems()}
-                                {activeTab === 'grimoire' && renderGrimoireRightPage()}
+                                {activeTab === 'upgrades' && renderMerchantItems()}
 
-                                {activeTab === 'status' && (
+                                {activeTab === 'character' && (
                                     <>
                                         <div className="space-y-4">
                                             <h3 className="text-lg font-bold text-amber-900/70 font-medieval border-b border-amber-900/10 pb-1">Notes</h3>
                                             <div className="text-sm italic text-slate-600 font-handwriting leading-relaxed opacity-80">
-                                                {mode === 'level_up' && "Great power flows through you. Choose wisely, for the path shapes the walker."}
                                                 {mode === 'shop' && "Ah, a customer! Standard exchange rates apply. No refunds on cursed items."}
                                                 {mode === 'view' && "\"To defeat the darkness, one must first understand their own strength.\""}
                                             </div>

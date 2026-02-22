@@ -291,6 +291,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         if (this.isDead || !this.active) return;
 
         this.hp -= amount;
+        this.scene.events.emit('enemy-hit');
         this.setTint(0xff0000);
         this.scene.time.delayedCall(100, () => {
             if (this.active && !this.isDead) this.clearTint();

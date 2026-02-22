@@ -58,6 +58,12 @@ export const FantasyButton: React.FC<FantasyButtonProps> = ({
                 ...style,
             }}
             disabled={disabled}
+            onPointerDown={() => {
+                import('../../game/AudioManager').then(({ AudioManager }) => {
+                    AudioManager.instance.resumeContext();
+                    AudioManager.instance.playSFX('ui_click');
+                });
+            }}
             {...props}
         >
             {/* The Background Panel */}

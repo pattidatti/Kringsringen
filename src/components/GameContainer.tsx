@@ -6,15 +6,14 @@ import { Hotbar } from './ui/Hotbar';
 import { TopHUD } from './ui/TopHUD';
 import { MenuAnchor } from './ui/MenuAnchor';
 import { FantasyBook, type BookMode } from './ui/FantasyBook';
-import { UPGRADES, type UpgradeConfig } from '../config/upgrades';
+
 import { setGameInstance } from '../hooks/useGameRegistry';
 
 export const GameContainer = () => {
     const gameContainerRef = useRef<HTMLDivElement>(null);
     const gameInstanceRef = useRef<Phaser.Game | null>(null);
 
-    const [isLeveling, setIsLeveling] = useState(false);
-    const [availablePerks, setAvailablePerks] = useState<UpgradeConfig[]>([]);
+
 
     // Book State
     const [isBookOpen, setIsBookOpen] = useState(false);
@@ -76,17 +75,8 @@ export const GameContainer = () => {
                 const mainScene = game.scene.getScene('MainScene');
                 if (mainScene) {
                     mainScene.events.on('level-up', () => {
-                        game.scene.pause('MainScene');
-
-                        // Generate Random Perks
-                        // Simple shuffle for now
-                        const shuffled = [...UPGRADES].sort(() => 0.5 - Math.random());
-                        setAvailablePerks(shuffled.slice(0, 3));
-
-                        // Open Book in Level Up Mode
-                        setBookMode('level_up');
-                        setIsBookOpen(true);
-                        setIsLeveling(true);
+                        // Level up is now automatic in MainScene without opening the book
+                        // We can still pause and heal here if desired, but GDD says heal on level complete.
                     });
 
                     mainScene.events.on('level-complete', () => {
@@ -124,16 +114,7 @@ export const GameContainer = () => {
         }
     }, [isBookOpen]);
 
-    const selectUpgrade = useCallback((upgradeId: string) => {
-        if (!gameInstanceRef.current) return;
-        const mainScene = gameInstanceRef.current.scene.getScene('MainScene');
-        mainScene.events.emit('apply-upgrade', upgradeId);
 
-        // Close Book and Resume
-        setIsBookOpen(false);
-        setIsLeveling(false);
-        // Pause handling is now automatic via useEffect
-    }, []);
 
     const applyShopUpgrade = useCallback((upgradeId: string, cost: number) => {
         if (!gameInstanceRef.current) return;
@@ -158,7 +139,7 @@ export const GameContainer = () => {
 
 
     const handleBookClose = useCallback(() => {
-        if (bookMode === 'level_up') return; // Cannot close while leveling
+        // Cannot close while leveling logic removed as leveling is gone
 
         if (bookMode === 'shop') {
             handleContinue(); // Trigger next level
@@ -178,15 +159,15 @@ export const GameContainer = () => {
 
     // Memoize actions to prevent re-renders in children
     const bookActions = useMemo(() => ({
-        onSelectPerk: selectUpgrade,
+        onSelectPerk: () => { }, // No longer used for leveling
         onBuyUpgrade: applyShopUpgrade
-    }), [selectUpgrade, applyShopUpgrade]);
+    }), [applyShopUpgrade]);
 
     return (
         <div id="game-container" ref={gameContainerRef} className="w-full h-full relative overflow-hidden bg-slate-950 font-sans selection:bg-cyan-500/30">
             {/* UI Layer - Pointer events managed internally */}
             <div id="ui-layer" className="absolute inset-0 z-10 pointer-events-none">
-                <div className={`pointer-events-auto transition-all duration-500 ${isLeveling ? 'blur-sm grayscale opacity-50' : ''}`}>
+                <div className={`pointer-events-auto transition-all duration-500`}>
                     <TopHUD />
                     <MenuAnchor
                         isOpen={isBookOpen}
@@ -195,7 +176,7 @@ export const GameContainer = () => {
                 </div>
 
                 {/* Hotbar - Bottom Center */}
-                <div className={`absolute bottom-6 left-1/2 -translate-x-1/2 pointer-events-auto transition-all duration-500 ${isLeveling ? 'blur-md grayscale opacity-20' : ''}`}>
+                <div className={`absolute bottom-6 left-1/2 -translate-x-1/2 pointer-events-auto transition-all duration-500`}>
                     <Hotbar />
                 </div>
             </div>
@@ -208,7 +189,7 @@ export const GameContainer = () => {
                         mode={bookMode}
                         onClose={handleBookClose}
                         isGamePaused={isBookOpen}
-                        availablePerks={availablePerks}
+                        availablePerks={[]}
                         actions={bookActions}
                     />
                 </div>

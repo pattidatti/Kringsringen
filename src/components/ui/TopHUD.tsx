@@ -6,9 +6,7 @@ import { FantasyIcon } from './FantasyIcon';
 export const TopHUD: React.FC = React.memo(() => {
     const hp = useGameRegistry('playerHP', 100);
     const maxHp = useGameRegistry('playerMaxHP', 100);
-    const xp = useGameRegistry('playerXP', 0);
-    const maxXp = useGameRegistry('playerMaxXP', 100);
-    const level = useGameRegistry('playerLevel', 1);
+    const level = useGameRegistry('gameLevel', 1);
     const wave = useGameRegistry('currentWave', 1);
     const maxWaves = useGameRegistry('maxWaves', 1);
     const coins = useGameRegistry('playerCoins', 0);
@@ -20,7 +18,7 @@ export const TopHUD: React.FC = React.memo(() => {
     }, []);
 
     const hpPercent = Math.min(100, Math.max(0, (hp / maxHp) * 100));
-    const xpPercent = Math.min(100, Math.max(0, (xp / maxXp) * 100));
+
     const isLowHp = hpPercent < 25;
 
     return (
@@ -50,16 +48,7 @@ export const TopHUD: React.FC = React.memo(() => {
                     </div>
                 </div>
 
-                {/* XP Bar (Slimmer) */}
-                <div className="relative w-48 h-4 bg-black/60 border border-amber-900/30 rounded-r-full overflow-hidden shadow-md -mt-1 ml-4">
-                    <div
-                        className="h-full bg-gradient-to-r from-blue-900 via-blue-500 to-cyan-400 transition-all duration-500 ease-out"
-                        style={{ width: `${xpPercent}%` }}
-                    />
-                    <div className="absolute inset-0 text-[8px] text-center text-white/70 font-mono leading-4 drop-shadow-sm">
-                        XP
-                    </div>
-                </div>
+
             </div>
 
             {/* Center: Phase & Level Indicator */}
