@@ -1,0 +1,110 @@
+import Phaser from 'phaser';
+
+/**
+ * Registers all game animations (player, enemies, blood effects).
+ * Called from MainScene.create().
+ */
+export function createAnimations(scene: Phaser.Scene): void {
+    scene.anims.create({
+        key: 'player-idle',
+        frames: scene.anims.generateFrameNumbers('player-idle', { start: 0, end: 5 }),
+        frameRate: 10,
+        repeat: -1
+    });
+
+    scene.anims.create({
+        key: 'player-walk',
+        frames: scene.anims.generateFrameNumbers('player-walk', { start: 0, end: 7 }),
+        frameRate: 12,
+        repeat: -1
+    });
+
+    scene.anims.create({
+        key: 'player-attack',
+        frames: scene.anims.generateFrameNumbers('player-attack', { start: 0, end: 5 }),
+        frameRate: 15,
+        repeat: 0
+    });
+
+    scene.anims.create({
+        key: 'player-bow',
+        frames: scene.anims.generateFrameNumbers('player-full', { start: 36, end: 44 }),
+        frameRate: 15,
+        repeat: 0
+    });
+
+    scene.anims.create({
+        key: 'orc-walk',
+        frames: scene.anims.generateFrameNumbers('orc-walk', { start: 0, end: 7 }),
+        frameRate: 10,
+        repeat: -1
+    });
+
+    scene.anims.create({
+        key: 'orc-attack',
+        frames: scene.anims.generateFrameNumbers('orc-attack', { start: 0, end: 5 }),
+        frameRate: 12,
+        repeat: 0
+    });
+
+    // New Enemy Animations
+    scene.anims.create({
+        key: 'slime-walk',
+        frames: scene.anims.generateFrameNumbers('slime', { start: 0, end: 5 }),
+        frameRate: 12,
+        repeat: -1
+    });
+
+    scene.anims.create({
+        key: 'skeleton-walk',
+        frames: scene.anims.generateFrameNumbers('skeleton', { start: 8, end: 15 }),
+        frameRate: 10,
+        repeat: -1
+    });
+
+    scene.anims.create({
+        key: 'werewolf-walk',
+        frames: scene.anims.generateFrameNumbers('werewolf', { start: 13, end: 25 }),
+        frameRate: 12,
+        repeat: -1
+    });
+
+    scene.anims.create({
+        key: 'greatsword-walk',
+        frames: scene.anims.generateFrameNumbers('greatsword_skeleton', { start: 12, end: 23 }),
+        frameRate: 8,
+        repeat: -1
+    });
+
+    // Elite Enemies
+    scene.anims.create({
+        key: 'armored-skeleton-walk',
+        frames: scene.anims.generateFrameNumbers('armored_skeleton', { start: 8, end: 15 }),
+        frameRate: 10,
+        repeat: -1
+    });
+
+    scene.anims.create({
+        key: 'elite-orc-walk',
+        frames: scene.anims.generateFrameNumbers('elite_orc', { start: 8, end: 15 }),
+        frameRate: 10,
+        repeat: -1
+    });
+
+    scene.anims.create({
+        key: 'armored-orc-walk',
+        frames: scene.anims.generateFrameNumbers('armored_orc', { start: 8, end: 15 }),
+        frameRate: 10,
+        repeat: -1
+    });
+
+    // Blood Effects
+    for (let i = 1; i <= 5; i++) {
+        scene.anims.create({
+            key: `blood_${i}`,
+            frames: scene.anims.generateFrameNumbers(`blood_${i}`, { start: 0, end: 29 }),
+            frameRate: 24,
+            repeat: 0
+        });
+    }
+}

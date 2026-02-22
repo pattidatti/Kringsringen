@@ -1,21 +1,24 @@
 import Phaser from 'phaser';
 import { Enemy } from './Enemy';
 import { CircularForestMapGenerator } from './CircularForestMapGenerator';
-import { FantasyAssetManifest } from './FantasyAssetManifest';
 import { Arrow } from './Arrow';
 import { Coin } from './Coin';
-import { UPGRADES } from '../config/upgrades';
 import { SaveManager } from './SaveManager';
 import { ObjectPoolManager } from './ObjectPoolManager';
-import { GAME_CONFIG } from '../config/GameConfig';
 import { SpatialHashGrid } from './SpatialGrid';
 import { AudioManager } from './AudioManager';
+import { loadAssets } from './AssetLoader';
+import { createAnimations } from './AnimationSetup';
+import { WaveManager } from './WaveManager';
+import { PlayerStatsManager } from './PlayerStatsManager';
+import { PlayerCombatManager } from './PlayerCombatManager';
+import type { IMainScene } from './IMainScene';
 
 
-class MainScene extends Phaser.Scene {
+class MainScene extends Phaser.Scene implements IMainScene {
     public enemies!: Phaser.Physics.Arcade.Group;
     public spatialGrid!: SpatialHashGrid;
-    private coins!: Phaser.Physics.Arcade.Group;
+    public coins!: Phaser.Physics.Arcade.Group;
     public obstacles!: Phaser.Physics.Arcade.StaticGroup;
     private attackHitbox!: Phaser.Types.Physics.Arcade.ImageWithDynamicBody;
     private wasd!: {
@@ -29,104 +32,19 @@ class MainScene extends Phaser.Scene {
     };
 
     private arrows!: Phaser.Physics.Arcade.Group;
-    private currentLevel: number = 1;
-    private currentWave: number = 1;
-    private enemiesToSpawn: number = 0;
-    private enemiesAlive: number = 0;
-    private isLevelActive: boolean = false;
-
-    // Throttle / Batched Economy Updates (GC Hardening & React Bridge)
-    private pendingEconomy = {
-        coins: 0
-    };
-
-    private readonly LEVEL_CONFIG = [
-        { waves: 2, enemiesPerWave: 6, multiplier: 1.0 },   // Level 1
-        { waves: 3, enemiesPerWave: 8, multiplier: 1.2 },   // Level 2
-        { waves: 3, enemiesPerWave: 12, multiplier: 1.5 },  // Level 3
-        { waves: 4, enemiesPerWave: 15, multiplier: 2.0 },  // Level 4
-        { waves: 5, enemiesPerWave: 20, multiplier: 3.0 }   // Level 5+
-    ];
-
-    // Player Base Stats
-    private baseDamage: number = GAME_CONFIG.PLAYER.BASE_DAMAGE;
-    private baseSpeed: number = GAME_CONFIG.PLAYER.BASE_SPEED;
-    private baseMaxHP: number = GAME_CONFIG.PLAYER.BASE_MAX_HP;
-    private baseCooldown: number = GAME_CONFIG.PLAYER.BASE_COOLDOWN;
-    private baseKnockback: number = GAME_CONFIG.PLAYER.BASE_KNOCKBACK;
-    private baseRegen: number = 0;
-    private baseArmor: number = 0;
-    private baseCritChance: number = GAME_CONFIG.PLAYER.BASE_CRIT_CHANCE;
-    private baseProjectiles: number = GAME_CONFIG.PLAYER.BASE_PROJECTILES;
-
-    // Current Stats (Calculated)
-    private playerDamage!: number;
-    private playerSpeed!: number;
-    private playerMaxHP!: number;
-    private playerCooldown!: number;
-    private playerKnockback!: number;
-
     public poolManager!: ObjectPoolManager;
 
-    private isInvincible: boolean = false;
-    private isKnockedBack: boolean = false;
-    private invincibilityDuration: number = 1000;
+    // Managers
+    public stats!: PlayerStatsManager;
+    public combat!: PlayerCombatManager;
+    public waves!: WaveManager;
 
     constructor() {
         super('MainScene');
     }
 
     preload() {
-        this.load.spritesheet('player-idle', 'assets/sprites/soldier/Soldier-Idle.png', { frameWidth: 100, frameHeight: 100 });
-        this.load.spritesheet('player-walk', 'assets/sprites/soldier/Soldier-Walk.png', { frameWidth: 100, frameHeight: 100 });
-        this.load.spritesheet('player-attack', 'assets/sprites/soldier/Soldier-Attack01.png', { frameWidth: 100, frameHeight: 100 });
-        this.load.spritesheet('player-full', 'assets/sprites/soldier/Soldier.png', { frameWidth: 100, frameHeight: 100 });
-        this.load.image('arrow', 'assets/sprites/projectile/arrow.png');
-
-        this.load.spritesheet('orc-idle', 'assets/sprites/orc/Orc-Idle.png', { frameWidth: 100, frameHeight: 100 });
-        this.load.spritesheet('orc-walk', 'assets/sprites/orc/Orc-Walk.png', { frameWidth: 100, frameHeight: 100 });
-        this.load.spritesheet('orc-attack', 'assets/sprites/orc/Orc-Attack01.png', { frameWidth: 100, frameHeight: 100 });
-
-        // New Enemies - Loading as 100x100 Spritesheets (Full Sheets)
-        this.load.spritesheet('slime', 'assets/sprites/slime.png', { frameWidth: 100, frameHeight: 100 });
-        this.load.spritesheet('skeleton', 'assets/sprites/skeleton.png', { frameWidth: 100, frameHeight: 100 });
-        this.load.spritesheet('greatsword_skeleton', 'assets/sprites/greatsword_skeleton.png', { frameWidth: 100, frameHeight: 100 });
-        this.load.spritesheet('werewolf', 'assets/sprites/werewolf.png', { frameWidth: 100, frameHeight: 100 });
-
-        // Elite Variants
-        this.load.spritesheet('armored_skeleton', 'assets/sprites/armored_skeleton.png', { frameWidth: 100, frameHeight: 100 });
-        this.load.spritesheet('elite_orc', 'assets/sprites/elite_orc.png', { frameWidth: 100, frameHeight: 100 });
-        this.load.spritesheet('armored_orc', 'assets/sprites/armored_orc.png', { frameWidth: 100, frameHeight: 100 });
-
-        // Fantasy Tileset Assets
-        this.load.spritesheet('fantasy-ground', 'assets/fantasy/Art/Ground Tileset/Tileset_Ground.png', { frameWidth: 16, frameHeight: 16 });
-        this.load.spritesheet('fantasy-road', 'assets/fantasy/Art/Ground Tileset/Tileset_Road.png', { frameWidth: 16, frameHeight: 16 });
-
-        // Load all assets from manifest
-        FantasyAssetManifest.forEach(asset => {
-            this.load.image(asset.id, asset.path);
-        });
-
-        // Keeping atlases for potential use
-        this.load.spritesheet('fantasy-props-atlas', 'assets/fantasy/Art/Props/Atlas/Props.png', { frameWidth: 16, frameHeight: 16 });
-        this.load.spritesheet('fantasy-trees-atlas', 'assets/fantasy/Art/Trees and Bushes/Atlas/Trees_Bushes.png', { frameWidth: 16, frameHeight: 16 });
-
-        // Map Assets
-        this.load.image('tiles-grass', 'assets/textures/TX Tileset Grass.png');
-        this.load.image('tiles-stone', 'assets/textures/TX Tileset Stone Ground.png');
-        this.load.spritesheet('props', 'assets/textures/TX Props.png', { frameWidth: 32, frameHeight: 32 });
-        this.load.spritesheet('plants', 'assets/textures/TX Plant.png', { frameWidth: 32, frameHeight: 32 });
-        this.load.spritesheet('struct', 'assets/textures/TX Struct.png', { frameWidth: 32, frameHeight: 32 });
-        this.load.spritesheet('shadows', 'assets/textures/TX Shadow.png', { frameWidth: 32, frameHeight: 32 });
-        this.load.spritesheet('shadows-plant', 'assets/textures/TX Shadow Plant.png', { frameWidth: 32, frameHeight: 32 });
-
-        // Blood Effects
-        for (let i = 1; i <= 5; i++) {
-            this.load.spritesheet(`blood_${i}`, `assets/sprites/effects/blood/blood_${i}.png`, { frameWidth: 100, frameHeight: 100 });
-        }
-
-        // Preload Audio
-        AudioManager.instance.preload(this);
+        loadAssets(this);
     }
 
     create() {
@@ -144,8 +62,13 @@ class MainScene extends Phaser.Scene {
         // Initialize Audio Manager
         AudioManager.instance.setScene(this);
 
+        // Initialize Managers
+        this.stats = new PlayerStatsManager(this);
+        this.combat = new PlayerCombatManager(this);
+        this.waves = new WaveManager(this);
+
         // Calculate Initial Stats
-        this.recalculateStats();
+        this.stats.recalculateStats();
 
         // Initialize Object Pool
         this.poolManager = new ObjectPoolManager(this);
@@ -189,7 +112,7 @@ class MainScene extends Phaser.Scene {
         const fantasyMap = new CircularForestMapGenerator(this, this.obstacles, mapWidth, mapHeight);
         fantasyMap.generate();
 
-        this.setupAnimations();
+        createAnimations(this);
 
         const player = this.physics.add.sprite(mapWidth / 2, mapHeight / 2, 'player-idle');
         player.setCollideWorldBounds(true);
@@ -211,8 +134,8 @@ class MainScene extends Phaser.Scene {
         // Enemy Group
         this.enemies = this.physics.add.group({
             classType: Enemy,
-            runChildUpdate: true, // Auto-update for pooling
-            maxSize: 100 // Cap enemies to prevent lag
+            runChildUpdate: true,
+            maxSize: 100
         });
 
         // Arrow Group
@@ -236,14 +159,13 @@ class MainScene extends Phaser.Scene {
 
         this.physics.add.overlap(this.attackHitbox, this.enemies, (_hitbox, enemy) => {
             const e = enemy as Enemy;
-            e.takeDamage(this.playerDamage);
-            e.pushback(player.x, player.y, this.playerKnockback);
+            e.takeDamage(this.stats.damage);
+            e.pushback(player.x, player.y, this.stats.knockback);
         });
 
         // Player Hit Logic (Event-Driven)
-        // Player Hit Logic (Event-Driven)
         this.events.on('enemy-hit-player', (damage: number, _type: string, x?: number, y?: number) => {
-            this.takePlayerDamage(damage, x, y);
+            this.combat.takePlayerDamage(damage, x, y);
         });
 
         const cursors = this.input.keyboard?.createCursorKeys();
@@ -274,24 +196,24 @@ class MainScene extends Phaser.Scene {
         // Listen for Upgrades
         this.events.off('apply-upgrade');
         this.events.on('apply-upgrade', (upgradeId: string) => {
-            this.applyUpgrade(upgradeId);
+            this.stats.applyUpgrade(upgradeId);
         });
 
         // Listen for Next Level
         this.events.on('start-next-level', () => {
-            this.startLevel(this.currentLevel + 1);
+            this.waves.startLevel(this.registry.get('gameLevel') + 1);
         });
 
         // Economy Throttler (React Bridge Batching)
         this.time.addEvent({
             delay: 50,
-            callback: this.flushEconomy,
+            callback: () => this.stats.flushEconomy(),
             callbackScope: this,
             loop: true
         });
 
         // Initial Start
-        this.startLevel(1);
+        this.waves.startLevel(1);
 
         // Resume audio context and play music
         this.input.on('pointerdown', () => AudioManager.instance.resumeContext());
@@ -302,466 +224,29 @@ class MainScene extends Phaser.Scene {
         this.events.on('player-swing', () => AudioManager.instance.playSFX('swing'));
     }
 
-    private setupAnimations() {
-        this.anims.create({
-            key: 'player-idle',
-            frames: this.anims.generateFrameNumbers('player-idle', { start: 0, end: 5 }),
-            frameRate: 10,
-            repeat: -1
-        });
-
-        this.anims.create({
-            key: 'player-walk',
-            frames: this.anims.generateFrameNumbers('player-walk', { start: 0, end: 7 }),
-            frameRate: 12,
-            repeat: -1
-        });
-
-        this.anims.create({
-            key: 'player-attack',
-            frames: this.anims.generateFrameNumbers('player-attack', { start: 0, end: 5 }),
-            frameRate: 15,
-            repeat: 0
-        });
-
-        this.anims.create({
-            key: 'player-bow',
-            frames: this.anims.generateFrameNumbers('player-full', { start: 36, end: 44 }),
-            frameRate: 15,
-            repeat: 0
-        });
-
-        this.anims.create({
-            key: 'orc-walk',
-            frames: this.anims.generateFrameNumbers('orc-walk', { start: 0, end: 7 }),
-            frameRate: 10,
-            repeat: -1
-        });
-
-        this.anims.create({
-            key: 'orc-attack',
-            frames: this.anims.generateFrameNumbers('orc-attack', { start: 0, end: 5 }),
-            frameRate: 12,
-            repeat: 0
-        });
-
-        // New Enemy Animations
-        this.anims.create({
-            key: 'slime-walk',
-            frames: this.anims.generateFrameNumbers('slime', { start: 0, end: 5 }), // User confirmed: 6 frames (0-5)
-            frameRate: 12,
-            repeat: -1
-        });
-
-        this.anims.create({
-            key: 'skeleton-walk',
-            frames: this.anims.generateFrameNumbers('skeleton', { start: 8, end: 15 }), // Assuming Row 1 is Walk
-            frameRate: 10,
-            repeat: -1
-        });
-
-        this.anims.create({
-            key: 'werewolf-walk',
-            frames: this.anims.generateFrameNumbers('werewolf', { start: 13, end: 25 }), // Assuming Row 1 is Walk
-            frameRate: 12,
-            repeat: -1
-        });
-
-        this.anims.create({
-            key: 'greatsword-walk',
-            frames: this.anims.generateFrameNumbers('greatsword_skeleton', { start: 12, end: 23 }), // Assuming Row 1 is Walk
-            frameRate: 8,
-            repeat: -1
-        });
-
-        // Elite Enemies
-        this.anims.create({
-            key: 'armored-skeleton-walk',
-            frames: this.anims.generateFrameNumbers('armored_skeleton', { start: 8, end: 15 }), // Assuming Row 1 is Walk
-            frameRate: 10,
-            repeat: -1
-        });
-
-        this.anims.create({
-            key: 'elite-orc-walk',
-            frames: this.anims.generateFrameNumbers('elite_orc', { start: 8, end: 15 }), // Assuming Row 1 is Walk
-            frameRate: 10,
-            repeat: -1
-        });
-
-        this.anims.create({
-            key: 'armored-orc-walk',
-            frames: this.anims.generateFrameNumbers('armored_orc', { start: 8, end: 15 }), // Assuming Row 1 is Walk
-            frameRate: 10,
-            repeat: -1
-        });
-        for (let i = 1; i <= 5; i++) {
-            this.anims.create({
-                key: `blood_${i}`,
-                frames: this.anims.generateFrameNumbers(`blood_${i}`, { start: 0, end: 29 }),
-                frameRate: 24, // Faster for impact
-                repeat: 0
-            });
-        }
-    }
-
-    private startLevel(level: number) {
-        this.currentLevel = level;
-        this.currentWave = 1;
-        this.isLevelActive = true;
-        this.registry.set('gameLevel', this.currentLevel);
-
-        // Switch music based on level
-        if (this.currentLevel === 3) {
-            AudioManager.instance.playBGM('dragons_fury');
-        } else if (this.currentLevel === 2) {
-            AudioManager.instance.playBGM('exploration_theme');
-        }
-
-        this.startWave();
-    }
-
-    private startWave() {
-        const config = this.LEVEL_CONFIG[Math.min(this.currentLevel - 1, this.LEVEL_CONFIG.length - 1)];
-        this.enemiesToSpawn = config.enemiesPerWave;
-
-        // Sync to registry
-        this.registry.set('currentWave', this.currentWave);
-        this.registry.set('maxWaves', config.waves);
-
-        // Visual Announcement
-        const topText = this.add.text(this.cameras.main.centerX, this.cameras.main.centerY - 100, `LEVEL ${this.currentLevel} - WAVE ${this.currentWave}`, {
-            fontSize: '48px',
-            color: '#fbbf24',
-            fontStyle: 'bold',
-            stroke: '#000',
-            strokeThickness: 6
-        }).setOrigin(0.5).setScrollFactor(0);
-
-        this.tweens.add({
-            targets: topText,
-            alpha: { from: 1, to: 0 },
-            y: this.cameras.main.centerY - 150,
-            duration: 2000,
-            ease: 'Power2',
-            onComplete: () => topText.destroy()
-        });
-
-        // Start spawning
-        this.time.addEvent({
-            delay: GAME_CONFIG.WAVES.SPAWN_DELAY,
-            callback: this.spawnEnemyInWave,
-            callbackScope: this,
-            repeat: this.enemiesToSpawn - 1
-        });
-    }
-
-    private spawnEnemyInWave() {
-        if (!this.isLevelActive) return;
-
-        const mapWidth = 3000;
-        const mapHeight = 3000;
-        const centerX = mapWidth / 2;
-        const centerY = mapHeight / 2;
-        const radius = 800; // Could move to config?
-
-        const angle = Math.random() * Math.PI * 2;
-        const x = centerX + Math.cos(angle) * radius;
-        const y = centerY + Math.sin(angle) * radius;
-
-        const player = this.data.get('player') as Phaser.Physics.Arcade.Sprite;
-        const config = this.LEVEL_CONFIG[Math.min(this.currentLevel - 1, this.LEVEL_CONFIG.length - 1)];
-
-        // Select Enemy Type based on level/wave
-        let allowedTypes: string[] = ['orc', 'slime']; // Default Level 1
-
-        if (this.currentLevel >= 2) {
-            allowedTypes.push('skeleton');
-            allowedTypes.push('armored_skeleton');
-        }
-
-        if (this.currentLevel >= 3) {
-            allowedTypes.push('werewolf');
-            allowedTypes.push('armored_orc');
-        }
-
-        if (this.currentLevel >= 4) {
-            allowedTypes.push('elite_orc');
-            allowedTypes.push('greatsword_skeleton');
-        }
-
-        // Simple weighted random (prefer basic enemies)
-        let type = Phaser.Utils.Array.GetRandom(allowedTypes);
-
-        // Spawn using Pool
-        let enemy = this.enemies.get(x, y) as Enemy;
-        if (!enemy) return; // Pool full
-
-        // Reset/Spawn Logic
-        enemy.reset(x, y, player, config.multiplier, type);
-
-        // Count alive
-        // Note: enemiesAlive tracking is now tricky if we rely on 'new'. 
-        // We should increment here.
-        this.enemiesAlive++;
-
-        // Clear previous listeners to avoid stacking
-        enemy.removeAllListeners('dead');
-
-        enemy.on('dead', (ex: number, ey: number) => {
-            this.enemiesAlive--;
-            this.checkWaveProgress();
-
-            // Get player reference for drops
-            const player = this.data.get('player') as Phaser.Physics.Arcade.Sprite;
-            if (!player) return; // Should not happen, but safety check
-
-            // Spawn Coins (1-5) (Pooled)
-            const coinCount = Phaser.Math.Between(1, 5);
-            for (let i = 0; i < coinCount; i++) {
-                const coin = this.coins.get(ex, ey) as Coin;
-                if (coin) {
-                    coin.spawn(ex, ey, player);
-                    coin.removeAllListeners('collected');
-                    coin.on('collected', () => {
-                        this.addCoins(1);
-                        AudioManager.instance.playSFX('coin_collect');
-                    });
-                }
-            }
-        });
-    }
-
-    private checkWaveProgress() {
-        const config = this.LEVEL_CONFIG[Math.min(this.currentLevel - 1, this.LEVEL_CONFIG.length - 1)];
-
-        if (this.enemiesAlive === 0) {
-            if (this.currentWave < config.waves) {
-                this.currentWave++;
-                this.time.delayedCall(GAME_CONFIG.WAVES.WAVE_DELAY, () => this.startWave());
-            } else {
-                // Level Complete
-                this.isLevelActive = false;
-
-                // Save High Stage
-                const currentStage = this.registry.get('gameLevel');
-                const highStage = this.registry.get('highStage') || 1;
-                if (currentStage >= highStage) {
-                    SaveManager.save({ highStage: currentStage + 1 });
-                }
-
-                this.time.delayedCall(GAME_CONFIG.WAVES.LEVEL_COMPLETE_DELAY, () => {
-                    this.events.emit('level-complete');
-                    this.scene.pause();
-                });
-            }
-        }
-    }
-
-    private addCoins(amount: number) {
-        this.pendingEconomy.coins += amount;
-    }
-
-    private flushEconomy() {
-        if (!this.scene.isActive()) return;
-
-        // Flush Coins
-        if (this.pendingEconomy.coins > 0) {
-            let coins = this.registry.get('playerCoins') || 0;
-            coins += this.pendingEconomy.coins;
-            this.registry.set('playerCoins', coins);
-
-            // Optional: Too frequent saves can stutter. We should use larger intervals.
-            // Currently saving every logic tick where coins cross 10s... Let's just limit.
-            if (coins % 10 === 0) {
-                SaveManager.save({ coins });
-            }
-
-            this.pendingEconomy.coins = 0;
-        }
-    }
-
-    private recalculateStats() {
-        const levels = this.registry.get('upgradeLevels') || {};
-
-        // Damage
-        const dmgLvl = levels['damage'] || 0;
-        this.playerDamage = this.baseDamage * (1 + (dmgLvl * 0.1));
-        this.registry.set('playerDamage', this.playerDamage);
-
-        // Speed
-        const speedLvl = levels['speed'] || 0;
-        this.playerSpeed = this.baseSpeed + (speedLvl * 10);
-        this.registry.set('playerSpeed', this.playerSpeed);
-
-        // Max HP
-        const hpLvl = levels['health'] || 0;
-        const newMaxHP = this.baseMaxHP + (hpLvl * 20);
-        this.playerMaxHP = newMaxHP;
-        this.registry.set('playerMaxHP', this.playerMaxHP);
-
-        // Cooldown
-        const cdLvl = levels['bow_cooldown'] || 0;
-        this.playerCooldown = this.baseCooldown * (1 - (cdLvl * 0.1));
-
-        // Attack Speed (Sword)
-        const atkSpdLvl = levels['attack_speed'] || 0;
-        const attackSpeedMult = 1 + (atkSpdLvl * 0.1);
-        this.registry.set('playerAttackSpeed', attackSpeedMult);
-
-        // Knockback
-        const kbLvl = levels['knockback'] || 0;
-        this.playerKnockback = this.baseKnockback * (1 + (kbLvl * 0.15));
-
-        // Armor
-        const armorLvl = levels['armor'] || 0;
-        const currentArmor = this.baseArmor + armorLvl;
-        this.registry.set('playerArmor', currentArmor);
-
-        // Regen
-        const regenLvl = levels['regen'] || 0;
-        const currentRegen = this.baseRegen + regenLvl;
-        this.registry.set('playerRegen', currentRegen);
-
-        // Projectiles
-        const multiLvl = levels['multishot'] || 0;
-        const currentProjectiles = this.baseProjectiles + multiLvl;
-        this.registry.set('playerProjectiles', currentProjectiles);
-
-        // Misc
-        this.registry.set('playerLuck', 1.0);
-        this.registry.set('playerCritChance', this.baseCritChance);
-    }
-
-    private applyUpgrade(upgradeId: string) {
-        const levels = this.registry.get('upgradeLevels') || {};
-        const config = UPGRADES.find(u => u.id === upgradeId);
-
-        if (!config) return;
-
-        const currentLvl = levels[upgradeId] || 0;
-        if (currentLvl >= config.maxLevel) return;
-
-        // Increment Level
-        levels[upgradeId] = currentLvl + 1;
-        this.registry.set('upgradeLevels', { ...levels });
-
-        // Save Upgrades
-        SaveManager.save({ upgradeLevels: levels });
-
-        // Special On-Purchase Effects (like Healing)
-        if (upgradeId === 'health') {
-            let currentHP = this.registry.get('playerHP');
-            this.registry.set('playerHP', currentHP + 20); // Heal 20 on purchase
-        }
-
-        // Recalculate all stats
-        this.recalculateStats();
-
-        // Visual feedback
-        const player = this.data.get('player') as Phaser.Physics.Arcade.Sprite;
-        this.tweens.add({
-            targets: player,
-            scale: 2.5,
-            duration: 250,
-            yoyo: true,
-            ease: 'Back.out'
-        });
-    }
-
-    private takePlayerDamage(amount: number, srcX?: number, srcY?: number) {
-        if (this.isInvincible) return;
-
-        let hp = this.registry.get('playerHP');
-        const isBlocking = this.data.get('isBlocking') as boolean;
-        const player = this.data.get('player') as Phaser.Physics.Arcade.Sprite;
-        const armor = this.registry.get('playerArmor') || 0;
-
-        // Armor Reduction: Damage - Armor (min 1)
-        let damageAfterArmor = Math.max(1, amount - armor);
-
-        // Block reduces damage by 80%
-        const actualDamage = isBlocking ? damageAfterArmor * 0.2 : damageAfterArmor;
-
-        hp -= actualDamage;
-        this.registry.set('playerHP', Math.max(0, hp));
-
-        // Screen Shake
-        this.cameras.main.shake(150, 0.005);
-
-        // Visual Impact (Blood) - Pooled
-        this.poolManager.spawnBloodEffect(player.x, player.y);
-
-        // Damage Number - Pooled
-        this.poolManager.getDamageText(player.x, player.y - 40, actualDamage);
-
-        if (!isBlocking) {
-            // Knockback
-            if (srcX !== undefined && srcY !== undefined) {
-                this.isKnockedBack = true;
-                const angle = Phaser.Math.Angle.Between(srcX, srcY, player.x, player.y);
-                player.setVelocity(
-                    Math.cos(angle) * this.playerKnockback, // Use calculated knockback
-                    Math.sin(angle) * this.playerKnockback
-                );
-
-                // End knockback after a short duration
-                this.time.delayedCall(200, () => {
-                    this.isKnockedBack = false;
-                });
-            }
-
-            // I-Frames starts
-            this.isInvincible = true;
-
-            // Blinking effect
-            const blinkCount = Math.floor(this.invincibilityDuration / 200);
-            this.tweens.add({
-                targets: player,
-                alpha: 0.2,
-                duration: 100,
-                yoyo: true,
-                repeat: blinkCount - 1,
-                onComplete: () => {
-                    player.setAlpha(1);
-                    this.isInvincible = false;
-                }
-            });
-        } else {
-            // Block feedback
-            player.setTint(0xffffff);
-            this.time.delayedCall(100, () => player.clearTint());
-        }
-
-        if (hp <= 0) {
-            this.scene.pause();
-        }
-    }
-
     update() {
         const player = this.data.get('player') as Phaser.Physics.Arcade.Sprite;
         const cursors = this.data.get('cursors') as Phaser.Types.Input.Keyboard.CursorKeys;
         const isAttacking = this.data.get('isAttacking') as boolean;
         const pointer = this.input.activePointer;
-        let speed = this.playerSpeed; // Use calculated speed
+        let speed = this.stats.speed;
 
         // Update Spatial Grid
         this.spatialGrid.clear();
         this.enemies.children.iterate((enemy: any) => {
-            if (enemy.active && !enemy.isDead) { // Only add active enemies
-                // Assuming enemy is 40x40 roughly, or use body size
+            if (enemy.active && !enemy.isDead) {
                 this.spatialGrid.insert({
                     x: enemy.x,
                     y: enemy.y,
                     width: enemy.body?.width || 40,
                     height: enemy.body?.height || 40,
-                    id: (enemy as any).id // Optional if we need to ID them
+                    id: (enemy as any).id
                 });
             }
             return true;
         });
 
-        if (isAttacking || this.isKnockedBack) {
+        if (isAttacking || this.combat.isKnockedBack) {
             if (isAttacking) player.setVelocity(0, 0);
             return;
         }
@@ -833,10 +318,10 @@ class MainScene extends Phaser.Scene {
                 player.play('player-bow');
 
                 // Spawn arrow during animation
-                this.time.delayedCall(this.playerCooldown * 0.5, () => {
+                this.time.delayedCall(this.stats.cooldown * 0.5, () => {
                     const arrow = this.arrows.get(player.x, player.y) as Arrow;
                     if (arrow) {
-                        arrow.fire(player.x, player.y, angle, this.playerDamage * 0.8);
+                        arrow.fire(player.x, player.y, angle, this.stats.damage * 0.8);
                         this.events.emit('player-swing');
 
                         // Multishot logic (Cone)
@@ -847,7 +332,7 @@ class MainScene extends Phaser.Scene {
                                 const offset = Math.ceil(i / 2) * 10 * (Math.PI / 180) * (i % 2 === 0 ? -1 : 1);
                                 const subArrow = this.arrows.get(player.x, player.y) as Arrow;
                                 if (subArrow) {
-                                    subArrow.fire(player.x, player.y, angle + offset, this.playerDamage * 0.8);
+                                    subArrow.fire(player.x, player.y, angle + offset, this.stats.damage * 0.8);
                                 }
                             }
                         }

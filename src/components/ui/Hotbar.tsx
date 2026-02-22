@@ -3,8 +3,21 @@ import { useGameRegistry, getGameInstance } from '../../hooks/useGameRegistry';
 import { WEAPON_SLOTS, type WeaponId } from '../../config/weapons';
 import { motion } from 'framer-motion';
 import clsx from 'clsx';
-import panelWood from '../../assets/ui/fantasy/panels/panel_wood.png';
+import { FantasyPanel } from './FantasyPanel';
 import uiSelectors from '../../assets/ui/fantasy/UI_Selectors.png';
+
+/**
+ * Selector sprite constants.
+ * UI_Selectors.png is 192×960 (4 cols × 20 rows of 48×48 sprites).
+ * We pick the green full-frame selector at row 5, col 0.
+ */
+const SELECTOR_SCALE = 3;
+const SELECTOR_CELL = 48;
+const SELECTOR_COL = 0;
+const SELECTOR_ROW = 5;
+const SELECTOR_BG_SIZE = `${192 * SELECTOR_SCALE}px ${960 * SELECTOR_SCALE}px`;
+const SELECTOR_BG_POS = `-${SELECTOR_COL * SELECTOR_CELL * SELECTOR_SCALE}px -${SELECTOR_ROW * SELECTOR_CELL * SELECTOR_SCALE}px`;
+const SELECTOR_DISPLAY_SIZE = SELECTOR_CELL * SELECTOR_SCALE; // 144px
 
 export const Hotbar: React.FC = React.memo(() => {
     const currentWeapon = useGameRegistry('currentWeapon', 'sword');
@@ -30,84 +43,86 @@ export const Hotbar: React.FC = React.memo(() => {
     }, [unlockedWeapons, handleSelectWeapon]);
 
     return (
-        <div className="relative flex items-end justify-center p-6 pb-2">
-            {/* Wood Panel Background */}
-            <div
-                className="absolute inset-x-0 bottom-0 h-24 z-0 max-w-lg mx-auto"
-                style={{
-                    backgroundImage: `url(${panelWood})`,
-                    backgroundSize: '100% 100%',
-                    backgroundRepeat: 'no-repeat',
-                    imageRendering: 'pixelated',
-                    filter: 'drop-shadow(0 -4px 6px rgba(0,0,0,0.5))'
-                }}
-            />
+        <div className="flex items-end justify-center pb-2">
+            <FantasyPanel
+                variant="wood"
+                scale={2}
+                contentPadding="px-3 py-2"
+                style={{ filter: 'drop-shadow(0 -4px 8px rgba(0,0,0,0.6))' }}
+            >
+                <div className="flex gap-2" role="tablist" aria-label="Weapon Selection">
+                    {WEAPON_SLOTS.map((slot) => {
+                        const isRealWeapon = !slot.id.startsWith('wrapper_');
+                        const isUnlocked = isRealWeapon && unlockedWeapons.includes(slot.id);
+                        const isActive = currentWeapon === slot.id;
 
-            <div className="relative z-10 flex gap-2 mb-3" role="tablist" aria-label="Weapon Selection">
-                {WEAPON_SLOTS.map((slot) => {
-                    // Check if this slot is a real weapon and if it's unlocked
-                    const isRealWeapon = !slot.id.startsWith('wrapper_');
-                    const isUnlocked = isRealWeapon && unlockedWeapons.includes(slot.id);
-                    const isActive = currentWeapon === slot.id;
+                        return (
+                            <div
+                                key={slot.hotkey}
+                                role="tab"
+                                aria-selected={isActive}
+                                aria-keyshortcuts={slot.hotkey}
+                                onClick={() => isUnlocked && handleSelectWeapon(slot.id)}
+                                className={clsx(
+                                    "relative w-14 h-14 flex items-center justify-center transition-all duration-200",
+                                    isUnlocked
+                                        ? "cursor-pointer hover:-translate-y-1 hover:brightness-125"
+                                        : "opacity-40 cursor-default grayscale",
+                                    isActive && "z-20"
+                                )}
+                            >
+                                {/* Slot dark recess */}
+                                <div className="absolute inset-1 bg-black/50 rounded-md" />
 
-                    return (
-                        <div
-                            key={slot.hotkey} // Use hotkey as key since IDs might be wrapper_X
-                            role="tab"
-                            aria-selected={isActive}
-                            aria-keyshortcuts={slot.hotkey}
-                            onClick={() => isUnlocked && handleSelectWeapon(slot.id)}
-                            className={clsx(
-                                "relative w-16 h-16 flex items-center justify-center transition-all duration-200",
-                                isUnlocked
-                                    ? "cursor-pointer hover:-translate-y-1 brightness-110"
-                                    : "opacity-50 cursor-default grayscale",
-                                // Active state scaling is handled by the selector logic or minimal scale
-                                isActive && "z-20"
-                            )}
-                        >
-                            {/* Slot Background / Socket Shadow */}
-                            <div className="absolute inset-2 bg-black/40 rounded-lg blur-sm" />
-
-                            {/* Selector Animation - Only for active */}
-                            {isActive && (
-                                <motion.div
-                                    layoutId="active-selector"
-                                    className="absolute inset-[-12px] pointer-events-none flex items-center justify-center z-30"
-                                    transition={{ type: "spring", stiffness: 400, damping: 25 }}
-                                >
-                                    <div
-                                        className="w-full h-full bg-no-repeat image-pixelated"
+                                {/* Selector — active weapon only */}
+                                {isActive && (
+                                    <motion.div
+                                        layoutId="active-selector"
+                                        className="absolute pointer-events-none z-30"
                                         style={{
-                                            backgroundImage: `url(${uiSelectors})`,
-                                            backgroundPosition: '-96px 0px',
-                                            backgroundSize: '384px 384px',
-                                            filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.5))'
+                                            width: SELECTOR_DISPLAY_SIZE,
+                                            height: SELECTOR_DISPLAY_SIZE,
+                                            /* Center the 144px selector over the 56px slot */
+                                            left: '50%',
+                                            top: '50%',
+                                            transform: 'translate(-50%, -50%)',
                                         }}
-                                    />
-                                </motion.div>
-                            )}
+                                        transition={{ type: "spring", stiffness: 400, damping: 25 }}
+                                    >
+                                        <div
+                                            className="w-full h-full bg-no-repeat"
+                                            style={{
+                                                backgroundImage: `url(${uiSelectors})`,
+                                                backgroundPosition: SELECTOR_BG_POS,
+                                                backgroundSize: SELECTOR_BG_SIZE,
+                                                imageRendering: 'pixelated',
+                                                filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.6))'
+                                            }}
+                                        />
+                                    </motion.div>
+                                )}
 
-                            {/* Text Label */}
-                            {slot.label && (
-                                <span className={clsx(
-                                    "relative z-20 font-fantasy tracking-widest text-xs transition-colors duration-200 mt-1",
-                                    isActive
-                                        ? "text-amber-100 drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]"
-                                        : "text-stone-400 drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]"
-                                )}>
-                                    {slot.label}
-                                </span>
-                            )}
+                                {/* Weapon label */}
+                                {slot.label && (
+                                    <span className={clsx(
+                                        "relative z-20 font-fantasy tracking-widest text-xs transition-colors duration-200",
+                                        isActive
+                                            ? "text-amber-100 drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]"
+                                            : "text-stone-400 drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]"
+                                    )}>
+                                        {slot.label}
+                                    </span>
+                                )}
 
-                            {/* Hotkey Indicator */}
-                            <div className="absolute -top-1 -right-1 w-4 h-4 bg-black/60 border border-amber-900/30 rounded flex items-center justify-center z-20">
-                                <span className="text-[9px] text-amber-200/80 font-mono leading-none">{slot.hotkey}</span>
+                                {/* Hotkey badge */}
+                                <div className="absolute -top-1 -right-1 w-4 h-4 bg-black/60 border border-amber-900/30 rounded flex items-center justify-center z-20">
+                                    <span className="text-[9px] text-amber-200/80 font-mono leading-none">{slot.hotkey}</span>
+                                </div>
                             </div>
-                        </div>
-                    );
-                })}
-            </div>
+                        );
+                    })}
+                </div>
+            </FantasyPanel>
         </div>
     );
 });

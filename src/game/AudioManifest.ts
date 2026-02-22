@@ -1,67 +1,65 @@
 export type SoundCategory = 'bgm' | 'sfx' | 'ui';
 
-export type ZzFXParams = (number | undefined)[];
-
+/** Configuration for a single sound or a group of interchangeable variants. */
 export interface SoundConfig {
     id: string;
+    /** Single file path (for BGM or single-variant SFX). */
     path?: string;
-    zzfx?: ZzFXParams;
+    /** Multiple file paths — one is chosen randomly on each play. */
+    variants?: string[];
     category: SoundCategory;
     volume?: number;
     loop?: boolean;
+    /** Random pitch variation range (±). Applied only to SFX. */
     pitchVariance?: number;
 }
 
 export const AUDIO_MANIFEST: SoundConfig[] = [
-    // Music
-    {
-        id: 'meadow_theme',
-        path: 'assets/audio/music/meadow_theme.mp3',
-        category: 'bgm',
-        volume: 0.5,
-        loop: true
-    },
-    {
-        id: 'exploration_theme',
-        path: 'assets/audio/music/exploration_theme.mp3',
-        category: 'bgm',
-        volume: 0.5,
-        loop: true
-    },
-    {
-        id: 'dragons_fury',
-        path: 'assets/audio/music/dragons_fury.mp3',
-        category: 'bgm',
-        volume: 0.6,
-        loop: true
-    },
+    // — BGM —
+    { id: 'meadow_theme', path: 'assets/audio/music/meadow_theme.mp3', category: 'bgm', volume: 0.5, loop: true },
+    { id: 'exploration_theme', path: 'assets/audio/music/exploration_theme.mp3', category: 'bgm', volume: 0.5, loop: true },
+    { id: 'dragons_fury', path: 'assets/audio/music/dragons_fury.mp3', category: 'bgm', volume: 0.6, loop: true },
 
-    // SFX - Procedural ZzFX sounds
-    {
-        id: 'hit',
-        zzfx: [, , 129, .01, .1, .22, 1, 1.14, 9.9, , , , , , , , .15],
-        category: 'sfx',
-        volume: 0.4,
-        pitchVariance: 0.15
-    },
+    // — Combat SFX —
     {
         id: 'swing',
-        zzfx: [, , 538, .02, .02, .22, 1, 1.59, , -4, 668, .06, .01, , , , .09, .67, .04],
-        category: 'sfx',
-        volume: 0.3,
-        pitchVariance: 0.1
-    },
-    {
-        id: 'coin_collect',
-        zzfx: [, , 356, .01, .05, .18, 1, 1.49, , , , , , .6, , .1, , .75, .03],
+        variants: [
+            'assets/audio/sfx/sword_attack_1.wav',
+            'assets/audio/sfx/sword_attack_2.wav',
+            'assets/audio/sfx/sword_attack_3.wav',
+        ],
         category: 'sfx',
         volume: 0.4,
-        pitchVariance: 0.05
+        pitchVariance: 0.1,
     },
     {
+        id: 'hit',
+        variants: [
+            'assets/audio/sfx/sword_impact_1.wav',
+            'assets/audio/sfx/sword_impact_2.wav',
+            'assets/audio/sfx/sword_impact_3.wav',
+        ],
+        category: 'sfx',
+        volume: 0.5,
+    },
+
+    // — Economy SFX —
+    {
+        id: 'coin_collect',
+        variants: [
+            'assets/audio/sfx/coin_collect_1.wav',
+            'assets/audio/sfx/coin_collect_2.wav',
+        ],
+        category: 'sfx',
+        volume: 0.35,
+        pitchVariance: 0.05,
+    },
+
+    // — UI —
+    {
         id: 'ui_click',
-        zzfx: [, , 90, .01, .02, .12, , 1.3, , , , , , , , .1, , .5, .01],
+        path: 'assets/audio/sfx/ui_click.wav',
         category: 'ui',
-        volume: 0.3
-    }
+        volume: 0.3,
+    },
 ];

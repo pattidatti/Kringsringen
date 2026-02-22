@@ -48,78 +48,19 @@ export class AudioManager {
     public setScene(scene: Phaser.Scene) {
         this.scene = scene;
         this.applySettings();
-        this.renderAllProceduralSounds();
     }
 
     public preload(scene: Phaser.Scene) {
         AUDIO_MANIFEST.forEach(config => {
-            if (config.path && config.path.endsWith('.mp3')) {
+            if (config.path) {
                 scene.load.audio(config.id, config.path);
             }
-        });
-    }
-
-    /**
-     * Pre-renders all ZzFX params in the manifest into Phaser AudioBuffers
-     */
-    private renderAllProceduralSounds() {
-        if (!this.scene) return;
-        const soundManager = this.scene.sound as Phaser.Sound.WebAudioSoundManager;
-        const context = soundManager.context;
-
-        AUDIO_MANIFEST.forEach(config => {
-            if (config.zzfx) {
-                const buffer = this.createZzFXBuffer(context, config.zzfx);
-                this.scene!.cache.audio.add(config.id, buffer);
+            if (config.variants) {
+                config.variants.forEach((variantPath, i) => {
+                    scene.load.audio(`${config.id}_${i}`, variantPath);
+                });
             }
         });
-    }
-
-    private createZzFXBuffer(context: AudioContext, params: (number | undefined)[]): AudioBuffer {
-        const [
-            volume_ = 1, randomness = .05, frequency = 220, attack = 0, sustain = 0,
-            release = .1, shape = 0, , ,
-            , noise = 0, deltaSlide = 0,
-            , , ,
-            , , sustainVolume = 1,
-            decay = 0
-        ] = params;
-
-        const sampleRate = 44100;
-        const adsrAttack = attack * sampleRate;
-        const adsrSustain = sustain * sampleRate;
-        const adsrRelease = release * sampleRate;
-        const adsrDecay = decay * sampleRate;
-        const length = adsrAttack + adsrDecay + adsrSustain + adsrRelease;
-
-        const buffer = context.createBuffer(1, length, sampleRate);
-        const data = buffer.getChannelData(0);
-
-        let s = 0, f = frequency, v = volume_, j = 0;
-        for (let i = 0; i < length; i++) {
-            if (j++ > randomness * sampleRate) {
-                j = 0;
-                s = (Math.random() * 2 - 1) * noise;
-            }
-
-            const env = i < adsrAttack ? i / adsrAttack :
-                i < adsrAttack + adsrDecay ? 1 - ((i - adsrAttack) / adsrDecay) * (1 - sustainVolume) :
-                    i < adsrAttack + adsrDecay + adsrSustain ? sustainVolume :
-                        Math.max(0, sustainVolume * (1 - (i - adsrAttack - adsrDecay - adsrSustain) / adsrRelease));
-
-            f += deltaSlide;
-            const phase = 2 * Math.PI * f * i / sampleRate;
-            let val = 0;
-
-            if (shape === 0) val = Math.sin(phase);
-            else if (shape === 1) val = Math.sin(phase) > 0 ? 1 : -1;
-            else if (shape === 2) val = 1 - (phase % (2 * Math.PI)) / Math.PI;
-            else val = Math.random() * 2 - 1;
-
-            data[i] = (val + s) * env * v;
-        }
-
-        return buffer;
     }
 
     /**
@@ -131,8 +72,15 @@ export class AudioManager {
         const config = AUDIO_MANIFEST.find(c => c.id === id);
         if (!config || config.category === 'bgm') return;
 
-        if (!this.scene.cache.audio.exists(id)) {
-            console.warn(`[AudioManager] Sound not found in cache: ${id}`);
+        // Resolve sound key: pick random variant or use base id
+        let soundKey = id;
+        if (config.variants && config.variants.length > 0) {
+            const idx = Math.floor(Math.random() * config.variants.length);
+            soundKey = `${id}_${idx}`;
+        }
+
+        if (!this.scene.cache.audio.exists(soundKey)) {
+            console.warn(`[AudioManager] Sound not found: ${soundKey}`);
             return;
         }
 
@@ -145,7 +93,7 @@ export class AudioManager {
             pitch += (Math.random() * 2 - 1) * config.pitchVariance;
         }
 
-        this.scene.sound.play(id, {
+        this.scene.sound.play(soundKey, {
             volume: finalVolume,
             detune: (pitch - 1) * 1200
         });
