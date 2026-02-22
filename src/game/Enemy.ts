@@ -13,7 +13,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     private lastAttackTime: number = 0;
     private isAttacking: boolean = false;
     public hasHit: boolean = false;
-    private readonly DAMAGE_FRAME: number = 3; // Frame where damage occurs
+    private readonly DEFAULT_DAMAGE_FRAME: number = 3; // Fallback frame where damage occurs
     public isOnDamageFrame: boolean = false;
     private isPushingBack: boolean = false;
     private movementSpeed: number = 100;
@@ -160,7 +160,8 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
             const currentFrameIndex = this.anims.currentFrame?.index || 0;
 
             // Check for Damage Frame
-            if (currentFrameIndex === this.DAMAGE_FRAME && !this.hasHit) {
+            const damageFrame = this.config.attackDamageFrame ?? this.DEFAULT_DAMAGE_FRAME;
+            if (currentFrameIndex === damageFrame && !this.hasHit) {
                 const target = this.targetStart as any;
                 if (target && target.active) {
                     const distance = Phaser.Math.Distance.Between(this.x, this.y, target.x, target.y);

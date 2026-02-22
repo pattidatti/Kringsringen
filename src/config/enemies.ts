@@ -17,6 +17,7 @@ export interface EnemyConfig {
     scale: number;
     bodySize: { width: number, height: number };
     knockbackResistance: number; // 0 = full knockback, 1 = immovable
+    attackDamageFrame?: number; // Which animation frame triggers damage (defaults to 3)
 }
 
 export const ENEMY_TYPES: Record<string, EnemyConfig> = {
@@ -47,7 +48,8 @@ export const ENEMY_TYPES: Record<string, EnemyConfig> = {
             type: 'spritesheet',
             texture: 'slime',
             anims: {
-                walk: 'slime-walk'
+                walk: 'slime-walk',
+                attack: 'slime-attack'
             }
         },
         baseHP: 30,
@@ -56,7 +58,8 @@ export const ENEMY_TYPES: Record<string, EnemyConfig> = {
         xpValue: 5,
         scale: 1.5,
         bodySize: { width: 32, height: 24 }, // Adjusted for 100x100 frame content
-        knockbackResistance: 0.2
+        knockbackResistance: 0.2,
+        attackDamageFrame: 3
     },
     skeleton: {
         id: 'skeleton',
@@ -65,7 +68,8 @@ export const ENEMY_TYPES: Record<string, EnemyConfig> = {
             type: 'spritesheet',
             texture: 'skeleton',
             anims: {
-                walk: 'skeleton-walk'
+                walk: 'skeleton-walk',
+                attack: 'skeleton-attack'
             }
         },
         baseHP: 40,
@@ -74,7 +78,8 @@ export const ENEMY_TYPES: Record<string, EnemyConfig> = {
         xpValue: 12,
         scale: 1.8,
         bodySize: { width: 24, height: 40 }, // Adjusted
-        knockbackResistance: 0.1
+        knockbackResistance: 0.1,
+        attackDamageFrame: 4 // 8-frame animation, damage at ~50%
     },
     werewolf: {
         id: 'werewolf',
@@ -83,7 +88,8 @@ export const ENEMY_TYPES: Record<string, EnemyConfig> = {
             type: 'spritesheet',
             texture: 'werewolf',
             anims: {
-                walk: 'werewolf-walk'
+                walk: 'werewolf-walk',
+                attack: 'werewolf-attack'
             }
         },
         baseHP: 120,
@@ -92,7 +98,8 @@ export const ENEMY_TYPES: Record<string, EnemyConfig> = {
         xpValue: 30,
         scale: 2.2,
         bodySize: { width: 40, height: 60 }, // Adjusted
-        knockbackResistance: 0.5
+        knockbackResistance: 0.5,
+        attackDamageFrame: 7 // 13-frame animation, damage at ~54%
     },
     greatsword_skeleton: {
         id: 'greatsword_skeleton',
@@ -101,7 +108,8 @@ export const ENEMY_TYPES: Record<string, EnemyConfig> = {
             type: 'spritesheet',
             texture: 'greatsword_skeleton',
             anims: {
-                walk: 'greatsword-walk'
+                walk: 'greatsword-walk',
+                attack: 'greatsword-attack'
             }
         },
         baseHP: 200,
@@ -110,7 +118,8 @@ export const ENEMY_TYPES: Record<string, EnemyConfig> = {
         xpValue: 50,
         scale: 2.5,
         bodySize: { width: 50, height: 80 },
-        knockbackResistance: 0.8
+        knockbackResistance: 0.8,
+        attackDamageFrame: 6 // 12-frame animation, damage at 50%
     },
     armored_skeleton: {
         id: 'armored_skeleton',
@@ -119,7 +128,8 @@ export const ENEMY_TYPES: Record<string, EnemyConfig> = {
             type: 'spritesheet',
             texture: 'armored_skeleton',
             anims: {
-                walk: 'armored-skeleton-walk'
+                walk: 'armored-skeleton-walk',
+                attack: 'armored-skeleton-attack'
             }
         },
         baseHP: 150,
@@ -128,7 +138,8 @@ export const ENEMY_TYPES: Record<string, EnemyConfig> = {
         xpValue: 35,
         scale: 2.0,
         bodySize: { width: 40, height: 60 },
-        knockbackResistance: 0.6
+        knockbackResistance: 0.6,
+        attackDamageFrame: 4
     },
     elite_orc: {
         id: 'elite_orc',
@@ -137,7 +148,8 @@ export const ENEMY_TYPES: Record<string, EnemyConfig> = {
             type: 'spritesheet',
             texture: 'elite_orc',
             anims: {
-                walk: 'elite-orc-walk'
+                walk: 'elite-orc-walk',
+                attack: 'elite-orc-attack'
             }
         },
         baseHP: 300,
@@ -146,7 +158,8 @@ export const ENEMY_TYPES: Record<string, EnemyConfig> = {
         xpValue: 70,
         scale: 2.2,
         bodySize: { width: 50, height: 60 },
-        knockbackResistance: 0.7
+        knockbackResistance: 0.7,
+        attackDamageFrame: 4
     },
     armored_orc: {
         id: 'armored_orc',
@@ -155,7 +168,8 @@ export const ENEMY_TYPES: Record<string, EnemyConfig> = {
             type: 'spritesheet',
             texture: 'armored_orc',
             anims: {
-                walk: 'armored-orc-walk'
+                walk: 'armored-orc-walk',
+                attack: 'armored-orc-attack'
             }
         },
         baseHP: 250,
@@ -164,6 +178,7 @@ export const ENEMY_TYPES: Record<string, EnemyConfig> = {
         xpValue: 60,
         scale: 2.1,
         bodySize: { width: 45, height: 65 },
-        knockbackResistance: 0.9
+        knockbackResistance: 0.9,
+        attackDamageFrame: 4
     }
 };
