@@ -59,7 +59,7 @@ export const ENEMY_TYPES: Record<string, EnemyConfig> = {
         scale: 1.5,
         bodySize: { width: 32, height: 24 }, // Adjusted for 100x100 frame content
         knockbackResistance: 0.2,
-        attackDamageFrame: 3
+        attackDamageFrame: 5 // 12-frame animation (row 2), damage at ~40%
     },
     skeleton: {
         id: 'skeleton',
@@ -139,7 +139,7 @@ export const ENEMY_TYPES: Record<string, EnemyConfig> = {
         scale: 2.0,
         bodySize: { width: 40, height: 60 },
         knockbackResistance: 0.6,
-        attackDamageFrame: 4
+        attackDamageFrame: 4 // 9-frame animation (row 2)
     },
     elite_orc: {
         id: 'elite_orc',
@@ -159,7 +159,7 @@ export const ENEMY_TYPES: Record<string, EnemyConfig> = {
         scale: 2.2,
         bodySize: { width: 50, height: 60 },
         knockbackResistance: 0.7,
-        attackDamageFrame: 4
+        attackDamageFrame: 5 // 11-frame animation (row 2)
     },
     armored_orc: {
         id: 'armored_orc',
@@ -179,6 +179,6 @@ export const ENEMY_TYPES: Record<string, EnemyConfig> = {
         scale: 2.1,
         bodySize: { width: 45, height: 65 },
         knockbackResistance: 0.9,
-        attackDamageFrame: 4
+        attackDamageFrame: 4 // 9-frame animation (row 2)
     }
 };

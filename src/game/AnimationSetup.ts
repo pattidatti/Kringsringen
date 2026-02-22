@@ -55,10 +55,10 @@ export function createAnimations(scene: Phaser.Scene): void {
         repeat: -1
     });
 
-    // Slime sheet: 12 cols × 6 rows = 72 frames. Walk = row 0 (0–5). Attack = second half of row 0 (6–11).
+    // Slime sheet: 12 cols × 6 rows = 72 frames. Walk = row 0 (0–5). Attack = row 2 (24–35).
     scene.anims.create({
         key: 'slime-attack',
-        frames: scene.anims.generateFrameNumbers('slime', { start: 6, end: 11 }),
+        frames: scene.anims.generateFrameNumbers('slime', { start: 24, end: 35 }),
         frameRate: 12,
         repeat: 0
     });
@@ -116,10 +116,10 @@ export function createAnimations(scene: Phaser.Scene): void {
         repeat: -1
     });
 
-    // Armored skeleton sheet: 9 cols × 6 rows = 54 frames. Walk = 8–15. Attack = next 8 frames (16–23).
+    // Armored skeleton sheet: 9 cols × 6 rows = 54 frames. Attack = row 2 (18–26).
     scene.anims.create({
         key: 'armored-skeleton-attack',
-        frames: scene.anims.generateFrameNumbers('armored_skeleton', { start: 16, end: 23 }),
+        frames: scene.anims.generateFrameNumbers('armored_skeleton', { start: 18, end: 26 }),
         frameRate: 10,
         repeat: 0
     });
@@ -131,10 +131,10 @@ export function createAnimations(scene: Phaser.Scene): void {
         repeat: -1
     });
 
-    // Elite orc sheet: 11 cols × 7 rows = 77 frames. Walk = 8–15. Attack = next 8 frames (16–23).
+    // Elite orc sheet: 11 cols × 7 rows = 77 frames. Attack = row 2 (22–32).
     scene.anims.create({
         key: 'elite-orc-attack',
-        frames: scene.anims.generateFrameNumbers('elite_orc', { start: 16, end: 23 }),
+        frames: scene.anims.generateFrameNumbers('elite_orc', { start: 22, end: 32 }),
         frameRate: 10,
         repeat: 0
     });
@@ -146,10 +146,10 @@ export function createAnimations(scene: Phaser.Scene): void {
         repeat: -1
     });
 
-    // Armored orc sheet: 9 cols × 8 rows = 72 frames. Walk = 8–15. Attack = next 8 frames (16–23).
+    // Armored orc sheet: 9 cols × 8 rows = 72 frames. Attack = row 2 (18–26).
     scene.anims.create({
         key: 'armored-orc-attack',
-        frames: scene.anims.generateFrameNumbers('armored_orc', { start: 16, end: 23 }),
+        frames: scene.anims.generateFrameNumbers('armored_orc', { start: 18, end: 26 }),
         frameRate: 10,
         repeat: 0
     });
