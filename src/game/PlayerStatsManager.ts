@@ -119,9 +119,6 @@ export class PlayerStatsManager {
         levels[upgradeId] = currentLvl + 1;
         this.scene.registry.set('upgradeLevels', { ...levels });
 
-        // Save Upgrades
-        SaveManager.save({ upgradeLevels: levels });
-
         // Special On-Purchase Effects (like Healing)
         if (upgradeId === 'health') {
             let currentHP = this.scene.registry.get('playerHP');

@@ -77,15 +77,15 @@ export const Hotbar: React.FC = React.memo(() => {
                                 {/* Selector — active weapon only */}
                                 {isActive && (
                                     <motion.div
-                                        layoutId="active-selector"
+                                        initial={{ scale: 0.85 }}
+                                        animate={{ scale: 1 }}
                                         className="absolute pointer-events-none z-30"
                                         style={{
                                             width: SELECTOR_DISPLAY_SIZE,
                                             height: SELECTOR_DISPLAY_SIZE,
-                                            /* Center the 144px selector over the 56px slot */
-                                            left: '50%',
-                                            top: '50%',
-                                            transform: 'translate(-50%, -50%)',
+                                            /* Center the 144px selector over the 56px slot without transform */
+                                            top: -((SELECTOR_DISPLAY_SIZE - 56) / 2),
+                                            left: -((SELECTOR_DISPLAY_SIZE - 56) / 2),
                                         }}
                                         transition={{ type: "spring", stiffness: 400, damping: 25 }}
                                     >

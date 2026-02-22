@@ -12,13 +12,13 @@
 
 # Bugs
 - [x] HP oppe til venstre oppdaterer seg ikke
-- [ ] Når spilleren dør, fryser og krasjer spillet. 
+- [x] Når spilleren dør, fryser og krasjer spillet. 
 - [x] Hotbar i bunnen bruker assets på feil måte. De er strukket, og feilbrukt.Selector viser hele sprite, og er vertical.  
 - [ ] Nesten ingen av enemies har attack animation, selv om dette ligger tilgjengelig i assets, slimes angriper heller ikke, de bare dytter borti spilleren.
 - [ ] Det er rimelig lang loading når spiller laster inn, hva skyldes dette? 
 - [x] Uklart hvordan man unlocker bue. 
 - [ ] Popup for neste level/fase forsvinner for fort. Man rekker knapt å se hva som skjedde. Det mangler også en level complete popup når boken åpnes etter et level. 
-- [ ] Mangler en ingame counter for gull. 
+- [x] Mangler en ingame counter for gull. 
 
 
 # Annet

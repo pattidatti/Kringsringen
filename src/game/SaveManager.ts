@@ -43,6 +43,17 @@ export class SaveManager {
         localStorage.removeItem(this.SAVE_KEY);
     }
 
+    /** Resets all per-run data (coins, upgrades, weapons) but preserves highStage. */
+    static clearRun(): void {
+        const current = this.load();
+        this.save({
+            coins: 0,
+            upgradeLevels: {},
+            unlockedWeapons: ['sword'],
+            highStage: current.highStage
+        });
+    }
+
     private static getDefaultData(): SaveData {
         return {
             coins: 0,

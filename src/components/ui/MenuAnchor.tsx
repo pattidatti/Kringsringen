@@ -8,7 +8,7 @@ interface MenuAnchorProps {
 
 export const MenuAnchor: React.FC<MenuAnchorProps> = ({ onClick, isOpen }) => {
     return (
-        <div className="fixed top-4 right-4 z-50 pointer-events-auto">
+        <div className="fixed bottom-4 left-4 z-50 pointer-events-auto">
             <FantasyButton
                 onClick={onClick}
                 label={isOpen ? "Close" : "Menu"}
@@ -21,7 +21,7 @@ export const MenuAnchor: React.FC<MenuAnchorProps> = ({ onClick, isOpen }) => {
             </FantasyButton>
 
             {/* Tooltip/Hint */}
-            <div className="absolute top-full right-1/2 translate-x-1/2 mt-2 opacity-0 hover:opacity-100 transition-opacity bg-black/80 text-amber-100 text-[10px] px-2 py-1 rounded pointer-events-none whitespace-nowrap">
+            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 opacity-0 hover:opacity-100 transition-opacity bg-black/80 text-amber-100 text-[10px] px-2 py-1 rounded pointer-events-none whitespace-nowrap">
                 {isOpen ? 'Close Book (ESC)' : 'Open Book (B)'}
             </div>
         </div>

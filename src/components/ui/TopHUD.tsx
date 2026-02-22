@@ -57,7 +57,6 @@ export const TopHUD: React.FC = React.memo(() => {
                 <div className="relative bg-amber-950/80 border-x border-b border-amber-500/30 px-8 py-2 rounded-b-xl shadow-2xl backdrop-blur-md flex flex-col items-center gap-1 group">
                     <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-amber-400 to-transparent opacity-50" />
 
-                    <span className="m-text-stats text-[10px] tracking-[0.4em] text-amber-200/60 uppercase">Wave {wave} / {maxWaves}</span>
                     <div className="flex items-center gap-3">
                         <div className="w-8 h-[1px] bg-gradient-to-r from-transparent to-amber-500/50" />
                         <h1 className="text-2xl font-black text-amber-100 m-text-outline tracking-wider" style={{ fontFamily: 'Cinzel, serif' }}>
@@ -66,8 +65,10 @@ export const TopHUD: React.FC = React.memo(() => {
                         <div className="w-8 h-[1px] bg-gradient-to-l from-transparent to-amber-500/50" />
                     </div>
 
+                    <span className="text-base font-black text-white uppercase tracking-widest drop-shadow-[0_1px_2px_rgba(0,0,0,1)]">Fase {wave} / {maxWaves}</span>
+
                     {/* Progress Micro-bar for Wave */}
-                    <div className="w-full h-0.5 bg-black/50 mt-1 rounded-full overflow-hidden">
+                    <div className="w-full h-0.5 bg-black/50 mt-0.5 rounded-full overflow-hidden">
                         <div className="h-full bg-amber-400/80" style={{ width: `${(wave / maxWaves) * 100}%` }} />
                     </div>
                 </div>

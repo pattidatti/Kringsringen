@@ -54,13 +54,12 @@ class MainScene extends Phaser.Scene implements IMainScene {
         // Load Saved Data
         const saveData = SaveManager.load();
 
-        // Initialize Registry State
-        this.registry.set('playerHP', 100);
-        this.registry.set('playerCoins', saveData.coins);
+        // Initialize Registry State — run resources always start fresh
+        this.registry.set('playerCoins', 0);
         this.registry.set('currentWeapon', 'sword');
-        this.registry.set('upgradeLevels', saveData.upgradeLevels);
+        this.registry.set('upgradeLevels', {});
         this.registry.set('highStage', saveData.highStage);
-        this.registry.set('unlockedWeapons', saveData.unlockedWeapons);
+        this.registry.set('unlockedWeapons', ['sword']);
 
         // Initialize Audio Manager
         AudioManager.instance.setScene(this);
@@ -72,6 +71,9 @@ class MainScene extends Phaser.Scene implements IMainScene {
 
         // Calculate Initial Stats
         this.stats.recalculateStats();
+
+        // HP starts at full max (after stats are calculated)
+        this.registry.set('playerHP', this.stats.maxHP);
 
         // Initialize Object Pool
         this.poolManager = new ObjectPoolManager(this);
