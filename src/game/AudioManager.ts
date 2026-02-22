@@ -7,6 +7,7 @@ export interface AudioSettings {
     bgmVolume: number;
     sfxVolume: number;
     uiVolume: number;
+    bgsVolume: number;
     isMuted: boolean;
 }
 
@@ -19,12 +20,15 @@ export class AudioManager {
     private scene: Phaser.Scene | null = null;
     private currentBGM: Phaser.Sound.BaseSound | null = null;
     private currentBGMId: string | null = null;
+    private currentBGS: Phaser.Sound.BaseSound | null = null;
+    private currentBGSId: string | null = null;
 
     private settings: AudioSettings = {
         masterVolume: 1.0,
         bgmVolume: 0.8,
         sfxVolume: 1.0,
         uiVolume: 1.0,
+        bgsVolume: 0.8,
         isMuted: false
     };
 
@@ -138,6 +142,45 @@ export class AudioManager {
         });
     }
 
+    /**
+     * Plays/Transitions a background soundscape (ambience) independently of BGM.
+     */
+    public playBGS(id: string, fadeDuration: number = 1500) {
+        if (!this.scene || this.currentBGSId === id) return;
+
+        const config = AUDIO_MANIFEST.find(c => c.id === id);
+        if (!config || config.category !== 'bgs') return;
+
+        if (!this.scene.cache.audio.exists(id)) {
+            console.warn(`[AudioManager] BGS not found in cache: ${id}`);
+            return;
+        }
+
+        const finalVolume = (config.volume || 0.3) * this.settings.bgsVolume * this.settings.masterVolume;
+
+        // Fade out current BGS
+        if (this.currentBGS) {
+            const oldBGS = this.currentBGS;
+            this.scene.tweens.add({
+                targets: oldBGS,
+                volume: 0,
+                duration: fadeDuration,
+                onComplete: () => oldBGS.stop()
+            });
+        }
+
+        // Start new BGS
+        this.currentBGS = this.scene.sound.add(id, { loop: true, volume: 0 });
+        this.currentBGSId = id;
+        this.currentBGS.play();
+
+        this.scene.tweens.add({
+            targets: this.currentBGS,
+            volume: finalVolume,
+            duration: fadeDuration
+        });
+    }
+
     public setVolume(category: keyof AudioSettings, value: number) {
         if (typeof value !== 'number') return;
 
@@ -163,6 +206,13 @@ export class AudioManager {
             const config = AUDIO_MANIFEST.find(c => c.id === this.currentBGMId);
             const baseVol = config?.volume || 1.0;
             (this.currentBGM as any).volume = baseVol * this.settings.bgmVolume * this.settings.masterVolume;
+        }
+
+        // Update current BGS volume
+        if (this.currentBGS && this.currentBGSId) {
+            const config = AUDIO_MANIFEST.find(c => c.id === this.currentBGSId);
+            const baseVol = config?.volume || 0.3;
+            (this.currentBGS as any).volume = baseVol * this.settings.bgsVolume * this.settings.masterVolume;
         }
     }
 

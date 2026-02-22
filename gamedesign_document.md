@@ -77,6 +77,7 @@ Siden XP er fjernet, er butikken det eneste stedet for progresjon. Prisene skale
 | **Kamp** | Skarpt Stål | +10% Skade | 20 | 60 |
 | **Kamp** | Flerskudd | +1 Pil (Kun Bue) | 5 | 250 |
 | **Kamp** | Gjennomboring| Piler går gjennom fiender | 3 | 300 |
+| **Våpen** | Bueskytter | Låser opp buen (hotkey 2) | 1 | 200 |
 | **Utility** | Magnet | Øker plukk-opp rekkevidde | 5 | 150 |
 
 ---

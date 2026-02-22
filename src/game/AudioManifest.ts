@@ -1,4 +1,4 @@
-export type SoundCategory = 'bgm' | 'sfx' | 'ui';
+export type SoundCategory = 'bgm' | 'sfx' | 'ui' | 'bgs';
 
 /** Configuration for a single sound or a group of interchangeable variants. */
 export interface SoundConfig {
@@ -19,6 +19,9 @@ export const AUDIO_MANIFEST: SoundConfig[] = [
     { id: 'meadow_theme', path: 'assets/audio/music/meadow_theme.mp3', category: 'bgm', volume: 0.5, loop: true },
     { id: 'exploration_theme', path: 'assets/audio/music/exploration_theme.mp3', category: 'bgm', volume: 0.5, loop: true },
     { id: 'dragons_fury', path: 'assets/audio/music/dragons_fury.mp3', category: 'bgm', volume: 0.6, loop: true },
+
+    // — BGS (Background Soundscapes) —
+    { id: 'forest_ambience', path: 'assets/audio/bgs/forest_day.wav', category: 'bgs', volume: 0.3, loop: true },
 
     // — Combat SFX —
     {
@@ -41,6 +44,41 @@ export const AUDIO_MANIFEST: SoundConfig[] = [
         ],
         category: 'sfx',
         volume: 0.5,
+    },
+    {
+        id: 'bow_attack',
+        variants: [
+            'assets/audio/sfx/bow_attack_1.wav',
+            'assets/audio/sfx/bow_attack_2.wav',
+        ],
+        category: 'sfx',
+        volume: 0.4,
+        pitchVariance: 0.1,
+    },
+    {
+        id: 'bow_impact',
+        variants: [
+            'assets/audio/sfx/bow_impact_1.wav',
+            'assets/audio/sfx/bow_impact_2.wav',
+            'assets/audio/sfx/bow_impact_3.wav',
+        ],
+        category: 'sfx',
+        volume: 0.45,
+    },
+
+    // — Movement SFX —
+    {
+        id: 'footstep',
+        variants: [
+            'assets/audio/sfx/dirt_run_1.wav',
+            'assets/audio/sfx/dirt_run_2.wav',
+            'assets/audio/sfx/dirt_run_3.wav',
+            'assets/audio/sfx/dirt_run_4.wav',
+            'assets/audio/sfx/dirt_run_5.wav',
+        ],
+        category: 'sfx',
+        volume: 0.25,
+        pitchVariance: 0.15,
     },
 
     // — Economy SFX —

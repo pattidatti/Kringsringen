@@ -16,12 +16,22 @@
 |:---|:---|:---|:---|:---|:---|
 | `swing` | `sword_attack_1-3.wav` | 3 | 0.4 | ±0.1 | `main.ts` → `player-swing` event |
 | `hit` | `sword_impact_1-3.wav` | 3 | 0.5 | — | `main.ts` → `enemy-hit` event |
+| `bow_attack` | `bow_attack_1-2.wav` | 2 | 0.4 | ±0.1 | `main.ts` → `bow-shot` event |
+| `bow_impact` | `bow_impact_1-3.wav` | 3 | 0.45 | — | `Arrow.ts` → `hit()` |
+| `footstep` | `dirt_run_1-5.wav` | 5 | 0.25 | ±0.15 | `main.ts` → player walk (250ms throttle) |
 | `coin_collect` | `coin_collect_1-2.wav` | 2 | 0.35 | ±0.05 | `WaveManager.ts` → coin pickup |
 | `ui_click` | `ui_click.wav` | 1 | 0.3 | — | `FantasyButton.tsx` → button click |
 
 All SFX files are in `public/assets/audio/sfx/`.
 
----
+### BGS (Background Soundscapes)
+
+| ID | File | Volume | Loop |
+|:---|:---|:---|:---|
+| `forest_ambience` | `assets/audio/bgs/forest_day.wav` | 0.3 | ✅ |
+
+BGS plays independently of BGM via `AudioManager.playBGS()`.
+
 
 ## WAV Library Inventory
 

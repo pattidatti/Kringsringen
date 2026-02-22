@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { Enemy } from './Enemy';
+import { AudioManager } from './AudioManager';
 
 export class Arrow extends Phaser.Physics.Arcade.Sprite {
     private damage: number = 0;
@@ -45,6 +46,7 @@ export class Arrow extends Phaser.Physics.Arcade.Sprite {
     }
 
     private hit() {
+        AudioManager.instance.playSFX('bow_impact');
         this.setActive(false);
         this.setVisible(false);
         if (this.body) this.body.enable = false;

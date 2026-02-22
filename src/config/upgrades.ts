@@ -88,6 +88,16 @@ export const UPGRADES: UpgradeConfig[] = [
 
     // --- BUE ---
     {
+        id: 'unlock_bow',
+        title: 'Bueskytter',
+        icon: 'm-icon-bow',
+        category: 'Bue',
+        maxLevel: 1,
+        basePrice: 200,
+        priceScale: 1,
+        description: () => 'Lås opp buen som våpen. Trykk [2] for å bytte.'
+    },
+    {
         id: 'bow_cooldown',
         title: 'Rask Trekking',
         icon: 'm-icon-bow',

@@ -72,6 +72,7 @@ export const FantasyBook: React.FC<FantasyBookProps> = React.memo(({
     const armor = useGameRegistry('playerArmor', 0);
     const regen = useGameRegistry('playerRegen', 0);
     const attackSpeed = useGameRegistry('playerAttackSpeed', 1);
+    const unlockedWeapons = useGameRegistry<string[]>('unlockedWeapons', ['sword']);
 
     // Auto-switch tab based on mode when opening
     useEffect(() => {
@@ -225,7 +226,13 @@ export const FantasyBook: React.FC<FantasyBookProps> = React.memo(({
 
     // --- MERCHANT RIGHT PAGE: Items ---
     const renderMerchantItems = () => {
-        const shopItems = UPGRADES.filter(u => u.category === activeShopCategory);
+        const hasBow = unlockedWeapons.includes('bow');
+        const shopItems = UPGRADES.filter(u => {
+            if (u.category !== activeShopCategory) return false;
+            if (u.id === 'unlock_bow') return !hasBow;
+            if (u.category === 'Bue') return hasBow;
+            return true;
+        });
         const theme = CATEGORY_THEMES[activeShopCategory] || CATEGORY_THEMES['Karakter'];
 
         return (

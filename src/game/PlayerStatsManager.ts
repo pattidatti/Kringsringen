@@ -128,6 +128,15 @@ export class PlayerStatsManager {
             this.scene.registry.set('playerHP', currentHP + 20);
         }
 
+        if (upgradeId === 'unlock_bow') {
+            const weapons: string[] = this.scene.registry.get('unlockedWeapons') || ['sword'];
+            if (!weapons.includes('bow')) {
+                const updated = [...weapons, 'bow'];
+                this.scene.registry.set('unlockedWeapons', updated);
+                SaveManager.save({ unlockedWeapons: updated });
+            }
+        }
+
         // Recalculate all stats
         this.recalculateStats();
 

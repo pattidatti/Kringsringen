@@ -39,6 +39,9 @@ class MainScene extends Phaser.Scene implements IMainScene {
     public combat!: PlayerCombatManager;
     public waves!: WaveManager;
 
+    // Audio throttle
+    private lastFootstepTime: number = 0;
+
     constructor() {
         super('MainScene');
     }
@@ -218,10 +221,12 @@ class MainScene extends Phaser.Scene implements IMainScene {
         // Resume audio context and play music
         this.input.on('pointerdown', () => AudioManager.instance.resumeContext());
         AudioManager.instance.playBGM('meadow_theme');
+        AudioManager.instance.playBGS('forest_ambience');
 
         // Global Sound Listeners
         this.events.on('enemy-hit', () => AudioManager.instance.playSFX('hit'));
         this.events.on('player-swing', () => AudioManager.instance.playSFX('swing'));
+        this.events.on('bow-shot', () => AudioManager.instance.playSFX('bow_attack'));
     }
 
     update() {
@@ -322,7 +327,7 @@ class MainScene extends Phaser.Scene implements IMainScene {
                     const arrow = this.arrows.get(player.x, player.y) as Arrow;
                     if (arrow) {
                         arrow.fire(player.x, player.y, angle, this.stats.damage * 0.8);
-                        this.events.emit('player-swing');
+                        this.events.emit('bow-shot');
 
                         // Multishot logic (Cone)
                         const projectiles = this.registry.get('playerProjectiles') || 1;
@@ -370,6 +375,12 @@ class MainScene extends Phaser.Scene implements IMainScene {
         if (vx !== 0 || vy !== 0) {
             if (player.anims.currentAnim?.key !== 'player-walk') {
                 player.play('player-walk');
+            }
+            // Footstep audio (throttled)
+            const now = this.time.now;
+            if (now - this.lastFootstepTime > 250) {
+                this.lastFootstepTime = now;
+                AudioManager.instance.playSFX('footstep');
             }
         } else {
             if (player.anims.currentAnim?.key !== 'player-idle') {
