@@ -50,6 +50,9 @@ class MainScene extends Phaser.Scene implements IMainScene {
     private mapWidth: number = 3000;
     private mapHeight: number = 3000;
     private playerShadow: Phaser.GameObjects.Sprite | null = null;
+    private playerLight!: Phaser.GameObjects.Light;
+    private outerPlayerLight!: Phaser.GameObjects.Light;
+    private haloPlayerLight!: Phaser.GameObjects.Light;
 
     // Audio throttle
     private lastFootstepTime: number = 0;
@@ -107,6 +110,18 @@ class MainScene extends Phaser.Scene implements IMainScene {
         graphics.generateTexture('coin', 10, 10);
         graphics.destroy();
 
+        // --- LIGHT SYSTEM ---
+        this.lights.enable();
+        this.lights.setAmbientColor(0x0a0a0a); // Near black edges
+
+        // Three-layer player light for a "ultra-smooth" halo effect
+        // 1. Core light (sharpest but low intensity)
+        this.playerLight = this.lights.addLight(0, 0, 250, 0xfffaf0, 0.7);
+        // 2. Mid-range halo
+        this.outerPlayerLight = this.lights.addLight(0, 0, 600, 0xfffaf0, 0.4);
+        // 3. Wide ambient glow (near invisible but smooths the final falloff)
+        this.haloPlayerLight = this.lights.addLight(0, 0, 1200, 0xfffaf0, 0.2);
+
         // Background: Map Generation with Variety
         // Set World Bounds
         this.physics.world.setBounds(0, 0, this.mapWidth, this.mapHeight);
@@ -130,6 +145,7 @@ class MainScene extends Phaser.Scene implements IMainScene {
         player.setOffset(player.body!.offset.x, 33);
         player.setMass(2);
         player.play('player-idle');
+        player.setPipeline('Light2D');
 
         this.playerShadow = this.add.sprite(player.x, player.y + 28, 'shadows', 0)
             .setAlpha(0.4)
@@ -285,6 +301,11 @@ class MainScene extends Phaser.Scene implements IMainScene {
         if (this.playerShadow) {
             this.playerShadow.setPosition(player.x, player.y + 28);
         }
+
+        // Update Player Lights
+        this.playerLight.setPosition(player.x, player.y - 10);
+        this.outerPlayerLight.setPosition(player.x, player.y - 10);
+        this.haloPlayerLight.setPosition(player.x, player.y - 10);
         const cursors = this.data.get('cursors') as Phaser.Types.Input.Keyboard.CursorKeys;
         const isAttacking = this.data.get('isAttacking') as boolean;
         const pointer = this.input.activePointer;

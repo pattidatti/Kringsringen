@@ -48,6 +48,7 @@ export class Coin extends Phaser.Physics.Arcade.Sprite {
         const force = Phaser.Math.Between(150, 250);
         this.setVelocity(Math.cos(angle) * force, Math.sin(angle) * force);
         this.setDrag(150);
+        this.setPipeline('Light2D');
     }
 
     preUpdate(time: number, delta: number) {

@@ -38,6 +38,7 @@ export class Arrow extends Phaser.Physics.Arcade.Sprite {
         this.setVisible(true);
         this.setPosition(x, y);
         this.setRotation(angle);
+        this.setPipeline('Light2D');
 
         this.trail = this.scene.add.particles(x, y, 'arrow', {
             lifespan: 120,

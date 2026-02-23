@@ -4,6 +4,7 @@ import { AudioManager } from './AudioManager';
 
 export class FrostBolt extends Phaser.Physics.Arcade.Sprite {
     private damage: number = 0;
+    private light: Phaser.GameObjects.Light | null = null;
 
     constructor(scene: Phaser.Scene, x: number, y: number) {
         super(scene, x, y, 'frost_projectile');
@@ -14,6 +15,7 @@ export class FrostBolt extends Phaser.Physics.Arcade.Sprite {
         this.setScale(1.5);
         this.setBodySize(1, 1); // Physics body disabled during use
         this.setDepth(200);
+        this.setPipeline('Light2D');
     }
 
     fire(x: number, y: number, targetX: number, targetY: number, damage: number) {
@@ -26,11 +28,18 @@ export class FrostBolt extends Phaser.Physics.Arcade.Sprite {
         if (this.body) this.body.enable = false;
         this.play('frost-fly');
 
+        // Add cast glow
+        this.light = this.scene.lights.addLight(x, y, 180, 0x88ccff, 1.0);
+
         // After one full cycle of cast anim (~550ms @ 12fps × 8 frames), impact at target
         const castDuration = Math.round((8 / 12) * 1000);
         this.scene.time.delayedCall(castDuration, () => {
             this.setActive(false);
             this.setVisible(false);
+            if (this.light) {
+                this.scene.lights.removeLight(this.light);
+                this.light = null;
+            }
             this.impact(targetX, targetY);
         });
     }
@@ -81,6 +90,18 @@ export class FrostBolt extends Phaser.Physics.Arcade.Sprite {
 
         mainScene.poolManager.spawnFrostExplosion(hitX, hitY);
         AudioManager.instance.playSFX('ice_freeze');
+
+        // Impact flash light
+        const flash = this.scene.lights.addLight(hitX, hitY, 350, 0x00aaff, 2.5);
+        this.scene.tweens.add({
+            targets: flash,
+            intensity: 0,
+            radius: 450,
+            duration: 500,
+            onComplete: () => {
+                this.scene.lights.removeLight(flash);
+            }
+        });
     }
 
     update() {

@@ -110,6 +110,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         if (this.config.spriteInfo.type === 'spritesheet' && this.config.spriteInfo.anims) {
             this.play(this.config.spriteInfo.anims.walk);
         }
+        this.setPipeline('Light2D');
 
         // Animation Listeners (Clean previous listeners to avoid duplicates if not careful, 
         // but Phaser usually handles 'on' by adding. We should check if listener exists or just use internal flags)

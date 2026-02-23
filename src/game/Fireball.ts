@@ -8,6 +8,7 @@ export class Fireball extends Phaser.Physics.Arcade.Sprite {
     private startX: number = 0;
     private startY: number = 0;
     private trail: Phaser.GameObjects.Particles.ParticleEmitter | null = null;
+    private light: Phaser.GameObjects.Light | null = null;
 
     constructor(scene: Phaser.Scene, x: number, y: number) {
         super(scene, x, y, 'fireball_projectile');
@@ -48,6 +49,9 @@ export class Fireball extends Phaser.Physics.Arcade.Sprite {
         });
         this.trail.setDepth(this.depth - 1);
 
+        // Add Dynamic Light
+        this.light = this.scene.lights.addLight(x, y, 200, 0xff6600, 1.0);
+
         if (this.body) {
             this.body.enable = true;
             const mainScene = this.scene as any;
@@ -69,6 +73,22 @@ export class Fireball extends Phaser.Physics.Arcade.Sprite {
             this.trail.destroy();
             this.trail = null;
         }
+        if (this.light) {
+            this.scene.lights.removeLight(this.light);
+            this.light = null;
+        }
+
+        // Spawn impact flash light
+        const flash = this.scene.lights.addLight(hitX, hitY, 300, 0xffaa00, 2.0);
+        this.scene.tweens.add({
+            targets: flash,
+            intensity: 0,
+            radius: 400,
+            duration: 400,
+            onComplete: () => {
+                this.scene.lights.removeLight(flash);
+            }
+        });
 
         const mainScene = this.scene as any;
         const fireballRadius = mainScene.registry.get('fireballRadius') || 80;
@@ -120,6 +140,11 @@ export class Fireball extends Phaser.Physics.Arcade.Sprite {
         if (!this.active) return;
 
         const distance = Phaser.Math.Distance.Between(this.startX, this.startY, this.x, this.y);
+
+        if (this.light) {
+            this.light.setPosition(this.x, this.y);
+        }
+
         if (distance > this.maxDistance) {
             this.hit();
         }
