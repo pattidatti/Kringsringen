@@ -3,7 +3,7 @@ export interface FantasyAsset {
     path: string;
     width: number;
     height: number;
-    type: 'building' | 'prop' | 'tree' | 'bush';
+    type: 'building' | 'prop' | 'tree' | 'bush' | 'rock';
 }
 
 export const FantasyAssetManifest: FantasyAsset[] = [
@@ -34,6 +34,13 @@ export const FantasyAssetManifest: FantasyAsset[] = [
     { id: 'prop-Sign_1', path: 'assets/fantasy/Art/Props/Sign_1.png', width: 24, height: 22, type: 'prop' },
     { id: 'prop-Sign_2', path: 'assets/fantasy/Art/Props/Sign_2.png', width: 24, height: 22, type: 'prop' },
     { id: 'prop-Table_Medium_1', path: 'assets/fantasy/Art/Props/Table_Medium_1.png', width: 42, height: 39, type: 'prop' },
+
+    // ROCKS
+    { id: 'rock-Rock_Brown_1', path: 'assets/fantasy/Art/Rocks/Rock_Brown_1.png', width: 28, height: 14, type: 'rock' },
+    { id: 'rock-Rock_Brown_2', path: 'assets/fantasy/Art/Rocks/Rock_Brown_2.png', width: 15, height: 30, type: 'rock' },
+    { id: 'rock-Rock_Brown_4', path: 'assets/fantasy/Art/Rocks/Rock_Brown_4.png', width: 27, height: 27, type: 'rock' },
+    { id: 'rock-Rock_Brown_6', path: 'assets/fantasy/Art/Rocks/Rock_Brown_6.png', width: 14, height: 14, type: 'rock' },
+    { id: 'rock-Rock_Brown_9', path: 'assets/fantasy/Art/Rocks/Rock_Brown_9.png', width: 9,  height: 12, type: 'rock' },
 
     // TREES & BUSHES
     { id: 'tree-Tree_Emerald_1', path: 'assets/fantasy/Art/Trees and Bushes/Tree_Emerald_1.png', width: 64, height: 63, type: 'tree' },

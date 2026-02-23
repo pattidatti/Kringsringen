@@ -132,7 +132,7 @@ export const UPGRADES: UpgradeConfig[] = [
     {
         id: 'magic_bolt',
         title: 'Ukjent Kraft',
-        icon: 'item_orb_purple',
+        icon: 'item_magic_staff',
         category: 'Magi',
         maxLevel: 1,
         basePrice: 9999,

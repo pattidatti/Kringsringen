@@ -155,7 +155,7 @@ export const FantasyBook: React.FC<FantasyBookProps> = React.memo(({
             { key: 'Sverd', label: 'Sverd', icon: 'item_sword' },
             { key: 'Bue', label: 'Bue', icon: 'item_bow' },
             { key: 'Karakter', label: 'Karakter', icon: 'item_heart_status' },
-            { key: 'Magi', label: 'Magi', icon: 'item_orb_purple' },
+            { key: 'Magi', label: 'Magi', icon: 'item_magic_staff' },
         ];
 
         return (
@@ -327,63 +327,99 @@ export const FantasyBook: React.FC<FantasyBookProps> = React.memo(({
                         initial={{ scale: 0.8, opacity: 0, y: 20 }}
                         animate={{ scale: 1, opacity: 1, y: 0 }}
                         exit={{ scale: 0.8, opacity: 0, y: 20 }}
-                        className="relative drop-shadow-2xl"
-                        style={{
-                            width: 'var(--book-width, 1000px)',
-                            aspectRatio: '227/134',
-                        }}
+                        className="flex flex-col items-center gap-3"
                     >
-                        {/* Book Background */}
-                        <img
-                            src={bookOpen}
-                            alt="Open Book"
-                            className="absolute inset-0 w-full h-full object-contain image-rendering-pixelated pointer-events-none"
-                        />
+                        {/* Level Complete Banner */}
+                        {mode === 'shop' && (
+                            <motion.div
+                                initial={{ opacity: 0, y: -10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: 0.15, duration: 0.4 }}
+                                className="px-10 py-2 bg-amber-950/90 border-2 border-amber-500/60 rounded-lg shadow-lg text-center"
+                            >
+                                <span className="text-amber-300 font-medieval font-bold text-2xl tracking-widest drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
+                                    ⚔ Level {level} fullført! ⚔
+                                </span>
+                            </motion.div>
+                        )}
 
-                        {/* Tabs */}
-                        {renderTabButton('character', 15)}
-                        {renderTabButton('upgrades', 30)}
+                        {/* Book */}
+                        <div
+                            className="relative drop-shadow-2xl"
+                            style={{
+                                width: 'var(--book-width, 1000px)',
+                                aspectRatio: '227/134',
+                            }}
+                        >
+                            {/* Book Background */}
+                            <img
+                                src={bookOpen}
+                                alt="Open Book"
+                                className="absolute inset-0 w-full h-full object-contain image-rendering-pixelated pointer-events-none"
+                            />
 
-                        {/* Content Layer */}
-                        <div className="absolute inset-0 grid grid-cols-2 p-[6%] gap-[4%] pt-[3%] pb-[8%] font-serif text-slate-900 overflow-hidden">
-                            {/* Left Page: Main Content Area */}
-                            <div className="px-5 py-3 overflow-y-auto custom-scrollbar h-full pr-4 relative overflow-x-hidden">
-                                {activeTab === 'character' && (
-                                    <>
-                                        <h2 className={`text-2xl font-bold mb-4 font-medieval border-b-2 pb-2 ${TABS[activeTab].color} border-current opacity-80 sticky top-0 bg-[#e3dac9] z-10`}>
-                                            {TABS[activeTab].title}
-                                        </h2>
-                                        {renderStatusPage()}
-                                    </>
-                                )}
-                                {activeTab === 'upgrades' && renderMerchantCategories()}
-                            </div>
+                            {/* Tabs */}
+                            {renderTabButton('character', 15)}
+                            {renderTabButton('upgrades', 30)}
 
-                            {/* Right Page: Supplemental / Notes / Controls / Merchant Items */}
-                            <div className="px-5 py-3 h-full flex flex-col justify-between relative overflow-x-hidden">
-                                {activeTab === 'upgrades' && renderMerchantItems()}
+                            {/* Content Layer */}
+                            <div className="absolute inset-0 grid grid-cols-2 p-[6%] gap-[4%] pt-[3%] pb-[8%] font-serif text-slate-900 overflow-hidden">
+                                {/* Left Page: Main Content Area */}
+                                <div className="px-5 py-3 overflow-y-auto custom-scrollbar h-full pr-4 relative overflow-x-hidden">
+                                    {activeTab === 'character' && (
+                                        <>
+                                            <h2 className={`text-2xl font-bold mb-4 font-medieval border-b-2 pb-2 ${TABS[activeTab].color} border-current opacity-80 sticky top-0 bg-[#e3dac9] z-10`}>
+                                                {TABS[activeTab].title}
+                                            </h2>
+                                            {renderStatusPage()}
+                                        </>
+                                    )}
+                                    {activeTab === 'upgrades' && renderMerchantCategories()}
+                                </div>
 
-                                {activeTab === 'character' && (
-                                    <>
-                                        <div className="space-y-4">
-                                            <h3 className="text-lg font-bold text-amber-900/70 font-medieval border-b border-amber-900/10 pb-1">Notes</h3>
-                                            <div className="text-sm italic text-slate-600 font-handwriting leading-relaxed opacity-80">
-                                                {mode === 'shop' && "Ah, a customer! Standard exchange rates apply. No refunds on cursed items."}
-                                                {mode === 'view' && "\"To defeat the darkness, one must first understand their own strength.\""}
+                                {/* Right Page: Supplemental / Notes / Controls / Merchant Items */}
+                                <div className="px-5 py-3 h-full flex flex-col justify-between relative overflow-x-hidden">
+                                    {activeTab === 'upgrades' && renderMerchantItems()}
+
+                                    {activeTab === 'character' && (
+                                        <>
+                                            <div className="space-y-4">
+                                                <h3 className="text-lg font-bold text-amber-900/70 font-medieval border-b border-amber-900/10 pb-1">Notes</h3>
+                                                <div className="text-sm italic text-slate-600 font-handwriting leading-relaxed opacity-80">
+                                                    {mode === 'shop' && "Ah, a customer! Standard exchange rates apply. No refunds on cursed items."}
+                                                    {mode === 'view' && "\"To defeat the darkness, one must first understand their own strength.\""}
+                                                </div>
                                             </div>
-                                        </div>
 
-                                        <div className="flex justify-end pt-4 border-t border-amber-900/10">
-                                            <FantasyButton
-                                                variant="danger"
-                                                onClick={onClose}
-                                                className="scale-90 origin-bottom-right"
-                                                label="Close Book"
-                                            />
-                                        </div>
-                                    </>
-                                )}
+                                            <div className="flex justify-end pt-4 border-t border-amber-900/10">
+                                                <FantasyButton
+                                                    variant="danger"
+                                                    onClick={onClose}
+                                                    className="scale-90 origin-bottom-right"
+                                                    label="Close Book"
+                                                />
+                                            </div>
+                                        </>
+                                    )}
+                                </div>
                             </div>
+                        </div>
+
+                        {/* Buttons below book */}
+                        <div className="flex gap-3">
+                            {mode === 'shop' ? (
+                                <FantasyButton
+                                    variant="success"
+                                    onClick={onClose}
+                                    label={`Til level ${level + 1}`}
+                                />
+                            ) : (
+                                <FantasyButton
+                                    variant="secondary"
+                                    onClick={onClose}
+                                    label="Lukk boken"
+                                />
+                            )}
                         </div>
                     </motion.div>
                 </div>

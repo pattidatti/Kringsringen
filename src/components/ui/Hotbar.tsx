@@ -66,7 +66,7 @@ export const Hotbar: React.FC = React.memo(() => {
                                 aria-keyshortcuts={slot.hotkey}
                                 onClick={() => isUnlocked && handleSelectWeapon(slot.id)}
                                 className={clsx(
-                                    "relative w-14 h-14 flex items-center justify-center transition-all duration-200",
+                                    "relative w-20 h-20 flex items-center justify-center transition-all duration-200",
                                     isUnlocked
                                         ? "cursor-pointer hover:-translate-y-1 hover:brightness-125"
                                         : "opacity-40 cursor-default grayscale",
@@ -85,9 +85,9 @@ export const Hotbar: React.FC = React.memo(() => {
                                         style={{
                                             width: SELECTOR_DISPLAY_SIZE,
                                             height: SELECTOR_DISPLAY_SIZE,
-                                            /* Center the 144px selector over the 56px slot without transform */
-                                            top: -((SELECTOR_DISPLAY_SIZE - 56) / 2),
-                                            left: -((SELECTOR_DISPLAY_SIZE - 56) / 2),
+                                            /* Center the 144px selector over the 80px slot without transform */
+                                            top: -((SELECTOR_DISPLAY_SIZE - 80) / 2),
+                                            left: -((SELECTOR_DISPLAY_SIZE - 80) / 2),
                                         }}
                                         transition={{ type: "spring", stiffness: 400, damping: 25 }}
                                     >
@@ -108,7 +108,7 @@ export const Hotbar: React.FC = React.memo(() => {
                                 {slot.icon && isItemSpriteIcon(slot.icon) ? (
                                     <ItemIcon
                                         icon={slot.icon as ItemIconKey}
-                                        size="lg"
+                                        size="md"
                                         className={clsx(
                                             "relative z-20 transition-all duration-200",
                                             isActive ? "brightness-125" : "brightness-75"
@@ -126,8 +126,8 @@ export const Hotbar: React.FC = React.memo(() => {
                                 ) : null}
 
                                 {/* Hotkey badge */}
-                                <div className="absolute -top-1 -right-1 w-4 h-4 bg-black/60 border border-amber-900/30 rounded flex items-center justify-center z-20">
-                                    <span className="text-[9px] text-amber-200/80 font-mono leading-none">{slot.hotkey}</span>
+                                <div className="absolute -top-2 -right-2 w-6 h-6 bg-black/70 border border-amber-500/50 rounded flex items-center justify-center z-40">
+                                    <span className="text-sm text-amber-200 font-mono font-bold leading-none">{slot.hotkey}</span>
                                 </div>
                             </div>
                         );

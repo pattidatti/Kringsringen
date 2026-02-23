@@ -17,7 +17,7 @@
 - [x] Nesten ingen av enemies har attack animation, selv om dette ligger tilgjengelig i assets, slimes angriper heller ikke, de bare dytter borti spilleren.
 - [ ] Det er rimelig lang loading når spiller laster inn, hva skyldes dette? 
 - [x] Uklart hvordan man unlocker bue. 
-- [ ] Popup for neste level/fase forsvinner for fort. Man rekker knapt å se hva som skjedde. Det mangler også en level complete popup når boken åpnes etter et level. 
+- [x] Popup for neste level/fase forsvinner for fort. Man rekker knapt å se hva som skjedde. Det mangler også en level complete popup når boken åpnes etter et level. 
 - [x] Mangler en ingame counter for gull. 
 
 

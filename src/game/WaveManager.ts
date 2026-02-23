@@ -73,6 +73,7 @@ export class WaveManager {
             targets: topText,
             alpha: { from: 1, to: 0 },
             y: this.scene.cameras.main.centerY - 150,
+            delay: 2000,
             duration: 2000,
             ease: 'Power2',
             onComplete: () => topText.destroy()

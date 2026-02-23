@@ -187,7 +187,8 @@ class MainScene extends Phaser.Scene implements IMainScene {
             W: Phaser.Input.Keyboard.KeyCodes.W,
             A: Phaser.Input.Keyboard.KeyCodes.A,
             S: Phaser.Input.Keyboard.KeyCodes.S,
-            D: Phaser.Input.Keyboard.KeyCodes.D
+            D: Phaser.Input.Keyboard.KeyCodes.D,
+            SPACE: Phaser.Input.Keyboard.KeyCodes.SPACE
         }) as any;
 
         this.hotkeys = this.input.keyboard?.addKeys({
@@ -308,8 +309,9 @@ class MainScene extends Phaser.Scene implements IMainScene {
         );
         this.attackHitbox.setRotation(angle);
 
-        // Handle Attack (Left Click)
-        if (pointer.leftButtonDown() && !blockPressed) {
+        // Handle Attack (Left Click or Spacebar)
+        const spacePressed = this.wasd?.SPACE?.isDown;
+        if ((pointer.leftButtonDown() || spacePressed) && !blockPressed) {
             const currentWeapon = this.registry.get('currentWeapon');
             this.data.set('isAttacking', true);
 
