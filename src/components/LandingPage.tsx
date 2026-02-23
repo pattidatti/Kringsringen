@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FantasyButton } from './ui/FantasyButton';
 import '../styles/pixel-ui.css';
@@ -9,6 +9,42 @@ interface LandingPageProps {
 
 const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
     const [activeToast, setActiveToast] = useState<string | null>(null);
+    const audioRef = useRef<HTMLAudioElement | null>(null);
+
+    useEffect(() => {
+        const audio = audioRef.current;
+        if (!audio) return;
+
+        const tryPlay = () => {
+            audio.play().catch(() => {/* autoplay blocked, ignore */});
+            document.removeEventListener('mousedown', tryPlay);
+            document.removeEventListener('keydown', tryPlay);
+        };
+
+        document.addEventListener('mousedown', tryPlay);
+        document.addEventListener('keydown', tryPlay);
+
+        return () => {
+            document.removeEventListener('mousedown', tryPlay);
+            document.removeEventListener('keydown', tryPlay);
+        };
+    }, []);
+
+    const handleStart = () => {
+        const audio = audioRef.current;
+        if (audio) {
+            const fadeOut = setInterval(() => {
+                if (audio.volume > 0.05) {
+                    audio.volume = Math.max(0, audio.volume - 0.05);
+                } else {
+                    audio.pause();
+                    audio.volume = 1;
+                    clearInterval(fadeOut);
+                }
+            }, 50);
+        }
+        onStart();
+    };
 
     const showToast = (label: string) => {
         setActiveToast(label);
@@ -17,6 +53,12 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
 
     return (
         <div className="relative w-full h-screen overflow-hidden bg-slate-950">
+            <audio
+                ref={audioRef}
+                src={import.meta.env.BASE_URL + 'assets/audio/bgs/forest_day.wav'}
+                loop
+            />
+
             {/* Background image */}
             <img
                 src={import.meta.env.BASE_URL + 'assets/landing-bg.png'}
@@ -53,7 +95,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
                 <FantasyButton
                     label="Start Game"
                     variant="primary"
-                    onClick={onStart}
+                    onClick={handleStart}
                     className="w-64 text-xl !text-black [text-shadow:none]"
                 />
                 <FantasyButton
