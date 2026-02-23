@@ -127,6 +127,9 @@ class MainScene extends Phaser.Scene implements IMainScene {
         // 3. Wide ambient glow (near invisible but smooths the final falloff)
         this.haloPlayerLight = this.lights.addLight(0, 0, 1200, 0xfffaf0, 0.2);
 
+        // --- POST PROCESSING ---
+        this.cameras.main.postFX.addBloom(0xffffff, 1, 1, 0.5, 0.7);
+
         // Background: Map Generation with Variety
         // Set World Bounds
         this.physics.world.setBounds(0, 0, this.mapWidth, this.mapHeight);

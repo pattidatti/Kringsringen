@@ -53,16 +53,16 @@ export class WeatherManager {
             x: { min: -200, max: width + 200 },
             y: -20,
             lifespan: 1500,
-            speedY: { min: 700, max: 1000 },
-            speedX: { min: -120, max: -80 }, // Slanted rain
-            scaleY: { min: 1, max: 1.5 },
-            alpha: { start: 0.7, end: 0.2 },
-            quantity: 8,
+            speedY: { min: 500, max: 800 }, // Slower rain
+            speedX: { min: -80, max: -40 },  // Less slanted
+            scaleY: { min: 0.8, max: 1.2 },
+            alpha: { start: 0.3, end: 0.1 }, // Softer alpha
+            quantity: 3,                   // Reduced quantity
             frequency: 1,
             blendMode: 'ADD'
         });
 
-        this.rainEmitter.setDepth(1000); // Overlay
+        this.rainEmitter.setDepth(10000); // Definitely on top of everything
         this.rainEmitter.setScrollFactor(0); // Fixed to screen
 
         AudioManager.instance.playBGS('rain');

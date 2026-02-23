@@ -49,6 +49,9 @@ export class Fireball extends Phaser.Physics.Arcade.Sprite {
         });
         this.trail.setDepth(this.depth - 1);
 
+        // Add Glow FX
+        this.postFX.addGlow(0xff4400, 4, 0, false, 0.1, 10);
+
         // Add Dynamic Light
         this.light = this.scene.lights.addLight(x, y, 200, 0xff6600, 1.0);
 
@@ -77,6 +80,7 @@ export class Fireball extends Phaser.Physics.Arcade.Sprite {
             this.scene.lights.removeLight(this.light);
             this.light = null;
         }
+        this.postFX.clear();
 
         // Spawn impact flash light
         const flash = this.scene.lights.addLight(hitX, hitY, 300, 0xffaa00, 2.0);

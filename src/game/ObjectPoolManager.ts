@@ -108,6 +108,7 @@ export class ObjectPoolManager {
             explosion = this.scene.add.sprite(x, y, 'fireball_explosion');
             explosion.setScale(2);
             explosion.setDepth(500);
+            explosion.postFX.addGlow(0xff6600, 4, 0.5, false, 0.1, 20);
         }
 
         explosion.play('fireball-explode');
@@ -139,6 +140,7 @@ export class ObjectPoolManager {
             explosion = this.scene.add.sprite(x, y, 'frost_explosion');
             explosion.setScale(2);
             explosion.setDepth(500);
+            explosion.postFX.addGlow(0x00aaff, 4, 0.5, false, 0.1, 20);
         }
 
         explosion.play('frost-explode');

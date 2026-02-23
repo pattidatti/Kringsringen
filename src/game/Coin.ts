@@ -49,6 +49,7 @@ export class Coin extends Phaser.Physics.Arcade.Sprite {
         this.setVelocity(Math.cos(angle) * force, Math.sin(angle) * force);
         this.setDrag(150);
         this.setPipeline('Light2D');
+        this.postFX.addGlow(0xffd700, 2, 0, false, 0.1, 15);
     }
 
     preUpdate(time: number, delta: number) {
@@ -88,5 +89,7 @@ export class Coin extends Phaser.Physics.Arcade.Sprite {
         this.setActive(false);
         this.setVisible(false);
         if (this.body) this.body.enable = false;
+        // Clear FX to prevent stacking if reused from pool
+        this.postFX.clear();
     }
 }

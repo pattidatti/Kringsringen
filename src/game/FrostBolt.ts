@@ -28,6 +28,9 @@ export class FrostBolt extends Phaser.Physics.Arcade.Sprite {
         if (this.body) this.body.enable = false;
         this.play('frost-fly');
 
+        // Add Glow FX
+        this.postFX.addGlow(0x00aaff, 4, 0, false, 0.1, 10);
+
         // Add cast glow
         this.light = this.scene.lights.addLight(x, y, 180, 0x88ccff, 1.0);
 
@@ -40,6 +43,7 @@ export class FrostBolt extends Phaser.Physics.Arcade.Sprite {
                 this.scene.lights.removeLight(this.light);
                 this.light = null;
             }
+            this.postFX.clear();
             this.impact(targetX, targetY);
         });
     }
