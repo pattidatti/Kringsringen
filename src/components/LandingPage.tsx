@@ -19,7 +19,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
         <div className="relative w-full h-screen overflow-hidden bg-slate-950">
             {/* Background image */}
             <img
-                src="/assets/landing-bg.png"
+                src={import.meta.env.BASE_URL + 'assets/landing-bg.png'}
                 alt=""
                 className="absolute inset-0 w-full h-full object-cover object-center"
                 draggable={false}

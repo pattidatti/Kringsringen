@@ -30,7 +30,7 @@ export const TopHUD: React.FC = React.memo(() => {
                 {/* HP Bar */}
                 <div className={`relative w-64 h-8 bg-black/60 border-2 border-amber-900/50 rounded-r-full overflow-hidden shadow-lg backdrop-blur-sm transition-all duration-300 ${isLowHp ? 'shadow-red-500/50 animate-pulse' : ''}`}>
                     {/* Background Pattern */}
-                    <div className="absolute inset-0 opacity-20 bg-[url('/assets/ui/fantasy/UI_Bars.png')] bg-repeat-x" style={{ backgroundSize: 'auto 100%' }} />
+                    <div className="absolute inset-0 opacity-20 bg-repeat-x" style={{ backgroundImage: `url(${import.meta.env.BASE_URL}assets/ui/fantasy/UI_Bars.png)`, backgroundSize: 'auto 100%' }} />
 
                     {/* Fill */}
                     <div

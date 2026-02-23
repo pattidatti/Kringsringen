@@ -19,7 +19,7 @@ export const MedievalButton = ({ onClick, label, variant = 'primary', className 
     // Tan Scroll:  Left(5,5), Mid(6,5), Right(12,5)
 
     const yRow = variant === 'primary' ? 6 : 5;
-    const spriteUrl = "url('/assets/sprites/ui/MediavelFree.png')";
+    const spriteUrl = `url(${import.meta.env.BASE_URL}assets/sprites/ui/MediavelFree.png)`;
     const size = 16;
     const bgPos = (x: number, y: number) => `-${x * size}px -${y * size}px`;
 
