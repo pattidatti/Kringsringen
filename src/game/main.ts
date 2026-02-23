@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { Enemy } from './Enemy';
-import { CircularForestMapGenerator } from './CircularForestMapGenerator';
+import { CircularForestMapGenerator, LEVEL_MAP_THEMES } from './CircularForestMapGenerator';
 import { Arrow } from './Arrow';
 import { Fireball } from './Fireball';
 import { Coin } from './Coin';
@@ -8,12 +8,12 @@ import { SaveManager } from './SaveManager';
 import { ObjectPoolManager } from './ObjectPoolManager';
 import { SpatialHashGrid } from './SpatialGrid';
 import { AudioManager } from './AudioManager';
-import { loadAssets } from './AssetLoader';
 import { createAnimations } from './AnimationSetup';
 import { WaveManager } from './WaveManager';
 import { PlayerStatsManager } from './PlayerStatsManager';
 import { PlayerCombatManager } from './PlayerCombatManager';
 import type { IMainScene } from './IMainScene';
+import { PreloadScene } from './PreloadScene';
 
 
 class MainScene extends Phaser.Scene implements IMainScene {
@@ -41,15 +41,16 @@ class MainScene extends Phaser.Scene implements IMainScene {
     public combat!: PlayerCombatManager;
     public waves!: WaveManager;
 
+    // Map Generation
+    private currentMap: CircularForestMapGenerator | null = null;
+    private mapWidth: number = 3000;
+    private mapHeight: number = 3000;
+
     // Audio throttle
     private lastFootstepTime: number = 0;
 
     constructor() {
         super('MainScene');
-    }
-
-    preload() {
-        loadAssets(this);
     }
 
     create() {
@@ -102,12 +103,9 @@ class MainScene extends Phaser.Scene implements IMainScene {
         graphics.destroy();
 
         // Background: Map Generation with Variety
-        const mapWidth = 3000;
-        const mapHeight = 3000;
-
         // Set World Bounds
-        this.physics.world.setBounds(0, 0, mapWidth, mapHeight);
-        this.cameras.main.setBounds(0, 0, mapWidth, mapHeight);
+        this.physics.world.setBounds(0, 0, this.mapWidth, this.mapHeight);
+        this.cameras.main.setBounds(0, 0, this.mapWidth, this.mapHeight);
 
         // Initialize Spatial Grid (Cell Size 150px)
         this.spatialGrid = new SpatialHashGrid(150);
@@ -115,13 +113,12 @@ class MainScene extends Phaser.Scene implements IMainScene {
         // Initialize Obstacles
         this.obstacles = this.physics.add.staticGroup();
 
-        // FANTASY DEMO
-        const fantasyMap = new CircularForestMapGenerator(this, this.obstacles, mapWidth, mapHeight);
-        fantasyMap.generate();
+        // Generate initial map (Level 1)
+        this.regenerateMap(1);
 
         createAnimations(this);
 
-        const player = this.physics.add.sprite(mapWidth / 2, mapHeight / 2, 'player-idle');
+        const player = this.physics.add.sprite(this.mapWidth / 2, this.mapHeight / 2, 'player-idle');
         player.setCollideWorldBounds(true);
         player.setScale(2);
         player.setBodySize(20, 15, true);
@@ -239,6 +236,31 @@ class MainScene extends Phaser.Scene implements IMainScene {
         this.events.on('player-swing', () => AudioManager.instance.playSFX('swing'));
         this.events.on('bow-shot', () => AudioManager.instance.playSFX('bow_attack'));
         this.events.on('fireball-cast', () => AudioManager.instance.playSFX('fireball_cast'));
+
+        // Listen for level completion to regenerate map for next level
+        this.events.on('level-complete', () => {
+            const nextLevel = this.registry.get('gameLevel') + 1;
+            // Schedule map regeneration after level complete delay
+            this.time.delayedCall(1000, () => {
+                this.regenerateMap(nextLevel);
+            });
+        });
+    }
+
+    /** Regenerate the map for a given level with appropriate theme. */
+    private regenerateMap(level: number) {
+        // Clean up old map
+        if (this.currentMap) {
+            this.currentMap.destroy();
+        }
+
+        // Get theme for this level (capped at last theme)
+        const themeIndex = Math.min(level - 1, LEVEL_MAP_THEMES.length - 1);
+        const theme = LEVEL_MAP_THEMES[themeIndex];
+
+        // Generate new map
+        this.currentMap = new CircularForestMapGenerator(this, this.obstacles, this.mapWidth, this.mapHeight);
+        this.currentMap.generate(theme);
     }
 
     update() {
@@ -434,7 +456,7 @@ export const createGame = (containerId: string) => {
                 debug: false
             }
         },
-        scene: MainScene,
+        scene: [PreloadScene, MainScene],
         scale: {
             mode: Phaser.Scale.RESIZE,
             autoCenter: Phaser.Scale.CENTER_BOTH
