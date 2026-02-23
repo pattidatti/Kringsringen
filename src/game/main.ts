@@ -49,6 +49,7 @@ class MainScene extends Phaser.Scene implements IMainScene {
     private currentMap: StaticMapLoader | null = null;
     private mapWidth: number = 3000;
     private mapHeight: number = 3000;
+    private playerShadow: Phaser.GameObjects.Sprite | null = null;
 
     // Audio throttle
     private lastFootstepTime: number = 0;
@@ -129,6 +130,10 @@ class MainScene extends Phaser.Scene implements IMainScene {
         player.setOffset(player.body!.offset.x, 33);
         player.setMass(2);
         player.play('player-idle');
+
+        this.playerShadow = this.add.sprite(player.x, player.y + 28, 'shadows', 0)
+            .setAlpha(0.4)
+            .setDepth(player.depth - 1);
 
         // Camera follow
         this.cameras.main.startFollow(player, true, 0.1, 0.1);
@@ -277,6 +282,9 @@ class MainScene extends Phaser.Scene implements IMainScene {
 
     update() {
         const player = this.data.get('player') as Phaser.Physics.Arcade.Sprite;
+        if (this.playerShadow) {
+            this.playerShadow.setPosition(player.x, player.y + 28);
+        }
         const cursors = this.data.get('cursors') as Phaser.Types.Input.Keyboard.CursorKeys;
         const isAttacking = this.data.get('isAttacking') as boolean;
         const pointer = this.input.activePointer;

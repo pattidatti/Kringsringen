@@ -7,6 +7,7 @@ export class Arrow extends Phaser.Physics.Arcade.Sprite {
     private maxDistance: number = 800;
     private startX: number = 0;
     private startY: number = 0;
+    private trail: Phaser.GameObjects.Particles.ParticleEmitter | null = null;
 
     constructor(scene: Phaser.Scene, x: number, y: number) {
         super(scene, x, y, 'arrow');
@@ -38,6 +39,17 @@ export class Arrow extends Phaser.Physics.Arcade.Sprite {
         this.setPosition(x, y);
         this.setRotation(angle);
 
+        this.trail = this.scene.add.particles(x, y, 'arrow', {
+            lifespan: 120,
+            scale: { start: 0.3, end: 0 },
+            alpha: { start: 0.5, end: 0 },
+            frequency: 18,
+            follow: this,
+            tint: 0xddbb66,
+            blendMode: 'ADD'
+        });
+        this.trail.setDepth(this.depth - 1);
+
         if (this.body) {
             this.body.enable = true;
             const speed = 700;
@@ -50,6 +62,10 @@ export class Arrow extends Phaser.Physics.Arcade.Sprite {
         this.setActive(false);
         this.setVisible(false);
         if (this.body) this.body.enable = false;
+        if (this.trail) {
+            this.trail.destroy();
+            this.trail = null;
+        }
     }
 
     update() {

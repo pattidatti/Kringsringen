@@ -7,6 +7,7 @@ export class Fireball extends Phaser.Physics.Arcade.Sprite {
     private maxDistance: number = 600;
     private startX: number = 0;
     private startY: number = 0;
+    private trail: Phaser.GameObjects.Particles.ParticleEmitter | null = null;
 
     constructor(scene: Phaser.Scene, x: number, y: number) {
         super(scene, x, y, 'fireball_projectile');
@@ -36,6 +37,17 @@ export class Fireball extends Phaser.Physics.Arcade.Sprite {
         this.setRotation(angle);
         this.play('fireball-fly');
 
+        this.trail = this.scene.add.particles(x, y, 'fireball_projectile', {
+            lifespan: 200,
+            scale: { start: 0.7, end: 0 },
+            alpha: { start: 0.6, end: 0 },
+            frequency: 20,
+            follow: this,
+            tint: 0xff4400,
+            blendMode: 'ADD'
+        });
+        this.trail.setDepth(this.depth - 1);
+
         if (this.body) {
             this.body.enable = true;
             const mainScene = this.scene as any;
@@ -53,6 +65,10 @@ export class Fireball extends Phaser.Physics.Arcade.Sprite {
         this.setActive(false);
         this.setVisible(false);
         if (this.body) this.body.enable = false;
+        if (this.trail) {
+            this.trail.destroy();
+            this.trail = null;
+        }
 
         const mainScene = this.scene as any;
         const fireballRadius = mainScene.registry.get('fireballRadius') || 80;

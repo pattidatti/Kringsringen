@@ -36,7 +36,24 @@ export class PlayerCombatManager {
         this.scene.registry.set('playerHP', Math.max(0, hp));
 
         // Screen Shake
-        this.scene.cameras.main.shake(150, 0.005);
+        this.scene.cameras.main.shake(200, 0.014);
+
+        // Red screen flash
+        const cam = this.scene.cameras.main;
+        const flash = (this.scene as unknown as Phaser.Scene).add.rectangle(
+            cam.scrollX + cam.width / 2,
+            cam.scrollY + cam.height / 2,
+            cam.width,
+            cam.height,
+            0xff0000,
+            0.35
+        ).setDepth(9999).setScrollFactor(0);
+        (this.scene as unknown as Phaser.Scene).tweens.add({
+            targets: flash,
+            alpha: 0,
+            duration: 180,
+            onComplete: () => flash.destroy()
+        });
 
         // Visual Impact (Blood) - Pooled
         this.scene.poolManager.spawnBloodEffect(player.x, player.y);

@@ -10,6 +10,17 @@
 - [ ] Items, inventory, équipment. 
 - [ ] Pengesystem 
 
+
+# visuelt 
+Dynamisk lys via Phaser Lights2D
+Phaser har et innebygd lys-system (scene.lights). Legge til et bevegelig lys rundt spilleren + oransje lys rundt flammekasteren. Krever normal maps på tilesets, eller man bruker det uten (gir ambient "pool of light"-effekt).
+
+13. Vær-effekter (regn, tåke)
+Phaser Particles + evt. en shader. Tåke er særlig effektivt for atmosfære i en mørkere skog-setting
+
+14. Bloom/glow post-processing
+Phaser støtter custom WebGL pipelines. Glow rundt ildkuler og lysstoffplanter er imponerende, men krever shader-kode.
+
 # Bugs
 - [x] HP oppe til venstre oppdaterer seg ikke
 - [x] Når spilleren dør, fryser og krasjer spillet. 

@@ -21,6 +21,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     private config: EnemyConfig;
     private slowTimer: Phaser.Time.TimerEvent | null = null;
     private originalSpeed: number = 100;
+    private shadow: Phaser.GameObjects.Sprite | null = null;
 
     // Static Buffers for AI (GC Hardening)
     private static readonly NUM_RAYS = 8;
@@ -41,6 +42,9 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         scene.add.existing(this);
         scene.physics.add.existing(this);
         this.hpBar = scene.add.graphics();
+        this.shadow = scene.add.sprite(x, y, 'shadows', 0)
+            .setAlpha(0.4)
+            .setDepth(-1);
 
         // If called with new(), we should initialize. If pooled, reset() will be called.
         // For now, we assume this might be called directly or via pool.
@@ -56,6 +60,10 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         this.setPosition(x, y);
         this.setAlpha(1);
         this.setTint(0xffffff);
+        if (this.shadow) {
+            this.shadow.setVisible(true);
+            this.shadow.setPosition(x, y);
+        }
         this.clearTint();
         this.setRotation(0);
 
@@ -181,6 +189,10 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
                     }
                 }
             }
+        }
+
+        if (this.shadow) {
+            this.shadow.setPosition(this.x, this.y + (this.height * this.scaleY * 0.3));
         }
 
         this.updateHPBar();
@@ -341,6 +353,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         this.setActive(false);
         this.setVisible(false);
         if (this.body) this.body.enable = false;
+        if (this.shadow) this.shadow.setVisible(false);
         // Do not destroy, keep in pool
     }
 
