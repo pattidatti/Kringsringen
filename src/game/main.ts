@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { Enemy } from './Enemy';
-import { CircularForestMapGenerator, LEVEL_MAP_THEMES } from './CircularForestMapGenerator';
+import { StaticMapLoader } from './StaticMapLoader';
+import { STATIC_MAPS } from './StaticMapData';
 import { Arrow } from './Arrow';
 import { Fireball } from './Fireball';
 import { FrostBolt } from './FrostBolt';
@@ -44,7 +45,7 @@ class MainScene extends Phaser.Scene implements IMainScene {
     public waves!: WaveManager;
 
     // Map Generation
-    private currentMap: CircularForestMapGenerator | null = null;
+    private currentMap: StaticMapLoader | null = null;
     private mapWidth: number = 3000;
     private mapHeight: number = 3000;
 
@@ -257,20 +258,20 @@ class MainScene extends Phaser.Scene implements IMainScene {
         });
     }
 
-    /** Regenerate the map for a given level with appropriate theme. */
+    /** Load the static map for a given level. */
     private regenerateMap(level: number) {
         // Clean up old map
         if (this.currentMap) {
             this.currentMap.destroy();
         }
 
-        // Get theme for this level (capped at last theme)
-        const themeIndex = Math.min(level - 1, LEVEL_MAP_THEMES.length - 1);
-        const theme = LEVEL_MAP_THEMES[themeIndex];
+        // Select map definition (capped at last entry)
+        const mapIndex = Math.min(level - 1, STATIC_MAPS.length - 1);
+        const mapDef = STATIC_MAPS[mapIndex];
 
-        // Generate new map
-        this.currentMap = new CircularForestMapGenerator(this, this.obstacles, this.mapWidth, this.mapHeight);
-        this.currentMap.generate(theme);
+        // Load static map – no procedural generation, instant
+        this.currentMap = new StaticMapLoader(this, this.obstacles, this.mapWidth, this.mapHeight);
+        this.currentMap.load(mapDef);
     }
 
     update() {
