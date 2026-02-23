@@ -100,6 +100,22 @@ export class PlayerStatsManager {
         const currentProjectiles = this.baseProjectiles + multiLvl;
         this.scene.registry.set('playerProjectiles', currentProjectiles);
 
+        // Fireball stats
+        const fireDmgLvl = levels['fire_damage'] || 0;
+        const fireRadLvl = levels['fire_radius'] || 0;
+        const fireSpdLvl = levels['fire_speed'] || 0;
+        this.scene.registry.set('fireballDamageMulti', 1 + fireDmgLvl * 0.15);
+        this.scene.registry.set('fireballRadius', 80 + fireRadLvl * 20);
+        this.scene.registry.set('fireballSpeed', 450 * (1 + fireSpdLvl * 0.15));
+
+        // FrostBolt stats
+        const frostDmgLvl = levels['frost_damage'] || 0;
+        const frostRadLvl = levels['frost_radius'] || 0;
+        const frostSlowLvl = levels['frost_slow'] || 0;
+        this.scene.registry.set('frostDamageMulti', 1 + frostDmgLvl * 0.15);
+        this.scene.registry.set('frostRadius', 100 + frostRadLvl * 20);
+        this.scene.registry.set('frostSlowDuration', frostSlowLvl * 500); // ms
+
         // Misc
         this.scene.registry.set('playerLuck', 1.0);
         this.scene.registry.set('playerCritChance', this.baseCritChance);

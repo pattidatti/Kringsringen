@@ -19,6 +19,8 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     private movementSpeed: number = 100;
     private enemyType: string = 'orc';
     private config: EnemyConfig;
+    private slowTimer: Phaser.Time.TimerEvent | null = null;
+    private originalSpeed: number = 100;
 
     // Static Buffers for AI (GC Hardening)
     private static readonly NUM_RAYS = 8;
@@ -87,6 +89,13 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         this.isOnDamageFrame = false;
         this.lastAttackTime = 0;
         this.lastAIUpdate = 0;
+
+        // Clear slow state
+        if (this.slowTimer) {
+            this.slowTimer.remove();
+            this.slowTimer = null;
+        }
+        this.originalSpeed = this.movementSpeed;
 
         // Animation
         this.setTexture(this.config.spriteInfo.texture);
@@ -369,6 +378,34 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
                     this.play(this.config.spriteInfo.anims.walk);
                 }
             }
+        });
+    }
+
+    public applySlow(durationMs: number) {
+        if (!this.active || this.isDead) return;
+
+        // Store original speed on first slow
+        if (this.slowTimer === null) {
+            this.originalSpeed = this.movementSpeed;
+            this.setTint(0x88ccff); // Blue frost tint
+        } else {
+            // Reset timer if already slowed
+            this.slowTimer.remove();
+        }
+
+        // Reduce movement speed by 50%
+        this.movementSpeed = this.originalSpeed * 0.5;
+
+        // Set timer to restore speed
+        this.slowTimer = this.scene.time.delayedCall(durationMs, () => {
+            if (this.active && !this.isDead) {
+                this.movementSpeed = this.originalSpeed;
+                this.clearTint();
+                if (this.config.spriteInfo.anims?.walk) {
+                    this.play(this.config.spriteInfo.anims.walk);
+                }
+            }
+            this.slowTimer = null;
         });
     }
 }

@@ -7,7 +7,6 @@ export class Fireball extends Phaser.Physics.Arcade.Sprite {
     private maxDistance: number = 600;
     private startX: number = 0;
     private startY: number = 0;
-    private readonly SPLASH_RADIUS = 80;
 
     constructor(scene: Phaser.Scene, x: number, y: number) {
         super(scene, x, y, 'fireball_projectile');
@@ -39,7 +38,9 @@ export class Fireball extends Phaser.Physics.Arcade.Sprite {
 
         if (this.body) {
             this.body.enable = true;
-            this.scene.physics.velocityFromRotation(angle, 450, this.body.velocity);
+            const mainScene = this.scene as any;
+            const fireballSpeed = mainScene.registry.get('fireballSpeed') || 450;
+            this.scene.physics.velocityFromRotation(angle, fireballSpeed, this.body.velocity);
         }
     }
 
@@ -53,26 +54,50 @@ export class Fireball extends Phaser.Physics.Arcade.Sprite {
         this.setVisible(false);
         if (this.body) this.body.enable = false;
 
+        const mainScene = this.scene as any;
+        const fireballRadius = mainScene.registry.get('fireballRadius') || 80;
+        const fireballDamageMulti = mainScene.registry.get('fireballDamageMulti') || 1;
+        const fireChainLvl = (mainScene.registry.get('upgradeLevels') || {})['fire_chain'] || 0;
+
+        const scaledDamage = this.damage * fireballDamageMulti;
+
         // Direct hit
         if (directHit) {
-            directHit.takeDamage(this.damage);
+            directHit.takeDamage(scaledDamage);
             directHit.pushback(this.startX, this.startY, 200);
         }
 
         // Splash damage to nearby enemies
-        const mainScene = this.scene as any;
+        const hitEnemies: Enemy[] = [];
         mainScene.enemies.children.iterate((e: any) => {
             if (!e.active || e === directHit) return true;
             const dist = Phaser.Math.Distance.Between(hitX, hitY, e.x, e.y);
-            if (dist <= this.SPLASH_RADIUS) {
-                (e as Enemy).takeDamage(this.damage * 0.5);
+            if (dist <= fireballRadius) {
+                (e as Enemy).takeDamage(scaledDamage * 0.5);
                 (e as Enemy).pushback(hitX, hitY, 100);
+                hitEnemies.push(e as Enemy);
             }
             return true;
         });
 
         mainScene.poolManager.spawnFireballExplosion(hitX, hitY);
         AudioManager.instance.playSFX('fireball_hit');
+
+        // Chain reaction: secondary explosion after 300ms
+        if (fireChainLvl > 0) {
+            mainScene.time.delayedCall(300, () => {
+                mainScene.enemies.children.iterate((e: any) => {
+                    if (!e.active) return true;
+                    const dist = Phaser.Math.Distance.Between(hitX, hitY, e.x, e.y);
+                    if (dist <= fireballRadius && e !== directHit && !hitEnemies.includes(e)) {
+                        (e as Enemy).takeDamage(scaledDamage * 0.3);
+                        (e as Enemy).pushback(hitX, hitY, 80);
+                    }
+                    return true;
+                });
+                mainScene.poolManager.spawnFireballExplosion(hitX, hitY);
+            });
+        }
     }
 
     update() {

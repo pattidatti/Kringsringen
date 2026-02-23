@@ -3,6 +3,7 @@ import { Enemy } from './Enemy';
 import { CircularForestMapGenerator, LEVEL_MAP_THEMES } from './CircularForestMapGenerator';
 import { Arrow } from './Arrow';
 import { Fireball } from './Fireball';
+import { FrostBolt } from './FrostBolt';
 import { Coin } from './Coin';
 import { SaveManager } from './SaveManager';
 import { ObjectPoolManager } from './ObjectPoolManager';
@@ -34,6 +35,7 @@ class MainScene extends Phaser.Scene implements IMainScene {
 
     private arrows!: Phaser.Physics.Arcade.Group;
     private fireballs!: Phaser.Physics.Arcade.Group;
+    private frostBolts!: Phaser.Physics.Arcade.Group;
     public poolManager!: ObjectPoolManager;
 
     // Managers
@@ -62,7 +64,7 @@ class MainScene extends Phaser.Scene implements IMainScene {
         this.registry.set('currentWeapon', 'sword');
         this.registry.set('upgradeLevels', {});
         this.registry.set('highStage', saveData.highStage);
-        this.registry.set('unlockedWeapons', ['sword', 'fireball']);
+        this.registry.set('unlockedWeapons', ['sword', 'fireball', 'frost']);
 
         // Initialize Audio Manager
         AudioManager.instance.setScene(this);
@@ -154,6 +156,13 @@ class MainScene extends Phaser.Scene implements IMainScene {
             runChildUpdate: true
         });
 
+        // Frost Bolt Group
+        this.frostBolts = this.physics.add.group({
+            classType: FrostBolt,
+            runChildUpdate: true,
+            maxSize: 20
+        });
+
         // Coin Group
         this.coins = this.physics.add.group({
             classType: Coin,
@@ -236,6 +245,7 @@ class MainScene extends Phaser.Scene implements IMainScene {
         this.events.on('player-swing', () => AudioManager.instance.playSFX('swing'));
         this.events.on('bow-shot', () => AudioManager.instance.playSFX('bow_attack'));
         this.events.on('fireball-cast', () => AudioManager.instance.playSFX('fireball_cast'));
+        this.events.on('frost-cast', () => AudioManager.instance.playSFX('ice_throw'));
 
         // Listen for level completion to regenerate map for next level
         this.events.on('level-complete', () => {
@@ -300,6 +310,9 @@ class MainScene extends Phaser.Scene implements IMainScene {
         }
         if (this.hotkeys['3']?.isDown && this.registry.get('currentWeapon') !== 'fireball' && unlocked.includes('fireball')) {
             this.registry.set('currentWeapon', 'fireball');
+        }
+        if (this.hotkeys['4']?.isDown && this.registry.get('currentWeapon') !== 'frost' && unlocked.includes('frost')) {
+            this.registry.set('currentWeapon', 'frost');
         }
 
         // Handle Orientation (Face Mouse)
@@ -394,6 +407,24 @@ class MainScene extends Phaser.Scene implements IMainScene {
                     const fireball = this.fireballs.get(player.x, player.y) as Fireball;
                     if (fireball) {
                         fireball.fire(player.x, player.y, angle, this.stats.damage * 1.2);
+                    }
+                });
+
+                player.once('animationcomplete-player-bow', () => {
+                    this.data.set('isAttacking', false);
+                    player.play('player-idle');
+                });
+            } else if (currentWeapon === 'frost') {
+                player.play('player-bow');
+                this.events.emit('frost-cast');
+
+                // Capture mouse world position at cast time
+                const frostTarget = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
+
+                this.time.delayedCall(100, () => {
+                    const bolt = this.frostBolts.get(player.x, player.y) as FrostBolt;
+                    if (bolt) {
+                        bolt.fire(player.x, player.y, frostTarget.x, frostTarget.y, this.stats.damage * 1.1);
                     }
                 });
 

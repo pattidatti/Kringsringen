@@ -128,16 +128,88 @@ export const UPGRADES: UpgradeConfig[] = [
         description: (lvl) => `Går gjennom +1 fiende (Nå: ${lvl})`
     },
 
-    // --- MAGI (Locked for now) ---
+    // --- MAGI (Fireball) ---
     {
-        id: 'magic_bolt',
-        title: 'Ukjent Kraft',
+        id: 'fire_damage',
+        title: 'Brannskade',
         icon: 'item_magic_staff',
         category: 'Magi',
-        maxLevel: 1,
-        basePrice: 9999,
-        priceScale: 1,
-        description: () => 'Du føler en magisk tilstedeværelse...'
+        maxLevel: 10,
+        basePrice: 70,
+        priceScale: 1.6,
+        description: (lvl) => `+15% Ildstav-skade (Nå: +${lvl * 15}%)`
+    },
+    {
+        id: 'fire_radius',
+        title: 'Eksplosiv Kraft',
+        icon: 'item_magic_staff',
+        category: 'Magi',
+        maxLevel: 5,
+        basePrice: 120,
+        priceScale: 1.8,
+        description: (lvl) => `+20px eksplosionsradius (Nå: ${80 + lvl * 20}px)`
+    },
+    {
+        id: 'fire_speed',
+        title: 'Lynild',
+        icon: 'item_magic_staff',
+        category: 'Magi',
+        maxLevel: 8,
+        basePrice: 80,
+        priceScale: 1.5,
+        description: (lvl) => `+15% prosjektilhastighet (Nå: +${lvl * 15}%)`
+    },
+    {
+        id: 'fire_chain',
+        title: 'Kjedereaksjon',
+        icon: 'item_magic_staff',
+        category: 'Magi',
+        maxLevel: 3,
+        basePrice: 300,
+        priceScale: 2.5,
+        description: (lvl) => lvl > 0 ? 'Eksplosjon setter fyr på fiender nær dem' : 'Lås opp kjedereaksjoner'
+    },
+
+    // --- MAGI (Frost) ---
+    {
+        id: 'frost_damage',
+        title: 'Iskald Makt',
+        icon: 'item_frost_orb',
+        category: 'Magi',
+        maxLevel: 10,
+        basePrice: 70,
+        priceScale: 1.6,
+        description: (lvl) => `+15% Froststav-skade (Nå: +${lvl * 15}%)`
+    },
+    {
+        id: 'frost_radius',
+        title: 'Frysebølge',
+        icon: 'item_frost_orb',
+        category: 'Magi',
+        maxLevel: 5,
+        basePrice: 120,
+        priceScale: 1.8,
+        description: (lvl) => `+20px frysningsradius (Nå: ${100 + lvl * 20}px)`
+    },
+    {
+        id: 'frost_slow',
+        title: 'Permafrost',
+        icon: 'item_frost_orb',
+        category: 'Magi',
+        maxLevel: 5,
+        basePrice: 150,
+        priceScale: 2.0,
+        description: (lvl) => `Fiender bremses i ${lvl * 0.5}s (Nå: ${lvl * 0.5}s)`
+    },
+    {
+        id: 'frost_shatter',
+        title: 'Isknusing',
+        icon: 'item_frost_orb',
+        category: 'Magi',
+        maxLevel: 3,
+        basePrice: 350,
+        priceScale: 2.8,
+        description: (lvl) => lvl > 0 ? 'Frosne fiender tar +50% skade og splintrer' : 'Lås opp isknusing'
     }
 ];
 

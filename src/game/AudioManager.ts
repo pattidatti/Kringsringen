@@ -22,6 +22,7 @@ export class AudioManager {
     private currentBGMId: string | null = null;
     private currentBGS: Phaser.Sound.BaseSound | null = null;
     private currentBGSId: string | null = null;
+    private reverbNode: ConvolverNode | null = null;
 
     private settings: AudioSettings = {
         masterVolume: 1.0,
@@ -68,7 +69,33 @@ export class AudioManager {
     }
 
     /**
-     * Plays a sound effect with optional pitch randomization.
+     * Builds a synthetic reverb impulse response (0.6s exponential white-noise decay).
+     * Called lazily the first time a reverb sound is played.
+     */
+    private buildReverbNode(): ConvolverNode | null {
+        const soundManager = this.scene?.sound as Phaser.Sound.WebAudioSoundManager | undefined;
+        const ctx = soundManager?.context;
+        if (!ctx) return null;
+
+        const sampleRate = ctx.sampleRate;
+        const duration = 0.6; // seconds
+        const length = Math.floor(sampleRate * duration);
+        const impulse = ctx.createBuffer(2, length, sampleRate);
+
+        for (let ch = 0; ch < 2; ch++) {
+            const data = impulse.getChannelData(ch);
+            for (let i = 0; i < length; i++) {
+                data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / length, 3);
+            }
+        }
+
+        const convolver = ctx.createConvolver();
+        convolver.buffer = impulse;
+        return convolver;
+    }
+
+    /**
+     * Plays a sound effect with optional pitch randomization and reverb.
      */
     public playSFX(id: string, options: { volume?: number, pitch?: number } = {}) {
         if (!this.scene || this.settings.isMuted) return;
@@ -95,6 +122,41 @@ export class AudioManager {
         let pitch = options.pitch || 1.0;
         if (config.pitchVariance) {
             pitch += (Math.random() * 2 - 1) * config.pitchVariance;
+        }
+
+        if (config.reverb) {
+            // Use Web Audio API directly for reverb effect
+            const soundManager = this.scene.sound as Phaser.Sound.WebAudioSoundManager;
+            const ctx = soundManager?.context;
+            if (ctx) {
+                if (!this.reverbNode) {
+                    this.reverbNode = this.buildReverbNode();
+                }
+                if (this.reverbNode) {
+                    const source = ctx.createBufferSource();
+                    const audioBuffer = this.scene.cache.audio.get(soundKey) as AudioBuffer;
+                    if (!audioBuffer) return;
+
+                    source.buffer = audioBuffer;
+                    source.detune.value = (pitch - 1) * 1200;
+
+                    const gainDry = ctx.createGain();
+                    gainDry.gain.value = finalVolume * 0.6;
+
+                    const gainWet = ctx.createGain();
+                    gainWet.gain.value = finalVolume * 0.45;
+
+                    source.connect(gainDry);
+                    gainDry.connect(ctx.destination);
+
+                    source.connect(this.reverbNode);
+                    this.reverbNode.connect(gainWet);
+                    gainWet.connect(ctx.destination);
+
+                    source.start(0);
+                    return;
+                }
+            }
         }
 
         this.scene.sound.play(soundKey, {

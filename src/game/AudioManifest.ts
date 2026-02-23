@@ -12,6 +12,8 @@ export interface SoundConfig {
     loop?: boolean;
     /** Random pitch variation range (±). Applied only to SFX. */
     pitchVariance?: number;
+    /** Apply a short convolver reverb tail on playback. */
+    reverb?: boolean;
 }
 
 export const AUDIO_MANIFEST: SoundConfig[] = [
@@ -104,4 +106,6 @@ export const AUDIO_MANIFEST: SoundConfig[] = [
     // — Spell SFX —
     { id: 'fireball_cast', path: 'assets/audio/sfx/fireball_cast.wav', category: 'sfx', volume: 0.5 },
     { id: 'fireball_hit',  path: 'assets/audio/sfx/fireball_hit.wav',  category: 'sfx', volume: 0.5 },
+    { id: 'ice_throw',     path: 'assets/audio/sfx/ice_throw.wav',     category: 'sfx', volume: 0.5 },
+    { id: 'ice_freeze',    path: 'assets/audio/sfx/ice_freeze.wav',    category: 'sfx', volume: 0.55, reverb: true },
 ];

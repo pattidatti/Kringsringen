@@ -66,6 +66,8 @@ export const UI_ATLAS = {
 
         item_orb_purple:     { x: 96,  y: 640, w: 32, h: 32 }, // TODO: verifiser
 
+        item_frost_orb:      { x: 64,  y: 640, w: 32, h: 32 }, // col=2 row=20 — verify in sprite-debug grid
+
         item_magic_staff:    { x: 288, y: 192, w: 32, h: 32 }, // col=9 row=6 ✓
     }
 } as const;

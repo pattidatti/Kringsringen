@@ -179,4 +179,20 @@ export function createAnimations(scene: Phaser.Scene): void {
         frameRate: 14,
         repeat: 0
     });
+
+    // Frost projectile: 512×576 @ 64×64 → 8 cols × 9 rows. Row 2 (cyan) = frames 16–23
+    scene.anims.create({
+        key: 'frost-fly',
+        frames: scene.anims.generateFrameNumbers('frost_projectile', { start: 16, end: 23 }),
+        frameRate: 12,
+        repeat: -1
+    });
+
+    // Frost explosion: 576×576 @ 64×64 → 9 cols × 9 rows. Row 2 (cyan) = frames 18–26
+    scene.anims.create({
+        key: 'frost-explode',
+        frames: scene.anims.generateFrameNumbers('frost_explosion', { start: 18, end: 26 }),
+        frameRate: 14,
+        repeat: 0
+    });
 }

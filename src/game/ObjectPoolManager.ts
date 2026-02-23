@@ -4,6 +4,7 @@ export class ObjectPoolManager {
     private damageTextPool: Phaser.GameObjects.Text[] = [];
     private bloodPool: Phaser.GameObjects.Sprite[] = [];
     private explosionPool: Phaser.GameObjects.Sprite[] = [];
+    private frostExplosionPool: Phaser.GameObjects.Sprite[] = [];
 
     // Config
     private readonly MAX_TEXT_POOL = 50;
@@ -120,6 +121,37 @@ export class ObjectPoolManager {
             explosion.setActive(false);
             explosion.setVisible(false);
             this.explosionPool.push(explosion);
+        } else {
+            explosion.destroy();
+        }
+    }
+
+    public spawnFrostExplosion(x: number, y: number) {
+        let explosion: Phaser.GameObjects.Sprite;
+
+        if (this.frostExplosionPool.length > 0) {
+            explosion = this.frostExplosionPool.pop()!;
+            explosion.setPosition(x, y);
+            explosion.setActive(true);
+            explosion.setVisible(true);
+            explosion.setAlpha(1);
+        } else {
+            explosion = this.scene.add.sprite(x, y, 'frost_explosion');
+            explosion.setScale(2);
+            explosion.setDepth(500);
+        }
+
+        explosion.play('frost-explode');
+        explosion.once('animationcomplete', () => {
+            this.returnFrostExplosion(explosion);
+        });
+    }
+
+    private returnFrostExplosion(explosion: Phaser.GameObjects.Sprite) {
+        if (this.frostExplosionPool.length < this.MAX_EXPLOSION_POOL) {
+            explosion.setActive(false);
+            explosion.setVisible(false);
+            this.frostExplosionPool.push(explosion);
         } else {
             explosion.destroy();
         }
