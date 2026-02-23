@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { type UpgradeConfig } from '../../config/upgrades';
+import { type UpgradeConfig, isItemSpriteIcon } from '../../config/upgrades';
+import { ItemIcon, type ItemIconKey } from './ItemIcon';
 
 interface PerkCardProps {
     perk: UpgradeConfig;
@@ -62,7 +63,10 @@ export const PerkCard: React.FC<PerkCardProps> = ({ perk, level, onClick, index 
         >
             {/* Icon Container */}
             <div className={`p-3 rounded-md shrink-0 border border-black/10 shadow-inner ${styles.iconBg}`}>
-                <div className={`${perk.icon} ${styles.iconColor} text-2xl`} />
+                {isItemSpriteIcon(perk.icon)
+                    ? <ItemIcon icon={perk.icon as ItemIconKey} size="md" />
+                    : <div className={`${perk.icon} ${styles.iconColor} text-2xl`} />
+                }
             </div>
 
             {/* Content */}

@@ -163,4 +163,20 @@ export function createAnimations(scene: Phaser.Scene): void {
             repeat: 0
         });
     }
+
+    // Fireball: 640×576 @ 64×64 → 10 cols × 9 rows. Row 0 = frames 0–9
+    scene.anims.create({
+        key: 'fireball-fly',
+        frames: scene.anims.generateFrameNumbers('fireball_projectile', { start: 0, end: 9 }),
+        frameRate: 12,
+        repeat: -1
+    });
+
+    // Explosion: 512×576 @ 64×64 → 8 cols × 9 rows. Row 0 = frames 0–7
+    scene.anims.create({
+        key: 'fireball-explode',
+        frames: scene.anims.generateFrameNumbers('fireball_explosion', { start: 0, end: 7 }),
+        frameRate: 14,
+        repeat: 0
+    });
 }

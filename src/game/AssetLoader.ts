@@ -57,6 +57,10 @@ export function loadAssets(scene: Phaser.Scene): void {
         scene.load.spritesheet(`blood_${i}`, `assets/sprites/effects/blood/blood_${i}.png`, { frameWidth: 100, frameHeight: 100 });
     }
 
+    // Fireball Spell
+    scene.load.spritesheet('fireball_projectile', 'assets/sprites/effects/fireball_projectile.png', { frameWidth: 64, frameHeight: 64 });
+    scene.load.spritesheet('fireball_explosion',  'assets/sprites/effects/fireball_explosion.png',  { frameWidth: 64, frameHeight: 64 });
+
     // Preload Audio
     AudioManager.instance.preload(scene);
 }

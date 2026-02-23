@@ -5,6 +5,8 @@ import { motion } from 'framer-motion';
 import clsx from 'clsx';
 import { FantasyPanel } from './FantasyPanel';
 import uiSelectors from '../../assets/ui/fantasy/UI_Selectors.png';
+import { ItemIcon, type ItemIconKey } from './ItemIcon';
+import { isItemSpriteIcon } from '../../config/upgrades';
 
 /**
  * Selector sprite constants.
@@ -102,8 +104,17 @@ export const Hotbar: React.FC = React.memo(() => {
                                     </motion.div>
                                 )}
 
-                                {/* Weapon label */}
-                                {slot.label && (
+                                {/* Weapon icon or label */}
+                                {slot.icon && isItemSpriteIcon(slot.icon) ? (
+                                    <ItemIcon
+                                        icon={slot.icon as ItemIconKey}
+                                        size="lg"
+                                        className={clsx(
+                                            "relative z-20 transition-all duration-200",
+                                            isActive ? "brightness-125" : "brightness-75"
+                                        )}
+                                    />
+                                ) : slot.label ? (
                                     <span className={clsx(
                                         "relative z-20 font-fantasy tracking-widest text-xs transition-colors duration-200",
                                         isActive
@@ -112,7 +123,7 @@ export const Hotbar: React.FC = React.memo(() => {
                                     )}>
                                         {slot.label}
                                     </span>
-                                )}
+                                ) : null}
 
                                 {/* Hotkey badge */}
                                 <div className="absolute -top-1 -right-1 w-4 h-4 bg-black/60 border border-amber-900/30 rounded flex items-center justify-center z-20">

@@ -3,10 +3,12 @@ export class ObjectPoolManager {
     private scene: Phaser.Scene;
     private damageTextPool: Phaser.GameObjects.Text[] = [];
     private bloodPool: Phaser.GameObjects.Sprite[] = [];
+    private explosionPool: Phaser.GameObjects.Sprite[] = [];
 
     // Config
     private readonly MAX_TEXT_POOL = 50;
     private readonly MAX_BLOOD_POOL = 50;
+    private readonly MAX_EXPLOSION_POOL = 20;
 
     constructor(scene: Phaser.Scene) {
         this.scene = scene;
@@ -89,6 +91,37 @@ export class ObjectPoolManager {
             this.bloodPool.push(blood);
         } else {
             blood.destroy();
+        }
+    }
+
+    public spawnFireballExplosion(x: number, y: number) {
+        let explosion: Phaser.GameObjects.Sprite;
+
+        if (this.explosionPool.length > 0) {
+            explosion = this.explosionPool.pop()!;
+            explosion.setPosition(x, y);
+            explosion.setActive(true);
+            explosion.setVisible(true);
+            explosion.setAlpha(1);
+        } else {
+            explosion = this.scene.add.sprite(x, y, 'fireball_explosion');
+            explosion.setScale(2);
+            explosion.setDepth(500);
+        }
+
+        explosion.play('fireball-explode');
+        explosion.once('animationcomplete', () => {
+            this.returnExplosion(explosion);
+        });
+    }
+
+    private returnExplosion(explosion: Phaser.GameObjects.Sprite) {
+        if (this.explosionPool.length < this.MAX_EXPLOSION_POOL) {
+            explosion.setActive(false);
+            explosion.setVisible(false);
+            this.explosionPool.push(explosion);
+        } else {
+            explosion.destroy();
         }
     }
 }

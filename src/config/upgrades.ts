@@ -16,7 +16,7 @@ export const UPGRADES: UpgradeConfig[] = [
     {
         id: 'health',
         title: 'Vitalitet',
-        icon: 'm-icon-plus-small',
+        icon: 'item_heart_status',
         category: 'Karakter',
         maxLevel: 20,
         basePrice: 40,
@@ -26,7 +26,7 @@ export const UPGRADES: UpgradeConfig[] = [
     {
         id: 'speed',
         title: 'Lynrask',
-        icon: 'm-icon-plus-small',
+        icon: 'item_lightning',
         category: 'Karakter',
         maxLevel: 10,
         basePrice: 50,
@@ -36,7 +36,7 @@ export const UPGRADES: UpgradeConfig[] = [
     {
         id: 'regen',
         title: 'Trollblod',
-        icon: 'm-icon-candle',
+        icon: 'item_potion_red',
         category: 'Karakter',
         maxLevel: 10,
         basePrice: 100,
@@ -46,7 +46,7 @@ export const UPGRADES: UpgradeConfig[] = [
     {
         id: 'armor',
         title: 'Jernhud',
-        icon: 'm-icon-shield', // Assuming shield icon exists or using general
+        icon: 'item_shield',
         category: 'Karakter',
         maxLevel: 10,
         basePrice: 75,
@@ -58,7 +58,7 @@ export const UPGRADES: UpgradeConfig[] = [
     {
         id: 'damage',
         title: 'Skarpt Stål',
-        icon: 'm-icon-sword',
+        icon: 'item_sword',
         category: 'Sverd',
         maxLevel: 20,
         basePrice: 60,
@@ -68,7 +68,7 @@ export const UPGRADES: UpgradeConfig[] = [
     {
         id: 'knockback',
         title: 'Tungt Slag',
-        icon: 'm-icon-sword',
+        icon: 'item_sword_heavy',
         category: 'Sverd',
         maxLevel: 10,
         basePrice: 50,
@@ -78,7 +78,7 @@ export const UPGRADES: UpgradeConfig[] = [
     {
         id: 'attack_speed',
         title: 'Berserk',
-        icon: 'm-icon-sword',
+        icon: 'item_swords_crossed',
         category: 'Sverd',
         maxLevel: 10,
         basePrice: 80,
@@ -90,7 +90,7 @@ export const UPGRADES: UpgradeConfig[] = [
     {
         id: 'unlock_bow',
         title: 'Bueskytter',
-        icon: 'm-icon-bow',
+        icon: 'item_bow',
         category: 'Bue',
         maxLevel: 1,
         basePrice: 200,
@@ -100,7 +100,7 @@ export const UPGRADES: UpgradeConfig[] = [
     {
         id: 'bow_cooldown',
         title: 'Rask Trekking',
-        icon: 'm-icon-bow',
+        icon: 'item_bow',
         category: 'Bue',
         maxLevel: 10,
         basePrice: 60,
@@ -110,7 +110,7 @@ export const UPGRADES: UpgradeConfig[] = [
     {
         id: 'multishot',
         title: 'Flerskudd',
-        icon: 'm-icon-bow',
+        icon: 'item_bow',
         category: 'Bue',
         maxLevel: 5,
         basePrice: 250,
@@ -120,7 +120,7 @@ export const UPGRADES: UpgradeConfig[] = [
     {
         id: 'pierce',
         title: 'Gjennomboring',
-        icon: 'm-icon-bow',
+        icon: 'item_spear',
         category: 'Bue',
         maxLevel: 3,
         basePrice: 300,
@@ -132,7 +132,7 @@ export const UPGRADES: UpgradeConfig[] = [
     {
         id: 'magic_bolt',
         title: 'Ukjent Kraft',
-        icon: 'm-icon-candle',
+        icon: 'item_orb_purple',
         category: 'Magi',
         maxLevel: 1,
         basePrice: 9999,
@@ -140,3 +140,7 @@ export const UPGRADES: UpgradeConfig[] = [
         description: () => 'Du føler en magisk tilstedeværelse...'
     }
 ];
+
+export function isItemSpriteIcon(icon: string): icon is `item_${string}` {
+    return icon.startsWith('item_');
+}

@@ -4,7 +4,8 @@ import { FantasyButton } from './FantasyButton';
 import bookOpen from '../../assets/ui/fantasy/containers/book_open.png';
 import tabRed from '../../assets/ui/fantasy/tabs/red.png';
 import tabGreen from '../../assets/ui/fantasy/tabs/green.png';
-import { UPGRADES, type UpgradeConfig } from '../../config/upgrades';
+import { UPGRADES, type UpgradeConfig, isItemSpriteIcon } from '../../config/upgrades';
+import { ItemIcon, type ItemIconKey } from './ItemIcon';
 import { useGameRegistry } from '../../hooks/useGameRegistry';
 // import { type FantasyTabVariant } from '../../types/fantasy-ui.generated';
 
@@ -150,11 +151,11 @@ export const FantasyBook: React.FC<FantasyBookProps> = React.memo(({
 
     // --- MERCHANT LEFTS PAGE: Categories ---
     const renderMerchantCategories = () => {
-        const categories: { key: UpgradeConfig['category']; label: string; icon: string }[] = [
-            { key: 'Sverd', label: 'Sverd', icon: 'm-icon-sword' },
-            { key: 'Bue', label: 'Bue', icon: 'm-icon-bow' },
-            { key: 'Karakter', label: 'Karakter', icon: 'm-icon-plus-small' },
-            { key: 'Magi', label: 'Magi', icon: 'm-icon-candle' },
+        const categories: { key: UpgradeConfig['category']; label: string; icon: ItemIconKey }[] = [
+            { key: 'Sverd', label: 'Sverd', icon: 'item_sword' },
+            { key: 'Bue', label: 'Bue', icon: 'item_bow' },
+            { key: 'Karakter', label: 'Karakter', icon: 'item_heart_status' },
+            { key: 'Magi', label: 'Magi', icon: 'item_orb_purple' },
         ];
 
         return (
@@ -205,7 +206,7 @@ export const FantasyBook: React.FC<FantasyBookProps> = React.memo(({
                                         : `bg-slate-100 border-slate-300 text-slate-400 group-hover:border-slate-400 group-hover:text-slate-600`
                                     }
                                 `}>
-                                    <span className={`${cat.icon} text-xl`} />
+                                    <ItemIcon icon={cat.icon} size="md" />
                                 </div>
                                 <span className={`font-medieval text-xl ${isActive ? `${theme.text} font-bold` : 'text-slate-600 group-hover:text-slate-800'}`}>
                                     {cat.label}
@@ -273,7 +274,10 @@ export const FantasyBook: React.FC<FantasyBookProps> = React.memo(({
                                             <div className="flex items-center justify-between mb-2">
                                                 <div className="flex items-center gap-3">
                                                     <div className={`w-10 h-10 flex items-center justify-center bg-white/50 rounded-lg border ${theme.border}`}>
-                                                        <div className={`${item.icon} ${theme.text} text-lg`} />
+                                                        {isItemSpriteIcon(item.icon)
+                                                            ? <ItemIcon icon={item.icon as ItemIconKey} size="md" />
+                                                            : <div className={`${item.icon} ${theme.text} text-lg`} />
+                                                        }
                                                     </div>
                                                     <span className={`font-bold text-lg ${theme.text}`}>{item.title}</span>
                                                 </div>

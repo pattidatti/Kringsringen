@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { Enemy } from './Enemy';
 import { CircularForestMapGenerator } from './CircularForestMapGenerator';
 import { Arrow } from './Arrow';
+import { Fireball } from './Fireball';
 import { Coin } from './Coin';
 import { SaveManager } from './SaveManager';
 import { ObjectPoolManager } from './ObjectPoolManager';
@@ -32,6 +33,7 @@ class MainScene extends Phaser.Scene implements IMainScene {
     };
 
     private arrows!: Phaser.Physics.Arcade.Group;
+    private fireballs!: Phaser.Physics.Arcade.Group;
     public poolManager!: ObjectPoolManager;
 
     // Managers
@@ -59,7 +61,7 @@ class MainScene extends Phaser.Scene implements IMainScene {
         this.registry.set('currentWeapon', 'sword');
         this.registry.set('upgradeLevels', {});
         this.registry.set('highStage', saveData.highStage);
-        this.registry.set('unlockedWeapons', ['sword']);
+        this.registry.set('unlockedWeapons', ['sword', 'fireball']);
 
         // Initialize Audio Manager
         AudioManager.instance.setScene(this);
@@ -149,6 +151,12 @@ class MainScene extends Phaser.Scene implements IMainScene {
             runChildUpdate: false
         });
 
+        // Fireball Group
+        this.fireballs = this.physics.add.group({
+            classType: Fireball,
+            runChildUpdate: true
+        });
+
         // Coin Group
         this.coins = this.physics.add.group({
             classType: Coin,
@@ -229,6 +237,7 @@ class MainScene extends Phaser.Scene implements IMainScene {
         this.events.on('enemy-hit', () => AudioManager.instance.playSFX('hit'));
         this.events.on('player-swing', () => AudioManager.instance.playSFX('swing'));
         this.events.on('bow-shot', () => AudioManager.instance.playSFX('bow_attack'));
+        this.events.on('fireball-cast', () => AudioManager.instance.playSFX('fireball_cast'));
     }
 
     update() {
@@ -265,6 +274,9 @@ class MainScene extends Phaser.Scene implements IMainScene {
         }
         if (this.hotkeys['2']?.isDown && this.registry.get('currentWeapon') !== 'bow' && unlocked.includes('bow')) {
             this.registry.set('currentWeapon', 'bow');
+        }
+        if (this.hotkeys['3']?.isDown && this.registry.get('currentWeapon') !== 'fireball' && unlocked.includes('fireball')) {
+            this.registry.set('currentWeapon', 'fireball');
         }
 
         // Handle Orientation (Face Mouse)
@@ -343,6 +355,21 @@ class MainScene extends Phaser.Scene implements IMainScene {
                                 }
                             }
                         }
+                    }
+                });
+
+                player.once('animationcomplete-player-bow', () => {
+                    this.data.set('isAttacking', false);
+                    player.play('player-idle');
+                });
+            } else if (currentWeapon === 'fireball') {
+                player.play('player-bow');
+                this.events.emit('fireball-cast');
+
+                this.time.delayedCall(100, () => {
+                    const fireball = this.fireballs.get(player.x, player.y) as Fireball;
+                    if (fireball) {
+                        fireball.fire(player.x, player.y, angle, this.stats.damage * 1.2);
                     }
                 });
 

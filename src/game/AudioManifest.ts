@@ -100,4 +100,8 @@ export const AUDIO_MANIFEST: SoundConfig[] = [
         category: 'ui',
         volume: 0.3,
     },
+
+    // — Spell SFX —
+    { id: 'fireball_cast', path: 'assets/audio/sfx/fireball_cast.wav', category: 'sfx', volume: 0.5 },
+    { id: 'fireball_hit',  path: 'assets/audio/sfx/fireball_hit.wav',  category: 'sfx', volume: 0.5 },
 ];

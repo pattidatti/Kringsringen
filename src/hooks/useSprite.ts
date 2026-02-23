@@ -22,10 +22,11 @@ export function useSprite({ sprite, scale = 1 }: UseSpriteOptions) {
         // Since we split files, we need to know which file a frame belongs to.
 
         let backgroundImage = '';
-        if (sprite.includes('button')) backgroundImage = `url(${UI_ATLAS.sources.buttons})`;
-        else if (sprite.includes('panel')) backgroundImage = `url(${UI_ATLAS.sources.panels})`;
-        else if (sprite.includes('icon')) backgroundImage = `url(${UI_ATLAS.sources.icons})`;
-        else if (sprite.includes('bar')) backgroundImage = `url(${UI_ATLAS.sources.bars})`;
+        if (sprite.startsWith('button'))      backgroundImage = `url(${UI_ATLAS.sources.buttons})`;
+        else if (sprite.startsWith('panel'))  backgroundImage = `url(${UI_ATLAS.sources.panels})`;
+        else if (sprite.startsWith('item'))   backgroundImage = `url(${UI_ATLAS.sources.items})`;
+        else if (sprite.startsWith('icon'))   backgroundImage = `url(${UI_ATLAS.sources.icons})`;
+        else if (sprite.startsWith('bar'))    backgroundImage = `url(${UI_ATLAS.sources.bars})`;
 
         const style: CSSProperties = {
             backgroundImage,

@@ -1,7 +1,7 @@
 # Ideer
 - [ ] Pil og bue, med egen hotkey
 - [ ] Spells - med spelleffekts
-- [ ] Ulike maps 
+- [ ] Ulike maps - Samme trær rundt og slikt, men erstatte noen gress tiles med litt annet snacks. 
 - [ ] Ulike mobs
 - [ ] Bosser
 - [ ] Faser per map/lvl. 
