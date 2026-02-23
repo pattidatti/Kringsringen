@@ -145,8 +145,9 @@ export class WaveManager {
             const player = this.scene.data.get('player') as Phaser.Physics.Arcade.Sprite;
             if (!player) return;
 
-            // Spawn Coins (1-5) (Pooled)
-            const coinCount = Phaser.Math.Between(1, 5);
+            // Spawn Coins: scale with level (5-15 base, multiplied by level)
+            const baseCoins = Phaser.Math.Between(5, 15);
+            const coinCount = baseCoins + (this.currentLevel - 1) * 3;
             for (let i = 0; i < coinCount; i++) {
                 const coin = this.scene.coins.get(ex, ey) as Coin;
                 if (coin) {
