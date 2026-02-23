@@ -29,6 +29,7 @@ class MainScene extends Phaser.Scene implements IMainScene {
         A: Phaser.Input.Keyboard.Key;
         S: Phaser.Input.Keyboard.Key;
         D: Phaser.Input.Keyboard.Key;
+        SPACE: Phaser.Input.Keyboard.Key;
     };
     private hotkeys!: {
         [key: string]: Phaser.Input.Keyboard.Key;

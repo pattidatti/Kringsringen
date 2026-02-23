@@ -2,7 +2,6 @@ import React, { useState, useCallback } from 'react';
 import { FantasyButton } from './FantasyButton';
 import { FantasyPanel } from './FantasyPanel';
 import { FantasyIcon } from './FantasyIcon';
-import framesImg from '../../assets/ui/fantasy/UI_Frames.png';
 import { FantasyBook } from './FantasyBook';
 import { UI_ATLAS } from '../../config/ui-atlas';
 
