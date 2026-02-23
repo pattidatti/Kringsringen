@@ -59,11 +59,11 @@ export function loadAssets(scene: Phaser.Scene): void {
 
     // Fireball Spell
     scene.load.spritesheet('fireball_projectile', 'assets/sprites/effects/fireball_projectile.png', { frameWidth: 64, frameHeight: 64 });
-    scene.load.spritesheet('fireball_explosion',  'assets/sprites/effects/fireball_explosion.png',  { frameWidth: 64, frameHeight: 64 });
+    scene.load.spritesheet('fireball_explosion', 'assets/sprites/effects/fireball_explosion.png', { frameWidth: 64, frameHeight: 64 });
 
     // Frost Spell (378.png = 512×576, 8 cols × 9 rows @ 64px; 293.png = 576×576, 9 cols × 9 rows @ 64px)
     scene.load.spritesheet('frost_projectile', 'assets/sprites/effects/frost_projectile.png', { frameWidth: 64, frameHeight: 64 });
-    scene.load.spritesheet('frost_explosion',  'assets/sprites/effects/frost_explosion.png',  { frameWidth: 64, frameHeight: 64 });
+    scene.load.spritesheet('frost_explosion', 'assets/sprites/effects/frost_explosion.png', { frameWidth: 64, frameHeight: 64 });
 
     // Preload Audio
     AudioManager.instance.preload(scene);

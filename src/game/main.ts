@@ -16,6 +16,7 @@ import { PlayerStatsManager } from './PlayerStatsManager';
 import { PlayerCombatManager } from './PlayerCombatManager';
 import type { IMainScene } from './IMainScene';
 import { PreloadScene } from './PreloadScene';
+import { WeatherManager } from './WeatherManager';
 
 
 class MainScene extends Phaser.Scene implements IMainScene {
@@ -57,6 +58,9 @@ class MainScene extends Phaser.Scene implements IMainScene {
     // Audio throttle
     private lastFootstepTime: number = 0;
 
+    // Weather
+    private weather!: WeatherManager;
+
     constructor() {
         super('MainScene');
     }
@@ -79,6 +83,7 @@ class MainScene extends Phaser.Scene implements IMainScene {
         this.stats = new PlayerStatsManager(this);
         this.combat = new PlayerCombatManager(this);
         this.waves = new WaveManager(this);
+        this.weather = new WeatherManager(this);
 
         // Calculate Initial Stats
         this.stats.recalculateStats();
@@ -262,7 +267,6 @@ class MainScene extends Phaser.Scene implements IMainScene {
         this.input.on('pointerdown', () => AudioManager.instance.resumeContext());
         AudioManager.instance.playBGM('meadow_theme');
         AudioManager.instance.playBGS('forest_ambience');
-
         // Global Sound Listeners
         this.events.on('enemy-hit', () => AudioManager.instance.playSFX('hit'));
         this.events.on('player-swing', () => AudioManager.instance.playSFX('swing'));
@@ -278,6 +282,10 @@ class MainScene extends Phaser.Scene implements IMainScene {
                 this.regenerateMap(nextLevel);
             });
         });
+
+        // Start Weather Effects
+        this.weather.enableFog();
+        this.weather.startRain();
     }
 
     /** Load the static map for a given level. */
