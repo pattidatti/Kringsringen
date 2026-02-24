@@ -7,27 +7,27 @@
 - [ ] Quester/challenges 
 - [ ] Powerups man kan finne på kartet. 
 - [ ] Items, inventory, équipment. 
-
+- [ ] Vanskelighetsgrader. 
+- [ ] Onboarding med forklaring av controls og slikt. Kan huke av at det ikke skal vises igjen, lagre i cash. 
 
 
 # Boss battles
+- Sjekke at alle bosser fungerer riktig, har animations osv. 
 
 
 # Spell
-- På actionbar må vi ha Cooldown som viser hvor lang tid det er mellom neste gang man kan gjøre angrepet. Enkel animasjon av et hjul (som i world of warcraft)
-- Lighting ER ALTFOR POWERFULL. 
-- Lighting; Når det kommer flere ut fra spilleren må de gå i ulike retninger, ikke oppå hverandre. 
-- Lighting; Seekingen er for powerfull, det må gå an å bomme. 
+- Lighting ser fremdeles ikke helt bra ut. 
 
 # musikk
 - Må bytte musikk hvert level. 
 
 
 # Bugs
+- [] Det er ikke regn på hele skjermen, det mangler litt på høyre side.
 - [?] Spillet crasher når man skyter bue og treffer noe med (ihvertfall med eksplosjon ulocked )
 - [x] Virker som gull forsvinner etter en stund, det må bli liggende. 
 - [x] Radius for å plukke opp gull må økes på default. 
-- [ ] Movement lock på spellcasting og bue må reduseres litt. 
+- [Nei?] Movement lock på spellcasting og bue må reduseres litt. 
 . [x] Spillet crasher på death
 - [x] Bare sverd er visuelt tilgjengelig actionbar ved spillstart. Det går an å velge annet, men UI oppdaterer seg ikke. 
 - [x] HP oppe til venstre oppdaterer seg ikke
