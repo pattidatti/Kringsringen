@@ -94,6 +94,7 @@ export class FrostBolt extends Phaser.Physics.Arcade.Sprite {
 
         mainScene.poolManager.spawnFrostExplosion(hitX, hitY);
         AudioManager.instance.playSFX('ice_freeze');
+        AudioManager.instance.playSFX('frost_impact');
 
         // Impact flash light
         const flash = this.scene.lights.addLight(hitX, hitY, 350, 0x00aaff, 2.5);

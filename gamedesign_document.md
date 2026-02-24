@@ -92,8 +92,6 @@ Alle fiendetyper er konfigurert i `src/config/enemies.ts` med sprite, animasjone
 
 > *Alle stats er base-verdier og skaleres med niveau-multiplikatoren.*
 
-### Åpne feil – Fiender
-- ⚠️ **Slime angriper ikke** med animasjon; de skader spilleren ved å bevege seg inn i dem.
 
 ---
 

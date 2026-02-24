@@ -11,6 +11,7 @@ export function loadAssets(scene: Phaser.Scene): void {
     scene.load.spritesheet('player-idle', 'assets/sprites/soldier/Soldier-Idle.png', { frameWidth: 100, frameHeight: 100 });
     scene.load.spritesheet('player-walk', 'assets/sprites/soldier/Soldier-Walk.png', { frameWidth: 100, frameHeight: 100 });
     scene.load.spritesheet('player-attack', 'assets/sprites/soldier/Soldier-Attack01.png', { frameWidth: 100, frameHeight: 100 });
+    scene.load.spritesheet('player-attack-2', 'assets/sprites/soldier/Soldier-Attack02.png', { frameWidth: 100, frameHeight: 100 });
     scene.load.spritesheet('player-full', 'assets/sprites/soldier/Soldier.png', { frameWidth: 100, frameHeight: 100 });
     scene.load.image('arrow', 'assets/sprites/projectile/arrow.png');
 

@@ -22,7 +22,7 @@ export const BOSS_CONFIGS: BossConfig[] = [
         afterLevel: 2,
         name: 'Orkehøvdingen',
         subtitle: 'The Orc Warchief',
-        enemyType: 'orc',
+        enemyType: 'armored_orc',
         hp: 800,
         damage: 30,
         speed: 80,

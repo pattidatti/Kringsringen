@@ -43,6 +43,8 @@ export class WaveManager {
             AudioManager.instance.playBGM('dragons_fury');
         } else if (this.currentLevel === 2) {
             AudioManager.instance.playBGM('exploration_theme');
+        } else if (this.currentLevel >= 4) {
+            AudioManager.instance.playBGM('dragons_fury');
         }
 
         this.startWave();
