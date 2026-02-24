@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FantasyButton } from './ui/FantasyButton';
+import { HighscoresModal } from './ui/HighscoresModal';
 import '../styles/pixel-ui.css';
 
 interface LandingPageProps {
@@ -9,6 +10,7 @@ interface LandingPageProps {
 
 const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
     const [activeToast, setActiveToast] = useState<string | null>(null);
+    const [showHighscores, setShowHighscores] = useState(false);
     const audioRef = useRef<HTMLAudioElement | null>(null);
 
     useEffect(() => {
@@ -101,7 +103,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
                 <FantasyButton
                     label="Highscore"
                     variant="secondary"
-                    onClick={() => showToast('Highscore')}
+                    onClick={() => setShowHighscores(true)}
                     className="w-64 text-xl !text-black [text-shadow:none]"
                 />
                 <FantasyButton
@@ -111,6 +113,12 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
                     className="w-64 text-xl !text-black [text-shadow:none]"
                 />
             </motion.div>
+
+            {/* Highscores Modal */}
+            <HighscoresModal
+                isOpen={showHighscores}
+                onClose={() => setShowHighscores(false)}
+            />
 
             {/* Coming Soon toast */}
             <AnimatePresence>
