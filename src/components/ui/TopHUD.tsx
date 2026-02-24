@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useGameRegistry } from '../../hooks/useGameRegistry';
 import { FantasyIcon } from './FantasyIcon';
+import { ItemIcon } from './ItemIcon';
 // import { FantasyPanel } from './FantasyPanel'; // We might use a custom ribbon approach
 
 export const TopHUD: React.FC = React.memo(() => {
@@ -75,12 +76,12 @@ export const TopHUD: React.FC = React.memo(() => {
             </div>
 
             {/* Right Wing: Economy */}
-            <div className="flex items-center gap-3 pointer-events-auto bg-black/60 border-2 border-amber-900/50 pl-4 pr-6 py-1 rounded-l-full shadow-lg backdrop-blur-sm mt-2">
+            <div className="flex items-center gap-5 pointer-events-auto bg-black/60 border-2 border-amber-900/50 pl-6 pr-10 py-3 rounded-l-full shadow-lg backdrop-blur-md mt-2">
                 <div className="text-right">
-                    <div className="text-[10px] text-amber-200/60 uppercase tracking-widest">Wealth</div>
-                    <div className="text-amber-100 font-bold text-lg leading-none m-text-gold">{coins}</div>
+                    <div className="text-xs text-amber-200/60 uppercase tracking-widest font-bold">Wealth</div>
+                    <div className="text-amber-100 font-black text-4xl leading-none m-text-gold drop-shadow-lg">{coins}</div>
                 </div>
-                <FantasyIcon icon="coin" size="md" className="animate-pulse" />
+                <ItemIcon icon="item_gold_coin" size="lg" className="animate-pulse drop-shadow-[0_0_10px_rgba(255,215,0,0.3)]" />
             </div>
         </div>
     );

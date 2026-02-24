@@ -26,6 +26,8 @@ export class PlayerCombatManager {
         if (this.isInvincible) return;
 
         let hp = this.scene.registry.get('playerHP');
+        if (hp <= 0) return;
+
         const isBlocking = this.scene.data.get('isBlocking') as boolean;
         const player = this.scene.data.get('player') as Phaser.Physics.Arcade.Sprite;
         const armor = this.scene.registry.get('playerArmor') || 0;
@@ -107,7 +109,9 @@ export class PlayerCombatManager {
             this.scene.time.delayedCall(100, () => player.clearTint());
         }
 
-        if (hp <= 0) {
+        // Check for lethal damage (predicted)
+        if (hp + this.pendingHPChange <= 0) {
+            this.flushHP(); // Force immediate update to 0
             this.scene.scene.pause();
         }
     }

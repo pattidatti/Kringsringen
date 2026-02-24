@@ -48,9 +48,11 @@ export function useGameRegistry<T>(key: string, initialValue: T): T {
 
     // Subscribe to registry events
     useEffect(() => {
-        if (!ready || !gameInstance) return;
+        const game = getGameInstance();
+        if (!ready || !game) return;
 
-        const registry = gameInstance.registry;
+        const registry = game.registry;
+        const events = registry.events; // This IS the EventEmitter for DataManager
 
         // Sync current value immediately (scene may have set it before we subscribed)
         const current = registry.get(key);
@@ -62,7 +64,7 @@ export function useGameRegistry<T>(key: string, initialValue: T): T {
         const onChangeData = (_parent: any, val: T) => {
             setValue(val);
         };
-        registry.events.on(`changedata-${key}`, onChangeData);
+        events.on(`changedata-${key}`, onChangeData);
 
         // Listen for generic setdata (fires when a NEW key is created)
         // Signature: (parent, itemKey, value)
@@ -71,11 +73,11 @@ export function useGameRegistry<T>(key: string, initialValue: T): T {
                 setValue(val);
             }
         };
-        registry.events.on('setdata', onSetData);
+        events.on('setdata', onSetData);
 
         return () => {
-            registry.events.off(`changedata-${key}`, onChangeData);
-            registry.events.off('setdata', onSetData);
+            events.off(`changedata-${key}`, onChangeData);
+            events.off('setdata', onSetData);
         };
     }, [key, ready]);
 

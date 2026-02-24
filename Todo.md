@@ -22,6 +22,11 @@
 
 
 # Bugs
+- [ ] Virker som gull forsvinner etter en stund, det må bli liggende. 
+- [ ] Radius for å plukke opp gull må økes på default. 
+- [ ] Movement lock på spellcasting og bue må reduseres litt. 
+. [x] Spillet crasher på death
+- [x] Bare sverd er visuelt tilgjengelig actionbar ved spillstart. Det går an å velge annet, men UI oppdaterer seg ikke. 
 - [x] HP oppe til venstre oppdaterer seg ikke
 - [x] Når spilleren dør, fryser og krasjer spillet. 
 - [x] Hotbar i bunnen bruker assets på feil måte. De er strukket, og feilbrukt.Selector viser hele sprite, og er vertical.  
