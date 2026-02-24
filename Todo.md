@@ -3,23 +3,15 @@
 - [ ] Spells - med spelleffekts
 - [ ] Ulike maps - Samme trær rundt og slikt, men erstatte noen gress tiles med litt annet snacks. 
 - [ ] Ulike mobs
-- [ ] Bosser
 - [ ] Faser per map/lvl. 
 - [ ] Quester/challenges 
 - [ ] Powerups man kan finne på kartet. 
 - [ ] Items, inventory, équipment. 
-- [ ] Pengesystem 
 
-# Multiplayer
-- Opp til 4 stk. Mobs må skalere. Er realtime database bra nok? Skal vi bruke pins, lobby, rooms, invites, randoms?
 
 
 # Boss battles
-- Vi må ha bossbattles annenhvert level, dvs ligge til levels mellom 2 og 3 osv. 
-- Her må det spawne en superversjon av det som har vært tidligere (skalert opp, med kule abilities)
-- Vi skal ha egen musikk som spilles av, velge mellom Final Dungeon Loop.mp3 og Glitch King.mp3
-- Splash screen: BOSS BATTLE 
-Lag en plan med forslag til både bosser, abilities osv. 
+
 
 # Spell
 - På actionbar må vi ha Cooldown som viser hvor lang tid det er mellom neste gang man kan gjøre angrepet. Enkel animasjon av et hjul (som i world of warcraft)
@@ -29,10 +21,10 @@ Lag en plan med forslag til både bosser, abilities osv.
 
 # musikk
 - Må bytte musikk hvert level. 
-- Skru opp lyden på ambiance 
+
 
 # Bugs
-- [ ] Spillet crasher når man skyter bue og treffer noe med (ihvertfall med eksplosjon ulocked )
+- [?] Spillet crasher når man skyter bue og treffer noe med (ihvertfall med eksplosjon ulocked )
 - [x] Virker som gull forsvinner etter en stund, det må bli liggende. 
 - [x] Radius for å plukke opp gull må økes på default. 
 - [ ] Movement lock på spellcasting og bue må reduseres litt. 
