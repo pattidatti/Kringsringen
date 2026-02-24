@@ -2,6 +2,7 @@ import React, { useCallback, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useGameRegistry } from '../../hooks/useGameRegistry';
 import { FantasyButton } from './FantasyButton';
+import { HighscoreManager } from '../../config/firebase';
 
 export const GameOverOverlay: React.FC = () => {
     const hp = useGameRegistry('playerHP', 100);
@@ -10,8 +11,42 @@ export const GameOverOverlay: React.FC = () => {
     const coins = useGameRegistry('playerCoins', 0);
 
     const [playerName, setPlayerName] = useState('');
+    const [submitting, setSubmitting] = useState(false);
+    const [submitError, setSubmitError] = useState<string | null>(null);
+    const [submitted, setSubmitted] = useState(false);
 
     const score = level * 1000 + wave * 100 + coins;
+
+    const handleSubmitScore = useCallback(async () => {
+        const trimmedName = playerName.trim();
+
+        // Validate name
+        if (!trimmedName) {
+            setSubmitError('Navn kan ikke være tomt');
+            return;
+        }
+
+        setSubmitting(true);
+        setSubmitError(null);
+
+        try {
+            await HighscoreManager.submitScore(
+                trimmedName,
+                score,
+                level,
+                wave,
+                coins
+            );
+            setSubmitted(true);
+            setSubmitError(null);
+            console.log('Score submitted successfully');
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Kunne ikke lagre poengsum';
+            setSubmitError(errorMessage);
+            setSubmitting(false);
+            console.error('Failed to submit score:', error);
+        }
+    }, [playerName, score, level, wave, coins]);
 
     const handleRestart = useCallback(() => {
         import('../../game/SaveManager').then(({ SaveManager }) => {
@@ -97,17 +132,63 @@ export const GameOverOverlay: React.FC = () => {
                         placeholder="Skriv inn navn..."
                         value={playerName}
                         onChange={e => setPlayerName(e.target.value)}
-                        className="w-full bg-black/80 border-2 border-red-800/60 text-white font-fantasy text-base text-center px-4 py-3 rounded outline-none focus:border-red-500 placeholder:text-red-800 tracking-widest"
+                        disabled={submitting}
+                        className="w-full bg-black/80 border-2 border-red-800/60 text-white font-fantasy text-base text-center px-4 py-3 rounded outline-none focus:border-red-500 placeholder:text-red-800 tracking-widest disabled:opacity-50 disabled:cursor-not-allowed"
                     />
                 </div>
 
-                {/* Restart button */}
-                <FantasyButton
-                    label="Prøv Igjen"
-                    variant="danger"
-                    onClick={handleRestart}
-                    className="w-56 text-xl"
-                />
+                {/* Error message */}
+                {submitError && (
+                    <motion.p
+                        className="text-red-500 font-fantasy text-sm text-center tracking-widest"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ duration: 0.3 }}
+                    >
+                        {submitError}
+                    </motion.p>
+                )}
+
+                {/* Buttons */}
+                {!submitted ? (
+                    <div className="w-full flex gap-4">
+                        <FantasyButton
+                            label="Send Score"
+                            variant="secondary"
+                            onClick={handleSubmitScore}
+                            disabled={submitting || !playerName.trim()}
+                            className="flex-1 text-lg"
+                        />
+                        <FantasyButton
+                            label="Prøv Igjen"
+                            variant="danger"
+                            onClick={handleRestart}
+                            disabled={submitting}
+                            className="flex-1 text-lg"
+                        />
+                    </div>
+                ) : (
+                    <motion.div
+                        className="text-center mb-2"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ duration: 0.5 }}
+                    >
+                        <p className="font-fantasy text-green-400 text-lg tracking-widest uppercase">
+                            Poengsum lagret!
+                        </p>
+                    </motion.div>
+                )}
+
+                {/* Restart button (always visible after submit) */}
+                {submitted && (
+                    <FantasyButton
+                        label="Prøv Igjen"
+                        variant="danger"
+                        onClick={handleRestart}
+                        className="w-56 text-xl"
+                    />
+                )}
             </motion.div>
         </motion.div>
     );
