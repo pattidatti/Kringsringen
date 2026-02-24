@@ -333,20 +333,67 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         this.isDead = true;
         this.setDrag(1000);
         this.hpBar.clear();
-        this.setTint(0x444444);
 
         if ((this.scene as any).poolManager) {
             (this.scene as any).poolManager.spawnBloodEffect(this.x, this.y);
         }
 
         this.emit('dead', this.x, this.y);
+
+        // ── Death visual sequence ────────────────────────────────────────────
+        // 1. Brief white flash to signal the killing blow.
+        this.setTint(0xffffff);
+
+        // 2. Spark burst at death position (uses 'spark' texture created in MainScene).
+        this.spawnDeathSparks();
+
+        // 3. Scale-pop: briefly enlarge then shrink to zero while fading.
+        //    This gives a satisfying "pop" rather than a plain alpha fade.
+        const popScale = this.scaleX * 1.25;
+        this.setScale(popScale);
+
+        // After the white flash settles, switch to the dark dissolve tint.
+        this.scene.time.delayedCall(80, () => {
+            if (this.active) this.setTint(0x555555);
+        });
+
         this.scene.tweens.add({
             targets: this,
             alpha: 0,
-            duration: 500,
+            scaleX: 0,
+            scaleY: 0,
+            duration: 380,
+            ease: 'Cubic.in',
             onComplete: () => {
                 this.disable();
             }
+        });
+    }
+
+    /**
+     * Emits a one-shot burst of tiny sparks at the enemy's position.
+     * Uses the 'spark' texture created at game startup in MainScene.
+     */
+    private spawnDeathSparks() {
+        // Skip if the texture hasn't been created yet (safety guard)
+        if (!this.scene.textures.exists('spark')) return;
+
+        const burst = this.scene.add.particles(this.x, this.y, 'spark', {
+            speed: { min: 60, max: 180 },
+            angle: { min: 0, max: 360 },
+            scale: { start: 0.8, end: 0 },
+            alpha: { start: 1, end: 0 },
+            lifespan: 350,
+            quantity: 10,
+            blendMode: 'ADD',
+            emitting: false,
+        });
+        burst.setDepth(600);
+        burst.explode(10);
+
+        // Destroy the one-shot emitter after all particles have expired
+        this.scene.time.delayedCall(500, () => {
+            if (burst.scene) burst.destroy();
         });
     }
 
