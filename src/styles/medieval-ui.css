@@ -1,12 +1,14 @@
 /* Medieval UI Sprite System - Avant-Garde Edition */
 
-@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Crimson+Text:ital,wght@0,400;0,600;1,400;1,600&family=Inter:wght@400;600;800&display=swap');
+/* Google Fonts imported in index.html for non-blocking load */
 
 :root {
     --ui-sprite: url('/assets/sprites/ui/MediavelFree.png');
     --color-wood: #5d3a2e;
     --color-amber: #d9a066;
     --color-gold: #ffcc00;
+    --glass-bg: rgba(15, 10, 5, 0.85);
+    --glass-border: rgba(180, 120, 60, 0.3);
 }
 
 .medieval-pixel {
