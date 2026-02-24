@@ -73,18 +73,35 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
             <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent" />
 
             {/* Title */}
-            <motion.h1
-                className="absolute top-8 w-full text-center font-fantasy text-6xl md:text-7xl tracking-widest uppercase"
-                style={{
-                    color: '#fde68a',
-                    textShadow: '2px 2px 0 #000, -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 0 4px 12px rgba(0,0,0,0.9)',
-                }}
+            <motion.div
+                className="absolute top-8 w-full text-center"
                 initial={{ opacity: 0, y: -16 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.7, ease: 'easeOut' }}
             >
-                Krigsringen
-            </motion.h1>
+                <motion.h1
+                    className="font-fantasy text-6xl md:text-7xl tracking-widest uppercase inline-block"
+                    style={{
+                        color: '#fde68a',
+                        textShadow: '2px 2px 0 #000, -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 0 4px 12px rgba(0,0,0,0.9)',
+                    }}
+                    animate={{
+                        textShadow: [
+                            '2px 2px 0 #000, -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 0 4px 12px rgba(0,0,0,0.9)',
+                            '2px 2px 0 #000, -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 0 8px 24px rgba(253, 230, 138, 0.4)',
+                            '2px 2px 0 #000, -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 0 4px 12px rgba(0,0,0,0.9)',
+                        ],
+                        y: [0, -3, 0],
+                    }}
+                    transition={{
+                        duration: 3,
+                        repeat: Infinity,
+                        ease: 'easeInOut',
+                    }}
+                >
+                    Krigsringen
+                </motion.h1>
+            </motion.div>
 
             {/* Buttons — centered horizontally, positioned below the character */}
             <motion.div

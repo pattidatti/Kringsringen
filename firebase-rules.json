@@ -1,0 +1,29 @@
+{
+  "rules": {
+    "highscores": {
+      ".read": true,
+      ".write": true,
+      ".validate": "newData.hasChildren(['name', 'score', 'level', 'wave', 'coins', 'timestamp'])",
+      "$entry": {
+        "name": {
+          ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 20"
+        },
+        "score": {
+          ".validate": "newData.isNumber() && newData.val() >= 0"
+        },
+        "level": {
+          ".validate": "newData.isNumber() && newData.val() >= 0"
+        },
+        "wave": {
+          ".validate": "newData.isNumber() && newData.val() >= 0"
+        },
+        "coins": {
+          ".validate": "newData.isNumber() && newData.val() >= 0"
+        },
+        "timestamp": {
+          ".validate": "newData.isNumber() && newData.val() > 0"
+        }
+      }
+    }
+  }
+}
