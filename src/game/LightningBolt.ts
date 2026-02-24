@@ -28,6 +28,14 @@ export class LightningBolt extends Phaser.Physics.Arcade.Sprite {
             if (!this.active) return;
             this.impact(enemy as Enemy);
         });
+
+        // Setup overlap detection with boss
+        if (mainScene.bossGroup) {
+            scene.physics.add.overlap(this, mainScene.bossGroup, (_bolt, boss) => {
+                if (!this.active) return;
+                this.impact(boss as Enemy);
+            });
+        }
     }
 
     fire(x: number, y: number, targetX: number, targetY: number, damage: number, bouncesLeft: number, hitEnemies?: Set<Enemy>) {
@@ -80,6 +88,21 @@ export class LightningBolt extends Phaser.Physics.Arcade.Sprite {
             }
             return true;
         });
+
+        // Check boss
+        if (mainScene.bossGroup) {
+            mainScene.bossGroup.children.iterate((e: any) => {
+                if (!e.active) return true;
+                if (this.hitEnemies.has(e)) return true;
+
+                const dist = Phaser.Math.Distance.Between(searchX, searchY, e.x, e.y);
+                if (dist < minDist) {
+                    minDist = dist;
+                    nearest = e as Enemy;
+                }
+                return true;
+            });
+        }
 
         return nearest;
     }

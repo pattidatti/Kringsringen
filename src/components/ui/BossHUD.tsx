@@ -21,7 +21,7 @@ export const BossHUD: React.FC = () => {
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: 20 }}
                     transition={{ duration: 0.4 }}
-                    className="absolute bottom-28 left-1/2 -translate-x-1/2 w-[480px] max-w-[90vw] pointer-events-none"
+                    className="absolute top-4 left-1/2 -translate-x-1/2 w-[480px] max-w-[90vw] pointer-events-none z-20"
                 >
                     {/* Boss name */}
                     <div className="flex items-center justify-between mb-1 px-1">
