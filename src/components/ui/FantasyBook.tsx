@@ -175,27 +175,46 @@ export const FantasyBook: React.FC<FantasyBookProps> = React.memo(({
                     </div>
                 )}
 
-                {/* Purse: High-Contrast Sovereign Panel */}
-                <div className="mb-8">
-                    <div className="relative overflow-hidden bg-slate-950/60 backdrop-blur-xl border border-amber-500/30 rounded-2xl p-5 shadow-2xl group hover:bg-slate-900/70 transition-all duration-500">
-                        {/* Dynamic Background Glow */}
-                        <div className="absolute -top-12 -right-12 w-32 h-32 bg-amber-400/10 blur-3xl rounded-full" />
+                {/* Purse: Avant-Garde Integrated Parchment Panel */}
+                <div className="mb-2 relative flex flex-col items-center justify-center py-2 px-2 group">
+                    {/* Decorative Top Border */}
+                    <div className="w-full flex items-center justify-center gap-2 opacity-70 mb-2">
+                        <div className="h-[1px] w-12 bg-gradient-to-r from-transparent to-amber-900/60" />
+                        <span className="text-[9px] font-cinzel text-amber-950 uppercase tracking-[0.25em] font-bold">The Sovereign Purse</span>
+                        <div className="h-[1px] w-12 bg-gradient-to-l from-transparent to-amber-900/60" />
+                    </div>
 
-                        <div className="text-[10px] uppercase tracking-[0.3em] text-amber-400/80 mb-3 font-bold m-text-shadow-strong">Merchant's Sovereign Purse</div>
-                        <div className="flex items-center gap-5">
-                            <div className="relative">
-                                <div className="w-12 h-12 rounded-full bg-amber-400 border-2 border-amber-600 shadow-[0_0_20px_rgba(251,191,36,0.6)] flex items-center justify-center m-icon-coin scale-150" />
-                                <motion.div
-                                    animate={{ scale: [1, 1.3, 1], opacity: [0.4, 0.7, 0.4] }}
-                                    transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
-                                    className="absolute inset-0 rounded-full bg-amber-500 blur-md -z-10"
+                    <div className="flex items-center gap-5 transition-transform duration-500 group-hover:scale-[1.02]">
+                        {/* Coin Icon from TopHUD */}
+                        <div className="relative">
+                            <motion.div
+                                animate={{ y: [-1, 1, -1] }}
+                                transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+                            >
+                                <ItemIcon
+                                    icon="item_gold_coin"
+                                    size="lg"
+                                    className="drop-shadow-[0_4px_8px_rgba(180,83,9,0.3)] filter brightness-110"
                                 />
-                            </div>
-                            <div className="flex flex-col">
-                                <span className="text-4xl font-black text-amber-50 m-text-shadow-strong tracking-tighter tabular-nums leading-none">{coins}</span>
-                                <span className="text-[9px] text-amber-400/70 uppercase font-black tracking-widest mt-1">Total Gold Holdings</span>
-                            </div>
+                            </motion.div>
+                            <motion.div
+                                animate={{ opacity: [0.3, 0.6, 0.3], scale: [0.9, 1.1, 0.9] }}
+                                transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+                                className="absolute inset-0 bg-amber-400/30 blur-xl -z-10 rounded-full"
+                            />
                         </div>
+
+                        {/* Amount */}
+                        <div className="flex flex-col items-start pr-4">
+                            <span className="text-4xl font-black text-amber-950/90 font-cinzel leading-none tabular-nums tracking-tighter drop-shadow-sm">
+                                {coins}
+                            </span>
+                        </div>
+                    </div>
+
+                    {/* Decorative Bottom Border */}
+                    <div className="w-full flex items-center justify-center mt-2 opacity-30">
+                        <div className="h-[1px] w-32 bg-gradient-to-r from-transparent via-amber-900/50 to-transparent" />
                     </div>
                 </div>
 
@@ -282,44 +301,49 @@ export const FantasyBook: React.FC<FantasyBookProps> = React.memo(({
                                             key={item.id}
                                             initial={{ opacity: 0, x: 10 }}
                                             animate={{ opacity: 1, x: 0 }}
-                                            className={`flex flex-col p-4 ${theme.bg} border ${theme.border} rounded-lg hover:brightness-105 transition-all group relative overflow-hidden`}
+                                            className={`flex p-4 ${theme.bg} border ${theme.border} rounded-lg hover:brightness-105 transition-all group relative overflow-hidden gap-4`}
                                         >
-                                            <div className="flex items-center justify-between mb-2">
-                                                <div className="flex items-center gap-3">
+                                            {/* Left Side: Info */}
+                                            <div className="flex-1 flex flex-col">
+                                                <div className="flex items-center gap-3 mb-2">
                                                     <div className={`w-10 h-10 flex items-center justify-center bg-white/50 rounded-lg border ${theme.border}`}>
                                                         {isItemSpriteIcon(item.icon)
                                                             ? <ItemIcon icon={item.icon as ItemIconKey} size="md" />
-                                                            : <div className={`${item.icon} ${theme.text} text-lg`} />
+                                                            : <div className={`${item.icon} ${theme.text} text-xl`} />
                                                         }
                                                     </div>
-                                                    <span className={`font-bold text-lg ${theme.text}`}>{item.title}</span>
+                                                    <span className={`font-bold text-xl ${theme.text}`}>{item.title}</span>
                                                 </div>
-                                                <span className={`text-xs font-bold ${theme.text} bg-${theme.primary}/20 px-2 py-1 rounded`}>Lvl {lvl}/{item.maxLevel}</span>
+
+                                                <div className={`text-lg ${theme.text} opacity-80 pl-1 leading-snug font-crimson mt-2`}>
+                                                    {item.description(lvl + 1)}
+                                                </div>
                                             </div>
 
-                                            <div className={`text-sm ${theme.text} opacity-80 mb-4 pl-1 leading-snug font-crimson`}>
-                                                {item.description(lvl + 1)}
-                                            </div>
+                                            {/* Right Side: Action & Level */}
+                                            <div className="flex flex-col w-28 shrink-0 justify-between items-end gap-2">
+                                                <span className={`text-3xl font-bold ${theme.text} opacity-90 block mt-1 tracking-tighter`}>{lvl}/{item.maxLevel}</span>
 
-                                            <div className="mt-auto">
-                                                {isMaxed ? (
-                                                    <div className={`w-full py-2 text-xs font-bold ${theme.text} bg-${theme.primary}/10 rounded border ${theme.border} text-center uppercase tracking-widest`}>
-                                                        Mastered
-                                                    </div>
-                                                ) : (
-                                                    <button
-                                                        onClick={() => actions.onBuyUpgrade(item.id, cost)}
-                                                        disabled={!canAfford}
-                                                        className={`w-full py-2.5 text-sm font-bold border rounded-lg transition-all flex items-center justify-center gap-2 shadow-md
-                                                            ${canAfford
-                                                                ? 'bg-amber-400 border-amber-600 text-amber-900 hover:bg-amber-300 hover:-translate-y-0.5 active:translate-y-0 active:shadow-inner'
-                                                                : 'bg-slate-200 border-slate-300 text-slate-400 cursor-not-allowed grayscale'}
-                                                        `}
-                                                    >
-                                                        <span>Buy for {cost}</span>
-                                                        <div className="w-2.5 h-2.5 rounded-full bg-amber-600 shadow-[0_0_5px_rgba(180,83,9,0.5)]" />
-                                                    </button>
-                                                )}
+                                                <div className="w-full mt-auto">
+                                                    {isMaxed ? (
+                                                        <div className={`w-full py-2 text-sm font-bold ${theme.text} bg-${theme.primary}/10 rounded border ${theme.border} text-center uppercase tracking-widest`}>
+                                                            Max
+                                                        </div>
+                                                    ) : (
+                                                        <button
+                                                            onClick={() => actions.onBuyUpgrade(item.id, cost)}
+                                                            disabled={!canAfford}
+                                                            className={`w-full py-2 text-base font-bold border rounded-lg transition-all flex items-center justify-center gap-1.5 shadow-md
+                                                                ${canAfford
+                                                                    ? 'bg-amber-400 border-amber-600 text-amber-900 hover:bg-amber-300 hover:-translate-y-0.5 active:translate-y-0 active:shadow-inner'
+                                                                    : 'bg-slate-200 border-slate-300 text-slate-400 cursor-not-allowed grayscale'}
+                                                            `}
+                                                        >
+                                                            <span>{cost}</span>
+                                                            <div className="w-2.5 h-2.5 rounded-full bg-amber-600 shadow-[0_0_5px_rgba(180,83,9,0.5)]" />
+                                                        </button>
+                                                    )}
+                                                </div>
                                             </div>
                                         </motion.div>
                                     )
