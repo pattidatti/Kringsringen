@@ -31,9 +31,22 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID,
 };
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const database = getDatabase(app);
+// Lazy-initialize Firebase on first use (prevents blocking app startup)
+let app: any = null;
+let database: any = null;
+
+function initializeFirebase() {
+  if (!app) {
+    try {
+      app = initializeApp(firebaseConfig);
+      database = getDatabase(app);
+    } catch (error) {
+      console.error('[Firebase] Initialization failed:', error);
+      throw error;
+    }
+  }
+  return database;
+}
 
 export class HighscoreManager {
   /**
@@ -52,7 +65,8 @@ export class HighscoreManager {
         throw new Error(validation.error || 'Invalid score data');
       }
 
-      const highscoresRef = ref(database, 'highscores');
+      const db = initializeFirebase();
+      const highscoresRef = ref(db, 'highscores');
       const timestamp = Date.now();
 
       // Push new highscore entry
@@ -77,7 +91,8 @@ export class HighscoreManager {
    */
   static async fetchHighscores(limit: number = 25): Promise<Highscore[]> {
     try {
-      const highscoresRef = ref(database, 'highscores');
+      const db = initializeFirebase();
+      const highscoresRef = ref(db, 'highscores');
       const q = query(
         highscoresRef,
         orderByChild('score'),
@@ -130,7 +145,8 @@ export class HighscoreManager {
    */
   static subscribeToHighscores(callback: (scores: Highscore[]) => void): Unsubscribe {
     try {
-      const highscoresRef = ref(database, 'highscores');
+      const db = initializeFirebase();
+      const highscoresRef = ref(db, 'highscores');
 
       const unsubscribe = onValue(
         highscoresRef,
