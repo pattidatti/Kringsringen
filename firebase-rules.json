@@ -3,8 +3,8 @@
     "highscores": {
       ".read": true,
       ".write": true,
-      ".validate": "newData.hasChildren(['name', 'score', 'level', 'wave', 'coins', 'timestamp'])",
       "$entry": {
+        ".validate": "newData.hasChildren(['name', 'score', 'level', 'wave', 'coins', 'timestamp'])",
         "name": {
           ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 20"
         },

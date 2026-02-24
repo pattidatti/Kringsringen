@@ -82,7 +82,8 @@ export class HighscoreManager {
       console.log('Score submitted successfully:', { name, score, level, wave, coins });
     } catch (error) {
       console.error('Failed to submit score:', error);
-      throw new Error('Kunne ikke lagre poengsum. Prøv igjen.');
+      const message = error instanceof Error ? error.message : 'Kunne ikke lagre poengsum. Prøv igjen.';
+      throw new Error(message);
     }
   }
 
