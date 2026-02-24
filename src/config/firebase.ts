@@ -93,7 +93,7 @@ export class HighscoreManager {
 
             if (data) {
               // Convert Firebase object to array and reverse for descending order
-              Object.entries(data).forEach(([key, value]: [string, any]) => {
+              Object.entries(data).forEach(([key, value]: [string, Record<string, unknown>]) => {
                 scores.push({
                   id: key,
                   name: value.name || 'Ukjent',
@@ -138,7 +138,7 @@ export class HighscoreManager {
           const scores: Highscore[] = [];
 
           if (data) {
-            Object.entries(data).forEach(([key, value]: [string, any]) => {
+            Object.entries(data).forEach(([key, value]: [string, Record<string, unknown>]) => {
               scores.push({
                 id: key,
                 name: value.name || 'Ukjent',
