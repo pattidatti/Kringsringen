@@ -89,7 +89,7 @@ export class LightningBolt extends Phaser.Physics.Arcade.Sprite {
 
         const angle = Phaser.Math.Angle.Between(this.x, this.y, this.targetEnemy.x, this.targetEnemy.y);
         this.scene.physics.velocityFromRotation(angle, this.speed, this.body.velocity);
-        this.setRotation(angle);
+        this.setRotation(angle + Math.PI / 2); // Rotate 90 degrees
     }
 
     update() {
