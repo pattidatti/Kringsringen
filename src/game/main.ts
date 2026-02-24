@@ -17,6 +17,7 @@ import { PlayerCombatManager } from './PlayerCombatManager';
 import type { IMainScene } from './IMainScene';
 import { PreloadScene } from './PreloadScene';
 import { WeatherManager } from './WeatherManager';
+import { AmbientParticleManager } from './AmbientParticleManager';
 
 
 class MainScene extends Phaser.Scene implements IMainScene {
@@ -61,6 +62,12 @@ class MainScene extends Phaser.Scene implements IMainScene {
     // Weather
     private weather!: WeatherManager;
 
+    // Ambient particles (fireflies / leaves / embers)
+    private ambient!: AmbientParticleManager;
+
+    // Vignette post-FX — strength driven by player HP
+    private vignetteEffect: any = null;
+
     constructor() {
         super('MainScene');
     }
@@ -84,6 +91,7 @@ class MainScene extends Phaser.Scene implements IMainScene {
         this.combat = new PlayerCombatManager(this);
         this.waves = new WaveManager(this);
         this.weather = new WeatherManager(this);
+        this.ambient = new AmbientParticleManager(this);
 
         // Calculate Initial Stats
         this.stats.recalculateStats();
@@ -115,6 +123,13 @@ class MainScene extends Phaser.Scene implements IMainScene {
         graphics.generateTexture('coin', 10, 10);
         graphics.destroy();
 
+        // Spark texture — used for enemy death burst particles
+        const sparkGfx = this.add.graphics();
+        sparkGfx.fillStyle(0xffffff);
+        sparkGfx.fillCircle(4, 4, 4);
+        sparkGfx.generateTexture('spark', 8, 8);
+        sparkGfx.destroy();
+
         // --- LIGHT SYSTEM ---
         this.lights.enable();
         this.lights.setAmbientColor(0x0a0a0a); // Near black edges
@@ -129,6 +144,10 @@ class MainScene extends Phaser.Scene implements IMainScene {
 
         // --- POST PROCESSING ---
         this.cameras.main.postFX.addBloom(0xffffff, 1, 1, 0.5, 0.7);
+
+        // Vignette — starts invisible; strength is driven by HP in update().
+        // Gives a subtle border darkening at all times and pulses red at low HP.
+        this.vignetteEffect = this.cameras.main.postFX.addVignette(0.5, 0.5, 0.85, 0.15);
 
         // Background: Map Generation with Variety
         // Set World Bounds
@@ -305,6 +324,9 @@ class MainScene extends Phaser.Scene implements IMainScene {
         // Load static map – no procedural generation, instant
         this.currentMap = new StaticMapLoader(this, this.obstacles, this.mapWidth, this.mapHeight);
         this.currentMap.load(mapDef);
+
+        // Swap ambient particle theme to match the new level
+        this.ambient.setTheme(level);
     }
 
     update() {
@@ -317,6 +339,33 @@ class MainScene extends Phaser.Scene implements IMainScene {
         this.playerLight.setPosition(player.x, player.y - 10);
         this.outerPlayerLight.setPosition(player.x, player.y - 10);
         this.haloPlayerLight.setPosition(player.x, player.y - 10);
+
+        // ── Vignette HP warning ──────────────────────────────────────────────
+        // Below 30 % HP the vignette pulses with increasing intensity, giving a
+        // clear "danger" signal without interrupting gameplay.
+        if (this.vignetteEffect) {
+            const hp = this.registry.get('playerHP') as number;
+            const maxHP = this.registry.get('playerMaxHP') as number;
+            if (maxHP > 0) {
+                const ratio = hp / maxHP;
+                if (ratio < 0.3) {
+                    // Pulse strength between 0.30 and 0.75, speed scales with danger
+                    const urgency = 1 + (0.3 - ratio) * 5; // faster at lower HP
+                    const pulse = (Math.sin(this.time.now / (380 / urgency)) + 1) * 0.5;
+                    this.vignetteEffect.strength = 0.30 + pulse * 0.45;
+                } else {
+                    // Smoothly return to the resting strength (0.15)
+                    const target = 0.15;
+                    const diff = this.vignetteEffect.strength - target;
+                    if (Math.abs(diff) > 0.005) {
+                        this.vignetteEffect.strength -= diff * 0.08;
+                    } else {
+                        this.vignetteEffect.strength = target;
+                    }
+                }
+            }
+        }
+        // ────────────────────────────────────────────────────────────────────
         const cursors = this.data.get('cursors') as Phaser.Types.Input.Keyboard.CursorKeys;
         const isAttacking = this.data.get('isAttacking') as boolean;
         const pointer = this.input.activePointer;

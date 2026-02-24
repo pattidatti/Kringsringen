@@ -10,6 +10,9 @@ export class PlayerCombatManager {
     private _isKnockedBack: boolean = false;
     private invincibilityDuration: number = 1000;
 
+    /** Active camera blur FX reference – removed after the hit-impact fades. */
+    private hitBlurFX: any = null;
+
     constructor(scene: IMainScene) {
         this.scene = scene;
     }
@@ -37,6 +40,10 @@ export class PlayerCombatManager {
 
         // Screen Shake
         this.scene.cameras.main.shake(200, 0.014);
+
+        // Hit-impact blur: brief camera blur that resolves quickly, giving a
+        // physical "impact" feel distinct from the red flash overlay.
+        this.applyHitBlur();
 
         // Red screen flash
         const cam = this.scene.cameras.main;
@@ -102,5 +109,35 @@ export class PlayerCombatManager {
         if (hp <= 0) {
             this.scene.scene.pause();
         }
+    }
+
+    /**
+     * Adds a short camera blur that eases back to zero, giving a tactile
+     * "screen impact" sensation when the player takes damage.
+     * Only one blur instance is kept active at a time.
+     */
+    private applyHitBlur() {
+        const cam = this.scene.cameras.main;
+
+        // Remove any previous hit blur so effects don't stack
+        if (this.hitBlurFX) {
+            try { cam.postFX.remove(this.hitBlurFX); } catch (_) { /* ignore */ }
+            this.hitBlurFX = null;
+        }
+
+        // addBlur(quality, x, y, strength, color, steps)
+        // quality 0 = low, keeps perf cost minimal
+        this.hitBlurFX = cam.postFX.addBlur(0, 2, 2, 1.2);
+
+        (this.scene as unknown as Phaser.Scene).tweens.add({
+            targets: this.hitBlurFX,
+            strength: 0,
+            duration: 280,
+            ease: 'Cubic.out',
+            onComplete: () => {
+                try { cam.postFX.remove(this.hitBlurFX); } catch (_) { /* ignore */ }
+                this.hitBlurFX = null;
+            }
+        });
     }
 }
