@@ -11,22 +11,18 @@
 - [ ] Pengesystem 
 
 
-# visuelt 
-Dynamisk lys via Phaser Lights2D
-Phaser har et innebygd lys-system (scene.lights). Legge til et bevegelig lys rundt spilleren + oransje lys rundt flammekasteren. Krever normal maps på tilesets, eller man bruker det uten (gir ambient "pool of light"-effekt).
+# Spell
+- Lightingspell, slot 5. Skyter ut fra spilleren mot et target (seeking). Når det treffer bouncer det videre. Oppgraderinger gjør bl.a. lynet splitter seg og går til enda flere. Mer damage. Spilleren kan skyte flere lyn samtidig. 
+- På actionbar må vi ha Cooldown som viser hvor lang tid det er mellom neste gang man kan gjøre angrepet. Enkel animasjon av et hjul (som i world of warcraft)
 
-13. Vær-effekter (regn, tåke)
-Phaser Particles + evt. en shader. Tåke er særlig effektivt for atmosfære i en mørkere skog-setting
 
-14. Bloom/glow post-processing
-Phaser støtter custom WebGL pipelines. Glow rundt ildkuler og lysstoffplanter er imponerende, men krever shader-kode.
 
 # Bugs
 - [x] HP oppe til venstre oppdaterer seg ikke
 - [x] Når spilleren dør, fryser og krasjer spillet. 
 - [x] Hotbar i bunnen bruker assets på feil måte. De er strukket, og feilbrukt.Selector viser hele sprite, og er vertical.  
 - [x] Nesten ingen av enemies har attack animation, selv om dette ligger tilgjengelig i assets, slimes angriper heller ikke, de bare dytter borti spilleren.
-- [ ] Det er rimelig lang loading når spiller laster inn, hva skyldes dette? 
+- [x] Det er rimelig lang loading når spiller laster inn, hva skyldes dette? 
 - [x] Uklart hvordan man unlocker bue. 
 - [x] Popup for neste level/fase forsvinner for fort. Man rekker knapt å se hva som skjedde. Det mangler også en level complete popup når boken åpnes etter et level. 
 - [x] Mangler en ingame counter for gull. 
