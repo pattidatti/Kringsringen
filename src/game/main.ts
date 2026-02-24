@@ -247,7 +247,7 @@ class MainScene extends Phaser.Scene implements IMainScene {
         this.coins = this.physics.add.group({
             classType: Coin,
             runChildUpdate: true,
-            maxSize: 100
+            maxSize: 5000
         });
 
         // Collisions
@@ -331,6 +331,10 @@ class MainScene extends Phaser.Scene implements IMainScene {
         // Listen for level completion to regenerate map for next level
         this.events.on('level-complete', () => {
             const nextLevel = this.registry.get('gameLevel') + 1;
+
+            // Clear coins on level complete
+            this.coins.clear(true, true);
+
             // Schedule map regeneration after level complete delay
             this.time.delayedCall(1000, () => {
                 this.regenerateMap(nextLevel);

@@ -22,8 +22,8 @@
 
 
 # Bugs
-- [ ] Virker som gull forsvinner etter en stund, det må bli liggende. 
-- [ ] Radius for å plukke opp gull må økes på default. 
+- [x] Virker som gull forsvinner etter en stund, det må bli liggende. 
+- [x] Radius for å plukke opp gull må økes på default. 
 - [ ] Movement lock på spellcasting og bue må reduseres litt. 
 . [x] Spillet crasher på death
 - [x] Bare sverd er visuelt tilgjengelig actionbar ved spillstart. Det går an å velge annet, men UI oppdaterer seg ikke. 

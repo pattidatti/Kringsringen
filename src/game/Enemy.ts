@@ -326,6 +326,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         }
 
         if (this.hp <= 0) {
+            console.log(`Enemy ${this.enemyType} reached 0 HP, calling die()`);
             this.die();
         }
     }
@@ -340,6 +341,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         }
 
         this.emit('dead', this.x, this.y);
+        console.log(`Enemy ${this.enemyType} emitted 'dead' event at ${this.x}, ${this.y}. Listeners:`, this.listenerCount('dead'));
 
         // ── Death visual sequence ────────────────────────────────────────────
         // 1. Brief white flash to signal the killing blow.

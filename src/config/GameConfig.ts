@@ -19,8 +19,8 @@ export const GAME_CONFIG = {
         BASE_KNOCKBACK: 400,
         BASE_CRIT_CHANCE: 0.05,
         BASE_PROJECTILES: 1,
-        PICKUP_RANGE: 30, // Default collection range
-        MAGNET_RANGE: 150 // Default magnet range
+        PICKUP_RANGE: 60, // Default collection range
+        MAGNET_RANGE: 250 // Default magnet range
     },
     ENEMIES: {
         ORC: {

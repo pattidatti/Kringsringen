@@ -7,8 +7,7 @@ export class Coin extends Phaser.Physics.Arcade.Sprite {
     private collectionRange: number = GAME_CONFIG.PLAYER.PICKUP_RANGE;
     private speed: number = 600;
     private isCollected: boolean = false;
-    private spawnTime: number = 0;
-    private lifespan: number = GAME_CONFIG.DROPS.COIN_LIFETIME;
+
 
     constructor(scene: Phaser.Scene, x: number, y: number, target: Phaser.GameObjects.Components.Transform) {
         super(scene, x, y, 'coin');
@@ -31,7 +30,7 @@ export class Coin extends Phaser.Physics.Arcade.Sprite {
         this.setPosition(x, y);
         this.targetStart = target;
         this.isCollected = false;
-        this.spawnTime = this.scene.time.now;
+
 
         // Visual Reset
         this.setAlpha(1);
@@ -60,11 +59,12 @@ export class Coin extends Phaser.Physics.Arcade.Sprite {
         super.preUpdate(time, delta);
         if (this.isCollected || !this.targetStart) return;
 
-        // Lifetime Check
+        /* Lifetime Check removed - Gold stays on the ground 
         if (time > this.spawnTime + this.lifespan) {
             this.disable();
             return;
         }
+        */
 
         const dx = (this.targetStart as any).x - this.x;
         const dy = (this.targetStart as any).y - this.y;

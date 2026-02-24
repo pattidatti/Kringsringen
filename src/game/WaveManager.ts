@@ -15,7 +15,7 @@ export class WaveManager {
 
     private currentLevel: number = 1;
     private currentWave: number = 1;
-    private enemiesToSpawn: number = 0;
+    private enemiesToSpawnInWave: number = 0;
     private enemiesAlive: number = 0;
     private isLevelActive: boolean = false;
 
@@ -49,7 +49,7 @@ export class WaveManager {
 
     private startWave(): void {
         const config = this.LEVEL_CONFIG[Math.min(this.currentLevel - 1, this.LEVEL_CONFIG.length - 1)];
-        this.enemiesToSpawn = config.enemiesPerWave;
+        this.enemiesToSpawnInWave = config.enemiesPerWave;
 
         // Sync to registry
         this.scene.registry.set('currentWave', this.currentWave);
@@ -84,7 +84,7 @@ export class WaveManager {
             delay: GAME_CONFIG.WAVES.SPAWN_DELAY,
             callback: this.spawnEnemyInWave,
             callbackScope: this,
-            repeat: this.enemiesToSpawn - 1
+            repeat: this.enemiesToSpawnInWave - 1
         });
     }
 
@@ -133,11 +133,13 @@ export class WaveManager {
         enemy.reset(x, y, player, config.multiplier, type);
 
         this.enemiesAlive++;
+        this.enemiesToSpawnInWave--;
 
         // Clear previous listeners to avoid stacking
         enemy.removeAllListeners('dead');
 
         enemy.on('dead', (ex: number, ey: number) => {
+            console.log(`WaveManager caught 'dead' event for enemy at ${ex}, ${ey}`);
             this.enemiesAlive--;
             this.checkWaveProgress();
 
@@ -149,7 +151,13 @@ export class WaveManager {
             const baseCoins = Phaser.Math.Between(5, 15);
             const coinCount = baseCoins + (this.currentLevel - 1) * 3;
             for (let i = 0; i < coinCount; i++) {
-                const coin = this.scene.coins.get(ex, ey) as Coin;
+                let coin = this.scene.coins.get(ex, ey) as Coin;
+
+                // Recycling fallback: if pool is full, reuse the oldest active coin
+                if (!coin) {
+                    coin = this.scene.coins.getFirstAlive() as Coin;
+                }
+
                 if (coin) {
                     coin.spawn(ex, ey, player);
                     coin.removeAllListeners('collected');
@@ -157,6 +165,8 @@ export class WaveManager {
                         this.scene.stats.addCoins(1);
                         AudioManager.instance.playSFX('coin_collect');
                     });
+                } else {
+                    console.error('CRITICAL: Coin spawning failed even with recycling fallback!');
                 }
             }
         });
@@ -165,7 +175,7 @@ export class WaveManager {
     private checkWaveProgress(): void {
         const config = this.LEVEL_CONFIG[Math.min(this.currentLevel - 1, this.LEVEL_CONFIG.length - 1)];
 
-        if (this.enemiesAlive === 0) {
+        if (this.enemiesAlive === 0 && this.enemiesToSpawnInWave === 0) {
             if (this.currentWave < config.waves) {
                 this.currentWave++;
                 this.scene.time.delayedCall(GAME_CONFIG.WAVES.WAVE_DELAY, () => this.startWave());
