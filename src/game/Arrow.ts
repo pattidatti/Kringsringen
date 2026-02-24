@@ -23,7 +23,7 @@ export class Arrow extends Phaser.Physics.Arcade.Sprite {
         scene.physics.add.overlap(this, mainScene.enemies, (_arrow, enemy) => {
             if (!this.active) return;
             const e = enemy as Enemy;
-            e.takeDamage(this.damage);
+            e.takeDamage(this.damage, '#ffffff');
             e.pushback(this.startX, this.startY, 150);
             this.hit();
         });

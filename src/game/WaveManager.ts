@@ -57,8 +57,8 @@ export class WaveManager {
 
         // Visual Announcement
         const topText = this.scene.add.text(
-            this.scene.cameras.main.centerX,
-            this.scene.cameras.main.centerY - 100,
+            this.scene.cameras.main.width / 2,
+            this.scene.cameras.main.height / 2 - 100,
             `LEVEL ${this.currentLevel} - WAVE ${this.currentWave}`,
             {
                 fontSize: '48px',

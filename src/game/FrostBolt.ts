@@ -64,7 +64,7 @@ export class FrostBolt extends Phaser.Physics.Arcade.Sprite {
             const dist = Phaser.Math.Distance.Between(hitX, hitY, e.x, e.y);
             if (dist <= frostRadius) {
                 const isCenter = dist < 20;
-                (e as Enemy).takeDamage(isCenter ? scaledDamage : scaledDamage * 0.5);
+                (e as Enemy).takeDamage(isCenter ? scaledDamage : scaledDamage * 0.5, '#00aaff');
                 (e as Enemy).pushback(hitX, hitY, isCenter ? 220 : 120);
 
                 // Apply slow effect if unlocked
@@ -79,13 +79,13 @@ export class FrostBolt extends Phaser.Physics.Arcade.Sprite {
         // Shatter effect: slowed enemies take extra damage and cause secondary splash
         if (frostShatterLvl > 0) {
             slowedEnemies.forEach(slowed => {
-                slowed.takeDamage(scaledDamage * 0.5); // Extra 50% damage
+                slowed.takeDamage(scaledDamage * 0.5, '#00aaff'); // Extra 50% damage
                 // Secondary splash on nearby enemies
                 mainScene.enemies.children.iterate((e: any) => {
                     if (!e.active || e === slowed) return true;
                     const dist = Phaser.Math.Distance.Between(slowed.x, slowed.y, e.x, e.y);
                     if (dist <= 60) { // Smaller radius for shatter splinter
-                        (e as Enemy).takeDamage(scaledDamage * 0.25);
+                        (e as Enemy).takeDamage(scaledDamage * 0.25, '#00aaff');
                     }
                     return true;
                 });

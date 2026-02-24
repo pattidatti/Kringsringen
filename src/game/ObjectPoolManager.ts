@@ -15,37 +15,51 @@ export class ObjectPoolManager {
         this.scene = scene;
     }
 
-    public getDamageText(x: number, y: number, amount: number): Phaser.GameObjects.Text {
+    public getDamageText(x: number, y: number, amount: number, color: string = '#ffffff'): Phaser.GameObjects.Text {
         let text: Phaser.GameObjects.Text;
 
         if (this.damageTextPool.length > 0) {
             text = this.damageTextPool.pop()!;
             text.setText(Math.round(amount).toString());
+            text.setColor(color);
             text.setPosition(x, y);
             text.setActive(true);
             text.setVisible(true);
             text.setAlpha(1);
-            text.setScale(1);
+            text.setScale(0.4); // Start small for pop effect
         } else {
             text = this.scene.add.text(x, y, Math.round(amount).toString(), {
-                fontSize: '20px',
-                color: '#ffffff',
+                fontSize: '32px', // Larger font
+                color: color,
                 fontStyle: 'bold',
                 stroke: '#000000',
-                strokeThickness: 3
+                strokeThickness: 5 // Thicker stroke
             }).setOrigin(0.5);
-            text.setDepth(2000); // Ensure high depth
+            text.setDepth(2000);
+            text.setScale(0.4);
         }
 
-        // Animation
+        const driftX = Phaser.Math.Between(-30, 30);
+
+        // Pop and Drift Animation
         this.scene.tweens.add({
             targets: text,
-            y: y - 80,
-            alpha: 0,
-            duration: 600,
-            ease: 'Cubic.out',
+            scale: { from: 0.4, to: 1.4 },
+            duration: 100,
+            ease: 'Back.out',
             onComplete: () => {
-                this.returnDamageText(text);
+                this.scene.tweens.add({
+                    targets: text,
+                    scale: 1.0,
+                    y: y - 80,
+                    x: x + driftX,
+                    alpha: 0,
+                    duration: 700,
+                    ease: 'Cubic.out',
+                    onComplete: () => {
+                        this.returnDamageText(text);
+                    }
+                });
             }
         });
 

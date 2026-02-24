@@ -27,7 +27,7 @@ export class Coin extends Phaser.Physics.Arcade.Sprite {
     public spawn(x: number, y: number, target: Phaser.GameObjects.Components.Transform) {
         this.setActive(true);
         this.setVisible(true);
-        this.body!.enable = true;
+        if (this.body) this.body.enable = true;
         this.setPosition(x, y);
         this.targetStart = target;
         this.isCollected = false;
@@ -36,6 +36,8 @@ export class Coin extends Phaser.Physics.Arcade.Sprite {
         // Visual Reset
         this.setAlpha(1);
         this.setScale(0.1);
+        this.setBlendMode(Phaser.BlendModes.ADD); // Optimization: Additive blend for that glowing look
+
         this.scene.tweens.add({
             targets: this,
             scale: 1.5,
@@ -48,8 +50,9 @@ export class Coin extends Phaser.Physics.Arcade.Sprite {
         const force = Phaser.Math.Between(150, 250);
         this.setVelocity(Math.cos(angle) * force, Math.sin(angle) * force);
         this.setDrag(150);
+
+        // Removed postFX.addGlow - now using baked-in texture glow + ADD blend
         this.setPipeline('Light2D');
-        this.postFX.addGlow(0xffd700, 2, 0, false, 0.1, 15);
     }
 
     preUpdate(time: number, delta: number) {
@@ -63,10 +66,13 @@ export class Coin extends Phaser.Physics.Arcade.Sprite {
             return;
         }
 
-        const distance = Phaser.Math.Distance.Between(this.x, this.y, (this.targetStart as any).x, (this.targetStart as any).y);
+        const dx = (this.targetStart as any).x - this.x;
+        const dy = (this.targetStart as any).y - this.y;
+        const distSq = dx * dx + dy * dy;
 
-        if (distance < this.magnetRange) {
-            const angle = Phaser.Math.Angle.Between(this.x, this.y, (this.targetStart as any).x, (this.targetStart as any).y);
+        // Optimization: use distance squared to avoid Math.sqrt
+        if (distSq < this.magnetRange * this.magnetRange) {
+            const angle = Math.atan2(dy, dx);
             this.setVelocity(
                 Math.cos(angle) * this.speed,
                 Math.sin(angle) * this.speed
@@ -74,7 +80,7 @@ export class Coin extends Phaser.Physics.Arcade.Sprite {
             this.setDrag(0);
         }
 
-        if (distance < this.collectionRange) {
+        if (distSq < this.collectionRange * this.collectionRange) {
             this.collect();
         }
     }
@@ -89,7 +95,7 @@ export class Coin extends Phaser.Physics.Arcade.Sprite {
         this.setActive(false);
         this.setVisible(false);
         if (this.body) this.body.enable = false;
-        // Clear FX to prevent stacking if reused from pool
-        this.postFX.clear();
+        // Optimization: No need to clear postFX since we don't add it anymore
+        this.setBlendMode(Phaser.BlendModes.NORMAL);
     }
 }

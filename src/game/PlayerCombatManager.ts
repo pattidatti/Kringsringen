@@ -48,8 +48,8 @@ export class PlayerCombatManager {
         // Red screen flash
         const cam = this.scene.cameras.main;
         const flash = (this.scene as unknown as Phaser.Scene).add.rectangle(
-            cam.scrollX + cam.width / 2,
-            cam.scrollY + cam.height / 2,
+            cam.width / 2,
+            cam.height / 2,
             cam.width,
             cam.height,
             0xff0000,

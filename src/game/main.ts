@@ -114,13 +114,30 @@ class MainScene extends Phaser.Scene implements IMainScene {
         graphics.fillPath();
         graphics.generateTexture('xp-gem', 10, 10);
 
-        // Create Coin Texture (Yellow Circle)
+        // Create Coin Texture (Yellow Circle with baked-in glow)
         graphics.clear();
-        graphics.fillStyle(0xffcc00);
-        graphics.fillCircle(5, 5, 5);
-        graphics.lineStyle(1, 0x000000, 0.5);
-        graphics.strokeCircle(5, 5, 5);
-        graphics.generateTexture('coin', 10, 10);
+
+        // 1. Draw several faint outer circles for a "soft glow" look (no postFX needed)
+        // This is much faster than per-object shaders.
+        for (let r = 10; r > 5; r--) {
+            const alpha = (10 - r) * 0.05;
+            graphics.fillStyle(0xffcc00, alpha);
+            graphics.fillCircle(10, 10, r);
+        }
+
+        // 2. Main coin body
+        graphics.fillStyle(0xffcc00, 1);
+        graphics.fillCircle(10, 10, 5);
+
+        // 3. Subtle inner highlight
+        graphics.fillStyle(0xffffff, 0.4);
+        graphics.fillCircle(10, 8, 2);
+
+        // 4. Subtle rim
+        graphics.lineStyle(1, 0x000000, 0.3);
+        graphics.strokeCircle(10, 10, 5);
+
+        graphics.generateTexture('coin', 20, 20);
         graphics.destroy();
 
         // Spark texture — used for enemy death burst particles
@@ -228,7 +245,7 @@ class MainScene extends Phaser.Scene implements IMainScene {
 
         this.physics.add.overlap(this.attackHitbox, this.enemies, (_hitbox, enemy) => {
             const e = enemy as Enemy;
-            e.takeDamage(this.stats.damage);
+            e.takeDamage(this.stats.damage, '#ffcc00'); // Gold for physical
             e.pushback(player.x, player.y, this.stats.knockback);
         });
 

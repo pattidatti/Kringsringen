@@ -310,7 +310,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         this.hpBar.fillRect(x, y, healthWidth, height);
     }
 
-    takeDamage(amount: number) {
+    takeDamage(amount: number, color: string = '#ffffff') {
         if (this.isDead || !this.active) return;
 
         this.hp -= amount;
@@ -321,7 +321,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         });
 
         if ((this.scene as any).poolManager) {
-            (this.scene as any).poolManager.getDamageText(this.x, this.y - 30, amount);
+            (this.scene as any).poolManager.getDamageText(this.x, this.y - 30, amount, color);
         }
 
         if (this.hp <= 0) {
