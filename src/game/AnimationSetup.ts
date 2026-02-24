@@ -27,6 +27,13 @@ export function createAnimations(scene: Phaser.Scene): void {
     });
 
     scene.anims.create({
+        key: 'player-attack-2',
+        frames: scene.anims.generateFrameNumbers('player-attack-2', { start: 0, end: 5 }),
+        frameRate: 15,
+        repeat: 0
+    });
+
+    scene.anims.create({
         key: 'player-bow',
         frames: scene.anims.generateFrameNumbers('player-full', { start: 36, end: 44 }),
         frameRate: 15,
@@ -150,6 +157,14 @@ export function createAnimations(scene: Phaser.Scene): void {
     scene.anims.create({
         key: 'armored-orc-attack',
         frames: scene.anims.generateFrameNumbers('armored_orc', { start: 18, end: 26 }),
+        frameRate: 10,
+        repeat: 0
+    });
+
+    // Armored orc shockwave: row 4 (frames 36–44), spilles én gang under AOE pushback
+    scene.anims.create({
+        key: 'armored-orc-shockwave',
+        frames: scene.anims.generateFrameNumbers('armored_orc', { start: 36, end: 44 }),
         frameRate: 10,
         repeat: 0
     });

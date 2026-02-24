@@ -37,9 +37,13 @@ export class BossEnemy extends Enemy {
 
         // Physics body & scale
         this.setScale(config.scale);
-        this.setBodySize(config.bodySize.width, config.bodySize.height, true);
-        const offsetY = (this.height * 0.5) - (config.bodySize.height * 0.5);
-        this.setOffset(this.body!.offset.x, offsetY + 10);
+        const srcW = config.bodySize.width / config.scale;
+        const srcH = config.bodySize.height / config.scale;
+        this.setBodySize(srcW, srcH, false);
+        this.setOffset(
+            this.displayOriginX - config.bodySize.width / 2,
+            this.displayHeight - config.bodySize.height - 10
+        );
 
         // Registry
         this.scene.registry.set('bossHP', config.hp);
@@ -62,7 +66,7 @@ export class BossEnemy extends Enemy {
         const p2 = phase2;
 
         switch (this.bossConfig.enemyType) {
-            case 'orc':
+            case 'armored_orc':
                 this.abilityTimers.push(
                     this.scene.time.addEvent({ delay: p2 ? 3000 : 5000, callback: this.performShockwave, callbackScope: this, loop: true })
                 );
@@ -100,6 +104,17 @@ export class BossEnemy extends Enemy {
 
     private performShockwave(): void {
         if (!this.active || this.isDead) return;
+
+        // Spill shockwave-animasjon (rad 4 av armored_orc.png, frames 36–44)
+        this.isAttacking = true;
+        this.setVelocity(0, 0);
+        this.play('armored-orc-shockwave');
+        this.once('animationcomplete-armored-orc-shockwave', () => {
+            if (this.active && !this.isDead) {
+                this.isAttacking = false;
+                this.play('armored-orc-walk');
+            }
+        });
 
         const graphics = this.scene.add.graphics();
         const state = { r: 0, alpha: 1.0 };
@@ -305,9 +320,6 @@ export class BossEnemy extends Enemy {
         this.scene.registry.set('bossHP', 0);
         this.scene.events.emit('boss-defeated');
 
-        // Return to normal music
-        AudioManager.instance.playBGM('meadow_theme');
-
         super.die();
     }
 
@@ -336,7 +348,7 @@ export class BossEnemy extends Enemy {
         });
 
         // Orc Warchief enrage: permanent +50% speed
-        if (this.bossConfig.enemyType === 'orc') {
+        if (this.bossConfig.enemyType === 'armored_orc') {
             this.movementSpeed = this.bossConfig.speed * 1.5;
             this.originalSpeed = this.movementSpeed;
         }

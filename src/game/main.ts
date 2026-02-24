@@ -326,6 +326,7 @@ class MainScene extends Phaser.Scene implements IMainScene {
         this.data.set('cursors', cursors);
         this.data.set('isAttacking', false);
         this.data.set('isBlocking', false);
+        this.data.set('attackAnimIndex', 0);
 
 
         // Listen for Upgrades
@@ -576,7 +577,12 @@ class MainScene extends Phaser.Scene implements IMainScene {
             this.data.set('isAttacking', true);
 
             if (currentWeapon === 'sword') {
-                player.play('player-attack');
+                const ATTACK_ANIMS = ['player-attack', 'player-attack-2'];
+                const idx = this.data.get('attackAnimIndex') as number;
+                const attackAnimKey = ATTACK_ANIMS[idx];
+                this.data.set('attackAnimIndex', (idx + 1) % ATTACK_ANIMS.length);
+
+                player.play(attackAnimKey);
                 this.events.emit('player-swing');
                 const attackSpeedMult = this.registry.get('playerAttackSpeed') || 1;
 
@@ -591,7 +597,7 @@ class MainScene extends Phaser.Scene implements IMainScene {
                     });
                 });
 
-                player.once('animationcomplete-player-attack', () => {
+                player.once(`animationcomplete-${attackAnimKey}`, () => {
                     this.data.set('isAttacking', false);
                     player.play('player-idle');
                 });

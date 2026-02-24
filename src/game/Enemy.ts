@@ -12,7 +12,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     private attackRange: number = 60;
     private attackCooldown: number = 1500;
     private lastAttackTime: number = 0;
-    private isAttacking: boolean = false;
+    protected isAttacking: boolean = false;
     public hasHit: boolean = false;
     private readonly DEFAULT_DAMAGE_FRAME: number = 3; // Fallback frame where damage occurs
     public isOnDamageFrame: boolean = false;
