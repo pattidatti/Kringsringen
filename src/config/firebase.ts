@@ -93,15 +93,16 @@ export class HighscoreManager {
 
             if (data) {
               // Convert Firebase object to array and reverse for descending order
-              Object.entries(data).forEach(([key, value]: [string, Record<string, unknown>]) => {
+              Object.entries(data).forEach(([key, value]) => {
+                const v = value as Record<string, unknown>;
                 scores.push({
                   id: key,
-                  name: value.name || 'Ukjent',
-                  score: value.score || 0,
-                  level: value.level || 0,
-                  wave: value.wave || 0,
-                  coins: value.coins || 0,
-                  timestamp: value.timestamp || 0,
+                  name: (v.name as string) || 'Ukjent',
+                  score: (v.score as number) || 0,
+                  level: (v.level as number) || 0,
+                  wave: (v.wave as number) || 0,
+                  coins: (v.coins as number) || 0,
+                  timestamp: (v.timestamp as number) || 0,
                 });
               });
             }
@@ -138,15 +139,16 @@ export class HighscoreManager {
           const scores: Highscore[] = [];
 
           if (data) {
-            Object.entries(data).forEach(([key, value]: [string, Record<string, unknown>]) => {
+            Object.entries(data).forEach(([key, value]) => {
+              const v = value as Record<string, unknown>;
               scores.push({
                 id: key,
-                name: value.name || 'Ukjent',
-                score: value.score || 0,
-                level: value.level || 0,
-                wave: value.wave || 0,
-                coins: value.coins || 0,
-                timestamp: value.timestamp || 0,
+                name: (v.name as string) || 'Ukjent',
+                score: (v.score as number) || 0,
+                level: (v.level as number) || 0,
+                wave: (v.wave as number) || 0,
+                coins: (v.coins as number) || 0,
+                timestamp: (v.timestamp as number) || 0,
               });
             });
           }

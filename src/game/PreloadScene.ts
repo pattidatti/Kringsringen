@@ -28,6 +28,21 @@ export class PreloadScene extends Phaser.Scene {
             bar.fillRect(bx, by, barW * value, barH);
         });
 
+        // Error handler — log failed assets but continue loading
+        this.load.on('loaderror', (file: Phaser.Loader.File) => {
+            console.warn(`[PreloadScene] Asset failed to load: ${file.key} (${file.url})`);
+        });
+
+        // Timeout fallback — if loader hangs for > 15 seconds, force scene start
+        const loadTimeout = this.time.delayedCall(15000, () => {
+            console.error('[PreloadScene] Load timed out. Forcing MainScene start.');
+            this.scene.start('MainScene');
+        });
+
+        this.load.on('complete', () => {
+            loadTimeout.remove();
+        });
+
         // Label
         this.add.text(width / 2, by - 28, 'Laster...', {
             fontSize: '16px',
