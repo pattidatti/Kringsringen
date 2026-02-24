@@ -65,6 +65,10 @@ export function loadAssets(scene: Phaser.Scene): void {
     scene.load.spritesheet('frost_projectile', 'assets/sprites/effects/frost_projectile.png', { frameWidth: 64, frameHeight: 64 });
     scene.load.spritesheet('frost_explosion', 'assets/sprites/effects/frost_explosion.png', { frameWidth: 64, frameHeight: 64 });
 
+    // Lightning Spell (896×576 @ 64px → 14 cols × 9 rows)
+    scene.load.spritesheet('lightning_projectile', 'assets/sprites/effects/lightning_projectile.png', { frameWidth: 64, frameHeight: 64 });
+    scene.load.spritesheet('lightning_impact', 'assets/sprites/effects/lightning_impact.png', { frameWidth: 64, frameHeight: 64 });
+
     // Preload Audio
     AudioManager.instance.preload(scene);
 }

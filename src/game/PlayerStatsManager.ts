@@ -126,6 +126,14 @@ export class PlayerStatsManager {
         this.scene.registry.set('frostRadius', 100 + frostRadLvl * 20);
         this.scene.registry.set('frostSlowDuration', frostSlowLvl * 500); // ms
 
+        // Lightning stats
+        const ltgDmgLvl = levels['lightning_damage'] || 0;
+        const ltgBounceLvl = levels['lightning_bounces'] || 0;
+        const ltgMulticastLvl = levels['lightning_multicast'] || 0;
+        this.scene.registry.set('lightningDamageMulti', 1 + ltgDmgLvl * 0.15);
+        this.scene.registry.set('lightningBounces', 1 + ltgBounceLvl);
+        this.scene.registry.set('lightningMulticast', 1 + ltgMulticastLvl);
+
         // Misc
         this.scene.registry.set('playerLuck', 1.0);
         this.scene.registry.set('playerCritChance', this.baseCritChance);

@@ -5,6 +5,7 @@ import { STATIC_MAPS } from './StaticMapData';
 import { Arrow } from './Arrow';
 import { Fireball } from './Fireball';
 import { FrostBolt } from './FrostBolt';
+import { LightningBolt } from './LightningBolt';
 import { Coin } from './Coin';
 import { SaveManager } from './SaveManager';
 import { ObjectPoolManager } from './ObjectPoolManager';
@@ -40,6 +41,7 @@ class MainScene extends Phaser.Scene implements IMainScene {
     private arrows!: Phaser.Physics.Arcade.Group;
     private fireballs!: Phaser.Physics.Arcade.Group;
     private frostBolts!: Phaser.Physics.Arcade.Group;
+    private lightningBolts!: Phaser.Physics.Arcade.Group;
     public poolManager!: ObjectPoolManager;
 
     // Managers
@@ -83,7 +85,7 @@ class MainScene extends Phaser.Scene implements IMainScene {
         this.registry.set('currentWeapon', 'sword');
         this.registry.set('upgradeLevels', {});
         this.registry.set('highStage', saveData.highStage);
-        this.registry.set('unlockedWeapons', ['sword', 'bow', 'fireball', 'frost']);
+        this.registry.set('unlockedWeapons', ['sword', 'bow', 'fireball', 'frost', 'lightning']);
 
         // Initialize Audio Manager
         AudioManager.instance.setScene(this);
@@ -243,6 +245,13 @@ class MainScene extends Phaser.Scene implements IMainScene {
             maxSize: 20
         });
 
+        // Lightning Bolt Group
+        this.lightningBolts = this.physics.add.group({
+            classType: LightningBolt,
+            runChildUpdate: true,
+            maxSize: 30
+        });
+
         // Coin Group
         this.coins = this.physics.add.group({
             classType: Coin,
@@ -327,6 +336,7 @@ class MainScene extends Phaser.Scene implements IMainScene {
         this.events.on('bow-shot', () => AudioManager.instance.playSFX('bow_attack'));
         this.events.on('fireball-cast', () => AudioManager.instance.playSFX('fireball_cast'));
         this.events.on('frost-cast', () => AudioManager.instance.playSFX('ice_throw'));
+        this.events.on('lightning-cast', () => AudioManager.instance.playSFX('fireball_cast')); // Using fireball_cast as placeholder
 
         // Listen for level completion to regenerate map for next level
         this.events.on('level-complete', () => {
@@ -440,6 +450,9 @@ class MainScene extends Phaser.Scene implements IMainScene {
         }
         if (this.hotkeys['4']?.isDown && this.registry.get('currentWeapon') !== 'frost' && unlocked.includes('frost')) {
             this.registry.set('currentWeapon', 'frost');
+        }
+        if (this.hotkeys['5']?.isDown && this.registry.get('currentWeapon') !== 'lightning' && unlocked.includes('lightning')) {
+            this.registry.set('currentWeapon', 'lightning');
         }
 
         // Handle Orientation (Face Mouse)
@@ -560,6 +573,31 @@ class MainScene extends Phaser.Scene implements IMainScene {
                     const bolt = this.frostBolts.get(player.x, player.y) as FrostBolt;
                     if (bolt) {
                         bolt.fire(player.x, player.y, frostTarget.x, frostTarget.y, this.stats.damage * 1.1);
+                    }
+                });
+
+                player.once('animationcomplete-player-bow', () => {
+                    this.data.set('isAttacking', false);
+                    player.play('player-idle');
+                });
+            } else if (currentWeapon === 'lightning') {
+                player.play('player-bow');
+                this.events.emit('lightning-cast');
+
+                // Get target position from mouse
+                const ltTarget = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
+
+                this.time.delayedCall(100, () => {
+                    const dmgMult = this.registry.get('lightningDamageMulti') || 1;
+                    const bounces = this.registry.get('lightningBounces') || 1;
+                    const multicast = this.registry.get('lightningMulticast') || 1;
+                    const baseDamage = this.stats.damage * 1.3 * dmgMult;
+
+                    for (let i = 0; i < multicast; i++) {
+                        const bolt = this.lightningBolts.get(player.x, player.y) as LightningBolt;
+                        if (bolt) {
+                            bolt.fire(player.x, player.y, ltTarget.x, ltTarget.y, baseDamage, bounces, new Set());
+                        }
                     }
                 });
 

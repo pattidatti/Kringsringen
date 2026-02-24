@@ -230,6 +230,38 @@ export const UPGRADES: UpgradeConfig[] = [
         basePrice: 350,
         priceScale: 2.8,
         description: (lvl) => lvl > 0 ? 'Frosne fiender tar +50% skade og splintrer' : 'Lås opp isknusing'
+    },
+
+    // --- MAGI (Lightning) ---
+    {
+        id: 'lightning_damage',
+        title: 'Tordenstyrke',
+        icon: 'item_lightning_staff',
+        category: 'Magi',
+        maxLevel: 10,
+        basePrice: 70,
+        priceScale: 1.6,
+        description: (lvl) => `+15% Lynstav-skade (Nå: +${lvl * 15}%)`
+    },
+    {
+        id: 'lightning_bounces',
+        title: 'Kjedeblunk',
+        icon: 'item_lightning_staff',
+        category: 'Magi',
+        maxLevel: 5,
+        basePrice: 200,
+        priceScale: 2.0,
+        description: (lvl) => `+1 ekstra mål (Nå: ${1 + lvl} ekstra mål)`
+    },
+    {
+        id: 'lightning_multicast',
+        title: 'Stormskudd',
+        icon: 'item_lightning_staff',
+        category: 'Magi',
+        maxLevel: 3,
+        basePrice: 300,
+        priceScale: 2.5,
+        description: (lvl) => `+1 lyn samtidig (Nå: ${1 + lvl} lyn)`
     }
 ];
 

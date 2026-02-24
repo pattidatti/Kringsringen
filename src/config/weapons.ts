@@ -12,5 +12,5 @@ export const WEAPON_SLOTS: WeaponUIConfig[] = [
     { id: 'bow',       label: 'BUE',   hotkey: '2', icon: 'item_bow' },
     { id: 'fireball',  label: 'ILD',   hotkey: '3', icon: 'item_magic_staff' },
     { id: 'frost',     label: 'FROST', hotkey: '4', icon: 'item_frost_orb' },
-    { id: 'wrapper_3', label: '',      hotkey: '5' },
+    { id: 'lightning', label: 'LYN',   hotkey: '5', icon: 'item_lightning_staff' },
 ];
