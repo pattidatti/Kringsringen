@@ -114,7 +114,12 @@ export const GameContainer = () => {
         }
     }, [isBookOpen]);
 
-
+    // Play paper sounds when book opens/closes
+    useEffect(() => {
+        import('../game/AudioManager').then(({ AudioManager }) => {
+            AudioManager.instance.playSFX(isBookOpen ? 'paper_open' : 'paper_close');
+        });
+    }, [isBookOpen]);
 
     const applyShopUpgrade = useCallback((upgradeId: string, cost: number) => {
         if (!gameInstanceRef.current) return;

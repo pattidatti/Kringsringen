@@ -43,7 +43,7 @@ export const FantasyButton: React.FC<FantasyButtonProps> = ({
             className={twMerge(
                 // Base
                 'relative inline-flex items-center justify-center',
-                'font-fantasy text-black tracking-wide uppercase',
+                'font-cinzel text-black tracking-wide uppercase',
                 'transition-all duration-100 ease-in-out',
                 'bg-transparent border-none p-0 cursor-pointer', // Reset button styles
 

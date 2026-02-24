@@ -142,7 +142,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
                 {activeToast && (
                     <motion.div
                         key={activeToast}
-                        className="absolute bottom-10 left-1/2 -translate-x-1/2 font-fantasy text-amber-200 text-sm tracking-widest uppercase bg-black/60 px-6 py-2 rounded"
+                        className="absolute bottom-10 left-1/2 -translate-x-1/2 font-cinzel text-amber-200 text-sm tracking-widest uppercase bg-black/60 px-6 py-2 rounded"
                         initial={{ opacity: 0, y: 8 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: 8 }}

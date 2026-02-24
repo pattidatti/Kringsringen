@@ -49,7 +49,7 @@ export const HighscoresModal: React.FC<HighscoresModalProps> = ({ isOpen, onClos
               {/* Title */}
               <div className="border-b-2 border-red-800/40 px-8 py-6 bg-red-950/20">
                 <h2
-                  className="font-fantasy text-5xl text-center tracking-[0.15em] uppercase"
+                  className="font-cinzel text-5xl text-center tracking-[0.15em] uppercase"
                   style={{
                     color: '#ffd700',
                     textShadow: '0 0 20px rgba(255,215,0,0.6), 2px 2px 0 #000, -2px -2px 0 #000',
@@ -74,7 +74,7 @@ export const HighscoresModal: React.FC<HighscoresModalProps> = ({ isOpen, onClos
                       animate={{ rotate: 360 }}
                       transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
                     />
-                    <p className="font-fantasy text-red-400 text-lg tracking-widest uppercase">
+                    <p className="font-cinzel text-red-400 text-lg tracking-widest uppercase">
                       Laster inn...
                     </p>
                   </motion.div>
@@ -86,7 +86,7 @@ export const HighscoresModal: React.FC<HighscoresModalProps> = ({ isOpen, onClos
                     animate={{ opacity: 1 }}
                     transition={{ duration: 0.3 }}
                   >
-                    <p className="font-fantasy text-red-400 text-center text-lg tracking-widest uppercase">
+                    <p className="font-cinzel text-red-400 text-center text-lg tracking-widest uppercase">
                       {error}
                     </p>
                     <FantasyButton
@@ -104,7 +104,7 @@ export const HighscoresModal: React.FC<HighscoresModalProps> = ({ isOpen, onClos
                     animate={{ opacity: 1 }}
                     transition={{ duration: 0.3 }}
                   >
-                    <p className="font-fantasy text-red-400 text-center text-lg tracking-widest uppercase">
+                    <p className="font-cinzel text-red-400 text-center text-lg tracking-widest uppercase">
                       Ingen poengsum ennå
                     </p>
                   </motion.div>
@@ -119,22 +119,22 @@ export const HighscoresModal: React.FC<HighscoresModalProps> = ({ isOpen, onClos
                     {/* Table header */}
                     <div className="grid grid-cols-12 gap-2 mb-2 pb-4 border-b-2 border-red-800/40">
                       <div className="col-span-1 text-center">
-                        <span className="font-fantasy text-xs text-red-400 uppercase tracking-widest">Rank</span>
+                        <span className="font-cinzel text-xs text-red-400 uppercase tracking-widest">Rank</span>
                       </div>
                       <div className="col-span-4">
-                        <span className="font-fantasy text-xs text-red-400 uppercase tracking-widest">Navn</span>
+                        <span className="font-cinzel text-xs text-red-400 uppercase tracking-widest">Navn</span>
                       </div>
                       <div className="col-span-2 text-right">
-                        <span className="font-fantasy text-xs text-red-400 uppercase tracking-widest">Score</span>
+                        <span className="font-cinzel text-xs text-red-400 uppercase tracking-widest">Score</span>
                       </div>
                       <div className="col-span-1 text-center">
-                        <span className="font-fantasy text-xs text-red-400 uppercase tracking-widest">Lvl</span>
+                        <span className="font-cinzel text-xs text-red-400 uppercase tracking-widest">Lvl</span>
                       </div>
                       <div className="col-span-2 text-center">
-                        <span className="font-fantasy text-xs text-red-400 uppercase tracking-widest">Fase</span>
+                        <span className="font-cinzel text-xs text-red-400 uppercase tracking-widest">Fase</span>
                       </div>
                       <div className="col-span-2 text-right">
-                        <span className="font-fantasy text-xs text-amber-300 uppercase tracking-widest">Gull</span>
+                        <span className="font-cinzel text-xs text-amber-300 uppercase tracking-widest">Gull</span>
                       </div>
                     </div>
 
@@ -152,7 +152,7 @@ export const HighscoresModal: React.FC<HighscoresModalProps> = ({ isOpen, onClos
             {/* Close button */}
             <motion.button
               onClick={onClose}
-              className="absolute -top-4 -right-4 z-20 w-10 h-10 flex items-center justify-center rounded-full bg-red-900/80 border-2 border-red-600 text-white font-fantasy font-bold text-xl hover:bg-red-800 transition-colors"
+              className="absolute -top-4 -right-4 z-20 w-10 h-10 flex items-center justify-center rounded-full bg-red-900/80 border-2 border-red-600 text-white font-cinzel font-bold text-xl hover:bg-red-800 transition-colors"
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.95 }}
             >
@@ -180,34 +180,34 @@ const HighscoreRow: React.FC<HighscoreRowProps> = ({ rank, score }) => {
     >
       {/* Rank */}
       <div className="col-span-1 flex items-center justify-center">
-        <span className="font-fantasy text-white font-bold">{rank}</span>
+        <span className="font-cinzel text-white font-bold">{rank}</span>
       </div>
 
       {/* Name */}
       <div className="col-span-4 flex items-center truncate">
-        <span className="font-fantasy text-white truncate">{score.name}</span>
+        <span className="font-cinzel text-white truncate">{score.name}</span>
       </div>
 
       {/* Score */}
       <div className="col-span-2 flex items-center justify-end">
-        <span className="font-fantasy text-amber-300 font-bold">
+        <span className="font-cinzel text-amber-300 font-bold">
           {score.score.toLocaleString()}
         </span>
       </div>
 
       {/* Level */}
       <div className="col-span-1 flex items-center justify-center">
-        <span className="font-fantasy text-white">{score.level}</span>
+        <span className="font-cinzel text-white">{score.level}</span>
       </div>
 
       {/* Wave */}
       <div className="col-span-2 flex items-center justify-center">
-        <span className="font-fantasy text-white">{score.wave}</span>
+        <span className="font-cinzel text-white">{score.wave}</span>
       </div>
 
       {/* Coins */}
       <div className="col-span-2 flex items-center justify-end">
-        <span className="font-fantasy text-amber-300">{score.coins}</span>
+        <span className="font-cinzel text-amber-300">{score.coins}</span>
       </div>
     </motion.div>
   );

@@ -88,12 +88,14 @@ export const AUDIO_MANIFEST: SoundConfig[] = [
     {
         id: 'coin_collect',
         variants: [
-            'assets/audio/sfx/coin_collect_1.wav',
-            'assets/audio/sfx/coin_collect_2.wav',
+            'assets/audio/sfx/pop_1.wav',
+            'assets/audio/sfx/pop_2.wav',
+            'assets/audio/sfx/pop_3.wav',
+            'assets/audio/sfx/glass_ping_small.wav',
         ],
         category: 'sfx',
-        volume: 0.35,
-        pitchVariance: 0.05,
+        volume: 0.25,
+        pitchVariance: 0.08,
     },
 
     // — UI —
@@ -102,6 +104,24 @@ export const AUDIO_MANIFEST: SoundConfig[] = [
         path: 'assets/audio/sfx/ui_click.wav',
         category: 'ui',
         volume: 0.3,
+    },
+    {
+        id: 'weapon_pick_up',
+        path: 'assets/audio/sfx/weapon_pick_up.wav',
+        category: 'ui',
+        volume: 0.4,
+    },
+    {
+        id: 'paper_open',
+        path: 'assets/audio/sfx/paper_move.wav',
+        category: 'ui',
+        volume: 0.8,
+    },
+    {
+        id: 'paper_close',
+        path: 'assets/audio/sfx/paper_move_reverse.wav',
+        category: 'ui',
+        volume: 0.8,
     },
 
     // — Spell SFX —

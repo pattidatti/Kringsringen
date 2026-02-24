@@ -84,7 +84,7 @@ export const GameOverOverlay: React.FC = () => {
                 {/* Title */}
                 <div className="text-center">
                     <motion.h1
-                        className="font-fantasy text-8xl tracking-[0.15em] uppercase"
+                        className="font-cinzel text-8xl tracking-[0.15em] uppercase"
                         style={{
                             color: '#ff2222',
                             textShadow: '0 0 40px rgba(255,0,0,0.9), 0 0 80px rgba(180,0,0,0.5), 3px 3px 0 #000, -3px -3px 0 #000, 3px -3px 0 #000, -3px 3px 0 #000',
@@ -94,7 +94,7 @@ export const GameOverOverlay: React.FC = () => {
                     >
                         Falnet
                     </motion.h1>
-                    <p className="font-fantasy text-base tracking-[0.35em] text-red-400 uppercase mt-2">
+                    <p className="font-cinzel text-base tracking-[0.35em] text-red-400 uppercase mt-2">
                         Din saga ender her
                     </p>
                 </div>
@@ -103,27 +103,27 @@ export const GameOverOverlay: React.FC = () => {
                 <div className="w-full border-2 border-red-800/60 bg-black/80 rounded overflow-hidden">
                     <div className="grid grid-cols-3 divide-x-2 divide-red-800/40">
                         <div className="flex flex-col items-center py-5 px-2 gap-1">
-                            <span className="font-fantasy text-sm text-red-400 uppercase tracking-widest">Level</span>
-                            <span className="font-fantasy text-5xl text-white">{level}</span>
+                            <span className="font-cinzel text-sm text-red-400 uppercase tracking-widest">Level</span>
+                            <span className="font-cinzel text-5xl text-white">{level}</span>
                         </div>
                         <div className="flex flex-col items-center py-5 px-2 gap-1">
-                            <span className="font-fantasy text-sm text-red-400 uppercase tracking-widest">Fase</span>
-                            <span className="font-fantasy text-5xl text-white">{wave}</span>
+                            <span className="font-cinzel text-sm text-red-400 uppercase tracking-widest">Fase</span>
+                            <span className="font-cinzel text-5xl text-white">{wave}</span>
                         </div>
                         <div className="flex flex-col items-center py-5 px-2 gap-1">
-                            <span className="font-fantasy text-sm text-red-400 uppercase tracking-widest">Gull</span>
-                            <span className="font-fantasy text-5xl text-amber-300">{coins}</span>
+                            <span className="font-cinzel text-sm text-red-400 uppercase tracking-widest">Gull</span>
+                            <span className="font-cinzel text-5xl text-amber-300">{coins}</span>
                         </div>
                     </div>
                     <div className="border-t-2 border-red-800/40 py-4 flex flex-col items-center gap-1 bg-red-950/20">
-                        <span className="font-fantasy text-sm text-red-400 uppercase tracking-widest">Score</span>
-                        <span className="font-fantasy text-5xl text-white">{score.toLocaleString()}</span>
+                        <span className="font-cinzel text-sm text-red-400 uppercase tracking-widest">Score</span>
+                        <span className="font-cinzel text-5xl text-white">{score.toLocaleString()}</span>
                     </div>
                 </div>
 
                 {/* Name input */}
                 <div className="w-full flex flex-col gap-2">
-                    <label className="font-fantasy text-sm text-red-400 uppercase tracking-widest text-center">
+                    <label className="font-cinzel text-sm text-red-400 uppercase tracking-widest text-center">
                         Ditt navn
                     </label>
                     <input
@@ -133,14 +133,14 @@ export const GameOverOverlay: React.FC = () => {
                         value={playerName}
                         onChange={e => setPlayerName(e.target.value)}
                         disabled={submitting}
-                        className="w-full bg-black/80 border-2 border-red-800/60 text-white font-fantasy text-base text-center px-4 py-3 rounded outline-none focus:border-red-500 placeholder:text-red-800 tracking-widest disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="w-full bg-black/80 border-2 border-red-800/60 text-white font-cinzel text-base text-center px-4 py-3 rounded outline-none focus:border-red-500 placeholder:text-red-800 tracking-widest disabled:opacity-50 disabled:cursor-not-allowed"
                     />
                 </div>
 
                 {/* Error message */}
                 {submitError && (
                     <motion.p
-                        className="text-red-500 font-fantasy text-sm text-center tracking-widest"
+                        className="text-red-500 font-cinzel text-sm text-center tracking-widest"
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         transition={{ duration: 0.3 }}
@@ -174,7 +174,7 @@ export const GameOverOverlay: React.FC = () => {
                         animate={{ opacity: 1 }}
                         transition={{ duration: 0.5 }}
                     >
-                        <p className="font-fantasy text-green-400 text-lg tracking-widest uppercase">
+                        <p className="font-cinzel text-green-400 text-lg tracking-widest uppercase">
                             Poengsum lagret!
                         </p>
                     </motion.div>

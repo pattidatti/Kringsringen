@@ -116,7 +116,7 @@ export const Hotbar: React.FC = React.memo(() => {
                                     />
                                 ) : slot.label ? (
                                     <span className={clsx(
-                                        "relative z-20 font-fantasy tracking-widest text-xs transition-colors duration-200",
+                                        "relative z-20 font-cinzel tracking-widest text-xs transition-colors duration-200",
                                         isActive
                                             ? "text-amber-100 drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]"
                                             : "text-stone-400 drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]"

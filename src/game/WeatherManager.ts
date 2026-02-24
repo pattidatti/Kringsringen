@@ -102,13 +102,13 @@ export class WeatherManager {
         this.fogParticles = this.scene.add.particles(0, 0, 'fog_cloud', {
             x: { min: -width * 1.5, max: width * 1.5 },
             y: { min: -height * 1.5, max: height * 1.5 },
-            scale: { min: 4, max: 8 },
-            alpha: { min: 0.3, max: 0.6 },
+            scale: { min: 1.5, max: 3 },
+            alpha: { min: 0.05, max: 0.12 },
             rotate: { min: 0, max: 360 },
             speed: { min: 10, max: 40 },
-            lifespan: 20000,
-            frequency: 30, // More frequent
-            blendMode: 'SCREEN'
+            lifespan: 12000,
+            frequency: 120,
+            blendMode: 'NORMAL'
         });
 
         this.fogParticles.setDepth(10); // Below player mostly

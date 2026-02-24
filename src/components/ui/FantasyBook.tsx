@@ -99,7 +99,7 @@ export const FantasyBook: React.FC<FantasyBookProps> = React.memo(({
                     zIndex: isActive ? 10 : 0
                 }}
             >
-                <span className={`font-medieval text-[10px] uppercase tracking-tighter ${config.color} 
+                <span className={`font-cinzel text-[10px] uppercase tracking-tighter ${config.color} 
                     ${isActive ? 'font-bold' : 'opacity-70'}`}>
                     {config.title}
                 </span>
@@ -108,14 +108,14 @@ export const FantasyBook: React.FC<FantasyBookProps> = React.memo(({
     };
 
     const renderStatusPage = () => (
-        <div className="space-y-4 font-serif text-slate-800 animate-in fade-in duration-300">
+        <div className="space-y-4 font-crimson text-slate-800 animate-in fade-in duration-300">
             <div className="flex items-center gap-4 mb-4 border-b border-red-900/20 pb-2">
                 <div className="w-16 h-16 bg-slate-200 border-2 border-slate-400 rounded-full flex items-center justify-center overflow-hidden">
                     {/* Placeholder Portrait */}
                     <span className="text-2xl">👤</span>
                 </div>
                 <div>
-                    <h3 className="text-xl font-bold font-medieval text-red-900">Map Level {level}</h3>
+                    <h3 className="text-xl font-bold font-cinzel text-red-900">Map Level {level}</h3>
                     <p className="text-xs italic text-slate-500">The Kringsjå Defender</p>
                 </div>
             </div>
@@ -158,7 +158,7 @@ export const FantasyBook: React.FC<FantasyBookProps> = React.memo(({
         ];
 
         return (
-            <div className="flex flex-col h-full font-serif animate-in fade-in duration-300">
+            <div className="flex flex-col h-full font-crimson animate-in fade-in duration-300">
                 {/* Purse: High-Contrast Sovereign Panel */}
                 <div className="mb-8">
                     <div className="relative overflow-hidden bg-slate-950/60 backdrop-blur-xl border border-amber-500/30 rounded-2xl p-5 shadow-2xl group hover:bg-slate-900/70 transition-all duration-500">
@@ -207,7 +207,7 @@ export const FantasyBook: React.FC<FantasyBookProps> = React.memo(({
                                 `}>
                                     <ItemIcon icon={cat.icon} size="md" />
                                 </div>
-                                <span className={`font-medieval text-xl ${isActive ? `${theme.text} font-bold` : 'text-slate-600 group-hover:text-slate-800'}`}>
+                                <span className={`font-cinzel text-xl ${isActive ? `${theme.text} font-bold` : 'text-slate-600 group-hover:text-slate-800'}`}>
                                     {cat.label}
                                 </span>
                                 {isActive && (
@@ -281,7 +281,7 @@ export const FantasyBook: React.FC<FantasyBookProps> = React.memo(({
                                                 <span className={`text-xs font-bold ${theme.text} bg-${theme.primary}/20 px-2 py-1 rounded`}>Lvl {lvl}/{item.maxLevel}</span>
                                             </div>
 
-                                            <div className={`text-sm ${theme.text} opacity-80 mb-4 pl-1 leading-snug font-serif`}>
+                                            <div className={`text-sm ${theme.text} opacity-80 mb-4 pl-1 leading-snug font-crimson`}>
                                                 {item.description(lvl + 1)}
                                             </div>
 
@@ -334,7 +334,7 @@ export const FantasyBook: React.FC<FantasyBookProps> = React.memo(({
                                 transition={{ delay: 0.15, duration: 0.4 }}
                                 className="px-10 py-2 bg-amber-950/90 border-2 border-amber-500/60 rounded-lg shadow-lg text-center"
                             >
-                                <span className="text-amber-300 font-medieval font-bold text-2xl tracking-widest drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
+                                <span className="text-amber-300 font-cinzel font-bold text-2xl tracking-widest drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
                                     ⚔ Level {level} fullført! ⚔
                                 </span>
                             </motion.div>
@@ -360,12 +360,12 @@ export const FantasyBook: React.FC<FantasyBookProps> = React.memo(({
                             {renderTabButton('upgrades', 30)}
 
                             {/* Content Layer */}
-                            <div className="absolute inset-0 grid grid-cols-2 p-[6%] gap-[4%] pt-[3%] pb-[8%] font-serif text-slate-900 overflow-hidden">
+                            <div className="absolute inset-0 grid grid-cols-2 p-[6%] gap-[4%] pt-[3%] pb-[8%] font-crimson text-slate-900 overflow-hidden">
                                 {/* Left Page: Main Content Area */}
                                 <div className="px-5 py-3 overflow-y-auto custom-scrollbar h-full pr-4 relative overflow-x-hidden">
                                     {activeTab === 'character' && (
                                         <>
-                                            <h2 className={`text-2xl font-bold mb-4 font-medieval border-b-2 pb-2 ${TABS[activeTab].color} border-current opacity-80 sticky top-0 bg-[#e3dac9] z-10`}>
+                                            <h2 className={`text-2xl font-bold mb-4 font-cinzel border-b-2 pb-2 ${TABS[activeTab].color} border-current opacity-80 sticky top-0 bg-[#e3dac9] z-10`}>
                                                 {TABS[activeTab].title}
                                             </h2>
                                             {renderStatusPage()}
@@ -381,8 +381,8 @@ export const FantasyBook: React.FC<FantasyBookProps> = React.memo(({
                                     {activeTab === 'character' && (
                                         <>
                                             <div className="space-y-4">
-                                                <h3 className="text-lg font-bold text-amber-900/70 font-medieval border-b border-amber-900/10 pb-1">Notes</h3>
-                                                <div className="text-sm italic text-slate-600 font-handwriting leading-relaxed opacity-80">
+                                                <h3 className="text-lg font-bold text-amber-900/70 font-cinzel border-b border-amber-900/10 pb-1">Notes</h3>
+                                                <div className="text-sm italic text-slate-600 font-crimson italic leading-relaxed opacity-80">
                                                     {mode === 'shop' && "Ah, a customer! Standard exchange rates apply. No refunds on cursed items."}
                                                     {mode === 'view' && "\"To defeat the darkness, one must first understand their own strength.\""}
                                                 </div>

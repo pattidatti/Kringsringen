@@ -47,7 +47,7 @@ export class PreloadScene extends Phaser.Scene {
         this.add.text(width / 2, by - 28, 'Laster...', {
             fontSize: '16px',
             color: '#8899cc',
-            fontFamily: 'serif'
+            fontFamily: '"Cinzel", Georgia, serif'
         }).setOrigin(0.5);
 
         loadAssets(this);

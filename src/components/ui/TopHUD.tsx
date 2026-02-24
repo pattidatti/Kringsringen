@@ -60,7 +60,7 @@ export const TopHUD: React.FC = React.memo(() => {
 
                     <div className="flex items-center gap-3">
                         <div className="w-8 h-[1px] bg-gradient-to-r from-transparent to-amber-500/50" />
-                        <h1 className="text-2xl font-black text-amber-100 m-text-outline tracking-wider" style={{ fontFamily: 'Cinzel, serif' }}>
+                        <h1 className="text-2xl font-black text-amber-100 m-text-outline tracking-wider font-cinzel">
                             Level {level}
                         </h1>
                         <div className="w-8 h-[1px] bg-gradient-to-l from-transparent to-amber-500/50" />

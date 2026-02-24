@@ -33,7 +33,8 @@ export class ObjectPoolManager {
                 color: color,
                 fontStyle: 'bold',
                 stroke: '#000000',
-                strokeThickness: 5 // Thicker stroke
+                strokeThickness: 5, // Thicker stroke
+                fontFamily: '"Cinzel", serif'
             }).setOrigin(0.5);
             text.setDepth(2000);
             text.setScale(0.4);

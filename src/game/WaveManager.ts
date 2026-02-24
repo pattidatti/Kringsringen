@@ -65,7 +65,8 @@ export class WaveManager {
                 color: '#fbbf24',
                 fontStyle: 'bold',
                 stroke: '#000',
-                strokeThickness: 6
+                strokeThickness: 6,
+                fontFamily: '"Cinzel", serif'
             }
         ).setOrigin(0.5).setScrollFactor(0);
 

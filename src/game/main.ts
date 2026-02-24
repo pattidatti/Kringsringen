@@ -328,7 +328,9 @@ class MainScene extends Phaser.Scene implements IMainScene {
 
         // Resume audio context and play music
         this.input.on('pointerdown', () => AudioManager.instance.resumeContext());
-        AudioManager.instance.playBGM('meadow_theme');
+        const bgmTracks = ['meadow_theme', 'exploration_theme', 'dragons_fury'];
+        const randomBGM = bgmTracks[Math.floor(Math.random() * bgmTracks.length)];
+        AudioManager.instance.playBGM(randomBGM);
         AudioManager.instance.playBGS('forest_ambience');
         // Global Sound Listeners
         this.events.on('enemy-hit', () => AudioManager.instance.playSFX('hit'));
@@ -337,6 +339,11 @@ class MainScene extends Phaser.Scene implements IMainScene {
         this.events.on('fireball-cast', () => AudioManager.instance.playSFX('fireball_cast'));
         this.events.on('frost-cast', () => AudioManager.instance.playSFX('ice_throw'));
         this.events.on('lightning-cast', () => AudioManager.instance.playSFX('fireball_cast')); // Using fireball_cast as placeholder
+
+        // Listen for weapon changes
+        this.registry.events.on('changedata-currentWeapon', () => {
+            AudioManager.instance.playSFX('weapon_pick_up');
+        }, this);
 
         // Listen for level completion to regenerate map for next level
         this.events.on('level-complete', () => {

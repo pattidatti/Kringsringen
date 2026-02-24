@@ -72,7 +72,7 @@ export const PerkCard: React.FC<PerkCardProps> = ({ perk, level, onClick, index 
             {/* Content */}
             <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between mb-1">
-                    <h4 className={`font-medieval font-bold text-lg leading-none ${styles.text}`}>
+                    <h4 className={`font-cinzel font-bold text-lg leading-none ${styles.text}`}>
                         {perk.title}
                     </h4>
                     <span className="text-[10px] font-bold tracking-widest uppercase opacity-60 border border-current px-1 rounded">
@@ -80,7 +80,7 @@ export const PerkCard: React.FC<PerkCardProps> = ({ perk, level, onClick, index 
                     </span>
                 </div>
 
-                <p className={`text-sm opacity-80 mb-2 leading-snug font-serif ${styles.text}`}>
+                <p className={`text-sm opacity-80 mb-2 leading-snug font-crimson ${styles.text}`}>
                     {perk.description(level)}
                 </p>
 
