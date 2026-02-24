@@ -83,7 +83,7 @@ class MainScene extends Phaser.Scene implements IMainScene {
         this.registry.set('currentWeapon', 'sword');
         this.registry.set('upgradeLevels', {});
         this.registry.set('highStage', saveData.highStage);
-        this.registry.set('unlockedWeapons', ['sword', 'fireball', 'frost']);
+        this.registry.set('unlockedWeapons', ['sword', 'bow', 'fireball', 'frost']);
 
         // Initialize Audio Manager
         AudioManager.instance.setScene(this);
@@ -168,15 +168,13 @@ class MainScene extends Phaser.Scene implements IMainScene {
 
         // Three-layer player light for a "ultra-smooth" halo effect
         // 1. Core light (sharpest but low intensity)
-        this.playerLight = this.lights.addLight(0, 0, 250, 0xfffaf0, 0.7);
+        this.playerLight = this.lights.addLight(this.mapWidth / 2, this.mapHeight / 2, 250, 0xfffaf0, 0.7);
         // 2. Mid-range halo
-        this.outerPlayerLight = this.lights.addLight(0, 0, 600, 0xfffaf0, 0.4);
+        this.outerPlayerLight = this.lights.addLight(this.mapWidth / 2, this.mapHeight / 2, 600, 0xfffaf0, 0.4);
         // 3. Wide ambient glow (near invisible but smooths the final falloff)
-        this.haloPlayerLight = this.lights.addLight(0, 0, 1200, 0xfffaf0, 0.2);
+        this.haloPlayerLight = this.lights.addLight(this.mapWidth / 2, this.mapHeight / 2, 1200, 0xfffaf0, 0.2);
 
         // --- POST PROCESSING ---
-        this.cameras.main.postFX.addBloom(0xffffff, 1, 1, 0.5, 0.7);
-
         // Vignette — starts invisible; strength is driven by HP in update().
         // Gives a subtle border darkening at all times and pulses red at low HP.
         this.vignetteEffect = this.cameras.main.postFX.addVignette(0.5, 0.5, 0.85, 0.15);
@@ -500,9 +498,17 @@ class MainScene extends Phaser.Scene implements IMainScene {
 
                 // Spawn arrow during animation
                 this.time.delayedCall(this.stats.cooldown * 0.5, () => {
+                    // Read arrow upgrade stats
+                    const arrowDamageMultiplier = this.registry.get('playerArrowDamageMultiplier') || 1;
+                    const arrowSpeed = this.registry.get('playerArrowSpeed') || 700;
+                    const pierceCount = this.registry.get('playerPierceCount') || 0;
+                    const explosiveLevel = this.registry.get('playerExplosiveLevel') || 0;
+
+                    const baseDamage = this.stats.damage * 0.8 * arrowDamageMultiplier;
+
                     const arrow = this.arrows.get(player.x, player.y) as Arrow;
                     if (arrow) {
-                        arrow.fire(player.x, player.y, angle, this.stats.damage * 0.8);
+                        arrow.fire(player.x, player.y, angle, baseDamage, arrowSpeed, pierceCount, explosiveLevel);
                         this.events.emit('bow-shot');
 
                         // Multishot logic (Cone)
@@ -513,7 +519,7 @@ class MainScene extends Phaser.Scene implements IMainScene {
                                 const offset = Math.ceil(i / 2) * 10 * (Math.PI / 180) * (i % 2 === 0 ? -1 : 1);
                                 const subArrow = this.arrows.get(player.x, player.y) as Arrow;
                                 if (subArrow) {
-                                    subArrow.fire(player.x, player.y, angle + offset, this.stats.damage * 0.8);
+                                    subArrow.fire(player.x, player.y, angle + offset, baseDamage, arrowSpeed, pierceCount, explosiveLevel);
                                 }
                             }
                         }

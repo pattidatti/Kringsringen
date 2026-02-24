@@ -66,6 +66,10 @@ export class WeatherManager {
         this.rainEmitter.setScrollFactor(0); // Fixed to screen
 
         AudioManager.instance.playBGS('rain');
+
+        // Schedule automatic rain stop after 2-4 minutes
+        const duration = Phaser.Math.Between(120000, 240000);
+        this.scene.time.delayedCall(duration, () => this.stopRain());
     }
 
     public stopRain() {
@@ -81,6 +85,10 @@ export class WeatherManager {
         }
 
         AudioManager.instance.playBGS('forest_ambience');
+
+        // Schedule automatic rain restart after 1-3 minutes
+        const pause = Phaser.Math.Between(60000, 180000);
+        this.scene.time.delayedCall(pause, () => this.startRain());
     }
 
     /**
@@ -100,12 +108,11 @@ export class WeatherManager {
             speed: { min: 10, max: 40 },
             lifespan: 20000,
             frequency: 30, // More frequent
-            blendMode: 'SCREEN',
-            follow: this.scene.cameras.main
+            blendMode: 'SCREEN'
         });
 
         this.fogParticles.setDepth(10); // Below player mostly
-        this.fogParticles.setScrollFactor(1);
+        this.fogParticles.setScrollFactor(0); // Fixed to screen, covers viewport
         this.fogParticles.setPipeline('Light2D');
 
         // Add a subtle tint to the scene for "mood"

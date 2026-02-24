@@ -88,16 +88,6 @@ export const UPGRADES: UpgradeConfig[] = [
 
     // --- BUE ---
     {
-        id: 'unlock_bow',
-        title: 'Bueskytter',
-        icon: 'item_bow',
-        category: 'Bue',
-        maxLevel: 1,
-        basePrice: 200,
-        priceScale: 1,
-        description: () => 'Lås opp buen som våpen. Trykk [2] for å bytte.'
-    },
-    {
         id: 'bow_cooldown',
         title: 'Rask Trekking',
         icon: 'item_bow',
@@ -126,6 +116,36 @@ export const UPGRADES: UpgradeConfig[] = [
         basePrice: 300,
         priceScale: 3.0,
         description: (lvl) => `Går gjennom +1 fiende (Nå: ${lvl})`
+    },
+    {
+        id: 'arrow_damage',
+        title: 'Skarpere Piler',
+        icon: 'item_bow',
+        category: 'Bue',
+        maxLevel: 8,
+        basePrice: 80,
+        priceScale: 1.8,
+        description: (lvl) => `+15% Pilskade (Nå: +${lvl * 15}%)`
+    },
+    {
+        id: 'arrow_speed',
+        title: 'Lynrask Pil',
+        icon: 'item_bow',
+        category: 'Bue',
+        maxLevel: 5,
+        basePrice: 70,
+        priceScale: 1.6,
+        description: (lvl) => `+20% Pilhastighet (Nå: +${lvl * 20}%)`
+    },
+    {
+        id: 'explosive_arrow',
+        title: 'Eksplosive Piler',
+        icon: 'item_bow',
+        category: 'Bue',
+        maxLevel: 3,
+        basePrice: 400,
+        priceScale: 2.5,
+        description: (lvl) => lvl > 0 ? `Eksplosjon ved treff (Radius: ${80 + (lvl - 1) * 50}px)` : 'Piler eksploderer ved treff'
     },
 
     // --- MAGI (Fireball) ---

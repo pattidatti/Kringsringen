@@ -8,6 +8,11 @@ export class Arrow extends Phaser.Physics.Arcade.Sprite {
     private startX: number = 0;
     private startY: number = 0;
     private trail: Phaser.GameObjects.Particles.ParticleEmitter | null = null;
+    private speed: number = 700;
+    private pierceCount: number = 0;
+    private hitEnemies: WeakSet<any> = new WeakSet();
+    private hitCount: number = 0;
+    private explosiveLevel: number = 0;
 
     constructor(scene: Phaser.Scene, x: number, y: number) {
         super(scene, x, y, 'arrow');
@@ -35,16 +40,39 @@ export class Arrow extends Phaser.Physics.Arcade.Sprite {
         scene.physics.add.overlap(this, mainScene.enemies, (_arrow, enemy) => {
             if (!this.active) return;
             const e = enemy as Enemy;
+
+            // Check if already hit this enemy
+            if (this.hitEnemies.has(e)) return;
+
+            // Mark as hit
+            this.hitEnemies.add(e);
+            this.hitCount++;
+
             e.takeDamage(this.damage, '#ffffff');
             e.pushback(this.startX, this.startY, 150);
-            this.hit();
+
+            // Handle explosion on impact
+            if (this.explosiveLevel > 0) {
+                this.explode(e.x, e.y);
+            }
+
+            // Check if pierce count exceeded
+            // pierceCount = 0 means hit 1 enemy then stop, 1 = hit 2 enemies, etc
+            if (this.hitCount > this.pierceCount) {
+                this.hit();
+            }
         });
     }
 
-    fire(x: number, y: number, angle: number, damage: number) {
+    fire(x: number, y: number, angle: number, damage: number, speed: number = 700, pierceCount: number = 0, explosiveLevel: number = 0) {
         this.startX = x;
         this.startY = y;
         this.damage = damage;
+        this.speed = speed;
+        this.pierceCount = pierceCount;
+        this.explosiveLevel = explosiveLevel;
+        this.hitEnemies = new WeakSet();
+        this.hitCount = 0;
 
         this.setActive(true);
         this.setVisible(true);
@@ -59,8 +87,7 @@ export class Arrow extends Phaser.Physics.Arcade.Sprite {
 
         if (this.body) {
             this.body.enable = true;
-            const speed = 700;
-            this.scene.physics.velocityFromRotation(angle, speed, this.body.velocity);
+            this.scene.physics.velocityFromRotation(angle, this.speed, this.body.velocity);
         }
     }
 
@@ -71,6 +98,29 @@ export class Arrow extends Phaser.Physics.Arcade.Sprite {
         if (this.body) this.body.enable = false;
         if (this.trail) {
             this.trail.stop();
+        }
+    }
+
+    private explode(x: number, y: number) {
+        const mainScene = this.scene as any;
+        const radius = 80 + (this.explosiveLevel - 1) * 50;
+        const explosionDamage = this.damage * 0.5;
+
+        // Spawn explosion effect
+        const explosion = mainScene.poolManager?.getExplosion();
+        if (explosion) {
+            explosion.explode(x, y);
+        }
+
+        // Damage all enemies in radius
+        const enemies = mainScene.spatialGrid?.getNearby(x, y, radius) || [];
+        const hitExplosionEnemies = new WeakSet<any>();
+        for (const enemy of enemies) {
+            const e = enemy as Enemy;
+            if (!hitExplosionEnemies.has(e)) {
+                hitExplosionEnemies.add(e);
+                e.takeDamage(explosionDamage, '#ffaa00');
+            }
         }
     }
 

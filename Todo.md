@@ -12,7 +12,11 @@
 
 
 # Spell
-- Lightingspell, slot 5. Skyter ut fra spilleren mot et target (seeking). Når det treffer bouncer det videre. Oppgraderinger gjør bl.a. lynet splitter seg og går til enda flere. Mer damage. Spilleren kan skyte flere lyn samtidig. 
+- Lightingspell, slot 5. Skyter ut fra spilleren mot et target (seeking). Når det treffer bouncer det videre. Oppgraderinger gjør bl.a. lynet splitter seg og går til enda flere. Mer damage. Spilleren kan skyte flere lyn samtidig.
+@614.png øverste rad er prosjektilet som sendes fra spilleren (rad 6, 0+5). @615.png er impact (rad 6,0+5). Default sendes det bare ut 1 ekstra lyn etter første treff.  
+
+
+
 - På actionbar må vi ha Cooldown som viser hvor lang tid det er mellom neste gang man kan gjøre angrepet. Enkel animasjon av et hjul (som i world of warcraft)
 
 

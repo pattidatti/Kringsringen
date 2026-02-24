@@ -100,6 +100,16 @@ export class PlayerStatsManager {
         const currentProjectiles = this.baseProjectiles + multiLvl;
         this.scene.registry.set('playerProjectiles', currentProjectiles);
 
+        // Arrow stats
+        const pierceLvl = levels['pierce'] || 0;
+        const arrowDmgLvl = levels['arrow_damage'] || 0;
+        const arrowSpdLvl = levels['arrow_speed'] || 0;
+        const explosiveLvl = levels['explosive_arrow'] || 0;
+        this.scene.registry.set('playerPierceCount', pierceLvl);
+        this.scene.registry.set('playerArrowDamageMultiplier', 1 + arrowDmgLvl * 0.15);
+        this.scene.registry.set('playerArrowSpeed', 700 * (1 + arrowSpdLvl * 0.20));
+        this.scene.registry.set('playerExplosiveLevel', explosiveLvl);
+
         // Fireball stats
         const fireDmgLvl = levels['fire_damage'] || 0;
         const fireRadLvl = levels['fire_radius'] || 0;
@@ -139,15 +149,6 @@ export class PlayerStatsManager {
         if (upgradeId === 'health') {
             let currentHP = this.scene.registry.get('playerHP');
             this.scene.registry.set('playerHP', currentHP + 20);
-        }
-
-        if (upgradeId === 'unlock_bow') {
-            const weapons: string[] = this.scene.registry.get('unlockedWeapons') || ['sword'];
-            if (!weapons.includes('bow')) {
-                const updated = [...weapons, 'bow'];
-                this.scene.registry.set('unlockedWeapons', updated);
-                SaveManager.save({ unlockedWeapons: updated });
-            }
         }
 
         // Recalculate all stats
