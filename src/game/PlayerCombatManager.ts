@@ -9,6 +9,7 @@ export class PlayerCombatManager {
     private isInvincible: boolean = false;
     private _isKnockedBack: boolean = false;
     private invincibilityDuration: number = 1000;
+    private pendingHPChange: number = 0;
 
     /** Active camera blur FX reference – removed after the hit-impact fades. */
     private hitBlurFX: any = null;
@@ -35,8 +36,8 @@ export class PlayerCombatManager {
         // Block reduces damage by 80%
         const actualDamage = isBlocking ? damageAfterArmor * 0.2 : damageAfterArmor;
 
-        hp -= actualDamage;
-        this.scene.registry.set('playerHP', Math.max(0, hp));
+        // Throttled HP update
+        this.pendingHPChange -= actualDamage;
 
         // Screen Shake
         this.scene.cameras.main.shake(200, 0.014);
@@ -139,5 +140,18 @@ export class PlayerCombatManager {
                 this.hitBlurFX = null;
             }
         });
+    }
+
+    /**
+     * Periodically called to apply pending HP changes and notify React (UI).
+     * This avoids excessive re-renders when many enemies hit at once.
+     */
+    public flushHP() {
+        if (this.pendingHPChange !== 0) {
+            let currentHP = this.scene.registry.get('playerHP');
+            currentHP = Math.max(0, currentHP + this.pendingHPChange);
+            this.scene.registry.set('playerHP', currentHP);
+            this.pendingHPChange = 0;
+        }
     }
 }

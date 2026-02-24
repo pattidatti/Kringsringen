@@ -34,8 +34,8 @@ export const TopHUD: React.FC = React.memo(() => {
 
                     {/* Fill */}
                     <div
-                        className="h-full bg-gradient-to-r from-red-900 via-red-600 to-red-500 transition-all duration-300 ease-out"
-                        style={{ width: `${hpPercent}%` }}
+                        className="h-full bg-gradient-to-r from-red-900 via-red-600 to-red-500 transition-transform duration-300 ease-out origin-left"
+                        style={{ transform: `scaleX(${hpPercent / 100})`, width: '100%' }}
                     />
 
                     {/* Gloss */}
@@ -69,7 +69,7 @@ export const TopHUD: React.FC = React.memo(() => {
 
                     {/* Progress Micro-bar for Wave */}
                     <div className="w-full h-0.5 bg-black/50 mt-0.5 rounded-full overflow-hidden">
-                        <div className="h-full bg-amber-400/80" style={{ width: `${(wave / maxWaves) * 100}%` }} />
+                        <div className="h-full bg-amber-400/80 transition-transform duration-500 ease-out origin-left" style={{ transform: `scaleX(${wave / maxWaves})`, width: '100%' }} />
                     </div>
                 </div>
             </div>

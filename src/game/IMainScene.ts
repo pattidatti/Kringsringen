@@ -18,4 +18,5 @@ export interface IMainScene extends Phaser.Scene {
     stats: PlayerStatsManager;
     combat: PlayerCombatManager;
     waves: WaveManager;
+    deathSparkEmitter: Phaser.GameObjects.Particles.ParticleEmitter;
 }

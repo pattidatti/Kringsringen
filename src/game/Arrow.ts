@@ -18,6 +18,18 @@ export class Arrow extends Phaser.Physics.Arcade.Sprite {
         this.setScale(1.5);
         this.setBodySize(20, 10);
 
+        // Initialize trail emitter (stopped)
+        this.trail = this.scene.add.particles(0, 0, 'arrow', {
+            lifespan: 120,
+            scale: { start: 0.3, end: 0 },
+            alpha: { start: 0.5, end: 0 },
+            frequency: 18,
+            tint: 0xddbb66,
+            blendMode: 'ADD',
+            emitting: false
+        });
+        this.trail.setDepth(this.depth - 1);
+
         // Setup overlap in constructor once
         const mainScene = scene as any;
         scene.physics.add.overlap(this, mainScene.enemies, (_arrow, enemy) => {
@@ -40,16 +52,10 @@ export class Arrow extends Phaser.Physics.Arcade.Sprite {
         this.setRotation(angle);
         this.setPipeline('Light2D');
 
-        this.trail = this.scene.add.particles(x, y, 'arrow', {
-            lifespan: 120,
-            scale: { start: 0.3, end: 0 },
-            alpha: { start: 0.5, end: 0 },
-            frequency: 18,
-            follow: this,
-            tint: 0xddbb66,
-            blendMode: 'ADD'
-        });
-        this.trail.setDepth(this.depth - 1);
+        if (this.trail) {
+            this.trail.start();
+            this.trail.follow = this;
+        }
 
         if (this.body) {
             this.body.enable = true;
@@ -64,8 +70,7 @@ export class Arrow extends Phaser.Physics.Arcade.Sprite {
         this.setVisible(false);
         if (this.body) this.body.enable = false;
         if (this.trail) {
-            this.trail.destroy();
-            this.trail = null;
+            this.trail.stop();
         }
     }
 

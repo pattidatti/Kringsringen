@@ -68,6 +68,8 @@ class MainScene extends Phaser.Scene implements IMainScene {
     // Vignette post-FX — strength driven by player HP
     private vignetteEffect: any = null;
 
+    public deathSparkEmitter!: Phaser.GameObjects.Particles.ParticleEmitter;
+
     constructor() {
         super('MainScene');
     }
@@ -146,6 +148,19 @@ class MainScene extends Phaser.Scene implements IMainScene {
         sparkGfx.fillCircle(4, 4, 4);
         sparkGfx.generateTexture('spark', 8, 8);
         sparkGfx.destroy();
+
+        // ── DEATH SPARK EMITTER (Centralized) ────────────────────────────────
+        this.deathSparkEmitter = this.add.particles(0, 0, 'spark', {
+            speed: { min: 60, max: 180 },
+            angle: { min: 0, max: 360 },
+            scale: { start: 0.8, end: 0 },
+            alpha: { start: 1, end: 0 },
+            lifespan: 350,
+            quantity: 10,
+            blendMode: 'ADD',
+            emitting: false,
+        });
+        this.deathSparkEmitter.setDepth(600);
 
         // --- LIGHT SYSTEM ---
         this.lights.enable();
@@ -291,10 +306,12 @@ class MainScene extends Phaser.Scene implements IMainScene {
             this.waves.startLevel(this.registry.get('gameLevel') + 1);
         });
 
-        // Economy Throttler (React Bridge Batching)
         this.time.addEvent({
             delay: 50,
-            callback: () => this.stats.flushEconomy(),
+            callback: () => {
+                this.stats.flushEconomy();
+                this.combat.flushHP();
+            },
             callbackScope: this,
             loop: true
         });

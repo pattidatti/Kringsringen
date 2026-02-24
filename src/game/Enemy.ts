@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { ENEMY_TYPES, type EnemyConfig } from '../config/enemies';
 import { GAME_CONFIG, type EnemyType } from '../config/GameConfig';
+import type { IMainScene } from './IMainScene';
 
 export class Enemy extends Phaser.Physics.Arcade.Sprite {
     private targetStart: Phaser.GameObjects.Components.Transform; // Renamed to avoid confusion with internal target
@@ -372,29 +373,13 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 
     /**
      * Emits a one-shot burst of tiny sparks at the enemy's position.
-     * Uses the 'spark' texture created at game startup in MainScene.
+     * Uses the centralized emitter in MainScene to avoid object churn.
      */
     private spawnDeathSparks() {
-        // Skip if the texture hasn't been created yet (safety guard)
-        if (!this.scene.textures.exists('spark')) return;
-
-        const burst = this.scene.add.particles(this.x, this.y, 'spark', {
-            speed: { min: 60, max: 180 },
-            angle: { min: 0, max: 360 },
-            scale: { start: 0.8, end: 0 },
-            alpha: { start: 1, end: 0 },
-            lifespan: 350,
-            quantity: 10,
-            blendMode: 'ADD',
-            emitting: false,
-        });
-        burst.setDepth(600);
-        burst.explode(10);
-
-        // Destroy the one-shot emitter after all particles have expired
-        this.scene.time.delayedCall(500, () => {
-            if (burst.scene) burst.destroy();
-        });
+        const scene = this.scene as unknown as IMainScene;
+        if (scene.deathSparkEmitter) {
+            scene.deathSparkEmitter.emitParticleAt(this.x, this.y, 10);
+        }
     }
 
     private disable() {
