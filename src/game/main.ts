@@ -1,5 +1,7 @@
 import Phaser from 'phaser';
 import { Enemy } from './Enemy';
+import { BossEnemy } from './BossEnemy';
+import { BOSS_CONFIGS } from '../config/bosses';
 import { StaticMapLoader } from './StaticMapLoader';
 import { STATIC_MAPS } from './StaticMapData';
 import { Arrow } from './Arrow';
@@ -42,6 +44,7 @@ class MainScene extends Phaser.Scene implements IMainScene {
     private fireballs!: Phaser.Physics.Arcade.Group;
     private frostBolts!: Phaser.Physics.Arcade.Group;
     private lightningBolts!: Phaser.Physics.Arcade.Group;
+    private bossGroup!: Phaser.Physics.Arcade.Group;
     public poolManager!: ObjectPoolManager;
 
     // Managers
@@ -86,6 +89,14 @@ class MainScene extends Phaser.Scene implements IMainScene {
         this.registry.set('upgradeLevels', {});
         this.registry.set('highStage', saveData.highStage);
         this.registry.set('unlockedWeapons', ['sword', 'bow', 'fireball', 'frost', 'lightning']);
+        // Boss state
+        this.registry.set('bossComingUp', -1);
+        this.registry.set('isBossActive', false);
+        this.registry.set('bossSplashVisible', false);
+        this.registry.set('bossHP', 0);
+        this.registry.set('bossMaxHP', 0);
+        this.registry.set('bossName', '');
+        this.registry.set('bossPhase', 1);
 
         // Initialize Audio Manager
         AudioManager.instance.setScene(this);
@@ -226,6 +237,13 @@ class MainScene extends Phaser.Scene implements IMainScene {
             maxSize: 100
         });
 
+        // Boss Group (max 1 boss at a time)
+        this.bossGroup = this.physics.add.group({
+            classType: BossEnemy,
+            runChildUpdate: true,
+            maxSize: 1
+        });
+
         // Arrow Group
         this.arrows = this.physics.add.group({
             classType: Arrow,
@@ -264,11 +282,19 @@ class MainScene extends Phaser.Scene implements IMainScene {
         this.physics.add.collider(this.enemies, this.enemies);
         this.physics.add.collider(player, this.obstacles);
         this.physics.add.collider(this.enemies, this.obstacles);
+        this.physics.add.collider(player, this.bossGroup);
+        this.physics.add.collider(this.bossGroup, this.obstacles);
 
         this.physics.add.overlap(this.attackHitbox, this.enemies, (_hitbox, enemy) => {
             const e = enemy as Enemy;
             e.takeDamage(this.stats.damage, '#ffcc00'); // Gold for physical
             e.pushback(player.x, player.y, this.stats.knockback);
+        });
+
+        this.physics.add.overlap(this.attackHitbox, this.bossGroup, (_hitbox, boss) => {
+            const b = boss as BossEnemy;
+            b.takeDamage(this.stats.damage, '#ffcc00');
+            b.pushback(player.x, player.y, this.stats.knockback);
         });
 
         // Player Hit Logic (Event-Driven)
@@ -311,6 +337,25 @@ class MainScene extends Phaser.Scene implements IMainScene {
         // Listen for Next Level
         this.events.on('start-next-level', () => {
             this.waves.startLevel(this.registry.get('gameLevel') + 1);
+        });
+
+        // Boss fight start
+        this.events.on('start-boss', (bossIndex: number) => {
+            // Show splash screen, then spawn boss
+            this.registry.set('bossSplashVisible', true);
+            this.time.delayedCall(3200, () => {
+                this.registry.set('bossSplashVisible', false);
+                this.spawnBoss(bossIndex);
+            });
+        });
+
+        // Boss minion spawning (from abilities like Raise Dead / Feral Howl)
+        this.events.on('boss-spawn-minion', (x: number, y: number, type: string) => {
+            const p = this.data.get('player');
+            const minion = this.enemies.get(x, y) as Enemy | null;
+            if (minion) {
+                minion.reset(x, y, p, 1.0, type);
+            }
         });
 
         this.time.addEvent({
@@ -361,6 +406,26 @@ class MainScene extends Phaser.Scene implements IMainScene {
         // Start Weather Effects
         this.weather.enableFog();
         this.weather.startRain();
+    }
+
+    /** Spawn a boss at the center of the map. */
+    private spawnBoss(bossIndex: number): void {
+        const config = BOSS_CONFIGS[bossIndex];
+        if (!config) return;
+
+        const player = this.data.get('player') as Phaser.Physics.Arcade.Sprite;
+
+        // Spawn offset from map center so boss isn't on top of player
+        const spawnX = this.mapWidth / 2 + 350;
+        const spawnY = this.mapHeight / 2;
+
+        const boss = this.bossGroup.get(spawnX, spawnY) as BossEnemy | null;
+        if (!boss) {
+            console.warn('BossEnemy pool exhausted — cannot spawn boss');
+            return;
+        }
+
+        boss.initAsBoss(spawnX, spawnY, player, config);
     }
 
     /** Load the static map for a given level. */
@@ -434,6 +499,19 @@ class MainScene extends Phaser.Scene implements IMainScene {
                     width: enemy.body?.width || 40,
                     height: enemy.body?.height || 40,
                     id: (enemy as any).id
+                });
+            }
+            return true;
+        });
+        // Include active boss in spatial grid so regular enemies avoid it
+        this.bossGroup.children.iterate((boss: any) => {
+            if (boss.active && !boss.isDead) {
+                this.spatialGrid.insert({
+                    x: boss.x,
+                    y: boss.y,
+                    width: boss.body?.width || 80,
+                    height: boss.body?.height || 80,
+                    id: 'boss'
                 });
             }
             return true;

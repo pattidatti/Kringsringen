@@ -6,6 +6,8 @@ import { Hotbar } from './ui/Hotbar';
 import { TopHUD } from './ui/TopHUD';
 import { MenuAnchor } from './ui/MenuAnchor';
 import { FantasyBook, type BookMode } from './ui/FantasyBook';
+import { BossSplashScreen } from './ui/BossSplashScreen';
+import { BossHUD } from './ui/BossHUD';
 
 import { setGameInstance } from '../hooks/useGameRegistry';
 
@@ -84,6 +86,13 @@ export const GameContainer = () => {
                         setBookMode('shop');
                         setIsBookOpen(true);
                     });
+
+                    mainScene.events.on('boss-defeated', () => {
+                        // Post-boss shop: clear boss flag so no warning shown
+                        game.registry.set('bossComingUp', -1);
+                        setBookMode('shop');
+                        setIsBookOpen(true);
+                    });
                 } else {
                     // Try again in a bit if scene isn't ready yet
                     setTimeout(setupSceneListeners, 100);
@@ -136,10 +145,18 @@ export const GameContainer = () => {
     const handleContinue = useCallback(() => {
         if (!gameInstanceRef.current) return;
         const mainScene = gameInstanceRef.current.scene.getScene('MainScene');
-        mainScene.events.emit('start-next-level');
+        const bossComingUp = gameInstanceRef.current.registry.get('bossComingUp') as number ?? -1;
+
+        if (bossComingUp >= 0) {
+            // Clear flag so post-boss shop won't re-trigger
+            gameInstanceRef.current.registry.set('bossComingUp', -1);
+            mainScene.events.emit('start-boss', bossComingUp);
+        } else {
+            mainScene.events.emit('start-next-level');
+        }
 
         setIsBookOpen(false);
-        // Pause handling is now automatic
+        // Pause handling is now automatic via useEffect watching isBookOpen
     }, []);
 
 
@@ -199,6 +216,12 @@ export const GameContainer = () => {
                     />
                 </div>
             </div>
+
+            {/* Boss HUD — visible above Hotbar during boss fights */}
+            <BossHUD />
+
+            {/* Boss Splash Screen — full-screen intro on boss start */}
+            <BossSplashScreen />
 
             {/* Game Over Overlay */}
             <GameOverOverlay />

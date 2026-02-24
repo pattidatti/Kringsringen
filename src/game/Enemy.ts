@@ -6,9 +6,9 @@ import type { IMainScene } from './IMainScene';
 export class Enemy extends Phaser.Physics.Arcade.Sprite {
     private targetStart: Phaser.GameObjects.Components.Transform; // Renamed to avoid confusion with internal target
     public hp: number = 50;
-    private maxHP: number = 50;
+    protected maxHP: number = 50;
     private hpBar: Phaser.GameObjects.Graphics;
-    private isDead: boolean = false;
+    protected isDead: boolean = false;
     private attackRange: number = 60;
     private attackCooldown: number = 1500;
     private lastAttackTime: number = 0;
@@ -17,11 +17,11 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     private readonly DEFAULT_DAMAGE_FRAME: number = 3; // Fallback frame where damage occurs
     public isOnDamageFrame: boolean = false;
     private isPushingBack: boolean = false;
-    private movementSpeed: number = 100;
+    protected movementSpeed: number = 100;
     private enemyType: string = 'orc';
     private config: EnemyConfig;
     private slowTimer: Phaser.Time.TimerEvent | null = null;
-    private originalSpeed: number = 100;
+    protected originalSpeed: number = 100;
     private shadow: Phaser.GameObjects.Sprite | null = null;
 
     // Static Buffers for AI (GC Hardening)
@@ -331,7 +331,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         }
     }
 
-    private die() {
+    protected die() {
         this.isDead = true;
         this.setDrag(1000);
         this.hpBar.clear();

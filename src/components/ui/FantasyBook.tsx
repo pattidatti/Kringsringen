@@ -65,6 +65,7 @@ export const FantasyBook: React.FC<FantasyBookProps> = React.memo(({
     const level = useGameRegistry('gameLevel', 1);
     const coins = useGameRegistry('playerCoins', 0);
     const upgradeLevels = useGameRegistry<Record<string, number>>('upgradeLevels', {});
+    const bossComingUp = useGameRegistry('bossComingUp', -1);
 
     // Detailed Stats for Status Page
     const maxHp = useGameRegistry('playerMaxHP', 100);
@@ -159,6 +160,21 @@ export const FantasyBook: React.FC<FantasyBookProps> = React.memo(({
 
         return (
             <div className="flex flex-col h-full font-crimson animate-in fade-in duration-300">
+                {/* Boss warning banner */}
+                {bossComingUp >= 0 && (
+                    <div className="mb-4 rounded-xl border border-red-600/60 bg-red-950/70 px-4 py-3 flex items-center gap-3 shadow-[0_0_20px_rgba(180,0,0,0.4)]">
+                        <span className="text-2xl leading-none">💀</span>
+                        <div>
+                            <div className="font-cinzel font-black text-red-400 text-sm tracking-wider uppercase" style={{ textShadow: '0 0 10px rgba(220,38,38,0.8)' }}>
+                                Boss Battle venter!
+                            </div>
+                            <div className="text-red-300/70 text-xs mt-0.5 font-crimson">
+                                Kjøp oppgraderinger – neste er en sjef!
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 {/* Purse: High-Contrast Sovereign Panel */}
                 <div className="mb-8">
                     <div className="relative overflow-hidden bg-slate-950/60 backdrop-blur-xl border border-amber-500/30 rounded-2xl p-5 shadow-2xl group hover:bg-slate-900/70 transition-all duration-500">
@@ -406,9 +422,9 @@ export const FantasyBook: React.FC<FantasyBookProps> = React.memo(({
                         <div className="flex gap-3">
                             {mode === 'shop' ? (
                                 <FantasyButton
-                                    variant="success"
+                                    variant={bossComingUp >= 0 ? 'danger' : 'success'}
                                     onClick={onClose}
-                                    label={`Til level ${level + 1}`}
+                                    label={bossComingUp >= 0 ? '💀 Møt sjefen' : `Til level ${level + 1}`}
                                 />
                             ) : (
                                 <FantasyButton

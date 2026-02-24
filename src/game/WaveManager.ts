@@ -5,6 +5,7 @@ import { SaveManager } from './SaveManager';
 import { GAME_CONFIG } from '../config/GameConfig';
 import { AudioManager } from './AudioManager';
 import type { IMainScene } from './IMainScene';
+import { getBossForLevel } from '../config/bosses';
 
 /**
  * Manages level/wave lifecycle: spawning enemies, tracking progress,
@@ -190,6 +191,10 @@ export class WaveManager {
                 if (currentStage >= highStage) {
                     SaveManager.save({ highStage: currentStage + 1 });
                 }
+
+                // Signal whether a boss follows this level
+                const bossConfig = getBossForLevel(this.currentLevel);
+                this.scene.registry.set('bossComingUp', bossConfig ? bossConfig.bossIndex : -1);
 
                 this.scene.time.delayedCall(GAME_CONFIG.WAVES.LEVEL_COMPLETE_DELAY, () => {
                     this.scene.events.emit('level-complete');

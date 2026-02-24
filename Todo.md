@@ -11,17 +11,25 @@
 - [ ] Pengesystem 
 
 
+# Boss battles
+- Vi må ha bossbattles annenhvert level, dvs ligge til levels mellom 2 og 3 osv. 
+- Her må det spawne en superversjon av det som har vært tidligere (skalert opp, med kule abilities)
+- Vi skal ha egen musikk som spilles av, velge mellom Final Dungeon Loop.mp3 og Glitch King.mp3
+- Splash screen: BOSS BATTLE 
+Lag en plan med forslag til både bosser, abilities osv. 
+
 # Spell
-- Lightingspell, slot 5. Skyter ut fra spilleren mot et target (seeking). Når det treffer bouncer det videre. Oppgraderinger gjør bl.a. lynet splitter seg og går til enda flere. Mer damage. Spilleren kan skyte flere lyn samtidig.
-@614.png øverste rad er prosjektilet som sendes fra spilleren (rad 6, 0+5). @615.png er impact (rad 6,0+5). Default sendes det bare ut 1 ekstra lyn etter første treff.  
-
-
-
 - På actionbar må vi ha Cooldown som viser hvor lang tid det er mellom neste gang man kan gjøre angrepet. Enkel animasjon av et hjul (som i world of warcraft)
+- Lighting ER ALTFOR POWERFULL. 
+- Lighting; Når det kommer flere ut fra spilleren må de gå i ulike retninger, ikke oppå hverandre. 
+- Lighting; Seekingen er for powerfull, det må gå an å bomme. 
 
-
+# musikk
+- Må bytte musikk hvert level. 
+- Skru opp lyden på ambiance 
 
 # Bugs
+- [ ] Spillet crasher når man skyter bue og treffer noe med (ihvertfall med eksplosjon ulocked )
 - [x] Virker som gull forsvinner etter en stund, det må bli liggende. 
 - [x] Radius for å plukke opp gull må økes på default. 
 - [ ] Movement lock på spellcasting og bue må reduseres litt. 
