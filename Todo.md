@@ -10,6 +10,9 @@
 - [ ] Items, inventory, équipment. 
 - [ ] Pengesystem 
 
+# Multiplayer
+- Opp til 4 stk. Mobs må skalere. Er realtime database bra nok? Skal vi bruke pins, lobby, rooms, invites, randoms?
+
 
 # Boss battles
 - Vi må ha bossbattles annenhvert level, dvs ligge til levels mellom 2 og 3 osv. 

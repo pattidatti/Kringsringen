@@ -211,18 +211,25 @@ export function createAnimations(scene: Phaser.Scene): void {
         repeat: 0
     });
 
-    // Lightning projectile: 896×576 @ 64×64 → 14 cols × 9 rows. Row 6 = frames 84–89
+    // Lightning projectiles: 896x576 @ 64x64 -> 14 cols x 9 rows.
     scene.anims.create({
-        key: 'lightning-fly',
-        frames: scene.anims.generateFrameNumbers('lightning_projectile', { start: 84, end: 89 }),
+        key: 'lightning-fly-blue', // Row 4 = frames 56-61
+        frames: scene.anims.generateFrameNumbers('lightning_projectile', { start: 56, end: 61 }),
         frameRate: 12,
         repeat: -1
     });
 
-    // Lightning impact: 896×576 @ 64×64 → 14 cols × 9 rows. Row 6 = frames 84–89
+    scene.anims.create({
+        key: 'lightning-fly-white', // Row 7 = frames 98-103
+        frames: scene.anims.generateFrameNumbers('lightning_projectile', { start: 98, end: 103 }),
+        frameRate: 12,
+        repeat: -1
+    });
+
+    // Lightning impact: 896x576 @ 64x64 -> 14 cols x 9 rows. Row 7 = frames 98-103
     scene.anims.create({
         key: 'lightning-impact',
-        frames: scene.anims.generateFrameNumbers('lightning_impact', { start: 84, end: 89 }),
+        frames: scene.anims.generateFrameNumbers('lightning_impact', { start: 98, end: 103 }),
         frameRate: 14,
         repeat: 0
     });

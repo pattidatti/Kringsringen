@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect } from 'react';
+import React, { useCallback, useEffect, useState, useRef } from 'react';
 import { useGameRegistry, getGameInstance } from '../../hooks/useGameRegistry';
 import { WEAPON_SLOTS, type WeaponId } from '../../config/weapons';
 import { motion } from 'framer-motion';
@@ -20,10 +20,61 @@ const SELECTOR_ROW = 5;
 const SELECTOR_BG_SIZE = `${192 * SELECTOR_SCALE}px ${960 * SELECTOR_SCALE}px`;
 const SELECTOR_BG_POS = `-${SELECTOR_COL * SELECTOR_CELL * SELECTOR_SCALE}px -${SELECTOR_ROW * SELECTOR_CELL * SELECTOR_SCALE}px`;
 const SELECTOR_DISPLAY_SIZE = SELECTOR_CELL * SELECTOR_SCALE; // 144px
+const COOLDOWN_CIRCUMFERENCE = 2 * Math.PI * 25;
+const COOLDOWN_STYLE = {
+    fill: "transparent",
+    stroke: "black",
+    strokeWidth: 50,
+    strokeDasharray: COOLDOWN_CIRCUMFERENCE
+};
+
+const RadialCooldown = React.memo(({ duration, timestamp }: { duration: number, timestamp: number }) => {
+    const circleRef = useRef<SVGCircleElement>(null);
+    const [isComplete, setIsComplete] = useState(false);
+
+    useEffect(() => {
+        setIsComplete(false);
+        const start = timestamp;
+        const end = timestamp + duration;
+        let rafId: number;
+
+        const update = () => {
+            const now = Date.now();
+            if (now >= end) {
+                setIsComplete(true);
+            } else {
+                if (circleRef.current) {
+                    const progress = (now - start) / duration;
+                    const offset = -COOLDOWN_CIRCUMFERENCE * Math.max(0, Math.min(1, progress));
+                    circleRef.current.style.strokeDashoffset = offset.toString();
+                }
+                rafId = requestAnimationFrame(update);
+            }
+        };
+
+        rafId = requestAnimationFrame(update);
+        return () => cancelAnimationFrame(rafId);
+    }, [duration, timestamp]);
+
+    if (isComplete) return null;
+
+    return (
+        <svg viewBox="0 0 50 50" className="absolute inset-0 w-full h-full -rotate-90 pointer-events-none z-30 opacity-40 mix-blend-multiply">
+            <circle
+                ref={circleRef}
+                cx="25"
+                cy="25"
+                r="25"
+                style={COOLDOWN_STYLE}
+            />
+        </svg>
+    );
+});
 
 export const Hotbar: React.FC = React.memo(() => {
     const currentWeapon = useGameRegistry('currentWeapon', 'sword');
     const unlockedWeapons = useGameRegistry('unlockedWeapons', ['sword']) as WeaponId[];
+    const weaponCooldown = useGameRegistry('weaponCooldown', null) as { duration: number, timestamp: number } | null;
 
     const handleSelectWeapon = useCallback((weaponId: WeaponId) => {
         const game = getGameInstance();
@@ -124,6 +175,11 @@ export const Hotbar: React.FC = React.memo(() => {
                                         {slot.label}
                                     </span>
                                 ) : null}
+
+                                {/* Cooldown Sweep Overlay */}
+                                {isUnlocked && weaponCooldown && (
+                                    <RadialCooldown duration={weaponCooldown.duration} timestamp={weaponCooldown.timestamp} />
+                                )}
 
                                 {/* Hotkey badge */}
                                 <div className="absolute -top-2 -right-2 w-6 h-6 bg-black/70 border border-amber-500/50 rounded flex items-center justify-center z-40">

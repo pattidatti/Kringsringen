@@ -219,7 +219,7 @@ export const UPGRADES: UpgradeConfig[] = [
         maxLevel: 5,
         basePrice: 150,
         priceScale: 2.0,
-        description: (lvl) => `Fiender bremses i ${lvl * 0.5}s (Nå: ${lvl * 0.5}s)`
+        description: (lvl) => `+0.5s frys-tid (Nå: ${1.0 + lvl * 0.5}s)`
     },
     {
         id: 'frost_shatter',

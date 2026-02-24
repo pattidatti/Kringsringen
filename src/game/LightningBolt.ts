@@ -10,6 +10,13 @@ export class LightningBolt extends Phaser.Physics.Arcade.Sprite {
     private speed: number = 400;
     private light: Phaser.GameObjects.Light | null = null;
     private impactSprite: Phaser.GameObjects.Sprite | null = null;
+    private turnRate: number = 1.2; // Fra 4.0 ned til 1.2 for at den skal bomme oftere
+    private currentAngle: number = 0;
+    private lifespan: number = 2500; // 2.5 sekunder
+    private colorHex: number = 0xffffff;
+    private colorStr: string = '#ffffff';
+    private colorVariant: 'white' | 'blue' = 'white';
+    private flashTimer: number = 0;
 
     constructor(scene: Phaser.Scene, x: number, y: number) {
         super(scene, x, y, 'lightning_projectile');
@@ -38,10 +45,18 @@ export class LightningBolt extends Phaser.Physics.Arcade.Sprite {
         }
     }
 
-    fire(x: number, y: number, targetX: number, targetY: number, damage: number, bouncesLeft: number, hitEnemies?: Set<Enemy>) {
+    fire(x: number, y: number, targetX: number, targetY: number, damage: number, bouncesLeft: number, hitEnemies?: Set<Enemy>, initialAngle?: number, colorVariant?: 'white' | 'blue') {
         this.damage = damage;
         this.bouncesLeft = bouncesLeft;
         this.hitEnemies = hitEnemies || new Set();
+        this.lifespan = 2500; // Reset lifespan ved hver ny bounce / firing
+        this.flashTimer = 0;
+
+        // Determine color variant
+        this.colorVariant = colorVariant || (Math.random() < 0.5 ? 'white' : 'blue');
+        this.colorHex = this.colorVariant === 'white' ? 0xffffff : 0x0088ff;
+        this.colorStr = this.colorVariant === 'white' ? '#ffffff' : '#0088ff';
+        const animKey = this.colorVariant === 'white' ? 'lightning-fly-white' : 'lightning-fly-blue';
 
         // Find nearest active enemy to target position that hasn't been hit
         this.targetEnemy = this.findNearestEnemy(targetX, targetY);
@@ -57,18 +72,27 @@ export class LightningBolt extends Phaser.Physics.Arcade.Sprite {
         this.setActive(true);
         this.setVisible(true);
         this.setPosition(x, y);
-        this.play('lightning-fly');
+        this.play(animKey);
 
-        // Add Glow FX (yellow for lightning)
-        this.postFX.addGlow(0xffff00, 4, 0, false, 0.1, 10);
+        // Add Glow FX
+        this.postFX.addGlow(this.colorHex, 4, 0, false, 0.1, 10);
 
         // Add Dynamic Light
-        this.light = this.scene.lights.addLight(x, y, 150, 0xffff00, 1.0);
+        this.light = this.scene.lights.addLight(x, y, 150, this.colorHex, 1.0);
 
         if (this.body) {
             this.body.enable = true;
-            // Initial velocity toward target
-            this.steerTowardTarget();
+
+            if (initialAngle !== undefined) {
+                this.currentAngle = initialAngle;
+            } else if (this.targetEnemy) {
+                this.currentAngle = Phaser.Math.Angle.Between(this.x, this.y, this.targetEnemy.x, this.targetEnemy.y);
+            } else {
+                this.currentAngle = 0;
+            }
+
+            this.scene.physics.velocityFromRotation(this.currentAngle, this.speed, this.body.velocity);
+            this.setRotation(this.currentAngle + Math.PI / 2);
         }
     }
 
@@ -107,16 +131,32 @@ export class LightningBolt extends Phaser.Physics.Arcade.Sprite {
         return nearest;
     }
 
-    private steerTowardTarget(): void {
+    private steerTowardTarget(deltaSeconds: number): void {
         if (!this.targetEnemy || !this.body) return;
 
-        const angle = Phaser.Math.Angle.Between(this.x, this.y, this.targetEnemy.x, this.targetEnemy.y);
-        this.scene.physics.velocityFromRotation(angle, this.speed, this.body.velocity);
-        this.setRotation(angle + Math.PI / 2); // Rotate 90 degrees
+        const targetAngle = Phaser.Math.Angle.Between(this.x, this.y, this.targetEnemy.x, this.targetEnemy.y);
+        this.currentAngle = Phaser.Math.Angle.RotateTo(this.currentAngle, targetAngle, this.turnRate * deltaSeconds);
+
+        this.scene.physics.velocityFromRotation(this.currentAngle, this.speed, this.body.velocity);
+        this.setRotation(this.currentAngle + Math.PI / 2);
     }
 
-    update() {
+    update(_time: number, delta: number) {
         if (!this.active) return;
+
+        this.lifespan -= delta;
+        if (this.lifespan <= 0) {
+            this.deactivate();
+            return;
+        }
+
+        this.flashTimer += delta;
+        if (this.flashTimer >= 400) { // Bytt farge/sprite hver 100ms for skikkelig lyn-effekt
+            this.flashTimer = 0;
+            this.toggleColor();
+        }
+
+        const deltaSeconds = delta / 1000;
 
         // Update light position
         if (this.light) {
@@ -134,7 +174,7 @@ export class LightningBolt extends Phaser.Physics.Arcade.Sprite {
         }
 
         // Steer toward target
-        this.steerTowardTarget();
+        this.steerTowardTarget(deltaSeconds);
 
         // Check if close enough to target to trigger impact
         const distToTarget = Phaser.Math.Distance.Between(this.x, this.y, this.targetEnemy.x, this.targetEnemy.y);
@@ -150,7 +190,7 @@ export class LightningBolt extends Phaser.Physics.Arcade.Sprite {
         const hitY = this.y;
 
         // Deal damage
-        hitEnemy.takeDamage(this.damage, '#ffff00');
+        hitEnemy.takeDamage(this.damage, this.colorStr);
         hitEnemy.pushback(this.x, this.y, 150);
 
         // Add to hit set
@@ -167,7 +207,7 @@ export class LightningBolt extends Phaser.Physics.Arcade.Sprite {
         this.impactSprite.setPipeline('Light2D');
 
         // Impact light
-        const flash = this.scene.lights.addLight(hitX, hitY, 250, 0xffff00, 2.0);
+        const flash = this.scene.lights.addLight(hitX, hitY, 250, this.colorHex, 2.0);
         this.scene.tweens.add({
             targets: flash,
             intensity: 0,
@@ -191,7 +231,7 @@ export class LightningBolt extends Phaser.Physics.Arcade.Sprite {
                     if (bolt) {
                         const dmgMult = mainScene.registry.get('lightningDamageMulti') || 1;
                         const damage = this.damage * dmgMult;
-                        bolt.fire(hitX, hitY, nextTarget.x, nextTarget.y, damage, this.bouncesLeft - 1, this.hitEnemies);
+                        bolt.fire(hitX, hitY, nextTarget.x, nextTarget.y, damage, this.bouncesLeft - 1, this.hitEnemies, undefined, this.colorVariant);
                     }
                 }
             });
@@ -219,5 +259,23 @@ export class LightningBolt extends Phaser.Physics.Arcade.Sprite {
             this.impactSprite.destroy();
             this.impactSprite = null;
         }
+    }
+
+    private toggleColor(): void {
+        this.colorVariant = this.colorVariant === 'white' ? 'blue' : 'white';
+        this.colorHex = this.colorVariant === 'white' ? 0xffffff : 0x0088ff;
+        this.colorStr = this.colorVariant === 'white' ? '#ffffff' : '#0088ff';
+
+        const animKey = this.colorVariant === 'white' ? 'lightning-fly-white' : 'lightning-fly-blue';
+
+        // Spill av ny animasjon (fortsett på nåværende frame/tid om mulig for smooth loop, selv om fargen hopper)
+        this.play({ key: animKey }, true);
+
+        if (this.light) {
+            this.light.setColor(this.colorHex);
+        }
+
+        this.postFX.clear();
+        this.postFX.addGlow(this.colorHex, 4, 0, false, 0.1, 10);
     }
 }

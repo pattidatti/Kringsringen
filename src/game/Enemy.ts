@@ -66,6 +66,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
             this.shadow.setPosition(x, y);
         }
         this.clearTint();
+        this.postFX.clear();
         this.setRotation(0);
 
         this.targetStart = target;
@@ -436,6 +437,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         if (this.slowTimer === null) {
             this.originalSpeed = this.movementSpeed;
             this.setTint(0x88ccff); // Blue frost tint
+            this.postFX.addGlow(0x00aaff, 4, 0, false, 0.1, 10); // Add blue glow
         } else {
             // Reset timer if already slowed
             this.slowTimer.remove();
@@ -449,6 +451,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
             if (this.active && !this.isDead) {
                 this.movementSpeed = this.originalSpeed;
                 this.clearTint();
+                this.postFX.clear(); // Remove glow
                 if (this.config.spriteInfo.anims?.walk) {
                     this.play(this.config.spriteInfo.anims.walk);
                 }

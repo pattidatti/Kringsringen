@@ -124,7 +124,7 @@ export class PlayerStatsManager {
         const frostSlowLvl = levels['frost_slow'] || 0;
         this.scene.registry.set('frostDamageMulti', 1 + frostDmgLvl * 0.15);
         this.scene.registry.set('frostRadius', 100 + frostRadLvl * 20);
-        this.scene.registry.set('frostSlowDuration', frostSlowLvl * 500); // ms
+        this.scene.registry.set('frostSlowDuration', 1000 + frostSlowLvl * 500); // ms
 
         // Lightning stats
         const ltgDmgLvl = levels['lightning_damage'] || 0;
