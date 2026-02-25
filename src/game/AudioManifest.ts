@@ -25,7 +25,7 @@ export const AUDIO_MANIFEST: SoundConfig[] = [
     { id: 'glitch_king', path: 'assets/audio/music/Glitch King.mp3', category: 'bgm', volume: 0.6, loop: true },
 
     // — BGS (Background Soundscapes) —
-    { id: 'forest_ambience', path: 'assets/audio/bgs/forest_day.wav', category: 'bgs', volume: 0.45, loop: true },
+    { id: 'forest_ambience', path: 'assets/audio/bgs/forest_day.wav', category: 'bgs', volume: 0.7, loop: true },
     { id: 'rain', path: 'assets/audio/bgs/rain.wav', category: 'bgs', volume: 0.6, loop: true },
 
     // — Combat SFX —

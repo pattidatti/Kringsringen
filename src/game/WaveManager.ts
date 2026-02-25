@@ -39,10 +39,12 @@ export class WaveManager {
         this.scene.registry.set('gameLevel', this.currentLevel);
 
         // Switch music based on level
-        if (this.currentLevel === 3) {
-            AudioManager.instance.playBGM('dragons_fury');
+        if (this.currentLevel === 1) {
+            AudioManager.instance.playBGM('meadow_theme');
         } else if (this.currentLevel === 2) {
             AudioManager.instance.playBGM('exploration_theme');
+        } else if (this.currentLevel === 3) {
+            AudioManager.instance.playBGM('dragons_fury');
         } else if (this.currentLevel >= 4) {
             AudioManager.instance.playBGM('dragons_fury');
         }

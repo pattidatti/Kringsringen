@@ -50,14 +50,14 @@ export class WeatherManager {
         const { width } = this.scene.scale;
 
         this.rainEmitter = this.scene.add.particles(0, 0, 'raindrop', {
-            x: { min: -200, max: width + 200 },
-            y: -20,
+            x: { min: -200, max: width + 50 },
+            y: { min: -20, max: -20 },
             lifespan: 1500,
-            speedY: { min: 500, max: 800 }, // Slower rain
-            speedX: { min: -80, max: -40 },  // Less slanted
+            speedY: { min: 500, max: 800 },
+            speedX: { min: -30, max: 10 },  // Reduced left-drift so right edge is covered
             scaleY: { min: 0.8, max: 1.2 },
-            alpha: { start: 0.3, end: 0.1 }, // Softer alpha
-            quantity: 3,                   // Reduced quantity
+            alpha: { start: 0.3, end: 0.1 },
+            quantity: 4,
             frequency: 1,
             blendMode: 'ADD'
         });
