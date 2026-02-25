@@ -4,6 +4,7 @@ export interface SaveData {
     highStage: number;
     unlockedWeapons: string[];
     audioSettings?: any; // Avoiding circular dependency, will be typed in AudioManager
+    tutorialSeen?: boolean;
 }
 
 export class SaveManager {
