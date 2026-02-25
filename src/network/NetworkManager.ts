@@ -44,14 +44,19 @@ export class NetworkManager {
     }
 
     private handleConnection(conn: DataConnection) {
-        conn.on('open', () => {
+        const onOpen = () => {
             if (conn.label === 'reliable') {
                 this.reliableConnections.set(conn.peer, conn);
             } else {
                 this.unreliableConnections.set(conn.peer, conn);
             }
             console.log(`Connection established (${conn.label}) with:`, conn.peer);
-        });
+        };
+
+        conn.on('open', onOpen);
+        if (conn.open) {
+            onOpen();
+        }
 
         conn.on('data', (data: any) => {
             this.onPacketReceived(data as SyncPacket, conn);
@@ -87,7 +92,11 @@ export class NetworkManager {
         // We removed the heavy JSON.stringify() to skip large V8 Garbage Collection pauses.
         targetMap.forEach(conn => {
             if (conn.open) {
-                conn.send(packet);
+                try {
+                    conn.send(packet);
+                } catch (err) {
+                    console.warn(`[Network] Failed to broadcast on ${conn.label}:`, err);
+                }
             }
         });
     }
@@ -100,7 +109,11 @@ export class NetworkManager {
         const conn = isReliable ? this.reliableConnections.get(peerId) : this.unreliableConnections.get(peerId);
 
         if (conn && conn.open) {
-            conn.send(packet);
+            try {
+                conn.send(packet);
+            } catch (err) {
+                console.warn(`[Network] Failed to sendTo on ${conn.label}:`, err);
+            }
         }
     }
 

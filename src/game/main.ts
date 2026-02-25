@@ -523,17 +523,18 @@ class MainScene extends Phaser.Scene implements IMainScene {
             this.playerNicknames.set(p.id, label);
         }
 
+        // Store target for smooth lerping Instead of physics velocity which overshoots
+        remotePlayer.setData('targetX', p.x);
+        remotePlayer.setData('targetY', p.y);
+
         const dx = p.x - remotePlayer.x;
         const dy = p.y - remotePlayer.y;
 
-        // Dead Reckoning: If distance is too large, snap (teleport or large lag spike)
+        // Snap if distance is too large
         if (Math.abs(dx) > 150 || Math.abs(dy) > 150) {
             remotePlayer.setPosition(p.x, p.y);
-            remotePlayer.setVelocity(0, 0);
-        } else {
-            // Target 40ms to smooth out the 33ms network ticks
-            remotePlayer.setVelocity(dx / 0.040, dy / 0.040);
         }
+        remotePlayer.setVelocity(0, 0);
 
         if (remotePlayer.anims.currentAnim?.key !== p.anim) {
             remotePlayer.play(p.anim);
@@ -661,7 +662,7 @@ class MainScene extends Phaser.Scene implements IMainScene {
         this.ambient.setTheme(level);
     }
 
-    update() {
+    update(_time: number, delta: number) {
         const player = this.data.get('player') as Phaser.Physics.Arcade.Sprite;
         if (this.playerShadow) {
             this.playerShadow.setPosition(player.x, player.y + 28);
@@ -669,6 +670,19 @@ class MainScene extends Phaser.Scene implements IMainScene {
 
         // --- Iterating Remote Players for dead reckoning updates ---
         this.remotePlayers.forEach((remotePlayer, id) => {
+            const tx = remotePlayer.getData('targetX');
+            const ty = remotePlayer.getData('targetY');
+
+            if (tx !== undefined && ty !== undefined) {
+                const dx = tx - remotePlayer.x;
+                const dy = ty - remotePlayer.y;
+
+                // Smooth lerp: close the distance over approx 40ms
+                const moveFactor = Math.min(1, delta / 40);
+                remotePlayer.x += dx * moveFactor;
+                remotePlayer.y += dy * moveFactor;
+            }
+
             const label = this.playerNicknames.get(id);
             if (label) label.setPosition(remotePlayer.x, remotePlayer.y - 40);
         });

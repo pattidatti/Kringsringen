@@ -423,6 +423,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         this.setVisible(false);
         if (this.body) this.body.enable = false;
         if (this.shadow) this.shadow.setVisible(false);
+        if (this.hpBar) this.hpBar.clear();
         this.isClientMode = false;
         // Do NOT call destroy() — keep in pool for reuse
     }
