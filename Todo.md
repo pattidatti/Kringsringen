@@ -14,14 +14,14 @@
 - [ ] Dash må implementeres, med en cooldown, 20 sec default. Hotkey 
 
 # Score 
-- [ ] Score ingame oppe ved siden av mynter
+- [x] Score ingame oppe ved siden av mynter
 
 # Boss battles
 - Sjekke at alle bosser fungerer riktig, har animations osv. 
 -[x] Orkehøvding har noe feil med hitbox, får ikke til å skade den. Bare lighting med seeking greier å treffe, alt annen bommer totalt, går rett gjennom. 
 -[x] Orkehøvding virker til å bli svært lett stuck, og kan ikke bevege seg; blir dermed ingen stor trussel. 
 
-- Multiplayer orkehøvding; spiller B får hitbaren over hodet, men den er gigalang, og  den er "tom" i HP baren på toppen. 
+-[x] Multiplayer orkehøvding; spiller B får hitbaren over hodet, men den er gigalang, og  den er "tom" i HP baren på toppen. 
 
 - En del enemies blinker mens de går, ligger antageligvis en frame for mange i sprite sheeten. 
 

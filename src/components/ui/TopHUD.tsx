@@ -75,13 +75,29 @@ export const TopHUD: React.FC = React.memo(() => {
                 </div>
             </div>
 
-            {/* Right Wing: Economy */}
-            <div className="flex items-center gap-5 pointer-events-auto bg-black/60 border-2 border-amber-900/50 pl-6 pr-10 py-3 rounded-l-full shadow-lg backdrop-blur-md mt-2">
-                <div className="text-right">
-                    <div className="text-xs text-amber-200/60 uppercase tracking-widest font-bold">Wealth</div>
-                    <div className="text-amber-100 font-black text-4xl leading-none m-text-gold drop-shadow-lg">{coins}</div>
+            {/* Right Wing: Economy & Score */}
+            <div className="flex items-center pointer-events-auto bg-black/60 border-2 border-amber-900/50 shadow-lg backdrop-blur-md mt-2 rounded-l-full overflow-hidden">
+
+                {/* Score Segment */}
+                <div className="text-right py-3 pl-8 pr-6 relative">
+                    <div className="text-xs text-slate-300/60 uppercase tracking-widest font-bold">Score</div>
+                    <div className="text-slate-100 font-black text-3xl leading-none drop-shadow-[0_0_8px_rgba(255,255,255,0.3)] font-cinzel">
+                        {(level * 1000 + wave * 100 + coins).toLocaleString()}
+                    </div>
+                    {/* Minimal Separator */}
+                    <div className="absolute right-0 top-1/2 -translate-y-1/2 w-px h-10 bg-gradient-to-b from-transparent via-amber-900/50 to-transparent" />
                 </div>
-                <ItemIcon icon="item_gold_coin" size="lg" className="animate-pulse drop-shadow-[0_0_10px_rgba(255,215,0,0.3)]" />
+
+                {/* Wealth Segment */}
+                <div className="flex items-center gap-4 py-3 pl-6 pr-10 bg-amber-950/20">
+                    <div className="text-right">
+                        <div className="text-xs text-amber-200/60 uppercase tracking-widest font-bold">Wealth</div>
+                        <div className="text-amber-100 font-black text-4xl leading-none m-text-gold drop-shadow-lg">{coins}</div>
+                    </div>
+                    <div className="-mr-4">
+                        <ItemIcon icon="item_gold_coin" size="lg" className="animate-pulse drop-shadow-[0_0_10px_rgba(255,215,0,0.3)]" />
+                    </div>
+                </div>
             </div>
         </div>
     );
