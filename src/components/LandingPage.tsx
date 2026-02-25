@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FantasyButton } from './ui/FantasyButton';
 import { HighscoresModal } from './ui/HighscoresModal';
+import { OnboardingTutorial } from './ui/OnboardingTutorial';
+import { SaveManager } from '../game/SaveManager';
 import '../styles/pixel-ui.css';
 
 interface LandingPageProps {
@@ -11,6 +13,7 @@ interface LandingPageProps {
 const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
     const [activeToast, setActiveToast] = useState<string | null>(null);
     const [showHighscores, setShowHighscores] = useState(false);
+    const [showTutorial, setShowTutorial] = useState(false);
     const audioRef = useRef<HTMLAudioElement | null>(null);
 
     useEffect(() => {
@@ -32,7 +35,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
         };
     }, []);
 
-    const handleStart = () => {
+    const fadeAudioAndStart = () => {
         const audio = audioRef.current;
         if (audio) {
             const fadeOut = setInterval(() => {
@@ -46,6 +49,14 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
             }, 50);
         }
         onStart();
+    };
+
+    const handleStart = () => {
+        if (SaveManager.load().tutorialSeen) {
+            fadeAudioAndStart();
+        } else {
+            setShowTutorial(true);
+        }
     };
 
     const showToast = (label: string) => {
@@ -136,6 +147,13 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
                 isOpen={showHighscores}
                 onClose={() => setShowHighscores(false)}
             />
+
+            {/* Onboarding Tutorial */}
+            <AnimatePresence>
+                {showTutorial && (
+                    <OnboardingTutorial onStart={fadeAudioAndStart} />
+                )}
+            </AnimatePresence>
 
             {/* Coming Soon toast */}
             <AnimatePresence>
