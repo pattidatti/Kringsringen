@@ -164,8 +164,10 @@ export class WaveManager {
             this.enemiesAlive--;
             this.checkWaveProgress();
 
-            // Only Host manages coin drops
-            if (this.scene.networkManager?.role !== 'host') return;
+            // Management of coin drops: Singleplayer or Host
+            const isMultiplayer = this.scene.registry.get('isMultiplayer');
+            const isHost = this.scene.networkManager?.role === 'host';
+            if (isMultiplayer && !isHost) return;
 
             const player = this.scene.data.get('player') as Phaser.Physics.Arcade.Sprite;
             if (!player) return;
