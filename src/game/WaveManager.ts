@@ -293,9 +293,11 @@ export class WaveManager {
             if (id === 'boss') {
                 enemy = this.scene.bossGroup.getFirstAlive();
                 if (!enemy && hp > 0) {
-                    const bossIdx = this.scene.registry.get('bossComingUp') ?? 0;
-                    this.scene.registry.set('bossComingUp', -1);
-                    this.scene.events.emit('start-boss', bossIdx);
+                    const bossIdx = this.scene.registry.get('bossComingUp') ?? -1;
+                    if (bossIdx >= 0) {
+                        this.scene.registry.set('bossComingUp', -1);
+                        this.scene.events.emit('start-boss', bossIdx);
+                    }
                 }
             } else {
                 enemy = this.findEnemyById(id);

@@ -9,7 +9,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     private targetStart: Phaser.GameObjects.Components.Transform; // Renamed to avoid confusion with internal target
     public hp: number = 50;
     protected maxHP: number = 50;
-    private hpBar: Phaser.GameObjects.Graphics;
+    protected hpBar: Phaser.GameObjects.Graphics;
     protected isDead: boolean = false;
     private attackRange: number = 60;
     private attackCooldown: number = 1500;
@@ -445,7 +445,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         }
     }
 
-    private updateHPBar() {
+    protected updateHPBar() {
         this.hpBar.clear();
         if (this.isDead || !this.active) return;
 

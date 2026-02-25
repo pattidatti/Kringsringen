@@ -284,6 +284,13 @@ export class BossEnemy extends Enemy {
 
     // ── Overrides ─────────────────────────────────────────────────────────────
 
+    protected updateHPBar(): void {
+        // Bosses use the global BossHUD instead of floating health bars
+        if (this.hpBar) {
+            this.hpBar.clear();
+        }
+    }
+
     takeDamage(amount: number, color: string = '#ffffff'): void {
         super.takeDamage(amount, color);
         if (!this.active) return;
