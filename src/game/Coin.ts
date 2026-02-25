@@ -6,8 +6,8 @@ export class Coin extends Phaser.Physics.Arcade.Sprite {
     private magnetRange: number = GAME_CONFIG.PLAYER.MAGNET_RANGE;
     private collectionRange: number = GAME_CONFIG.PLAYER.PICKUP_RANGE;
     private speed: number = 600;
+    public id: string = "";
     private isCollected: boolean = false;
-
 
     constructor(scene: Phaser.Scene, x: number, y: number, target: Phaser.GameObjects.Components.Transform) {
         super(scene, x, y, 'coin');
@@ -20,10 +20,11 @@ export class Coin extends Phaser.Physics.Arcade.Sprite {
         this.setTint(0xffd700); // Gold color
 
         // Initial state if created via new()
-        this.spawn(x, y, target);
+        this.spawn(x, y, target, `coin-${Phaser.Math.RND.uuid()}`);
     }
 
-    public spawn(x: number, y: number, target: Phaser.GameObjects.Components.Transform) {
+    public spawn(x: number, y: number, target: Phaser.GameObjects.Components.Transform, id?: string) {
+        this.id = id || `coin-${Phaser.Math.RND.uuid()}`;
         this.setActive(true);
         this.setVisible(true);
         if (this.body) this.body.enable = true;

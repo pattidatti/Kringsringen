@@ -137,6 +137,10 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         this.updateHPBar();
     }
 
+    public getIsDead(): boolean {
+        return this.isDead;
+    }
+
     private lastAIUpdate: number = 0;
     private readonly AI_UPDATE_INTERVAL: number = 100;
 
@@ -207,7 +211,8 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         if (this.isDead || this.isPushingBack) return;
         if (!this.body) return;
 
-        const distance = Phaser.Math.Distance.Between(this.x, this.y, (this.targetStart as any).x, (this.targetStart as any).y);
+        const nearestTarget = this.getNearestTarget();
+        const distance = Phaser.Math.Distance.Between(this.x, this.y, nearestTarget.x, nearestTarget.y);
         const hasAttackAnim = this.config.spriteInfo.type === 'spritesheet' && this.config.spriteInfo.anims?.attack;
 
         if (hasAttackAnim && distance < this.attackRange && time > this.lastAttackTime + this.attackCooldown) {
@@ -256,13 +261,15 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
             // Check for Damage Frame
             const damageFrame = this.config.attackDamageFrame ?? this.DEFAULT_DAMAGE_FRAME;
             if (currentFrameIndex === damageFrame && !this.hasHit) {
-                const target = this.targetStart as any;
+                const target = this.getNearestTarget();
                 if (target && target.active) {
                     const distance = Phaser.Math.Distance.Between(this.x, this.y, target.x, target.y);
                     // Allow slightly more range than attackRange to feel fair (the swing has reach)
                     if (distance <= this.attackRange + 10) {
                         this.hasHit = true;
-                        this.scene.events.emit('enemy-hit-player', this.damage, this.enemyType, this.x, this.y);
+
+                        // Emit to scene - mainScene identifies which player was hit
+                        this.scene.events.emit('enemy-hit-player', this.damage, this.enemyType, this.x, this.y, target);
                     }
                 }
             }
@@ -300,7 +307,25 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         const interests = Enemy.INTEREST_BUFFER;
         const dangers = Enemy.DANGER_BUFFER;
 
-        const targetAngle = Phaser.Math.Angle.Between(this.x, this.y, (this.targetStart as any).x, (this.targetStart as any).y);
+        // --- Multi-Targeting Logic (Host Only) ---
+        // Find nearest player among local player and all remote players
+        let nearestTarget = this.targetStart as any;
+        let minDist = Phaser.Math.Distance.Between(this.x, this.y, nearestTarget.x, nearestTarget.y);
+
+        const mainScene = this.scene as any;
+        if (mainScene.remotePlayers) {
+            mainScene.remotePlayers.forEach((remotePlayer: any) => {
+                if (remotePlayer.active) {
+                    const dist = Phaser.Math.Distance.Between(this.x, this.y, remotePlayer.x, remotePlayer.y);
+                    if (dist < minDist) {
+                        minDist = dist;
+                        nearestTarget = remotePlayer;
+                    }
+                }
+            });
+        }
+
+        const targetAngle = Phaser.Math.Angle.Between(this.x, this.y, nearestTarget.x, nearestTarget.y);
 
         // Interest
         for (let i = 0; i < numRays; i++) {
@@ -598,5 +623,24 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         }
 
         return null;
+    }
+
+    private getNearestTarget(): any {
+        let nearestTarget = this.targetStart as any;
+        let minDist = Phaser.Math.Distance.Between(this.x, this.y, nearestTarget.x, nearestTarget.y);
+
+        const mainScene = this.scene as any;
+        if (mainScene.remotePlayers) {
+            mainScene.remotePlayers.forEach((remotePlayer: any) => {
+                if (remotePlayer.active) {
+                    const dist = Phaser.Math.Distance.Between(this.x, this.y, remotePlayer.x, remotePlayer.y);
+                    if (dist < minDist) {
+                        minDist = dist;
+                        nearestTarget = remotePlayer;
+                    }
+                }
+            });
+        }
+        return nearestTarget;
     }
 }

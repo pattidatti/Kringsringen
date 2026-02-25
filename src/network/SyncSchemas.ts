@@ -18,7 +18,7 @@ export type PackedPlayer = [string, number, number, string, number, number, stri
 export type PackedEnemy = [string, number, number, number, string, number];
 
 export interface GameEventPacket {
-    type: 'attack' | 'spawn' | 'death' | 'upgrade' | 'boss_ability' | 'coin_collect' | 'spawn_coins' | 'level_complete' | 'hit_request' | 'hit_confirm' | 'projectile_hit_request';
+    type: 'attack' | 'spawn' | 'death' | 'upgrade' | 'boss_ability' | 'coin_collect' | 'spawn_coins' | 'level_complete' | 'hit_request' | 'hit_confirm' | 'projectile_hit_request' | 'enemy_death' | 'damage_player';
     data: any;
 }
 

@@ -87,6 +87,7 @@ class MainScene extends Phaser.Scene implements IMainScene {
     private playerBuffers: Map<string, JitterBuffer<PackedPlayer>> = new Map();
     /** Cache of last-received packet per remote peer — used by Host to relay all positions */
     private remotePlayerPackets: Map<string, PackedPlayer> = new Map();
+    public pendingDeaths: Set<string> = new Set();
     private lastSyncTime: number = 0;
     private lastSentPlayerStates: Map<string, string> = new Map();
     private networkTickCount: number = 0;
@@ -396,8 +397,27 @@ class MainScene extends Phaser.Scene implements IMainScene {
         });
 
         // Player Hit Logic (Event-Driven)
-        this.events.on('enemy-hit-player', (damage: number, _type: string, x?: number, y?: number) => {
-            this.combat.takePlayerDamage(damage, x, y);
+        this.events.on('enemy-hit-player', (damage: number, _type: string, x?: number, y?: number, target?: any) => {
+            const player = this.data.get('player');
+            if (target === player) {
+                // Local player takes damage
+                this.combat.takePlayerDamage(damage, x, y);
+            } else if (this.networkManager?.role === 'host') {
+                // Remote player was hit. Host notifies the client.
+                // Find Peer ID for the target sprite
+                let targetPeerId: string | null = null;
+                this.remotePlayers.forEach((sprite, peerId) => {
+                    if (sprite === target) targetPeerId = peerId;
+                });
+
+                if (targetPeerId) {
+                    this.networkManager.sendTo(targetPeerId, {
+                        t: PacketType.GAME_EVENT,
+                        ev: { type: 'damage_player', data: { damage, x, y } },
+                        ts: Date.now()
+                    });
+                }
+            }
         });
 
         const cursors = this.input.keyboard?.createCursorKeys();
@@ -689,31 +709,31 @@ class MainScene extends Phaser.Scene implements IMainScene {
                 }
             }
         } else if (event.type === 'spawn_coins') {
-            const { x, y, count } = event.data;
+            const { x, y, count, coins } = event.data;
             const player = this.data.get('player') as Phaser.Physics.Arcade.Sprite;
-            for (let i = 0; i < count; i++) {
-                const coin = this.coins.get(x, y) as Coin;
-                if (coin) {
-                    coin.spawn(x, y, player);
-                    coin.removeAllListeners('collected');
-                    coin.on('collected', () => {
-                        // If client picks up, tell host (host handles the central score)
-                        if (this.networkManager?.role === 'client') {
-                            this.networkManager.broadcast({
-                                t: PacketType.GAME_EVENT,
-                                ev: { type: 'coin_collect', data: { amount: 1, x: coin.x, y: coin.y } },
-                                ts: Date.now()
-                            });
-                        } else {
-                            // Host picked up locally
-                            this.stats.addCoins(1);
-                        }
-                        AudioManager.instance.playSFX('coin_collect');
-                    });
+
+            if (coins && Array.isArray(coins)) {
+                coins.forEach((cData: any) => {
+                    const coin = this.coins.get(cData.x, cData.y) as Coin;
+                    if (coin) {
+                        coin.spawn(cData.x, cData.y, player, cData.id);
+                        coin.removeAllListeners('collected');
+                        this.setupCoinCollection(coin);
+                    }
+                });
+            } else {
+                // Fallback for older packet versions
+                for (let i = 0; i < count; i++) {
+                    const coin = this.coins.get(x, y) as Coin;
+                    if (coin) {
+                        coin.spawn(x, y, player);
+                        coin.removeAllListeners('collected');
+                        this.setupCoinCollection(coin);
+                    }
                 }
             }
         } else if (event.type === 'coin_collect') {
-            const { amount, x, y } = event.data;
+            const { amount, x, y, id } = event.data;
             // Host acts as authority on total gold
             if (this.networkManager?.role === 'host') {
                 this.stats.addCoins(amount);
@@ -722,10 +742,23 @@ class MainScene extends Phaser.Scene implements IMainScene {
                 this.stats.addCoins(amount);
             }
 
-            // Visually remove the coin at this position for everyone else
-            if (x !== undefined && y !== undefined) {
+            // Visually remove the coin. Priority: ID match, Fallback: Proximity
+            let removed = false;
+            this.coins.children.iterate((c: any) => {
+                if (c.active && id && c.id === id) {
+                    c.setActive(false);
+                    c.setVisible(false);
+                    if (c.body) c.body.enable = false;
+                    removed = true;
+                    return false;
+                }
+                return true;
+            });
+
+            if (!removed && x !== undefined && y !== undefined) {
                 this.coins.children.iterate((c: any) => {
-                    if (c.active && Phaser.Math.Distance.Between(c.x, c.y, x, y) < 50) {
+                    // Increased radius to 150 to account for drift/lag in coin movement
+                    if (c.active && Phaser.Math.Distance.Between(c.x, c.y, x, y) < 150) {
                         c.setActive(false);
                         c.setVisible(false);
                         if (c.body) c.body.enable = false;
@@ -734,6 +767,23 @@ class MainScene extends Phaser.Scene implements IMainScene {
                     return true;
                 });
             }
+        } else if (event.type === 'enemy_death') {
+            const { id } = event.data;
+            const enemy = this.waves.findEnemyById(id) || (id === 'boss' ? this.bossGroup.getFirstAlive() as any : null);
+            if (enemy) {
+                if (enemy.die) {
+                    enemy.die();
+                } else {
+                    enemy.disable();
+                }
+            } else {
+                // Buffer the death so it applies if logic spawns it later from an old unreliable packet
+                this.pendingDeaths.add(id);
+            }
+        } else if (event.type === 'damage_player') {
+            // Client receives damage from Host authority
+            const { damage, x, y } = event.data;
+            this.combat.takePlayerDamage(damage, x, y);
         } else if (event.type === 'level_complete') {
             const { nextLevel } = event.data;
             if (this.networkManager?.role === 'client') {
@@ -742,6 +792,23 @@ class MainScene extends Phaser.Scene implements IMainScene {
                 this.events.emit('level-complete');
             }
         }
+    }
+
+    private setupCoinCollection(coin: Coin) {
+        coin.on('collected', () => {
+            // If client picks up, tell host (host handles the central score)
+            if (this.networkManager?.role === 'client') {
+                this.networkManager.broadcast({
+                    t: PacketType.GAME_EVENT,
+                    ev: { type: 'coin_collect', data: { amount: 1, x: coin.x, y: coin.y, id: coin.id } },
+                    ts: Date.now()
+                });
+            } else {
+                // Host picked up locally
+                this.stats.addCoins(1);
+            }
+            AudioManager.instance.playSFX('coin_collect');
+        });
     }
 
     /** Spawn a boss at the center of the map. */

@@ -22,4 +22,5 @@ export interface IMainScene extends Phaser.Scene {
     waves: WaveManager;
     deathSparkEmitter: Phaser.GameObjects.Particles.ParticleEmitter;
     networkManager?: NetworkManager;
+    pendingDeaths: Set<string>;
 }

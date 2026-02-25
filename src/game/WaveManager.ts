@@ -164,6 +164,13 @@ export class WaveManager {
             this.enemiesAlive--;
             this.checkWaveProgress();
 
+            // Sync enemy death reliably to prevent ghosting
+            this.scene.networkManager?.broadcast({
+                t: PacketType.GAME_EVENT,
+                ev: { type: 'enemy_death', data: { id: enemy.id } },
+                ts: Date.now()
+            });
+
             // Management of coin drops: Singleplayer or Host
             const isMultiplayer = this.scene.registry.get('isMultiplayer');
             const isHost = this.scene.networkManager?.role === 'host';
@@ -174,36 +181,34 @@ export class WaveManager {
 
             const baseCoins = Phaser.Math.Between(5, 15);
             const coinCount = baseCoins + (this.currentLevel - 1) * 3;
-            const coinData: any[] = [];
+            const coinData: { x: number, y: number, id: string }[] = [];
 
             for (let i = 0; i < coinCount; i++) {
                 let coin = this.scene.coins.get(ex, ey) as Coin;
-                // Avoid using getFirstAlive which might steal a coin that's already on screen
                 if (!coin) continue;
 
-                if (coin) {
-                    coin.spawn(ex, ey, player);
-                    coin.removeAllListeners('collected');
-                    coin.on('collected', () => {
-                        this.scene.stats.addCoins(1);
-                        AudioManager.instance.playSFX('coin_collect');
+                const coinId = `coin-${Phaser.Math.RND.uuid()}`;
+                coin.spawn(ex, ey, player, coinId);
+                coin.removeAllListeners('collected');
+                coin.on('collected', () => {
+                    this.scene.stats.addCoins(1);
+                    AudioManager.instance.playSFX('coin_collect');
 
-                        // Sync coin collection
-                        this.scene.networkManager?.broadcast({
-                            t: PacketType.GAME_EVENT,
-                            ev: { type: 'coin_collect', data: { amount: 1, x: ex, y: ey } },
-                            ts: Date.now()
-                        });
+                    // Sync coin collection with actual current position and ID
+                    this.scene.networkManager?.broadcast({
+                        t: PacketType.GAME_EVENT,
+                        ev: { type: 'coin_collect', data: { amount: 1, x: coin.x, y: coin.y, id: coin.id } },
+                        ts: Date.now()
                     });
+                });
 
-                    coinData.push({ x: ex, y: ey });
-                }
+                coinData.push({ x: ex, y: ey, id: coinId });
             }
 
-            // Sync coin spawn to clients
+            // Sync coin spawn to clients with IDs
             this.scene.networkManager?.broadcast({
                 t: PacketType.GAME_EVENT,
-                ev: { type: 'spawn_coins', data: { x: ex, y: ey, count: coinCount } },
+                ev: { type: 'spawn_coins', data: { x: ex, y: ey, count: coinCount, coins: coinData } },
                 ts: Date.now()
             });
         });
@@ -281,8 +286,6 @@ export class WaveManager {
     public syncEnemies(packets: PackedEnemy[], timestamp: number): void {
         const player = this.scene.data.get('player') as Phaser.Physics.Arcade.Sprite;
 
-        // We do NOT disable missing enemies anymore because of Delta Compression.
-        // Enemies are only disabled when an explicit packet with hp <= 0 is received.
         packets.forEach(p => {
             const [id, x, y, hp, anim, flipX] = p;
             let enemy: any = null;
@@ -296,6 +299,12 @@ export class WaveManager {
             } else {
                 enemy = this.findEnemyById(id);
                 if (!enemy && hp > 0) {
+                    // Check if this enemy was already marked dead before it even spawned locally
+                    if (this.scene.pendingDeaths && this.scene.pendingDeaths.has(id)) {
+                        this.scene.pendingDeaths.delete(id);
+                        return; // Don't spawn
+                    }
+
                     let type = 'orc';
                     if (anim.includes('slime')) type = 'slime';
                     if (anim.includes('skeleton')) type = 'skeleton';
@@ -309,17 +318,16 @@ export class WaveManager {
                 }
             }
 
-            if (enemy) {
-                if (hp <= 0) {
-                    enemy.disable();
+            if (enemy && enemy.active) {
+                // RACE PROTECTION: If enemy is already dead or in death animation, ignore old packets
+                if (enemy.getIsDead && enemy.getIsDead()) {
                     return;
                 }
 
-                // Ensure enemy is active if it was previously disabled in the pool
-                if (!enemy.active) {
-                    enemy.setActive(true);
-                    enemy.setVisible(true);
-                    if (enemy.body) enemy.body.enable = true;
+                if (hp <= 0) {
+                    if (enemy.die) enemy.die();
+                    else enemy.disable();
+                    return;
                 }
 
                 enemy.setData('targetX', x);
