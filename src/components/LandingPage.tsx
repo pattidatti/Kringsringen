@@ -144,7 +144,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart, onStartMP }) => {
                     label="Multiplayer"
                     variant="secondary"
                     onClick={() => setShowMPLobby(true)}
-                    className="w-64 text-xl !text-black [text-shadow:none] ring-2 ring-amber-500/50"
+                    className="w-64 text-xl !text-black [text-shadow:none]"
                 />
             </motion.div>
 
