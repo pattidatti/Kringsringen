@@ -12,6 +12,7 @@ import type { NetworkManager } from '../network/NetworkManager';
  */
 export interface IMainScene extends Phaser.Scene {
     enemies: Phaser.Physics.Arcade.Group;
+    bossGroup: Phaser.Physics.Arcade.Group;
     coins: Phaser.Physics.Arcade.Group;
     obstacles: Phaser.Physics.Arcade.StaticGroup;
     spatialGrid: SpatialHashGrid;

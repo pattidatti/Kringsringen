@@ -229,11 +229,17 @@ export class WaveManager {
                 this.scene.time.delayedCall(GAME_CONFIG.WAVES.LEVEL_COMPLETE_DELAY, () => {
                     this.scene.events.emit('level-complete');
                     this.scene.scene.pause();
+
+                    // Sync level complete to clients
+                    this.scene.networkManager?.broadcast({
+                        t: PacketType.GAME_EVENT,
+                        ev: { type: 'level_complete', data: { nextLevel: this.currentLevel + 1 } },
+                        ts: Date.now()
+                    });
                 });
             }
         }
     }
-
     public getEnemySyncData(): EnemyPacket[] {
         const data: EnemyPacket[] = [];
         this.scene.enemies.children.iterate((child: any) => {
@@ -249,6 +255,22 @@ export class WaveManager {
             }
             return true;
         });
+
+        // Also sync boss if active
+        this.scene.bossGroup.children.iterate((boss: any) => {
+            if (boss.active && !boss.isDead) {
+                data.push({
+                    id: 'boss',
+                    x: Math.round(boss.x),
+                    y: Math.round(boss.y),
+                    hp: boss.hp,
+                    anim: boss.anims.currentAnim?.key || '',
+                    flipX: boss.flipX
+                });
+            }
+            return true;
+        });
+
         return data;
     }
 
@@ -257,30 +279,40 @@ export class WaveManager {
         const activeIds = new Set(packets.map(p => p.id));
 
         packets.forEach(p => {
-            let enemy = this.findEnemyById(p.id);
-            if (!enemy) {
-                let type = 'orc';
-                if (p.anim.includes('slime')) type = 'slime';
-                if (p.anim.includes('skeleton')) type = 'skeleton';
-                if (p.anim.includes('werewolf')) type = 'werewolf';
+            let enemy: any = null;
+            if (p.id === 'boss') {
+                enemy = this.scene.bossGroup.getFirstAlive();
+                if (!enemy) {
+                    const bossIdx = this.scene.registry.get('bossComingUp') ?? 0;
+                    this.scene.events.emit('start-boss', bossIdx);
+                }
+            } else {
+                enemy = this.findEnemyById(p.id);
+                if (!enemy) {
+                    let type = 'orc';
+                    if (p.anim.includes('slime')) type = 'slime';
+                    if (p.anim.includes('skeleton')) type = 'skeleton';
+                    if (p.anim.includes('werewolf')) type = 'werewolf';
 
-                enemy = this.scene.enemies.get(p.x, p.y) as Enemy;
-                if (enemy) {
-                    enemy.reset(p.x, p.y, player, 1.0, type);
-                    (enemy as any).id = p.id;
+                    enemy = this.scene.enemies.get(p.x, p.y) as Enemy;
+                    if (enemy) {
+                        enemy.reset(p.x, p.y, player, 1.0, type);
+                        enemy.id = p.id;
+                    }
                 }
             }
 
             if (enemy) {
-                // Position and animation driven purely by host
-                enemy.setPosition(p.x, p.y);
+                enemy.setData('targetX', p.x);
+                enemy.setData('targetY', p.y);
+                // Also update real pos initially if it's super far (Enemy.ts handles it anyway, but safe to do)
+
                 enemy.hp = p.hp;
                 enemy.setFlipX(p.flipX);
                 if (enemy.anims.currentAnim?.key !== p.anim && p.anim) {
                     enemy.play(p.anim);
                 }
-                // Ensure this is a passive puppet — no AI, no physics body, no damage
-                enemy.setClientMode(true);
+                if (enemy.setClientMode) enemy.setClientMode(true);
             }
         });
 

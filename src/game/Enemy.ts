@@ -139,6 +139,24 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 
         // CLIENT PUPPET MODE: only render shadow + HP bar, skip all AI and damage
         if (this.isClientMode) {
+            const tx = this.getData('targetX');
+            const ty = this.getData('targetY');
+
+            if (tx !== undefined && ty !== undefined) {
+                const dx = tx - this.x;
+                const dy = ty - this.y;
+
+                // Snap if too far or newly spawned
+                if (Math.abs(dx) > 150 || Math.abs(dy) > 150) {
+                    this.setPosition(tx, ty);
+                } else {
+                    // Smooth lerp: close the distance over approx 40ms.
+                    const moveFactor = Math.min(1, delta / 40);
+                    this.x += dx * moveFactor;
+                    this.y += dy * moveFactor;
+                }
+            }
+
             if (this.shadow) this.shadow.setPosition(this.x, this.y + (this.height * this.scaleY * 0.3));
             this.updateHPBar();
             return;

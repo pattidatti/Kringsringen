@@ -11,7 +11,7 @@ import '../styles/pixel-ui.css';
 
 interface LandingPageProps {
     onStart: () => void;
-    onStartMP: (role: 'host' | 'client', roomCode: string, peer: Peer, nickname: string) => void;
+    onStartMP: (role: 'host' | 'client', roomCode: string, peer: Peer, nickname: string, hostPeerId?: string) => void;
 }
 
 const LandingPage: React.FC<LandingPageProps> = ({ onStart, onStartMP }) => {
@@ -164,9 +164,9 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart, onStartMP }) => {
             <MultiplayerLobby
                 isOpen={showMPLobby}
                 onClose={() => setShowMPLobby(false)}
-                onStartGame={(role, code, peer, nick) => {
+                onStartGame={(role, code, peer, nick, hostId) => {
                     setShowMPLobby(false);
-                    onStartMP(role, code, peer, nick);
+                    onStartMP(role, code, peer, nick, hostId);
                 }}
             />
 

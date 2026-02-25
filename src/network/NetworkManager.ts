@@ -1,12 +1,16 @@
 import Peer from 'peerjs';
 import type { DataConnection } from 'peerjs';
-import type { SyncPacket } from './SyncSchemas';
+import { PacketType, type SyncPacket } from './SyncSchemas';
 
 export class NetworkManager {
     private peer: Peer;
-    private connections: Map<string, DataConnection> = new Map();
+    // Map of Peer ID -> DataConnection for reliable/unreliable channels
+    private reliableConnections: Map<string, DataConnection> = new Map();
+    private unreliableConnections: Map<string, DataConnection> = new Map();
     private onPacketReceived: (packet: SyncPacket, connection: DataConnection) => void;
     public role: 'host' | 'client';
+    private tickInterval: ReturnType<typeof setInterval> | null = null;
+    private onTick: (() => void) | null = null;
 
     constructor(
         peer: Peer,
@@ -22,23 +26,31 @@ export class NetworkManager {
 
     private setupListeners() {
         this.peer.on('connection', (conn) => {
-            console.log('Incoming connection from:', conn.peer);
+            console.log(`Incoming ${conn.label} connection from:`, conn.peer);
             this.handleConnection(conn);
         });
     }
 
     public connectToHost(hostPeerId: string) {
         if (this.role === 'client') {
-            // Reliable mode (default) — ensures no silent packet drops under load
-            const conn = this.peer.connect(hostPeerId);
-            this.handleConnection(conn);
+            // Establish reliable channel for critical events
+            const relConn = this.peer.connect(hostPeerId, { label: 'reliable', reliable: true });
+            this.handleConnection(relConn);
+
+            // Establish unreliable channel for sync data (low latency, drops packet over HOL-blocking)
+            const unRelConn = this.peer.connect(hostPeerId, { label: 'unreliable', reliable: false });
+            this.handleConnection(unRelConn);
         }
     }
 
     private handleConnection(conn: DataConnection) {
         conn.on('open', () => {
-            this.connections.set(conn.peer, conn);
-            console.log('Connection established with:', conn.peer);
+            if (conn.label === 'reliable') {
+                this.reliableConnections.set(conn.peer, conn);
+            } else {
+                this.unreliableConnections.set(conn.peer, conn);
+            }
+            console.log(`Connection established (${conn.label}) with:`, conn.peer);
         });
 
         conn.on('data', (data: any) => {
@@ -46,37 +58,63 @@ export class NetworkManager {
         });
 
         conn.on('close', () => {
-            this.connections.delete(conn.peer);
-            console.log('Connection closed with:', conn.peer);
+            if (conn.label === 'reliable') {
+                this.reliableConnections.delete(conn.peer);
+            } else {
+                this.unreliableConnections.delete(conn.peer);
+            }
+            console.log(`Connection closed (${conn.label}) with:`, conn.peer);
         });
 
         conn.on('error', (err) => {
-            console.error('Connection error with:', conn.peer, err);
-            this.connections.delete(conn.peer);
-        });
-    }
-
-    /**
-     * Sender en pakke til alle tilkoblede peers (hvis Host) 
-     * eller til Host (hvis Client)
-     */
-    public broadcast(packet: SyncPacket) {
-        const data = JSON.parse(JSON.stringify(packet)); // Enkel serialisering
-        this.connections.forEach(conn => {
-            if (conn.open) {
-                conn.send(data);
+            console.error(`Connection error (${conn.label}) with:`, conn.peer, err);
+            if (conn.label === 'reliable') {
+                this.reliableConnections.delete(conn.peer);
+            } else {
+                this.unreliableConnections.delete(conn.peer);
             }
         });
     }
 
     /**
-     * Sender til en spesifikk peer
+     * Broadcasts to all peers. Routes pakets automatically based on PacketType.
+     */
+    public broadcast(packet: SyncPacket) {
+        const isReliable = packet.t === PacketType.GAME_EVENT || packet.t === PacketType.GAME_STATE;
+        const targetMap = isReliable ? this.reliableConnections : this.unreliableConnections;
+
+        // PeerJS naturally serializes objects via JS internal cloning before WebRTC bridging.
+        // We removed the heavy JSON.stringify() to skip large V8 Garbage Collection pauses.
+        targetMap.forEach(conn => {
+            if (conn.open) {
+                conn.send(packet);
+            }
+        });
+    }
+
+    /**
+     * Sends to a specific peer over the correct channel.
      */
     public sendTo(peerId: string, packet: SyncPacket) {
-        const conn = this.connections.get(peerId);
+        const isReliable = packet.t === PacketType.GAME_EVENT || packet.t === PacketType.GAME_STATE;
+        const conn = isReliable ? this.reliableConnections.get(peerId) : this.unreliableConnections.get(peerId);
+
         if (conn && conn.open) {
             conn.send(packet);
         }
+    }
+
+    /**
+     * Sets an off-main-render-thread tick interval. 
+     * Ideal to prevent the networking engine from stuttering or throttling
+     * when the browser tab loses focus.
+     */
+    public setTickFunction(callback: () => void, intervalMs: number = 33) {
+        this.onTick = callback;
+        if (this.tickInterval) clearInterval(this.tickInterval);
+        this.tickInterval = setInterval(() => {
+            if (this.onTick) this.onTick();
+        }, intervalMs);
     }
 
     /** Safe public accessor for the local peer ID */
@@ -85,11 +123,15 @@ export class NetworkManager {
     }
 
     public getConnectedPeerCount(): number {
-        return this.connections.size;
+        // Reliable represents solid connection count securely
+        return this.reliableConnections.size;
     }
 
     public disconnect() {
-        this.connections.forEach(conn => conn.close());
-        this.connections.clear();
+        this.reliableConnections.forEach(conn => conn.close());
+        this.unreliableConnections.forEach(conn => conn.close());
+        this.reliableConnections.clear();
+        this.unreliableConnections.clear();
+        if (this.tickInterval) clearInterval(this.tickInterval);
     }
 }
