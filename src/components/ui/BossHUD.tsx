@@ -17,11 +17,11 @@ export const BossHUD: React.FC = () => {
             {isBossActive && (
                 <motion.div
                     key="boss-hud"
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: 20 }}
+                    initial={{ opacity: 0, y: 20, x: "-50%" }}
+                    animate={{ opacity: 1, y: 0, x: "-50%" }}
+                    exit={{ opacity: 0, y: 20, x: "-50%" }}
                     transition={{ duration: 0.4 }}
-                    className="absolute top-28 left-1/2 -translate-x-1/2 w-[480px] max-w-[90vw] pointer-events-none z-20"
+                    className="absolute top-28 left-1/2 w-[480px] max-w-[90vw] pointer-events-none z-20"
                 >
                     {/* Boss name */}
                     <div className="flex items-center justify-between mb-1 px-1">
@@ -37,7 +37,7 @@ export const BossHUD: React.FC = () => {
                             {bossName}
                         </span>
                         <span className="font-mono text-xs text-red-300/70 select-none">
-                            {bossHP} / {bossMaxHP}
+                            {Math.ceil(bossHP)} / {Math.ceil(bossMaxHP)}
                         </span>
                     </div>
 
