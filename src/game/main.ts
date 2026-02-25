@@ -1024,6 +1024,11 @@ class MainScene extends Phaser.Scene implements IMainScene {
         // Handle Attack (Left Click or Spacebar)
         const spacePressed = this.wasd?.SPACE?.isDown;
         if ((pointer.leftButtonDown() || spacePressed) && !blockPressed) {
+            const lastCd = this.registry.get('weaponCooldown');
+            if (lastCd && Date.now() < lastCd.timestamp + lastCd.duration) {
+                return;
+            }
+
             const currentWeapon = this.registry.get('currentWeapon');
             this.data.set('isAttacking', true);
 
@@ -1037,12 +1042,15 @@ class MainScene extends Phaser.Scene implements IMainScene {
             });
 
             if (currentWeapon === 'sword') {
+                const attackSpeedMult = this.registry.get('playerAttackSpeed') || 1;
+                const swordCooldown = 500 / attackSpeedMult;
+
                 const ATTACK_ANIMS = ['player-attack', 'player-attack-2'];
                 const idx = this.data.get('attackAnimIndex') as number;
                 const attackAnimKey = ATTACK_ANIMS[idx];
                 this.data.set('attackAnimIndex', (idx + 1) % ATTACK_ANIMS.length);
 
-                this.registry.set('weaponCooldown', { duration: 400, timestamp: Date.now() });
+                this.registry.set('weaponCooldown', { duration: swordCooldown, timestamp: Date.now() });
 
                 player.play(attackAnimKey);
                 this.events.emit('player-swing');
@@ -1062,13 +1070,8 @@ class MainScene extends Phaser.Scene implements IMainScene {
                     ts: Date.now()
                 });
 
-                const attackSpeedMult = this.registry.get('playerAttackSpeed') || 1;
-
-                // Adjust cooldown based on stats (faster attack speed = lower cooldown)
-                const cooldown = 500 / attackSpeedMult;
-
                 // Enable hitbox during middle of animation
-                this.time.delayedCall(Math.max(100, cooldown * 0.3), () => {
+                this.time.delayedCall(Math.max(100, swordCooldown * 0.3), () => {
                     this.attackHitbox.body!.setEnable(true);
                     this.time.delayedCall(100, () => {
                         this.attackHitbox.body!.setEnable(false);
@@ -1080,7 +1083,7 @@ class MainScene extends Phaser.Scene implements IMainScene {
                     player.play('player-idle');
                 });
             } else if (currentWeapon === 'bow') {
-                this.registry.set('weaponCooldown', { duration: 600, timestamp: Date.now() });
+                this.registry.set('weaponCooldown', { duration: this.stats.cooldown, timestamp: Date.now() });
                 player.play('player-bow');
 
                 // Spawn arrow during animation
