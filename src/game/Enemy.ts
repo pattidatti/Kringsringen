@@ -66,7 +66,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     }
 
     public reset(x: number, y: number, target: Phaser.GameObjects.Components.Transform, multiplier: number = 1.0, type: string = 'orc') {
-        this.id = (this as any).id || `${type}-${Phaser.Math.RND.uuid()}`;
+        this.id = `${type}-${Phaser.Math.RND.uuid()}`;
         this.setActive(true);
         this.setVisible(true);
         // Always re-enable physics on reset; setClientMode() will disable it again if needed

@@ -672,7 +672,7 @@ class MainScene extends Phaser.Scene implements IMainScene {
                         if (this.networkManager?.role === 'client') {
                             this.networkManager.broadcast({
                                 t: PacketType.GAME_EVENT,
-                                ev: { type: 'coin_collect', data: { amount: 1 } },
+                                ev: { type: 'coin_collect', data: { amount: 1, x: coin.x, y: coin.y } },
                                 ts: Date.now()
                             });
                         } else {
@@ -684,14 +684,26 @@ class MainScene extends Phaser.Scene implements IMainScene {
                 }
             }
         } else if (event.type === 'coin_collect') {
-            const { amount } = event.data;
+            const { amount, x, y } = event.data;
             // Host acts as authority on total gold
             if (this.networkManager?.role === 'host') {
                 this.stats.addCoins(amount);
-                // We could broadcast the new total, but for now just increment locally on all
             } else {
-                // Client receives this from Host (or another client broadcast)
+                // Client receives this from Host (via relay)
                 this.stats.addCoins(amount);
+            }
+
+            // Visually remove the coin at this position for everyone else
+            if (x !== undefined && y !== undefined) {
+                this.coins.children.iterate((c: any) => {
+                    if (c.active && Phaser.Math.Distance.Between(c.x, c.y, x, y) < 50) {
+                        c.setActive(false);
+                        c.setVisible(false);
+                        if (c.body) c.body.enable = false;
+                        return false;
+                    }
+                    return true;
+                });
             }
         } else if (event.type === 'level_complete') {
             const { nextLevel } = event.data;

@@ -178,7 +178,8 @@ export class WaveManager {
 
             for (let i = 0; i < coinCount; i++) {
                 let coin = this.scene.coins.get(ex, ey) as Coin;
-                if (!coin) coin = this.scene.coins.getFirstAlive() as Coin;
+                // Avoid using getFirstAlive which might steal a coin that's already on screen
+                if (!coin) continue;
 
                 if (coin) {
                     coin.spawn(ex, ey, player);
@@ -190,7 +191,7 @@ export class WaveManager {
                         // Sync coin collection
                         this.scene.networkManager?.broadcast({
                             t: PacketType.GAME_EVENT,
-                            ev: { type: 'coin_collect', data: { amount: 1 } },
+                            ev: { type: 'coin_collect', data: { amount: 1, x: ex, y: ey } },
                             ts: Date.now()
                         });
                     });
@@ -312,6 +313,13 @@ export class WaveManager {
                 if (hp <= 0) {
                     enemy.disable();
                     return;
+                }
+
+                // Ensure enemy is active if it was previously disabled in the pool
+                if (!enemy.active) {
+                    enemy.setActive(true);
+                    enemy.setVisible(true);
+                    if (enemy.body) enemy.body.enable = true;
                 }
 
                 enemy.setData('targetX', x);
