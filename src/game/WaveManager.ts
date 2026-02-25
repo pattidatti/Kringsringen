@@ -270,21 +270,25 @@ export class WaveManager {
             }
 
             if (enemy) {
+                // Position and animation driven purely by host
                 enemy.setPosition(p.x, p.y);
                 enemy.hp = p.hp;
                 enemy.setFlipX(p.flipX);
                 if (enemy.anims.currentAnim?.key !== p.anim && p.anim) {
                     enemy.play(p.anim);
                 }
+                // Ensure this is a passive puppet — no AI, no physics body, no damage
+                enemy.setClientMode(true);
             }
         });
 
+        // Use disable() (pool-safe) instead of destroy() to prevent pool exhaustion over time
+        const toRemove: any[] = [];
         this.scene.enemies.children.iterate((child: any) => {
-            if (child.active && !activeIds.has(child.id)) {
-                child.destroy();
-            }
+            if (child.active && !activeIds.has(child.id)) toRemove.push(child);
             return true;
         });
+        toRemove.forEach(e => (e as Enemy).disable());
     }
 
     private findEnemyById(id: string): Enemy | null {

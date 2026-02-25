@@ -7,7 +7,8 @@ import type { IMainScene } from './IMainScene';
 export class PlayerCombatManager {
     private scene: IMainScene;
     private isInvincible: boolean = false;
-    private _isKnockedBack: boolean = false;
+    /** Absolute timestamp (ms) after which knockback is considered over. Non-stacking. */
+    private _knockbackEndTime: number = 0;
     private invincibilityDuration: number = 1000;
     private pendingHPChange: number = 0;
 
@@ -19,7 +20,7 @@ export class PlayerCombatManager {
     }
 
     /** Whether the player is currently in knockback recovery */
-    get isKnockedBack(): boolean { return this._isKnockedBack; }
+    get isKnockedBack(): boolean { return Date.now() < this._knockbackEndTime; }
 
     /** Handle incoming damage to the player */
     takePlayerDamage(amount: number, srcX?: number, srcY?: number): void {
@@ -72,19 +73,14 @@ export class PlayerCombatManager {
         this.scene.poolManager.getDamageText(player.x, player.y - 40, actualDamage);
 
         if (!isBlocking) {
-            // Knockback
+            // Knockback — absolute timestamp, never stacks into a permanent freeze
             if (srcX !== undefined && srcY !== undefined) {
-                this._isKnockedBack = true;
+                this._knockbackEndTime = Date.now() + 200;
                 const angle = Phaser.Math.Angle.Between(srcX, srcY, player.x, player.y);
                 player.setVelocity(
                     Math.cos(angle) * this.scene.stats.knockback,
                     Math.sin(angle) * this.scene.stats.knockback
                 );
-
-                // End knockback after a short duration
-                this.scene.time.delayedCall(200, () => {
-                    this._isKnockedBack = false;
-                });
             }
 
             // I-Frames starts

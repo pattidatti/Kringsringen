@@ -83,6 +83,8 @@ class MainScene extends Phaser.Scene implements IMainScene {
     public networkManager?: NetworkManager;
     private remotePlayers: Map<string, Phaser.Physics.Arcade.Sprite> = new Map();
     private playerNicknames: Map<string, Phaser.GameObjects.Text> = new Map();
+    /** Cache of last-received packet per remote peer — used by Host to relay all positions */
+    private remotePlayerPackets: Map<string, PlayerPacket> = new Map();
     private lastSyncTime: number = 0;
 
     constructor() {
@@ -483,7 +485,9 @@ class MainScene extends Phaser.Scene implements IMainScene {
     }
 
     private updateRemotePlayer(p: any) {
-        if (p.id === this.networkManager?.['peer']?.id) return; // Skip self
+        // Use the registry peer ID (not private NetworkManager.peer) to skip ourselves
+        const myId = this.game.registry.get('networkConfig')?.peer.id;
+        if (p.id === myId) return;
 
         let remotePlayer = this.remotePlayers.get(p.id);
         if (!remotePlayer) {
@@ -508,6 +512,9 @@ class MainScene extends Phaser.Scene implements IMainScene {
             remotePlayer.play(p.anim);
         }
         remotePlayer.setFlipX(p.flipX);
+
+        // Cache latest packet so host can relay it to other clients
+        this.remotePlayerPackets.set(p.id, p);
 
         const label = this.playerNicknames.get(p.id);
         if (label) label.setPosition(p.x, p.y - 40);
@@ -750,6 +757,15 @@ class MainScene extends Phaser.Scene implements IMainScene {
         if ((pointer.leftButtonDown() || spacePressed) && !blockPressed) {
             const currentWeapon = this.registry.get('currentWeapon');
             this.data.set('isAttacking', true);
+
+            // Safety valve: if the animationcomplete event somehow never fires (e.g. missing
+            // animation key), this hard-clears isAttacking so movement can never be permanently locked.
+            this.time.delayedCall(1500, () => {
+                if (this.data.get('isAttacking')) {
+                    this.data.set('isAttacking', false);
+                    player.play('player-idle');
+                }
+            });
 
             if (currentWeapon === 'sword') {
                 const ATTACK_ANIMS = ['player-attack', 'player-attack-2'];
@@ -1016,10 +1032,9 @@ class MainScene extends Phaser.Scene implements IMainScene {
             };
 
             if (this.networkManager.role === 'host') {
-                // Host sends everything
-                const allPlayers = [playerPacket];
-                // For simplified logic, we trust individual player broadcasts for now
-                // but Host could rebroadcast others here.
+                // Host broadcasts its own position + all remote (client) positions
+                // so every client sees every other player.
+                const allPlayers: PlayerPacket[] = [playerPacket, ...Array.from(this.remotePlayerPackets.values())];
 
                 this.networkManager.broadcast({
                     t: PacketType.PLAYER_SYNC,

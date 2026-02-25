@@ -24,6 +24,8 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     protected originalSpeed: number = 100;
     private shadow: Phaser.GameObjects.Sprite | null = null;
     public id: string = "";
+    /** When true this enemy is a client-side puppet — no AI, no damage, no physics body active. */
+    private isClientMode: boolean = false;
 
     // Static Buffers for AI (GC Hardening)
     private static readonly NUM_RAYS = 8;
@@ -59,6 +61,8 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         this.id = (this as any).id || `${type}-${Phaser.Math.RND.uuid()}`;
         this.setActive(true);
         this.setVisible(true);
+        // Always re-enable physics on reset; setClientMode() will disable it again if needed
+        this.isClientMode = false;
         this.body!.enable = true;
         this.setPosition(x, y);
         this.setAlpha(1);
@@ -132,6 +136,14 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         if (!this.active) return;
 
         super.preUpdate(time, delta);
+
+        // CLIENT PUPPET MODE: only render shadow + HP bar, skip all AI and damage
+        if (this.isClientMode) {
+            if (this.shadow) this.shadow.setPosition(this.x, this.y + (this.height * this.scaleY * 0.3));
+            this.updateHPBar();
+            return;
+        }
+
         if (this.isDead || this.isPushingBack) return;
         if (!this.body) return;
 
@@ -387,12 +399,27 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         }
     }
 
-    private disable() {
+    /** Public so WaveManager (and other systems) can return this enemy to the pool without destroying it. */
+    public disable() {
         this.setActive(false);
         this.setVisible(false);
         if (this.body) this.body.enable = false;
         if (this.shadow) this.shadow.setVisible(false);
-        // Do not destroy, keep in pool
+        this.isClientMode = false;
+        // Do NOT call destroy() — keep in pool for reuse
+    }
+
+    /**
+     * Call with `true` on clients to make this a position-only puppet.
+     * The physics body is disabled so the enemy won't block the local player
+     * or emit damage events. The host is the sole authority.
+     */
+    public setClientMode(enabled: boolean) {
+        this.isClientMode = enabled;
+        if (this.body) {
+            // Disabling the body prevents arcade-physics collisions and overlap callbacks
+            this.body.enable = !enabled;
+        }
     }
 
     public pushback(sourceX: number, sourceY: number, force: number = 400) {

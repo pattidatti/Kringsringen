@@ -40,6 +40,15 @@ export function createAnimations(scene: Phaser.Scene): void {
         repeat: 0
     });
 
+    // Cast animation (used by frost + lightning). Reuses bow frames until a dedicated
+    // cast spritesheet is available. Must exist or animationcomplete never fires → isAttacking stuck.
+    scene.anims.create({
+        key: 'player-cast',
+        frames: scene.anims.generateFrameNumbers('player-full', { start: 36, end: 44 }),
+        frameRate: 18,  // Slightly faster than bow for a snappier feel
+        repeat: 0
+    });
+
     scene.anims.create({
         key: 'orc-walk',
         frames: scene.anims.generateFrameNumbers('orc-walk', { start: 0, end: 7 }),

@@ -29,9 +29,8 @@ export class NetworkManager {
 
     public connectToHost(hostPeerId: string) {
         if (this.role === 'client') {
-            const conn = this.peer.connect(hostPeerId, {
-                reliable: false // Vi vil ha lav latency for action-data
-            });
+            // Reliable mode (default) — ensures no silent packet drops under load
+            const conn = this.peer.connect(hostPeerId);
             this.handleConnection(conn);
         }
     }
@@ -78,6 +77,11 @@ export class NetworkManager {
         if (conn && conn.open) {
             conn.send(packet);
         }
+    }
+
+    /** Safe public accessor for the local peer ID */
+    public get peerId(): string {
+        return this.peer.id;
     }
 
     public getConnectedPeerCount(): number {
