@@ -167,6 +167,14 @@ export const GameOverOverlay: React.FC = () => {
                         placeholder="Skriv inn navn..."
                         value={playerName}
                         onChange={e => setPlayerName(e.target.value)}
+                        onKeyDown={e => {
+                            e.stopPropagation();
+                            e.nativeEvent.stopImmediatePropagation();
+                        }}
+                        onKeyUp={e => {
+                            e.stopPropagation();
+                            e.nativeEvent.stopImmediatePropagation();
+                        }}
                         disabled={submitting || submitted}
                         className="w-full bg-black/80 border-2 border-red-800/60 text-white font-cinzel text-base text-center px-4 py-3 rounded outline-none focus:border-red-500 placeholder:text-red-800 tracking-widest disabled:opacity-50 disabled:cursor-not-allowed"
                     />

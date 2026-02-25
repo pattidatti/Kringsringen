@@ -35,7 +35,13 @@
 - [x] Må bytte musikk hvert level. 
 
 
+- [ ] 
+
 # Bugs
+- [ ] Orkeboss ikke synlig for andre enn host. 
+- [ ] HP bar for alle andre enn host, er cracy stor, virker som å justere seg når de tar damage. 
+- [ ] Man må kunne resse folk etter et level er over, via boken og det koster masse penger. Øker i kostnad for hver gang man gjør det. 
+- [ ] Når spillere dør, skal de bli spøkelser, som kan plukke opp gull, men de kan ikke skade fiender. De er spectating. Monstere skal ikke angripe døde spillere. 
 - [ ] Når man skriver navn på death screen, får man ikke bruke alle bokstaver; WASD er blokket. 
 - [x] Generell dårlig pathing på fiender, de setter seg fast i alt mulig. 
 - [] Det er ikke regn på hele skjermen, det mangler litt på høyre side.
