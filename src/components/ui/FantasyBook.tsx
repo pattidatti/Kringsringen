@@ -4,9 +4,11 @@ import { FantasyButton } from './FantasyButton';
 import bookOpen from '../../assets/ui/fantasy/containers/book_open.png';
 import tabRed from '../../assets/ui/fantasy/tabs/red.png';
 import tabGreen from '../../assets/ui/fantasy/tabs/green.png';
+import tabYellow from '../../assets/ui/fantasy/tabs/yellow.png';
 import { UPGRADES, type UpgradeConfig, isItemSpriteIcon } from '../../config/upgrades';
 import { ItemIcon, type ItemIconKey } from './ItemIcon';
 import { useGameRegistry } from '../../hooks/useGameRegistry';
+import { SettingsContent } from './SettingsContent';
 // import { type FantasyTabVariant } from '../../types/fantasy-ui.generated';
 
 export type BookMode = 'view' | 'level_up' | 'shop';
@@ -27,11 +29,12 @@ interface FantasyBookProps {
     }
 }
 
-type TabKey = 'character' | 'upgrades';
+type TabKey = 'character' | 'upgrades' | 'settings';
 
 const TABS: Record<TabKey, { title: string; icon: string; color: string; locked?: boolean }> = {
     character: { title: 'Character', icon: tabRed, color: 'text-red-900' },
     upgrades: { title: 'Upgrades', icon: tabGreen, color: 'text-emerald-900' },
+    settings: { title: 'Settings', icon: tabYellow, color: 'text-amber-900' },
 };
 
 const CATEGORY_THEMES: Record<string, { primary: string; secondary: string; border: string; bg: string; text: string }> = {
@@ -398,47 +401,56 @@ export const FantasyBook: React.FC<FantasyBookProps> = React.memo(({
                             {/* Tabs */}
                             {renderTabButton('character', 15)}
                             {renderTabButton('upgrades', 30)}
+                            {renderTabButton('settings', 45)}
 
                             {/* Content Layer */}
                             <div className="absolute inset-0 grid grid-cols-2 p-[6%] gap-[4%] pt-[3%] pb-[8%] font-crimson text-slate-900 overflow-hidden">
-                                {/* Left Page: Main Content Area */}
-                                <div className="px-5 py-3 overflow-y-auto custom-scrollbar h-full pr-4 relative overflow-x-hidden">
-                                    {activeTab === 'character' && (
-                                        <>
-                                            <h2 className={`text-2xl font-bold mb-4 font-cinzel border-b-2 pb-2 ${TABS[activeTab].color} border-current opacity-80 sticky top-0 bg-[#e3dac9] z-10`}>
-                                                {TABS[activeTab].title}
-                                            </h2>
-                                            {renderStatusPage()}
-                                        </>
-                                    )}
-                                    {activeTab === 'upgrades' && renderMerchantCategories()}
-                                </div>
+                                {activeTab === 'settings' ? (
+                                    <div className="col-span-2 h-full">
+                                        <SettingsContent inBookContext={true} />
+                                    </div>
+                                ) : (
+                                    <>
+                                        {/* Left Page: Main Content Area */}
+                                        <div className="px-5 py-3 overflow-y-auto custom-scrollbar h-full pr-4 relative overflow-x-hidden">
+                                            {activeTab === 'character' && (
+                                                <>
+                                                    <h2 className={`text-2xl font-bold mb-4 font-cinzel border-b-2 pb-2 ${TABS[activeTab].color} border-current opacity-80 sticky top-0 bg-[#e3dac9] z-10`}>
+                                                        {TABS[activeTab].title}
+                                                    </h2>
+                                                    {renderStatusPage()}
+                                                </>
+                                            )}
+                                            {activeTab === 'upgrades' && renderMerchantCategories()}
+                                        </div>
 
-                                {/* Right Page: Supplemental / Notes / Controls / Merchant Items */}
-                                <div className="px-5 py-3 h-full flex flex-col justify-between relative overflow-x-hidden">
-                                    {activeTab === 'upgrades' && renderMerchantItems()}
+                                        {/* Right Page: Supplemental / Notes / Controls / Merchant Items */}
+                                        <div className="px-5 py-3 h-full flex flex-col justify-between relative overflow-x-hidden">
+                                            {activeTab === 'upgrades' && renderMerchantItems()}
 
-                                    {activeTab === 'character' && (
-                                        <>
-                                            <div className="space-y-4">
-                                                <h3 className="text-lg font-bold text-amber-900/70 font-cinzel border-b border-amber-900/10 pb-1">Notes</h3>
-                                                <div className="text-sm italic text-slate-600 font-crimson italic leading-relaxed opacity-80">
-                                                    {mode === 'shop' && "Ah, a customer! Standard exchange rates apply. No refunds on cursed items."}
-                                                    {mode === 'view' && "\"To defeat the darkness, one must first understand their own strength.\""}
-                                                </div>
-                                            </div>
+                                            {activeTab === 'character' && (
+                                                <>
+                                                    <div className="space-y-4">
+                                                        <h3 className="text-lg font-bold text-amber-900/70 font-cinzel border-b border-amber-900/10 pb-1">Notes</h3>
+                                                        <div className="text-sm italic text-slate-600 font-crimson italic leading-relaxed opacity-80">
+                                                            {mode === 'shop' && "Ah, a customer! Standard exchange rates apply. No refunds on cursed items."}
+                                                            {mode === 'view' && "\"To defeat the darkness, one must first understand their own strength.\""}
+                                                        </div>
+                                                    </div>
 
-                                            <div className="flex justify-end pt-4 border-t border-amber-900/10">
-                                                <FantasyButton
-                                                    variant="danger"
-                                                    onClick={onClose}
-                                                    className="scale-90 origin-bottom-right"
-                                                    label="Close Book"
-                                                />
-                                            </div>
-                                        </>
-                                    )}
-                                </div>
+                                                    <div className="flex justify-end pt-4 border-t border-amber-900/10">
+                                                        <FantasyButton
+                                                            variant="danger"
+                                                            onClick={onClose}
+                                                            className="scale-90 origin-bottom-right"
+                                                            label="Close Book"
+                                                        />
+                                                    </div>
+                                                </>
+                                            )}
+                                        </div>
+                                    </>
+                                )}
                             </div>
                         </div>
 

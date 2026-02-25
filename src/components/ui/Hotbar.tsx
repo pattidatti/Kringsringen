@@ -99,11 +99,11 @@ export const Hotbar: React.FC = React.memo(() => {
         <div className="flex items-end justify-center pb-2">
             <FantasyPanel
                 variant="wood"
-                scale={2}
-                contentPadding="px-3 py-2"
+                scale={1}
+                contentPadding="px-2 py-2"
                 style={{ filter: 'drop-shadow(0 -4px 8px rgba(0,0,0,0.6))' }}
             >
-                <div className="flex gap-2" role="tablist" aria-label="Weapon Selection">
+                <div className="flex gap-1" role="tablist" aria-label="Weapon Selection">
                     {WEAPON_SLOTS.map((slot) => {
                         const isRealWeapon = !slot.id.startsWith('wrapper_');
                         const isUnlocked = isRealWeapon && unlockedWeapons.includes(slot.id);
@@ -125,7 +125,7 @@ export const Hotbar: React.FC = React.memo(() => {
                                 )}
                             >
                                 {/* Slot dark recess */}
-                                <div className="absolute inset-1 bg-black/50 rounded-md" />
+                                <div className="absolute inset-x-0 inset-y-0.5 bg-black/50 rounded-md" />
 
                                 {/* Selector — active weapon only */}
                                 {isActive && (
@@ -159,7 +159,7 @@ export const Hotbar: React.FC = React.memo(() => {
                                 {slot.icon && isItemSpriteIcon(slot.icon) ? (
                                     <ItemIcon
                                         icon={slot.icon as ItemIconKey}
-                                        size="md"
+                                        fitSize={65}
                                         className={clsx(
                                             "relative z-20 transition-all duration-200",
                                             isActive ? "brightness-125" : "brightness-75"

@@ -19,6 +19,7 @@ export class WaveManager {
     private enemiesToSpawnInWave: number = 0;
     private enemiesAlive: number = 0;
     private isLevelActive: boolean = false;
+    private bgmPlaylist: string[] = [];
 
     private readonly LEVEL_CONFIG = [
         { waves: 2, enemiesPerWave: 6, multiplier: 1.0 },   // Level 1
@@ -39,9 +40,19 @@ export class WaveManager {
         this.scene.registry.set('gameLevel', this.currentLevel);
 
         // Music per level — boss music is handled separately in BossEnemy/spawnBoss
-        const bgmTracks = ['meadow_theme', 'exploration_theme', 'dragons_fury'];
-        const randomBGM = bgmTracks[Math.floor(Math.random() * bgmTracks.length)];
-        AudioManager.instance.playBGM(randomBGM);
+        if (this.bgmPlaylist.length === 0) {
+            const bgmTracks = [
+                'meadow_theme', 'exploration_theme', 'dragons_fury',
+                'pixel_rush_overture', 'glitch_in_the_forest', 'glitch_in_the_dungeon',
+                'glitch_in_the_catacombs', 'glitch_in_the_heavens'
+            ];
+            this.bgmPlaylist = Phaser.Utils.Array.Shuffle(bgmTracks);
+        }
+
+        const nextBGM = this.bgmPlaylist.pop();
+        if (nextBGM) {
+            AudioManager.instance.playBGM(nextBGM);
+        }
 
         this.startWave();
     }

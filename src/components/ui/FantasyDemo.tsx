@@ -6,11 +6,22 @@ import { FantasyBook } from './FantasyBook';
 import { UI_ATLAS } from '../../config/ui-atlas';
 
 const ITEM_ICONS_URL = import.meta.env.BASE_URL + 'assets/ui/fantasy/UI_Item_Icons.png';
+const UI_ALL_URL = import.meta.env.BASE_URL + 'assets/ui/UI_ALL.png';
 
 // Icons are 32×32px → 16 columns in a 512px-wide sheet
 const CELL = 32;
-const GRID_COLS = 16;
-const GRID_ROWS = 28; // covers full sheet
+
+type SpriteSheetInfo = {
+    name: string;
+    url: string;
+    cols: number;
+    rows: number;
+};
+
+const SPRITE_SHEETS: SpriteSheetInfo[] = [
+    { name: 'UI_Item_Icons', url: ITEM_ICONS_URL, cols: 16, rows: 28 },
+    { name: 'UI_ALL', url: UI_ALL_URL, cols: 64, rows: 81 },
+];
 
 // ─── Named icon list ──────────────────────────────────────────────────────────
 const ItemIconNamedList: React.FC = () => {
@@ -59,6 +70,9 @@ type CellPos = { col: number; row: number };
 
 const ItemIconDebugGrid: React.FC = () => {
     const [zoom, setZoom] = useState(2); // display scale: 1×, 2×, 3×
+    const [sheetIdx, setSheetIdx] = useState(0);
+
+    const activeSheet = SPRITE_SHEETS[sheetIdx];
     const display = CELL * zoom;
 
     const [dragStart, setDragStart] = useState<CellPos | null>(null);
@@ -93,26 +107,46 @@ const ItemIconDebugGrid: React.FC = () => {
         <div className="flex flex-col gap-4" onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp}>
 
             {/* Controls */}
-            <div className="flex items-center gap-6 flex-wrap">
-                <div className="flex items-center gap-3">
-                    <span className="text-base text-slate-300">Zoom:</span>
-                    {[1, 2, 3, 4].map(z => (
+            <div className="flex flex-col gap-4">
+                <div className="flex items-center gap-3 flex-wrap">
+                    <span className="text-base text-slate-300">Sprite:</span>
+                    {SPRITE_SHEETS.map((sheet, idx) => (
                         <button
-                            key={z}
-                            onClick={() => setZoom(z)}
-                            className={`px-3 py-1 rounded font-mono text-base border transition-colors ${
-                                zoom === z
-                                    ? 'bg-amber-500 text-black border-amber-400 font-bold'
-                                    : 'bg-slate-700 text-slate-200 border-slate-500 hover:border-amber-400'
-                            }`}
+                            key={sheet.name}
+                            onClick={() => {
+                                setSheetIdx(idx);
+                                setDragStart(null);
+                                setDragEnd(null);
+                            }}
+                            className={`px-3 py-1 rounded font-mono text-base border transition-colors ${sheetIdx === idx
+                                ? 'bg-amber-500 text-black border-amber-400 font-bold'
+                                : 'bg-slate-700 text-slate-200 border-slate-500 hover:border-amber-400'
+                                }`}
                         >
-                            {z}×
+                            {sheet.name}
                         </button>
                     ))}
                 </div>
-                <span className="text-sm text-slate-500">
-                    Cellestr: {display}×{display}px &nbsp;|&nbsp; Kvar ikon = 1 celle ({CELL}×{CELL}px)
-                </span>
+                <div className="flex items-center gap-6 flex-wrap">
+                    <div className="flex items-center gap-3">
+                        <span className="text-base text-slate-300">Zoom:</span>
+                        {[1, 2, 3, 4].map(z => (
+                            <button
+                                key={z}
+                                onClick={() => setZoom(z)}
+                                className={`px-3 py-1 rounded font-mono text-base border transition-colors ${zoom === z
+                                    ? 'bg-amber-500 text-black border-amber-400 font-bold'
+                                    : 'bg-slate-700 text-slate-200 border-slate-500 hover:border-amber-400'
+                                    }`}
+                            >
+                                {z}×
+                            </button>
+                        ))}
+                    </div>
+                    <span className="text-sm text-slate-500">
+                        Cellestr: {display}×{display}px &nbsp;|&nbsp; Kvar ikon = 1 celle ({CELL}×{CELL}px)
+                    </span>
+                </div>
             </div>
 
             {/* Sticky readout */}
@@ -136,7 +170,7 @@ const ItemIconDebugGrid: React.FC = () => {
                             <div style={{
                                 width: selW,
                                 height: selH,
-                                backgroundImage: `url(${ITEM_ICONS_URL})`,
+                                backgroundImage: `url(${activeSheet.url})`,
                                 backgroundPosition: `-${selX}px -${selY}px`,
                                 backgroundRepeat: 'no-repeat',
                                 backgroundSize: 'auto',
@@ -182,11 +216,11 @@ const ItemIconDebugGrid: React.FC = () => {
 
             {/* Grid */}
             <div
-                className="overflow-auto border border-slate-600 rounded-lg bg-slate-950"
-                style={{ maxHeight: '72vh', cursor: 'crosshair', userSelect: 'none' }}
+                className="overflow-x-auto border border-slate-600 rounded-lg bg-slate-950"
+                style={{ cursor: 'crosshair', userSelect: 'none' }}
             >
                 <div style={{ display: 'inline-block' }}>
-                    {Array.from({ length: GRID_ROWS }, (_, row) => (
+                    {Array.from({ length: activeSheet.rows }, (_, row) => (
                         <div key={row} style={{ display: 'flex', alignItems: 'center' }}>
                             {/* Y-label */}
                             <div style={{
@@ -204,10 +238,10 @@ const ItemIconDebugGrid: React.FC = () => {
                                 {row * CELL}
                             </div>
 
-                            {Array.from({ length: GRID_COLS }, (_, col) => {
+                            {Array.from({ length: activeSheet.cols }, (_, col) => {
                                 const inSel = sel
-                                    ? col >= sel.col && col < sel.col + sel.cols
-                                      && row >= sel.row && row < sel.row + sel.rows
+                                    ? col >= sel.col && (sel.col + sel.cols) > col
+                                    && row >= sel.row && (sel.row + sel.rows) > row
                                     : false;
 
                                 return (
@@ -230,7 +264,7 @@ const ItemIconDebugGrid: React.FC = () => {
                                         <div style={{
                                             width: CELL,
                                             height: CELL,
-                                            backgroundImage: `url(${ITEM_ICONS_URL})`,
+                                            backgroundImage: `url(${activeSheet.url})`,
                                             backgroundPosition: `-${col * CELL}px -${row * CELL}px`,
                                             backgroundRepeat: 'no-repeat',
                                             backgroundSize: 'auto',

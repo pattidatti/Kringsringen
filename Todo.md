@@ -19,7 +19,7 @@
 - Lighting ser fremdeles ikke helt bra ut. 
 
 # musikk
-- Må bytte musikk hvert level. 
+- [x] Må bytte musikk hvert level. 
 
 
 # Bugs

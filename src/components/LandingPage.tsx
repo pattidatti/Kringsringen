@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FantasyButton } from './ui/FantasyButton';
 import { HighscoresModal } from './ui/HighscoresModal';
+import { SettingsModal } from './ui/SettingsModal';
 import { OnboardingTutorial } from './ui/OnboardingTutorial';
 import { SaveManager } from '../game/SaveManager';
 import '../styles/pixel-ui.css';
@@ -11,8 +12,8 @@ interface LandingPageProps {
 }
 
 const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
-    const [activeToast, setActiveToast] = useState<string | null>(null);
     const [showHighscores, setShowHighscores] = useState(false);
+    const [showSettings, setShowSettings] = useState(false);
     const [showTutorial, setShowTutorial] = useState(false);
     const audioRef = useRef<HTMLAudioElement | null>(null);
 
@@ -21,7 +22,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
         if (!audio) return;
 
         const tryPlay = () => {
-            audio.play().catch(() => {/* autoplay blocked, ignore */});
+            audio.play().catch(() => {/* autoplay blocked, ignore */ });
             document.removeEventListener('mousedown', tryPlay);
             document.removeEventListener('keydown', tryPlay);
         };
@@ -57,11 +58,6 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
         } else {
             setShowTutorial(true);
         }
-    };
-
-    const showToast = (label: string) => {
-        setActiveToast(label);
-        setTimeout(() => setActiveToast(null), 2000);
     };
 
     return (
@@ -123,21 +119,21 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
                 transition={{ duration: 0.6, ease: 'easeOut', delay: 0.2 }}
             >
                 <FantasyButton
-                    label="Start Game"
+                    label="Start Spill"
                     variant="primary"
                     onClick={handleStart}
                     className="w-64 text-xl !text-black [text-shadow:none]"
                 />
                 <FantasyButton
-                    label="Highscore"
+                    label="Høyeste Poengsum"
                     variant="secondary"
                     onClick={() => setShowHighscores(true)}
                     className="w-64 text-xl !text-black [text-shadow:none]"
                 />
                 <FantasyButton
-                    label="Settings"
+                    label="Innstillinger"
                     variant="secondary"
-                    onClick={() => showToast('Settings')}
+                    onClick={() => setShowSettings(true)}
                     className="w-64 text-xl !text-black [text-shadow:none]"
                 />
             </motion.div>
@@ -148,6 +144,12 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
                 onClose={() => setShowHighscores(false)}
             />
 
+            {/* Settings Modal */}
+            <SettingsModal
+                isOpen={showSettings}
+                onClose={() => setShowSettings(false)}
+            />
+
             {/* Onboarding Tutorial */}
             <AnimatePresence>
                 {showTutorial && (
@@ -155,21 +157,6 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
                 )}
             </AnimatePresence>
 
-            {/* Coming Soon toast */}
-            <AnimatePresence>
-                {activeToast && (
-                    <motion.div
-                        key={activeToast}
-                        className="absolute bottom-10 left-1/2 -translate-x-1/2 font-cinzel text-amber-200 text-sm tracking-widest uppercase bg-black/60 px-6 py-2 rounded"
-                        initial={{ opacity: 0, y: 8 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: 8 }}
-                        transition={{ duration: 0.25 }}
-                    >
-                        {activeToast} — Kommer snart
-                    </motion.div>
-                )}
-            </AnimatePresence>
         </div>
     );
 };
