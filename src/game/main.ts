@@ -533,7 +533,7 @@ class MainScene extends Phaser.Scene implements IMainScene {
             case PacketType.ENEMY_SYNC:
                 // Only clients receive this from host
                 if (this.networkManager?.role === 'client' && packet.es) {
-                    this.waves.syncEnemies(packet.es);
+                    this.waves.syncEnemies(packet.es, packet.ts);
                 }
                 break;
             case PacketType.GAME_EVENT:

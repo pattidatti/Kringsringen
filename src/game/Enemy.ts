@@ -2,6 +2,8 @@ import Phaser from 'phaser';
 import { ENEMY_TYPES, type EnemyConfig } from '../config/enemies';
 import { GAME_CONFIG, type EnemyType } from '../config/GameConfig';
 import type { IMainScene } from './IMainScene';
+import { JitterBuffer } from '../network/JitterBuffer';
+import type { PackedEnemy } from '../network/SyncSchemas';
 
 export class Enemy extends Phaser.Physics.Arcade.Sprite {
     private targetStart: Phaser.GameObjects.Components.Transform; // Renamed to avoid confusion with internal target
@@ -29,6 +31,9 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 
     /** History buffer for Lag Compensation (Host only). Stores [timestamp, x, y] tuples. */
     public positionHistory: [number, number, number][] = [];
+
+    /** Jitter buffer for smooth interpolation (Client only). */
+    private jitterBuffer: JitterBuffer<PackedEnemy> | null = null;
 
     // Static Buffers for AI (GC Hardening)
     private static readonly NUM_RAYS = 8;
@@ -143,21 +148,53 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 
         // CLIENT PUPPET MODE: only render shadow + HP bar, skip all AI and damage
         if (this.isClientMode) {
-            const tx = this.getData('targetX');
-            const ty = this.getData('targetY');
+            if (this.jitterBuffer) {
+                const renderTime = (this.scene as any).networkManager ? (this.scene as any).networkManager.getServerTime() - 100 : Date.now();
+                const sample = this.jitterBuffer.sample(renderTime);
 
-            if (tx !== undefined && ty !== undefined) {
-                const dx = tx - this.x;
-                const dy = ty - this.y;
+                if (sample) {
+                    const pPrev = sample.prev.state;
+                    const pNext = sample.next.state;
+                    const f = sample.factor;
 
-                // Snap if too far or newly spawned
-                if (Math.abs(dx) > 150 || Math.abs(dy) > 150) {
-                    this.setPosition(tx, ty);
+                    const pRx = pPrev[1];
+                    const pRy = pPrev[2];
+                    const nRx = pNext[1];
+                    const nRy = pNext[2];
+
+                    // Snap immediately if teleporting long distances
+                    if (Math.abs(pRx - nRx) > 150 || Math.abs(pRy - nRy) > 150) {
+                        this.setPosition(pNext[1], pNext[2]);
+                    } else {
+                        // Smoothly interpolate between the two network states inside the jitter buffer
+                        const x = pRx + (nRx - pRx) * f;
+                        const y = pRy + (nRy - pRy) * f;
+                        this.setPosition(x, y);
+                    }
+
+                    const activeState = f > 0.5 ? pNext : pPrev;
+                    const anim = activeState[4];
+                    const flipX = activeState[5];
+
+                    if (anim && this.anims.currentAnim?.key !== anim) {
+                        this.play(anim);
+                    }
+                    this.setFlipX(flipX === 1);
                 } else {
-                    // Smooth lerp: close the distance over approx 40ms.
-                    const moveFactor = Math.min(1, delta / 40);
-                    this.x += dx * moveFactor;
-                    this.y += dy * moveFactor;
+                    // Fallback interpolation if no buffer bounds exist yet
+                    const tx = this.getData('targetX');
+                    const ty = this.getData('targetY');
+                    if (tx !== undefined && ty !== undefined) {
+                        const dx = tx - this.x;
+                        const dy = ty - this.y;
+                        if (Math.abs(dx) > 150 || Math.abs(dy) > 150) {
+                            this.setPosition(tx, ty);
+                        } else {
+                            const moveFactor = Math.min(1, delta / 40);
+                            this.x += dx * moveFactor;
+                            this.y += dy * moveFactor;
+                        }
+                    }
                 }
             }
 
@@ -453,6 +490,14 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
             // Disabling the body prevents arcade-physics collisions and overlap callbacks
             this.body.enable = !enabled;
         }
+        if (enabled && !this.jitterBuffer) {
+            this.jitterBuffer = new JitterBuffer<PackedEnemy>(30);
+        }
+    }
+
+    public pushState(ts: number, packet: PackedEnemy) {
+        if (!this.jitterBuffer) return;
+        this.jitterBuffer.push(ts, packet);
     }
 
     public pushback(sourceX: number, sourceY: number, force: number = 400) {

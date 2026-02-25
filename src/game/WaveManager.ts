@@ -240,56 +240,61 @@ export class WaveManager {
             }
         }
     }
+    private lastEnemyStates: Map<string, string> = new Map();
+    private updateTick: number = 0;
+
     public getEnemySyncData(): PackedEnemy[] {
         const data: PackedEnemy[] = [];
-        this.scene.enemies.children.iterate((child: any) => {
-            if (child.active && !child.isDead) {
-                data.push([
-                    child.id || child.name,
-                    Math.round(child.x),
-                    Math.round(child.y),
-                    child.hp,
-                    child.anims.currentAnim?.key || '',
-                    child.flipX ? 1 : 0
-                ]);
-            }
-            return true;
-        });
+        this.updateTick++;
+        const forceFullSync = this.updateTick % 20 === 0;
 
-        // Also sync boss if active
-        this.scene.bossGroup.children.iterate((boss: any) => {
-            if (boss.active && !boss.isDead) {
-                data.push([
-                    'boss',
-                    Math.round(boss.x),
-                    Math.round(boss.y),
-                    boss.hp,
-                    boss.anims.currentAnim?.key || '',
-                    boss.flipX ? 1 : 0
-                ]);
+        const processEnemy = (child: any, type: string) => {
+            const id = child.id || child.name || type;
+            if (child.active && !child.isDead) {
+                const rx = Math.round(child.x);
+                const ry = Math.round(child.y);
+                const hp = child.hp;
+                const anim = child.anims.currentAnim?.key || '';
+                const flipX = child.flipX ? 1 : 0;
+
+                const stateStr = `${rx},${ry},${hp},${anim},${flipX}`;
+                const lastState = this.lastEnemyStates.get(id);
+
+                if (forceFullSync || lastState !== stateStr) {
+                    this.lastEnemyStates.set(id, stateStr);
+                    data.push([id, rx, ry, hp, anim, flipX]);
+                }
+            } else if (this.lastEnemyStates.has(id)) {
+                // He just died or deactivated! Tell clients this HP is 0, so they can destroy him
+                this.lastEnemyStates.delete(id);
+                data.push([id, Math.round(child.x), Math.round(child.y), 0, '', 0]);
             }
-            return true;
-        });
+        };
+
+        this.scene.enemies.children.iterate((child: any) => { processEnemy(child, 'enemy'); return true; });
+        this.scene.bossGroup.children.iterate((boss: any) => { processEnemy(boss, 'boss'); return true; });
 
         return data;
     }
 
-    public syncEnemies(packets: PackedEnemy[]): void {
+    public syncEnemies(packets: PackedEnemy[], timestamp: number): void {
         const player = this.scene.data.get('player') as Phaser.Physics.Arcade.Sprite;
-        const activeIds = new Set(packets.map(p => p[0]));
 
+        // We do NOT disable missing enemies anymore because of Delta Compression.
+        // Enemies are only disabled when an explicit packet with hp <= 0 is received.
         packets.forEach(p => {
             const [id, x, y, hp, anim, flipX] = p;
             let enemy: any = null;
+
             if (id === 'boss') {
                 enemy = this.scene.bossGroup.getFirstAlive();
-                if (!enemy) {
+                if (!enemy && hp > 0) {
                     const bossIdx = this.scene.registry.get('bossComingUp') ?? 0;
                     this.scene.events.emit('start-boss', bossIdx);
                 }
             } else {
                 enemy = this.findEnemyById(id);
-                if (!enemy) {
+                if (!enemy && hp > 0) {
                     let type = 'orc';
                     if (anim.includes('slime')) type = 'slime';
                     if (anim.includes('skeleton')) type = 'skeleton';
@@ -304,26 +309,20 @@ export class WaveManager {
             }
 
             if (enemy) {
+                if (hp <= 0) {
+                    enemy.disable();
+                    return;
+                }
+
                 enemy.setData('targetX', x);
                 enemy.setData('targetY', y);
-                // Also update real pos initially if it's super far (Enemy.ts handles it anyway, but safe to do)
-
                 enemy.hp = hp;
                 enemy.setFlipX(flipX === 1);
-                if (enemy.anims.currentAnim?.key !== anim && anim) {
-                    enemy.play(anim);
-                }
+
                 if (enemy.setClientMode) enemy.setClientMode(true);
+                if (enemy.pushState) enemy.pushState(timestamp, p);
             }
         });
-
-        // Use disable() (pool-safe) instead of destroy() to prevent pool exhaustion over time
-        const toRemove: any[] = [];
-        this.scene.enemies.children.iterate((child: any) => {
-            if (child.active && !activeIds.has(child.id)) toRemove.push(child);
-            return true;
-        });
-        toRemove.forEach(e => (e as Enemy).disable());
     }
 
     public findEnemyById(id: string): Enemy | null {

@@ -12,6 +12,7 @@ export class NetworkManager {
     public timeOffset: number = 0;
     private pingInterval: ReturnType<typeof setInterval> | null = null;
     private tickInterval: ReturnType<typeof setInterval> | null = null;
+    private tickWorker: Worker | null = null;
     private onTick: (() => void) | null = null;
 
     constructor(
@@ -177,10 +178,37 @@ export class NetworkManager {
      */
     public setTickFunction(callback: () => void, intervalMs: number = 33) {
         this.onTick = callback;
-        if (this.tickInterval) clearInterval(this.tickInterval);
-        this.tickInterval = setInterval(() => {
-            if (this.onTick) this.onTick();
-        }, intervalMs);
+        if (this.tickInterval) {
+            clearInterval(this.tickInterval as any);
+            this.tickInterval = null;
+        }
+        if (this.tickWorker) {
+            this.tickWorker.terminate();
+        }
+
+        try {
+            const workerCode = `
+                let intervalId = null;
+                self.onmessage = function(e) {
+                    if (e.data.type === 'start') {
+                        intervalId = setInterval(() => self.postMessage('tick'), e.data.interval);
+                    } else if (e.data.type === 'stop') {
+                        clearInterval(intervalId);
+                    }
+                };
+            `;
+            const blob = new Blob([workerCode], { type: 'application/javascript' });
+            this.tickWorker = new Worker(URL.createObjectURL(blob));
+            this.tickWorker.onmessage = () => {
+                if (this.onTick) this.onTick();
+            };
+            this.tickWorker.postMessage({ type: 'start', interval: intervalMs });
+        } catch (e) {
+            console.warn("Worker creation failed, falling back to setInterval", e);
+            this.tickInterval = setInterval(() => {
+                if (this.onTick) this.onTick();
+            }, intervalMs);
+        }
     }
 
     /** Safe public accessor for the local peer ID */
@@ -206,7 +234,11 @@ export class NetworkManager {
         this.unreliableConnections.forEach(conn => conn.close());
         this.reliableConnections.clear();
         this.unreliableConnections.clear();
-        if (this.tickInterval) clearInterval(this.tickInterval);
-        if (this.pingInterval) clearInterval(this.pingInterval);
+        if (this.tickInterval) clearInterval(this.tickInterval as unknown as number);
+        if (this.tickWorker) {
+            this.tickWorker.terminate();
+            this.tickWorker = null;
+        }
+        if (this.pingInterval) clearInterval(this.pingInterval as unknown as number);
     }
 }
