@@ -4,17 +4,21 @@ import { FantasyButton } from './ui/FantasyButton';
 import { HighscoresModal } from './ui/HighscoresModal';
 import { SettingsModal } from './ui/SettingsModal';
 import { OnboardingTutorial } from './ui/OnboardingTutorial';
+import { MultiplayerLobby } from './ui/MultiplayerLobby';
 import { SaveManager } from '../game/SaveManager';
+import Peer from 'peerjs';
 import '../styles/pixel-ui.css';
 
 interface LandingPageProps {
     onStart: () => void;
+    onStartMP: (role: 'host' | 'client', roomCode: string, peer: Peer, nickname: string) => void;
 }
 
-const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
+const LandingPage: React.FC<LandingPageProps> = ({ onStart, onStartMP }) => {
     const [showHighscores, setShowHighscores] = useState(false);
     const [showSettings, setShowSettings] = useState(false);
     const [showTutorial, setShowTutorial] = useState(false);
+    const [showMPLobby, setShowMPLobby] = useState(false);
     const audioRef = useRef<HTMLAudioElement | null>(null);
 
     useEffect(() => {
@@ -136,6 +140,12 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
                     onClick={() => setShowSettings(true)}
                     className="w-64 text-xl !text-black [text-shadow:none]"
                 />
+                <FantasyButton
+                    label="Multiplayer"
+                    variant="secondary"
+                    onClick={() => setShowMPLobby(true)}
+                    className="w-64 text-xl !text-black [text-shadow:none] ring-2 ring-amber-500/50"
+                />
             </motion.div>
 
             {/* Highscores Modal */}
@@ -148,6 +158,16 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
             <SettingsModal
                 isOpen={showSettings}
                 onClose={() => setShowSettings(false)}
+            />
+
+            {/* Multiplayer Lobby */}
+            <MultiplayerLobby
+                isOpen={showMPLobby}
+                onClose={() => setShowMPLobby(false)}
+                onStartGame={(role, code, peer, nick) => {
+                    setShowMPLobby(false);
+                    onStartMP(role, code, peer, nick);
+                }}
             />
 
             {/* Onboarding Tutorial */}

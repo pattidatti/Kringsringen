@@ -3,6 +3,7 @@ import type { ObjectPoolManager } from './ObjectPoolManager';
 import type { PlayerStatsManager } from './PlayerStatsManager';
 import type { PlayerCombatManager } from './PlayerCombatManager';
 import type { WaveManager } from './WaveManager';
+import type { NetworkManager } from '../network/NetworkManager';
 
 /**
  * Lightweight interface for MainScene.
@@ -19,4 +20,5 @@ export interface IMainScene extends Phaser.Scene {
     combat: PlayerCombatManager;
     waves: WaveManager;
     deathSparkEmitter: Phaser.GameObjects.Particles.ParticleEmitter;
+    networkManager?: NetworkManager;
 }

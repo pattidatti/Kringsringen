@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { createGame } from '../game/main';
 import '../styles/medieval-ui.css';
 import { GameOverOverlay } from './ui/GameOverOverlay';
@@ -10,8 +10,13 @@ import { BossSplashScreen } from './ui/BossSplashScreen';
 import { BossHUD } from './ui/BossHUD';
 
 import { setGameInstance } from '../hooks/useGameRegistry';
+import type { NetworkConfig } from '../App';
 
-export const GameContainer = () => {
+interface GameContainerProps {
+    networkConfig?: NetworkConfig | null;
+}
+
+export const GameContainer: React.FC<GameContainerProps> = ({ networkConfig }) => {
     const gameContainerRef = useRef<HTMLDivElement>(null);
     const gameInstanceRef = useRef<Phaser.Game | null>(null);
 
@@ -65,7 +70,7 @@ export const GameContainer = () => {
 
     useEffect(() => {
         if (gameContainerRef.current && !gameInstanceRef.current) {
-            const game = createGame(gameContainerRef.current.id);
+            const game = createGame(gameContainerRef.current.id, networkConfig);
             gameInstanceRef.current = game;
 
             // Initialize the singleton for hooks

@@ -23,6 +23,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     private slowTimer: Phaser.Time.TimerEvent | null = null;
     protected originalSpeed: number = 100;
     private shadow: Phaser.GameObjects.Sprite | null = null;
+    public id: string = "";
 
     // Static Buffers for AI (GC Hardening)
     private static readonly NUM_RAYS = 8;
@@ -55,6 +56,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     }
 
     public reset(x: number, y: number, target: Phaser.GameObjects.Components.Transform, multiplier: number = 1.0, type: string = 'orc') {
+        this.id = (this as any).id || `${type}-${Phaser.Math.RND.uuid()}`;
         this.setActive(true);
         this.setVisible(true);
         this.body!.enable = true;

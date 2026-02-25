@@ -35,7 +35,7 @@ const firebaseConfig = {
 let app: any = null;
 let database: any = null;
 
-function initializeFirebase() {
+export function initializeFirebase() {
   if (!app) {
     try {
       app = initializeApp(firebaseConfig);
@@ -189,7 +189,7 @@ export class HighscoreManager {
       return unsubscribe;
     } catch (error) {
       console.error('Error setting up subscription:', error);
-      return () => {};
+      return () => { };
     }
   }
 

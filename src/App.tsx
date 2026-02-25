@@ -8,12 +8,36 @@ import { FantasyDebug } from './components/dev/FantasyDebug'
 import './index.css'
 import './styles/pixel-ui.css'
 
+import Peer from 'peerjs'
+
+export interface NetworkConfig {
+  role: 'host' | 'client';
+  roomCode: string;
+  peer: Peer;
+  nickname: string;
+  hostPeerId?: string; // Påkrevd for klienter
+}
+
 function App() {
   const [showLanding, setShowLanding] = useState(true);
   const [showDemo, setShowDemo] = useState(false);
+  const [networkConfig, setNetworkConfig] = useState<NetworkConfig | null>(null);
+
+  const handleStartMP = (role: 'host' | 'client', roomCode: string, peer: Peer, nickname: string, hostPeerId?: string) => {
+    setNetworkConfig({ role, roomCode, peer, nickname, hostPeerId });
+    setShowLanding(false);
+  };
 
   if (showLanding) {
-    return <LandingPage onStart={() => setShowLanding(false)} />;
+    return (
+      <LandingPage
+        onStart={() => {
+          setNetworkConfig(null);
+          setShowLanding(false);
+        }}
+        onStartMP={handleStartMP}
+      />
+    );
   }
 
   return (
@@ -29,7 +53,7 @@ function App() {
 
       {showDemo ? (
         window.location.hash === '#debug' ? <FantasyDebug /> : <FantasyDemo />
-      ) : <GameContainer />}
+      ) : <GameContainer networkConfig={networkConfig} />}
     </div>
   )
 }

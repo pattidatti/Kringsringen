@@ -1,9 +1,11 @@
 import Phaser from 'phaser';
 import { Enemy } from './Enemy';
+import type { EnemyPacket } from '../network/SyncSchemas';
 import { Coin } from './Coin';
 import { SaveManager } from './SaveManager';
 import { GAME_CONFIG } from '../config/GameConfig';
 import { AudioManager } from './AudioManager';
+import { PacketType } from '../network/SyncSchemas';
 import type { IMainScene } from './IMainScene';
 import { getBossForLevel } from '../config/bosses';
 
@@ -33,13 +35,21 @@ export class WaveManager {
         this.scene = scene;
     }
 
+    private getPlayerCount(): number {
+        const isMultiplayer = this.scene.registry.get('isMultiplayer');
+        if (!isMultiplayer) return 1;
+
+        // Count remote players + local player
+        return (this.scene as any).remotePlayers?.size + 1 || 1;
+    }
+
     startLevel(level: number): void {
         this.currentLevel = level;
         this.currentWave = 1;
         this.isLevelActive = true;
         this.scene.registry.set('gameLevel', this.currentLevel);
 
-        // Music per level — boss music is handled separately in BossEnemy/spawnBoss
+        // Music per level
         if (this.bgmPlaylist.length === 0) {
             const bgmTracks = [
                 'meadow_theme', 'exploration_theme', 'dragons_fury',
@@ -58,8 +68,11 @@ export class WaveManager {
     }
 
     private startWave(): void {
+        const playerCount = this.getPlayerCount();
         const config = this.LEVEL_CONFIG[Math.min(this.currentLevel - 1, this.LEVEL_CONFIG.length - 1)];
-        this.enemiesToSpawnInWave = config.enemiesPerWave;
+
+        // Scaling: +25% more enemies per extra player
+        this.enemiesToSpawnInWave = Math.round(config.enemiesPerWave * (1 + (playerCount - 1) * 0.25));
 
         // Sync to registry
         this.scene.registry.set('currentWave', this.currentWave);
@@ -90,13 +103,16 @@ export class WaveManager {
             onComplete: () => topText.destroy()
         });
 
-        // Start spawning
-        this.scene.time.addEvent({
-            delay: GAME_CONFIG.WAVES.SPAWN_DELAY,
-            callback: this.spawnEnemyInWave,
-            callbackScope: this,
-            repeat: this.enemiesToSpawnInWave - 1
-        });
+        // START SPAWNING (Only if Host or Single Player)
+        const isClient = this.scene.registry.get('networkRole') === 'client';
+        if (!isClient) {
+            this.scene.time.addEvent({
+                delay: GAME_CONFIG.WAVES.SPAWN_DELAY,
+                callback: this.spawnEnemyInWave,
+                callbackScope: this,
+                repeat: this.enemiesToSpawnInWave - 1
+            });
+        }
     }
 
     private spawnEnemyInWave(): void {
@@ -114,60 +130,53 @@ export class WaveManager {
 
         const player = this.scene.data.get('player') as Phaser.Physics.Arcade.Sprite;
         const config = this.LEVEL_CONFIG[Math.min(this.currentLevel - 1, this.LEVEL_CONFIG.length - 1)];
+        const playerCount = this.getPlayerCount();
 
-        // Select Enemy Type based on level/wave
-        let allowedTypes: string[] = ['orc', 'slime']; // Default Level 1
+        // Scaling: +50% HP per extra player
+        const hpMultiplier = config.multiplier * (1 + (playerCount - 1) * 0.5);
 
+        // Select Enemy Type
+        let allowedTypes: string[] = ['orc', 'slime'];
         if (this.currentLevel >= 2) {
-            allowedTypes.push('skeleton');
-            allowedTypes.push('armored_skeleton');
+            allowedTypes.push('skeleton', 'armored_skeleton');
         }
-
         if (this.currentLevel >= 3) {
-            allowedTypes.push('werewolf');
-            allowedTypes.push('armored_orc');
+            allowedTypes.push('werewolf', 'armored_orc');
         }
-
         if (this.currentLevel >= 4) {
-            allowedTypes.push('elite_orc');
-            allowedTypes.push('greatsword_skeleton');
+            allowedTypes.push('elite_orc', 'greatsword_skeleton');
         }
 
-        // Simple weighted random (prefer basic enemies)
         let type = Phaser.Utils.Array.GetRandom(allowedTypes);
 
         // Spawn using Pool
         let enemy = this.scene.enemies.get(x, y) as Enemy;
-        if (!enemy) return; // Pool full
+        if (!enemy) return;
 
         // Reset/Spawn Logic
-        enemy.reset(x, y, player, config.multiplier, type);
+        enemy.reset(x, y, player, hpMultiplier, type);
 
         this.enemiesAlive++;
         this.enemiesToSpawnInWave--;
 
-        // Clear previous listeners to avoid stacking
         enemy.removeAllListeners('dead');
-
         enemy.on('dead', (ex: number, ey: number) => {
-            console.log(`WaveManager caught 'dead' event for enemy at ${ex}, ${ey}`);
             this.enemiesAlive--;
             this.checkWaveProgress();
 
-            // Get player reference for drops
+            // Only Host manages coin drops
+            if (this.scene.networkManager?.role !== 'host') return;
+
             const player = this.scene.data.get('player') as Phaser.Physics.Arcade.Sprite;
             if (!player) return;
 
-            // Spawn Coins: scale with level (5-15 base, multiplied by level)
             const baseCoins = Phaser.Math.Between(5, 15);
             const coinCount = baseCoins + (this.currentLevel - 1) * 3;
+            const coinData: any[] = [];
+
             for (let i = 0; i < coinCount; i++) {
                 let coin = this.scene.coins.get(ex, ey) as Coin;
-
-                // Recycling fallback: if pool is full, reuse the oldest active coin
-                if (!coin) {
-                    coin = this.scene.coins.getFirstAlive() as Coin;
-                }
+                if (!coin) coin = this.scene.coins.getFirstAlive() as Coin;
 
                 if (coin) {
                     coin.spawn(ex, ey, player);
@@ -175,11 +184,25 @@ export class WaveManager {
                     coin.on('collected', () => {
                         this.scene.stats.addCoins(1);
                         AudioManager.instance.playSFX('coin_collect');
+
+                        // Sync coin collection
+                        this.scene.networkManager?.broadcast({
+                            t: PacketType.GAME_EVENT,
+                            ev: { type: 'coin_collect', data: { amount: 1 } },
+                            ts: Date.now()
+                        });
                     });
-                } else {
-                    console.error('CRITICAL: Coin spawning failed even with recycling fallback!');
+
+                    coinData.push({ x: ex, y: ey });
                 }
             }
+
+            // Sync coin spawn to clients
+            this.scene.networkManager?.broadcast({
+                t: PacketType.GAME_EVENT,
+                ev: { type: 'spawn_coins', data: { x: ex, y: ey, count: coinCount } },
+                ts: Date.now()
+            });
         });
     }
 
@@ -191,17 +214,13 @@ export class WaveManager {
                 this.currentWave++;
                 this.scene.time.delayedCall(GAME_CONFIG.WAVES.WAVE_DELAY, () => this.startWave());
             } else {
-                // Level Complete
                 this.isLevelActive = false;
-
-                // Save High Stage
                 const currentStage = this.scene.registry.get('gameLevel');
                 const highStage = this.scene.registry.get('highStage') || 1;
                 if (currentStage >= highStage) {
                     SaveManager.save({ highStage: currentStage + 1 });
                 }
 
-                // Signal whether a boss follows this level
                 const bossConfig = getBossForLevel(this.currentLevel);
                 this.scene.registry.set('bossComingUp', bossConfig ? bossConfig.bossIndex : -1);
 
@@ -211,5 +230,72 @@ export class WaveManager {
                 });
             }
         }
+    }
+
+    public getEnemySyncData(): EnemyPacket[] {
+        const data: EnemyPacket[] = [];
+        this.scene.enemies.children.iterate((child: any) => {
+            if (child.active && !child.isDead) {
+                data.push({
+                    id: child.id || child.name,
+                    x: Math.round(child.x),
+                    y: Math.round(child.y),
+                    hp: child.hp,
+                    anim: child.anims.currentAnim?.key || '',
+                    flipX: child.flipX
+                });
+            }
+            return true;
+        });
+        return data;
+    }
+
+    public syncEnemies(packets: EnemyPacket[]): void {
+        const player = this.scene.data.get('player') as Phaser.Physics.Arcade.Sprite;
+        const activeIds = new Set(packets.map(p => p.id));
+
+        packets.forEach(p => {
+            let enemy = this.findEnemyById(p.id);
+            if (!enemy) {
+                let type = 'orc';
+                if (p.anim.includes('slime')) type = 'slime';
+                if (p.anim.includes('skeleton')) type = 'skeleton';
+                if (p.anim.includes('werewolf')) type = 'werewolf';
+
+                enemy = this.scene.enemies.get(p.x, p.y) as Enemy;
+                if (enemy) {
+                    enemy.reset(p.x, p.y, player, 1.0, type);
+                    (enemy as any).id = p.id;
+                }
+            }
+
+            if (enemy) {
+                enemy.setPosition(p.x, p.y);
+                enemy.hp = p.hp;
+                enemy.setFlipX(p.flipX);
+                if (enemy.anims.currentAnim?.key !== p.anim && p.anim) {
+                    enemy.play(p.anim);
+                }
+            }
+        });
+
+        this.scene.enemies.children.iterate((child: any) => {
+            if (child.active && !activeIds.has(child.id)) {
+                child.destroy();
+            }
+            return true;
+        });
+    }
+
+    private findEnemyById(id: string): Enemy | null {
+        let found: Enemy | null = null;
+        this.scene.enemies.children.iterate((child: any) => {
+            if ((child as any).id === id) {
+                found = child as Enemy;
+                return false;
+            }
+            return true;
+        });
+        return found;
     }
 }

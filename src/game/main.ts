@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import type { NetworkConfig } from '../App';
 import { Enemy } from './Enemy';
 import { BossEnemy } from './BossEnemy';
 import { BOSS_CONFIGS } from '../config/bosses';
@@ -21,6 +22,9 @@ import type { IMainScene } from './IMainScene';
 import { PreloadScene } from './PreloadScene';
 import { WeatherManager } from './WeatherManager';
 import { AmbientParticleManager } from './AmbientParticleManager';
+import { NetworkManager } from '../network/NetworkManager';
+import { PacketType, type SyncPacket, type PlayerPacket } from '../network/SyncSchemas';
+import type { DataConnection } from 'peerjs';
 
 
 class MainScene extends Phaser.Scene implements IMainScene {
@@ -75,6 +79,12 @@ class MainScene extends Phaser.Scene implements IMainScene {
 
     public deathSparkEmitter!: Phaser.GameObjects.Particles.ParticleEmitter;
 
+    // Multiplayer properties
+    public networkManager?: NetworkManager;
+    private remotePlayers: Map<string, Phaser.Physics.Arcade.Sprite> = new Map();
+    private playerNicknames: Map<string, Phaser.GameObjects.Text> = new Map();
+    private lastSyncTime: number = 0;
+
     constructor() {
         super('MainScene');
     }
@@ -98,6 +108,17 @@ class MainScene extends Phaser.Scene implements IMainScene {
         this.registry.set('bossName', '');
         this.registry.set('bossPhase', 1);
 
+        // Network state
+        const netConfig = this.game.registry.get('networkConfig') as NetworkConfig | null;
+        if (netConfig) {
+            this.registry.set('isMultiplayer', true);
+            this.registry.set('roomCode', netConfig.roomCode);
+            this.registry.set('networkRole', netConfig.role);
+            this.registry.set('nickname', netConfig.nickname);
+        } else {
+            this.registry.set('isMultiplayer', false);
+        }
+
         // Initialize Audio Manager
         AudioManager.instance.setScene(this);
 
@@ -105,8 +126,23 @@ class MainScene extends Phaser.Scene implements IMainScene {
         this.stats = new PlayerStatsManager(this);
         this.combat = new PlayerCombatManager(this);
         this.waves = new WaveManager(this);
+        this.poolManager = new ObjectPoolManager(this);
         this.weather = new WeatherManager(this);
         this.ambient = new AmbientParticleManager(this);
+
+        // Initialize Network Manager if in multiplayer
+        if (netConfig) {
+            this.networkManager = new NetworkManager(
+                netConfig.peer,
+                netConfig.role,
+                (packet, conn) => this.handleNetworkPacket(packet, conn)
+            );
+
+            if (netConfig.role === 'client' && netConfig.hostPeerId) {
+                console.log('Client connecting to host:', netConfig.hostPeerId);
+                this.networkManager.connectToHost(netConfig.hostPeerId);
+            }
+        }
 
         // Calculate Initial Stats
         this.stats.recalculateStats();
@@ -421,6 +457,131 @@ class MainScene extends Phaser.Scene implements IMainScene {
         // Start Weather Effects
         this.weather.enableFog();
         this.weather.startRain();
+
+        // If client, we might need to connect to host (handled in create())
+        if (this.networkManager?.role === 'client') {
+            // Handled via netConfig.hostPeerId in create()
+        }
+    }
+
+    private handleNetworkPacket(packet: SyncPacket, _conn: DataConnection) {
+        switch (packet.t) {
+            case PacketType.PLAYER_SYNC:
+                if (packet.p) this.updateRemotePlayer(packet.p);
+                if (packet.ps) packet.ps.forEach(p => this.updateRemotePlayer(p));
+                break;
+            case PacketType.ENEMY_SYNC:
+                // Only clients receive this from host
+                if (this.networkManager?.role === 'client' && packet.es) {
+                    this.waves.syncEnemies(packet.es);
+                }
+                break;
+            case PacketType.GAME_EVENT:
+                if (packet.ev) this.handleGameEvent(packet.ev);
+                break;
+        }
+    }
+
+    private updateRemotePlayer(p: any) {
+        if (p.id === this.networkManager?.['peer']?.id) return; // Skip self
+
+        let remotePlayer = this.remotePlayers.get(p.id);
+        if (!remotePlayer) {
+            remotePlayer = this.physics.add.sprite(p.x, p.y, 'player-idle');
+            remotePlayer.setScale(2);
+            remotePlayer.setDepth(100);
+            this.remotePlayers.set(p.id, remotePlayer);
+
+            // Add nickname tag
+            const label = this.add.text(p.x, p.y - 40, p.name || 'Spiller', {
+                fontSize: '12px',
+                fontFamily: 'Alagard',
+                color: '#ffffff',
+                backgroundColor: '#00000088',
+                padding: { x: 4, y: 2 }
+            }).setOrigin(0.5).setDepth(101);
+            this.playerNicknames.set(p.id, label);
+        }
+
+        remotePlayer.setPosition(p.x, p.y);
+        if (remotePlayer.anims.currentAnim?.key !== p.anim) {
+            remotePlayer.play(p.anim);
+        }
+        remotePlayer.setFlipX(p.flipX);
+
+        const label = this.playerNicknames.get(p.id);
+        if (label) label.setPosition(p.x, p.y - 40);
+    }
+
+    private handleGameEvent(event: any) {
+        if (event.type === 'attack') {
+            const { id, weapon, angle, anim } = event.data;
+            if (id === this.game.registry.get('networkConfig')?.peer.id) return;
+
+            const remoteSprite = this.remotePlayers.get(id);
+            if (remoteSprite) {
+                remoteSprite.play(anim);
+
+                // Spawn projectile for remote player if needed
+                if (weapon === 'bow') {
+                    const arrow = this.arrows.get(remoteSprite.x, remoteSprite.y) as Arrow;
+                    if (arrow) {
+                        arrow.fire(remoteSprite.x, remoteSprite.y, angle, 10, 700, 0, 0);
+                    }
+                } else if (weapon === 'fire') {
+                    const fireball = this.fireballs.get(remoteSprite.x, remoteSprite.y) as Fireball;
+                    if (fireball) fireball.fire(remoteSprite.x, remoteSprite.y, angle, 15);
+                } else if (weapon === 'frost') {
+                    const bolt = this.frostBolts.get(remoteSprite.x, remoteSprite.y) as FrostBolt;
+                    if (bolt) {
+                        const targetX = remoteSprite.x + Math.cos(angle) * 200;
+                        const targetY = remoteSprite.y + Math.sin(angle) * 200;
+                        bolt.fire(remoteSprite.x, remoteSprite.y, targetX, targetY, 12);
+                    }
+                } else if (weapon === 'lightning') {
+                    const bolt = this.lightningBolts.get(remoteSprite.x, remoteSprite.y) as LightningBolt;
+                    if (bolt) {
+                        const targetX = remoteSprite.x + Math.cos(angle) * 300;
+                        const targetY = remoteSprite.y + Math.sin(angle) * 300;
+                        bolt.fire(remoteSprite.x, remoteSprite.y, targetX, targetY, 20, 1);
+                    }
+                }
+            }
+        } else if (event.type === 'spawn_coins') {
+            const { x, y, count } = event.data;
+            const player = this.data.get('player') as Phaser.Physics.Arcade.Sprite;
+            for (let i = 0; i < count; i++) {
+                const coin = this.coins.get(x, y) as Coin;
+                if (coin) {
+                    coin.spawn(x, y, player);
+                    coin.removeAllListeners('collected');
+                    coin.on('collected', () => {
+                        // If client picks up, tell host (host handles the central score)
+                        if (this.networkManager?.role === 'client') {
+                            this.networkManager.broadcast({
+                                t: PacketType.GAME_EVENT,
+                                ev: { type: 'coin_collect', data: { amount: 1 } },
+                                ts: Date.now()
+                            });
+                        } else {
+                            // Host picked up locally
+                            this.stats.addCoins(1);
+                        }
+                        AudioManager.instance.playSFX('coin_collect');
+                    });
+                }
+            }
+        } else if (event.type === 'coin_collect') {
+            const { amount } = event.data;
+            // Host acts as authority on total gold
+            if (this.networkManager?.role === 'host') {
+                this.stats.addCoins(amount);
+                // We could broadcast the new total, but for now just increment locally on all
+            } else {
+                // Client receives this from Host (or another client broadcast)
+                this.stats.addCoins(amount);
+            }
+        }
     }
 
     /** Spawn a boss at the center of the map. */
@@ -600,6 +761,22 @@ class MainScene extends Phaser.Scene implements IMainScene {
 
                 player.play(attackAnimKey);
                 this.events.emit('player-swing');
+
+                // SYNC ATTACK
+                this.networkManager?.broadcast({
+                    t: PacketType.GAME_EVENT,
+                    ev: {
+                        type: 'attack',
+                        data: {
+                            id: this.game.registry.get('networkConfig')?.peer.id,
+                            weapon: 'sword',
+                            anim: attackAnimKey,
+                            angle: angle
+                        }
+                    },
+                    ts: Date.now()
+                });
+
                 const attackSpeedMult = this.registry.get('playerAttackSpeed') || 1;
 
                 // Adjust cooldown based on stats (faster attack speed = lower cooldown)
@@ -636,6 +813,21 @@ class MainScene extends Phaser.Scene implements IMainScene {
                         arrow.fire(player.x, player.y, angle, baseDamage, arrowSpeed, pierceCount, explosiveLevel);
                         this.events.emit('bow-shot');
 
+                        // SYNC BOW ATTACK
+                        this.networkManager?.broadcast({
+                            t: PacketType.GAME_EVENT,
+                            ev: {
+                                type: 'attack',
+                                data: {
+                                    id: this.game.registry.get('networkConfig')?.peer.id,
+                                    weapon: 'bow',
+                                    anim: 'player-bow',
+                                    angle: angle
+                                }
+                            },
+                            ts: Date.now()
+                        });
+
                         // Multishot logic (Cone)
                         const projectiles = this.registry.get('playerProjectiles') || 1;
                         if (projectiles > 1) {
@@ -663,7 +855,23 @@ class MainScene extends Phaser.Scene implements IMainScene {
                 this.time.delayedCall(100, () => {
                     const fireball = this.fireballs.get(player.x, player.y) as Fireball;
                     if (fireball) {
-                        fireball.fire(player.x, player.y, angle, this.stats.damage * 1.2);
+                        fireball.fire(player.x, player.y, angle, this.stats.damage * 1.5);
+                        this.events.emit('fireball-cast');
+
+                        // SYNC FIRE ATTACK
+                        this.networkManager?.broadcast({
+                            t: PacketType.GAME_EVENT,
+                            ev: {
+                                type: 'attack',
+                                data: {
+                                    id: this.game.registry.get('networkConfig')?.peer.id,
+                                    weapon: 'fire',
+                                    anim: 'player-cast',
+                                    angle: angle
+                                }
+                            },
+                            ts: Date.now()
+                        });
                     }
                 });
 
@@ -672,27 +880,42 @@ class MainScene extends Phaser.Scene implements IMainScene {
                     player.play('player-idle');
                 });
             } else if (currentWeapon === 'frost') {
-                this.registry.set('weaponCooldown', { duration: 600, timestamp: Date.now() });
-                player.play('player-bow');
-                this.events.emit('frost-cast');
+                this.registry.set('weaponCooldown', { duration: 1000, timestamp: Date.now() });
+                player.play('player-cast');
 
                 // Capture mouse world position at cast time
                 const frostTarget = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
 
                 this.time.delayedCall(100, () => {
-                    const bolt = this.frostBolts.get(player.x, player.y) as FrostBolt;
-                    if (bolt) {
-                        bolt.fire(player.x, player.y, frostTarget.x, frostTarget.y, this.stats.damage * 1.1);
+                    const frostBolt = this.frostBolts.get(player.x, player.y) as FrostBolt;
+                    if (frostBolt) {
+                        frostBolt.fire(player.x, player.y, frostTarget.x, frostTarget.y, this.stats.damage * 1.2);
+                        this.events.emit('frost-cast');
+
+                        // SYNC FROST ATTACK
+                        this.networkManager?.broadcast({
+                            t: PacketType.GAME_EVENT,
+                            ev: {
+                                type: 'attack',
+                                data: {
+                                    id: this.game.registry.get('networkConfig')?.peer.id,
+                                    weapon: 'frost',
+                                    anim: 'player-cast',
+                                    angle: angle
+                                }
+                            },
+                            ts: Date.now()
+                        });
                     }
                 });
 
-                player.once('animationcomplete-player-bow', () => {
+                player.once('animationcomplete-player-cast', () => {
                     this.data.set('isAttacking', false);
                     player.play('player-idle');
                 });
             } else if (currentWeapon === 'lightning') {
-                this.registry.set('weaponCooldown', { duration: 600, timestamp: Date.now() });
-                player.play('player-bow');
+                this.registry.set('weaponCooldown', { duration: 800, timestamp: Date.now() });
+                player.play('player-cast');
                 this.events.emit('lightning-cast');
 
                 // Get target position from mouse
@@ -714,9 +937,24 @@ class MainScene extends Phaser.Scene implements IMainScene {
                             bolt.fire(player.x, player.y, ltTarget.x, ltTarget.y, baseDamage, bounces, new Set(), finalAngle);
                         }
                     }
+
+                    // SYNC LIGHTNING ATTACK
+                    this.networkManager?.broadcast({
+                        t: PacketType.GAME_EVENT,
+                        ev: {
+                            type: 'attack',
+                            data: {
+                                id: this.game.registry.get('networkConfig')?.peer.id,
+                                weapon: 'lightning',
+                                anim: 'player-cast',
+                                angle: baseAngle
+                            }
+                        },
+                        ts: Date.now()
+                    });
                 });
 
-                player.once('animationcomplete-player-bow', () => {
+                player.once('animationcomplete-player-cast', () => {
                     this.data.set('isAttacking', false);
                     player.play('player-idle');
                 });
@@ -759,11 +997,56 @@ class MainScene extends Phaser.Scene implements IMainScene {
                 player.play('player-idle');
             }
         }
+
+        // --- NETWORK SYNC (Broadcast 30 times/sec) ---
+        const now = Date.now();
+        if (this.networkManager && now - this.lastSyncTime > 33) {
+            this.lastSyncTime = now;
+
+            const myId = this.game.registry.get('networkConfig')?.peer.id || 'unknown';
+            const playerPacket: PlayerPacket = {
+                id: myId,
+                x: Math.round(player.x),
+                y: Math.round(player.y),
+                anim: player.anims.currentAnim?.key || 'player-idle',
+                flipX: player.flipX,
+                hp: this.registry.get('playerHP'),
+                weapon: this.registry.get('currentWeapon'),
+                name: this.registry.get('nickname')
+            };
+
+            if (this.networkManager.role === 'host') {
+                // Host sends everything
+                const allPlayers = [playerPacket];
+                // For simplified logic, we trust individual player broadcasts for now
+                // but Host could rebroadcast others here.
+
+                this.networkManager.broadcast({
+                    t: PacketType.PLAYER_SYNC,
+                    ps: allPlayers,
+                    ts: now
+                });
+
+                const enemies = this.waves.getEnemySyncData();
+                this.networkManager.broadcast({
+                    t: PacketType.ENEMY_SYNC,
+                    es: enemies,
+                    ts: now
+                });
+            } else if (this.networkManager.role === 'client') {
+                // Client sends local state to host
+                this.networkManager.broadcast({
+                    t: PacketType.PLAYER_SYNC,
+                    p: playerPacket,
+                    ts: now
+                });
+            }
+        }
     }
 }
 
-export const createGame = (containerId: string) => {
-    return new Phaser.Game({
+export const createGame = (containerId: string, networkConfig?: NetworkConfig | null) => {
+    const game = new Phaser.Game({
         type: Phaser.AUTO,
         parent: containerId,
         width: '100%',
@@ -782,4 +1065,10 @@ export const createGame = (containerId: string) => {
         },
         backgroundColor: '#0f172a'
     });
+
+    if (networkConfig) {
+        game.registry.set('networkConfig', networkConfig);
+    }
+
+    return game;
 };
