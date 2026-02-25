@@ -10,18 +10,26 @@
 - [ ] Vanskelighetsgrader. 
 - [ ] Onboarding med forklaring av controls og slikt. Kan huke av at det ikke skal vises igjen, lagre i cash. 
 
+# Dash
+- [ ] Dash må implementeres, med en cooldown, 20 sec default. Hotkey 
+
+# Score 
+- [ ] Score ingame oppe ved siden av mynter
 
 # Boss battles
 - Sjekke at alle bosser fungerer riktig, har animations osv. 
 - Orkehøvding har noe feil med hitbox, får ikke til å skade den. Bare lighting med seeking greier å treffe, alt annen bommer totalt, går rett gjennom. 
 - Orkehøvding virker til å bli svært lett stuck, og kan ikke bevege seg; blir dermed ingen stor trussel. 
 
+- Multiplayer orkehøvding; spiller B får hitbaren over hodet, men den er gigalang, og  den er "tom" i HP baren på toppen. 
+
 - En del enemies blinker mens de går, ligger antageligvis en frame for mange i sprite sheeten. 
+
 
 # Spell
 - Lighting ser fremdeles ikke helt bra ut. 
 - Ser ut som man kan caste fortere enn cooldownen tillater. 
-
+- [ ] Lag når det er 3+ lyn samtidig, begynner det å lagge, må optimaliseres betraktelig! 
 # musikk
 - [x] Må bytte musikk hvert level. 
 

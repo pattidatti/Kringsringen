@@ -23,6 +23,7 @@ export class BossEnemy extends Enemy {
     ): void {
         // Base reset sets up sprite, animations, physics, default stats
         this.reset(x, y, player, 1.0, config.enemyType);
+        this.id = 'boss';
 
         this.bossConfig = config;
         this.phase = 1;
@@ -37,13 +38,10 @@ export class BossEnemy extends Enemy {
 
         // Physics body & scale
         this.setScale(config.scale);
-        const srcW = config.bodySize.width / config.scale;
-        const srcH = config.bodySize.height / config.scale;
-        this.setBodySize(srcW, srcH, false);
-        this.setOffset(
-            this.displayOriginX - config.bodySize.width / 2,
-            this.displayHeight - config.bodySize.height - 10
-        );
+        this.setBodySize(config.bodySize.width, config.bodySize.height, true);
+        const offsetY = (this.height * 0.5) - (config.bodySize.height * 0.5);
+        this.setOffset(this.body!.offset.x, offsetY + 10);
+        this.setDrag(0);
 
         // Registry
         this.scene.registry.set('bossHP', config.hp);

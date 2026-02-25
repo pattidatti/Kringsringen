@@ -294,6 +294,7 @@ export class WaveManager {
                 enemy = this.scene.bossGroup.getFirstAlive();
                 if (!enemy && hp > 0) {
                     const bossIdx = this.scene.registry.get('bossComingUp') ?? 0;
+                    this.scene.registry.set('bossComingUp', -1);
                     this.scene.events.emit('start-boss', bossIdx);
                 }
             } else {
@@ -344,6 +345,10 @@ export class WaveManager {
                 enemy.setData('targetY', y);
                 enemy.hp = hp;
                 enemy.setFlipX(flipX === 1);
+
+                if (id === 'boss') {
+                    this.scene.registry.set('bossHP', Math.max(0, hp));
+                }
 
                 if (enemy.setClientMode) enemy.setClientMode(true);
                 if (enemy.pushState) enemy.pushState(timestamp, p);

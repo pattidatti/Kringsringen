@@ -639,6 +639,9 @@ class MainScene extends Phaser.Scene implements IMainScene {
                     this.registry.set('gameLevel', packet.gs.level);
                     this.registry.set('currentWave', packet.gs.wave);
                     this.registry.set('isBossActive', packet.gs.isBossActive);
+                    if (packet.gs.bossIndex !== undefined) {
+                        this.registry.set('bossComingUp', packet.gs.bossIndex);
+                    }
                 }
                 break;
         }
