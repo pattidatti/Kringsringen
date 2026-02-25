@@ -5,11 +5,19 @@ import {
     onValue,
     off,
     remove,
-    serverTimestamp
+    serverTimestamp,
+    query,
+    orderByChild,
+    equalTo,
+    limitToLast,
+    onDisconnect
 } from 'firebase/database';
 import { initializeFirebase } from '../config/firebase';
 
 export interface RoomData {
+    roomName: string;
+    hasPassword: boolean;
+    password?: string;
     hostId: string;
     hostName: string;
     players: Record<string, { name: string; peerId: string }>;
@@ -35,7 +43,7 @@ export class MatchmakingService {
     /**
      * Oppretter et nytt rom
      */
-    static async createRoom(hostName: string, hostPeerId: string): Promise<string> {
+    static async createRoom(hostName: string, hostPeerId: string, roomName: string, hasPassword: boolean = false, password?: string): Promise<string> {
         const db = initializeFirebase();
         let roomCode = this.generateRoomCode();
 
@@ -46,6 +54,9 @@ export class MatchmakingService {
         }
 
         const roomData: RoomData = {
+            roomName: roomName.trim() || `${hostName}s Rom`,
+            hasPassword,
+            password: hasPassword ? password : '',
             hostId: hostPeerId,
             hostName: hostName,
             players: {
@@ -55,14 +66,18 @@ export class MatchmakingService {
             createdAt: serverTimestamp()
         };
 
-        await set(ref(db, `${this.ROOMS_PATH}/${roomCode}`), roomData);
+        const roomRef = ref(db, `${this.ROOMS_PATH}/${roomCode}`);
+
+        // Sørg for at Firebase rydder opp rommet hvis Host mister forbindelsen
+        await onDisconnect(roomRef).remove();
+        await set(roomRef, roomData);
         return roomCode;
     }
 
     /**
      * Joiner et eksisterende rom
      */
-    static async joinRoom(roomCode: string, playerName: string, playerPeerId: string): Promise<RoomData> {
+    static async joinRoom(roomCode: string, playerName: string, playerPeerId: string, passwordAttempt?: string): Promise<RoomData> {
         const db = initializeFirebase();
         const roomRef = ref(db, `${this.ROOMS_PATH}/${roomCode.toUpperCase()}`);
         const snapshot = await get(roomRef);
@@ -72,6 +87,10 @@ export class MatchmakingService {
         }
 
         const roomData = snapshot.val() as RoomData;
+
+        if (roomData.hasPassword && roomData.password !== passwordAttempt) {
+            throw new Error('Feil passord!');
+        }
 
         if (roomData.status !== 'lobby') {
             throw new Error('Spillet har allerede startet.');
@@ -102,6 +121,29 @@ export class MatchmakingService {
         });
 
         return () => off(roomRef);
+    }
+
+    /**
+     * Lytter på alle åpne 'lobby'-rom for Serverlisten
+     */
+    static subscribeToLobbies(callback: (rooms: Record<string, RoomData>) => void) {
+        const db = initializeFirebase();
+        const lobbiesQuery = query(
+            ref(db, this.ROOMS_PATH),
+            orderByChild('status'),
+            equalTo('lobby'),
+            limitToLast(50)
+        );
+
+        onValue(lobbiesQuery, (snapshot) => {
+            if (snapshot.exists()) {
+                callback(snapshot.val());
+            } else {
+                callback({});
+            }
+        });
+
+        return () => off(lobbiesQuery);
     }
 
     /**

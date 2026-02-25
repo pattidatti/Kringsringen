@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { FantasyButton } from './FantasyButton';
 import { MatchmakingService, type RoomData } from '../../services/Matchmaking';
 import Peer from 'peerjs';
@@ -12,13 +12,21 @@ interface MultiplayerLobbyProps {
 
 export const MultiplayerLobby: React.FC<MultiplayerLobbyProps> = ({ isOpen, onClose, onStartGame }) => {
     const [nickname, setNickname] = useState(localStorage.getItem('mp_nickname') || '');
-    const [roomCode, setRoomCode] = useState('');
     const [currentRoom, setCurrentRoom] = useState<RoomData | null>(null);
     const [activeRoomCode, setActiveRoomCode] = useState<string | null>(null);
     const [isHost, setIsHost] = useState(false);
     const [peer, setPeer] = useState<Peer | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
+
+    // Endringer for Serverliste
+    const [activeTab, setActiveTab] = useState<'list' | 'create'>('list');
+    const [lobbies, setLobbies] = useState<Record<string, RoomData>>({});
+    const [roomName, setRoomName] = useState('');
+    const [hasPassword, setHasPassword] = useState(false);
+    const [password, setPassword] = useState('');
+    const [joinPassword, setJoinPassword] = useState('');
+    const [selectedRoom, setSelectedRoom] = useState<{ id: string, name: string } | null>(null);
 
     // Initialiser PeerJS når komponenten åpnes
     useEffect(() => {
@@ -44,7 +52,18 @@ export const MultiplayerLobby: React.FC<MultiplayerLobbyProps> = ({ isOpen, onCl
         };
     }, [isOpen, peer, activeRoomCode]);
 
-    // Lytt på rom-endringer
+    // Lytt på åpne lobbyer for serverlisten
+    useEffect(() => {
+        let unsubscribe: (() => void) | undefined;
+        if (isOpen && activeTab === 'list' && !activeRoomCode) {
+            unsubscribe = MatchmakingService.subscribeToLobbies((data) => {
+                setLobbies(data || {});
+            });
+        }
+        return () => unsubscribe?.();
+    }, [isOpen, activeTab, activeRoomCode]);
+
+    // Lytt på rom-endringer for selve venterommet
     useEffect(() => {
         let unsubscribe: (() => void) | undefined;
         if (activeRoomCode) {
@@ -64,13 +83,17 @@ export const MultiplayerLobby: React.FC<MultiplayerLobbyProps> = ({ isOpen, onCl
             setError('Skriv inn et navn først.');
             return;
         }
+        if (hasPassword && !password.trim()) {
+            setError('Du må skrive et passord når rommet krever det.');
+            return;
+        }
         if (!peer) return;
 
         setLoading(true);
         setError(null);
         try {
             localStorage.setItem('mp_nickname', nickname);
-            const code = await MatchmakingService.createRoom(nickname, peer.id);
+            const code = await MatchmakingService.createRoom(nickname, peer.id, roomName, hasPassword, password);
             setActiveRoomCode(code);
             setIsHost(true);
         } catch (err: any) {
@@ -80,13 +103,23 @@ export const MultiplayerLobby: React.FC<MultiplayerLobbyProps> = ({ isOpen, onCl
         }
     };
 
-    const handleJoinRoom = async () => {
+    const handleJoinServerClick = (id: string, room: RoomData) => {
+        if (room.hasPassword) {
+            setSelectedRoom({ id, name: room.roomName });
+            setJoinPassword('');
+        } else {
+            handleJoinRoom(id);
+        }
+    };
+
+    const handleJoinRoom = async (codeToJoin: string, passAttempt?: string) => {
         if (!nickname.trim()) {
             setError('Skriv inn et navn først.');
             return;
         }
-        if (!roomCode.trim()) {
-            setError('Skriv inn rom-kode.');
+        const targetCode = codeToJoin;
+        if (!targetCode.trim()) {
+            setError('Ugyldig rom-kode.');
             return;
         }
         if (!peer) return;
@@ -95,9 +128,11 @@ export const MultiplayerLobby: React.FC<MultiplayerLobbyProps> = ({ isOpen, onCl
         setError(null);
         try {
             localStorage.setItem('mp_nickname', nickname);
-            await MatchmakingService.joinRoom(roomCode, nickname, peer.id);
-            setActiveRoomCode(roomCode.toUpperCase());
+            await MatchmakingService.joinRoom(targetCode, nickname, peer.id, passAttempt);
+            setActiveRoomCode(targetCode.toUpperCase());
             setIsHost(false);
+            setSelectedRoom(null);
+            setJoinPassword('');
         } catch (err: any) {
             setError(err.message || 'Kunne ikke bli med i rommet.');
         } finally {
@@ -129,10 +164,10 @@ export const MultiplayerLobby: React.FC<MultiplayerLobbyProps> = ({ isOpen, onCl
                 initial={{ scale: 0.9, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 0.9, opacity: 0 }}
-                className="pixel-panel w-full max-w-md bg-[#2a1a10] border-4 border-[#4a2e1d] p-6 text-[#fde68a]"
+                className="pixel-panel w-full max-w-md bg-[#2a1a10] border-4 border-[#4a2e1d] p-6 text-[#fde68a] relative"
             >
                 <h2 className="font-fantasy text-3xl mb-6 text-center tracking-wider text-amber-200">
-                    MULTIPLAYER LOBBY
+                    FLERSPILLER
                 </h2>
 
                 {error && (
@@ -142,9 +177,11 @@ export const MultiplayerLobby: React.FC<MultiplayerLobbyProps> = ({ isOpen, onCl
                 )}
 
                 {!activeRoomCode ? (
-                    <div className="space-y-6">
-                        <div>
-                            <label className="block text-xs uppercase mb-1 opacity-70">Ditt Navn</label>
+                    <div className="space-y-4">
+                        <div className="mb-2">
+                            <label className="block text-xs uppercase mb-1 opacity-70 flex justify-between">
+                                <span>Ditt Navn</span>
+                            </label>
                             <input
                                 type="text"
                                 value={nickname}
@@ -155,71 +192,169 @@ export const MultiplayerLobby: React.FC<MultiplayerLobbyProps> = ({ isOpen, onCl
                             />
                         </div>
 
-                        <div className="grid grid-cols-1 gap-4">
-                            <div className="bg-white/5 p-4 border border-white/10 rounded">
-                                <FantasyButton
-                                    label={loading ? "Laster..." : "Opprett Rom"}
-                                    variant="primary"
-                                    onClick={handleCreateRoom}
-                                    disabled={loading}
-                                    className="w-full"
-                                />
-                                <p className="text-[10px] text-center mt-2 opacity-60">Start et nytt spill og inviter venner</p>
-                            </div>
-
-                            <div className="bg-white/5 p-4 border border-white/10 rounded">
-                                <div className="flex gap-2 mb-2">
-                                    <input
-                                        type="text"
-                                        value={roomCode}
-                                        onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
-                                        maxLength={4}
-                                        className="flex-1 bg-black/40 border-2 border-[#4a2e1d] p-2 text-center font-bold tracking-widest text-xl outline-none"
-                                        placeholder="KODE"
-                                    />
-                                    <FantasyButton
-                                        label="Bli med"
-                                        variant="secondary"
-                                        onClick={handleJoinRoom}
-                                        disabled={loading}
-                                    />
-                                </div>
-                                <p className="text-[10px] text-center opacity-60">Skriv inn en 4-tegns kode</p>
-                            </div>
+                        {/* Tabs */}
+                        <div className="flex border-b-2 border-[#4a2e1d] mb-4">
+                            <button
+                                className={`flex-1 py-2 text-xs uppercase tracking-wider font-bold transition-colors ${activeTab === 'list' ? 'text-amber-300 border-b-2 border-amber-500 bg-amber-900/20' : 'text-stone-500 hover:text-stone-300'}`}
+                                onClick={() => setActiveTab('list')}
+                            >
+                                Servere
+                            </button>
+                            <button
+                                className={`flex-1 py-2 text-xs uppercase tracking-wider font-bold transition-colors ${activeTab === 'create' ? 'text-amber-300 border-b-2 border-amber-500 bg-amber-900/20' : 'text-stone-500 hover:text-stone-300'}`}
+                                onClick={() => setActiveTab('create')}
+                            >
+                                Opprett Rom
+                            </button>
                         </div>
+
+                        {activeTab === 'list' && (
+                            <div className="space-y-4">
+                                <div className="max-h-56 min-h-[14rem] overflow-y-auto space-y-2 pr-2 custom-scrollbar">
+                                    {Object.entries(lobbies).length === 0 ? (
+                                        <div className="text-center p-8 border-2 border-dashed border-[#4a2e1d] text-stone-500 flex flex-col items-center justify-center h-full">
+                                            Ingen aktive servere funnet.
+                                            <p className="text-xs mt-2 opacity-50">Prøv å opprette et eget rom!</p>
+                                        </div>
+                                    ) : (
+                                        Object.entries(lobbies).map(([id, room]) => {
+                                            const isFull = Object.keys(room.players || {}).length >= 4;
+                                            return (
+                                                <div key={id} className="bg-black/30 border border-[#4a2e1d] p-3 flex justify-between items-center group hover:border-amber-700 transition-colors">
+                                                    <div className="overflow-hidden">
+                                                        <div className="font-bold text-amber-200 truncate pr-2" title={room.roomName}>{room.roomName}</div>
+                                                        <div className="text-[10px] text-stone-400 truncate">Host: {room.hostName}</div>
+                                                    </div>
+                                                    <div className="flex items-center gap-3 shrink-0">
+                                                        <div className="text-xs font-mono bg-black/50 px-1 py-0.5 border border-[#4a2e1d] text-stone-400">
+                                                            {id}
+                                                        </div>
+                                                        <div className="text-sm text-stone-300 flex items-center gap-1 w-12 justify-end">
+                                                            {room.hasPassword && <span title="Krever passord">🔒</span>}
+                                                            <span className={isFull ? 'text-red-400' : 'text-green-400'}>{Object.keys(room.players || {}).length}/4</span>
+                                                        </div>
+                                                        <button
+                                                            className={`px-3 py-1.5 text-xs font-bold uppercase transition-colors ${isFull ? 'bg-stone-800 text-stone-600 cursor-not-allowed' : 'bg-amber-800 text-white hover:bg-amber-600'}`}
+                                                            onClick={() => !isFull && handleJoinServerClick(id, room)}
+                                                            disabled={isFull || loading}
+                                                        >
+                                                            {isFull ? 'Fullt' : 'Bli Med'}
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })
+                                    )}
+                                </div>
+
+                            </div>
+                        )}
+
+                        {activeTab === 'create' && (
+                            <div className="space-y-4">
+                                <div className="bg-white/5 p-4 border border-white/10 rounded space-y-4 min-h-[14rem] flex flex-col justify-center">
+                                    <div>
+                                        <label className="block text-xs uppercase mb-1 opacity-70">Rom Navn (Valgfritt)</label>
+                                        <input
+                                            type="text"
+                                            value={roomName}
+                                            onChange={(e) => setRoomName(e.target.value)}
+                                            maxLength={20}
+                                            className="w-full bg-black/40 border-2 border-[#4a2e1d] p-2 text-amber-100 outline-none focus:border-amber-500 transition-colors"
+                                            placeholder={`${nickname || 'Min'}s server`}
+                                        />
+                                    </div>
+
+                                    <div className="flex items-center gap-2 mt-2">
+                                        <input
+                                            type="checkbox"
+                                            id="hasPassword"
+                                            checked={hasPassword}
+                                            onChange={(e) => setHasPassword(e.target.checked)}
+                                            className="w-4 h-4 accent-amber-600"
+                                        />
+                                        <label htmlFor="hasPassword" className="text-xs uppercase text-stone-300 select-none cursor-pointer">Krever passord for å bli med</label>
+                                    </div>
+
+                                    <AnimatePresence>
+                                        {hasPassword && (
+                                            <motion.div
+                                                initial={{ height: 0, opacity: 0 }}
+                                                animate={{ height: 'auto', opacity: 1 }}
+                                                exit={{ height: 0, opacity: 0 }}
+                                                className="overflow-hidden"
+                                            >
+                                                <div className="pt-2">
+                                                    <label className="block text-xs uppercase mb-1 opacity-70 text-red-200">Passord</label>
+                                                    <input
+                                                        type="text"
+                                                        value={password}
+                                                        onChange={(e) => setPassword(e.target.value)}
+                                                        maxLength={12}
+                                                        className="w-full bg-black/40 border-2 border-red-900/50 p-2 text-amber-100 outline-none focus:border-red-500 transition-colors"
+                                                        placeholder="Hemmelig passord..."
+                                                    />
+                                                    <p className="text-[9px] text-red-400 mt-1 uppercase text-right">Sendes ukryptert via P2P</p>
+                                                </div>
+                                            </motion.div>
+                                        )}
+                                    </AnimatePresence>
+
+                                    <div className="pt-4 mt-auto">
+                                        <FantasyButton
+                                            label={loading ? "Vennligst vent..." : "Opprett Server"}
+                                            variant="primary"
+                                            onClick={handleCreateRoom}
+                                            disabled={loading}
+                                            className="w-full py-3"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        )}
 
                         <button
                             onClick={onClose}
-                            className="w-full text-xs uppercase opacity-70 hover:opacity-100 transition-opacity mt-4"
+                            className="w-full text-xs uppercase opacity-50 hover:opacity-100 transition-opacity mt-4 pt-2 border-t border-[#4a2e1d]"
                         >
-                            Tilbake
+                            Lukk Meny
                         </button>
                     </div>
                 ) : (
                     <div className="space-y-6">
                         <div className="text-center">
-                            <p className="text-xs uppercase opacity-70">Rom-kode</p>
+                            <p className="text-xs uppercase opacity-70">{currentRoom?.roomName || 'Rom'}</p>
                             <h3 className="text-5xl font-bold tracking-tighter text-amber-400 drop-shadow-lg">
                                 {activeRoomCode}
                             </h3>
+                            {currentRoom?.hasPassword && <div className="text-xs text-red-300 mt-1">🔒 Passordbeskyttet</div>}
                         </div>
 
                         <div className="bg-black/30 p-4 border-2 border-[#4a2e1d]">
-                            <p className="text-xs uppercase mb-2 opacity-70">Spillere i rommet ({Object.keys(currentRoom?.players || {}).length}/4)</p>
-                            <ul className="space-y-2">
+                            <p className="text-xs uppercase mb-2 opacity-70 flex justify-between">
+                                <span>Spillere ({Object.keys(currentRoom?.players || {}).length}/4)</span>
+                            </p>
+                            <ul className="space-y-2 min-h-[8rem]">
                                 {currentRoom && Object.values(currentRoom.players).map((p, idx) => (
                                     <motion.li
                                         key={p.peerId}
                                         initial={{ x: -10, opacity: 0 }}
                                         animate={{ x: 0, opacity: 1 }}
                                         transition={{ delay: idx * 0.1 }}
-                                        className="flex items-center gap-2"
+                                        className="flex items-center gap-2 bg-black/20 p-2 border border-white/5"
                                     >
                                         <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                                        <span className={p.peerId === peer?.id ? "text-amber-200" : "text-white"}>
-                                            {p.name} {p.peerId === currentRoom.hostId && <span className="text-[10px] text-amber-500 font-bold ml-1">(HOST)</span>}
+                                        <span className={p.peerId === peer?.id ? "text-amber-200 font-bold" : "text-white"}>
+                                            {p.name} {p.peerId === currentRoom.hostId && <span className="text-[10px] text-amber-500 font-bold ml-1 border border-amber-500/50 px-1 rounded-sm">HOST</span>}
                                         </span>
                                     </motion.li>
+                                ))}
+                                {/* Render empty slots */}
+                                {Array.from({ length: Math.max(0, 4 - Object.keys(currentRoom?.players || {}).length) }).map((_, i) => (
+                                    <li key={`empty-${i}`} className="flex items-center gap-2 p-2 border border-white/5 border-dashed opacity-30">
+                                        <div className="w-2 h-2 bg-stone-500 rounded-full" />
+                                        <span className="text-stone-400 text-sm">Venter på spiller...</span>
+                                    </li>
                                 ))}
                             </ul>
                         </div>
@@ -227,27 +362,76 @@ export const MultiplayerLobby: React.FC<MultiplayerLobbyProps> = ({ isOpen, onCl
                         <div className="flex flex-col gap-3">
                             {isHost ? (
                                 <FantasyButton
-                                    label="Start Kampen!"
+                                    label={`Start Kampen (${Object.keys(currentRoom?.players || {}).length}/4)`}
                                     variant="primary"
                                     onClick={handleStartMatch}
                                     className="w-full py-4 text-xl"
                                     disabled={Object.keys(currentRoom?.players || {}).length < 1}
                                 />
                             ) : (
-                                <div className="text-center py-4 text-sm animate-pulse text-amber-200">
-                                    Venter på at Host starter...
+                                <div className="text-center py-4 bg-black/40 border border-amber-900/50 text-amber-200 uppercase text-xs tracking-widest flex items-center justify-center gap-3">
+                                    <span className="animate-pulse">●</span> Venter på Host <span className="animate-pulse">●</span>
                                 </div>
                             )}
 
                             <button
                                 onClick={handleCancel}
-                                className="text-xs uppercase opacity-70 hover:opacity-100 transition-opacity"
+                                className="text-xs uppercase opacity-70 hover:opacity-100 transition-opacity text-stone-400"
                             >
-                                Avbryt / Forlat
+                                {isHost ? 'Oppløs Rom' : 'Forlat Rom'}
                             </button>
                         </div>
                     </div>
                 )}
+
+                {/* Returnerer Modellen for Passord Request */}
+                <AnimatePresence>
+                    {selectedRoom && (
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="absolute inset-0 z-50 bg-black/90 backdrop-blur-sm flex items-center justify-center p-6 border-4 border-[#4a2e1d]"
+                        >
+                            <motion.div
+                                initial={{ scale: 0.9, y: 20 }}
+                                animate={{ scale: 1, y: 0 }}
+                                exit={{ scale: 0.9, y: 20 }}
+                                className="w-full bg-[#2a1a10] border-2 border-red-900 p-6 shadow-2xl relative"
+                            >
+                                <h3 className="text-xl text-center text-red-400 font-bold mb-1 tracking-wider uppercase">Låst Server</h3>
+                                <p className="text-xs text-center text-stone-400 mb-6">"{selectedRoom.name}" krever passord.</p>
+                                <input
+                                    type="password"
+                                    value={joinPassword}
+                                    onChange={(e) => setJoinPassword(e.target.value)}
+                                    className="w-full bg-black/60 border-2 border-red-900 p-3 text-white text-center tracking-widest outline-none focus:border-red-500 mb-6"
+                                    placeholder="SKRIV PASSORD"
+                                    autoFocus
+                                    onKeyDown={(e) => e.key === 'Enter' && handleJoinRoom(selectedRoom.id, joinPassword)}
+                                />
+                                <div className="flex gap-3">
+                                    <button
+                                        className="flex-1 py-3 bg-stone-900 hover:bg-stone-800 border border-stone-700 text-xs uppercase font-bold text-stone-400 transition-colors"
+                                        onClick={() => {
+                                            setSelectedRoom(null);
+                                            setJoinPassword('');
+                                        }}
+                                    >
+                                        Avbryt
+                                    </button>
+                                    <FantasyButton
+                                        label={loading ? "..." : "Lås Opp"}
+                                        variant="primary"
+                                        className="flex-1"
+                                        onClick={() => handleJoinRoom(selectedRoom.id, joinPassword)}
+                                        disabled={loading || !joinPassword.trim()}
+                                    />
+                                </div>
+                            </motion.div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
             </motion.div>
         </div>
     );
