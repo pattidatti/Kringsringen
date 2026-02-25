@@ -27,6 +27,9 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     /** When true this enemy is a client-side puppet — no AI, no damage, no physics body active. */
     private isClientMode: boolean = false;
 
+    /** History buffer for Lag Compensation (Host only). Stores [timestamp, x, y] tuples. */
+    public positionHistory: [number, number, number][] = [];
+
     // Static Buffers for AI (GC Hardening)
     private static readonly NUM_RAYS = 8;
     private static readonly INTEREST_BUFFER = new Array(Enemy.NUM_RAYS).fill(0);
@@ -112,6 +115,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
             this.slowTimer = null;
         }
         this.originalSpeed = this.movementSpeed;
+        this.positionHistory = [];
 
         // Animation
         this.setTexture(this.config.spriteInfo.texture);
@@ -231,6 +235,16 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         }
 
         this.updateHPBar();
+
+        if (!this.isClientMode && this.active) {
+            const now = (this.scene as any).networkManager ? (this.scene as any).networkManager.getServerTime() : Date.now();
+            this.positionHistory.push([now, this.x, this.y]);
+
+            // Retain up to 1000ms of history for lag compensation
+            while (this.positionHistory.length > 0 && now - this.positionHistory[0][0] > 1000) {
+                this.positionHistory.shift();
+            }
+        }
     }
 
     private updateAIPathing() {
@@ -506,5 +520,37 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
             }
             this.slowTimer = null;
         });
+    }
+
+    /**
+     * Interpolates the enemy's historical position at a given timestamp.
+     * Essential for Lag Compensation (Rollback Auth) on the Host.
+     */
+    public getHistoricalPosition(targetTime: number): { x: number, y: number } | null {
+        if (this.positionHistory.length === 0) return null;
+
+        if (targetTime <= this.positionHistory[0][0]) {
+            return { x: this.positionHistory[0][1], y: this.positionHistory[0][2] };
+        }
+
+        const newest = this.positionHistory[this.positionHistory.length - 1];
+        if (targetTime >= newest[0]) {
+            return { x: newest[1], y: newest[2] };
+        }
+
+        for (let i = this.positionHistory.length - 1; i >= 1; i--) {
+            const next = this.positionHistory[i];
+            const prev = this.positionHistory[i - 1];
+
+            if (targetTime >= prev[0] && targetTime <= next[0]) {
+                const range = next[0] - prev[0];
+                const f = range === 0 ? 0 : (targetTime - prev[0]) / range;
+                const hX = prev[1] + (next[1] - prev[1]) * f;
+                const hY = prev[2] + (next[2] - prev[2]) * f;
+                return { x: hX, y: hY };
+            }
+        }
+
+        return null;
     }
 }

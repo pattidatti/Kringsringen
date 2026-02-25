@@ -23,8 +23,9 @@ import { PreloadScene } from './PreloadScene';
 import { WeatherManager } from './WeatherManager';
 import { AmbientParticleManager } from './AmbientParticleManager';
 import { NetworkManager } from '../network/NetworkManager';
-import { PacketType, type SyncPacket, type PlayerPacket } from '../network/SyncSchemas';
+import { PacketType, type SyncPacket, type PackedPlayer } from '../network/SyncSchemas';
 import type { DataConnection } from 'peerjs';
+import { JitterBuffer } from '../network/JitterBuffer';
 
 
 class MainScene extends Phaser.Scene implements IMainScene {
@@ -83,8 +84,9 @@ class MainScene extends Phaser.Scene implements IMainScene {
     public networkManager?: NetworkManager;
     private remotePlayers: Map<string, Phaser.Physics.Arcade.Sprite> = new Map();
     private playerNicknames: Map<string, Phaser.GameObjects.Text> = new Map();
+    private playerBuffers: Map<string, JitterBuffer<PackedPlayer>> = new Map();
     /** Cache of last-received packet per remote peer — used by Host to relay all positions */
-    private remotePlayerPackets: Map<string, PlayerPacket> = new Map();
+    private remotePlayerPackets: Map<string, PackedPlayer> = new Map();
     private lastSyncTime: number = 0;
 
     constructor() {
@@ -328,14 +330,67 @@ class MainScene extends Phaser.Scene implements IMainScene {
 
         this.physics.add.overlap(this.attackHitbox, this.enemies, (_hitbox, enemy) => {
             const e = enemy as Enemy;
-            e.takeDamage(this.stats.damage, '#ffcc00'); // Gold for physical
-            e.pushback(player.x, player.y, this.stats.knockback);
+            if (this.networkManager?.role === 'client') {
+                const now = Date.now();
+                const lastReq = e.getData('lastHitRequest') || 0;
+                if (now - lastReq > 250) { // Throttle client hit requests
+                    e.setData('lastHitRequest', now);
+                    this.networkManager.broadcast({
+                        t: PacketType.GAME_EVENT,
+                        ev: {
+                            type: 'hit_request',
+                            data: {
+                                enemyId: e.id,
+                                hitX: this.attackHitbox.x,
+                                hitY: this.attackHitbox.y,
+                                damage: this.stats.damage
+                            }
+                        },
+                        ts: this.networkManager.getServerTime()
+                    });
+
+                    // Client-side prediction (visual only)
+                    if (this.poolManager) {
+                        this.poolManager.getDamageText(e.x, e.y - 30, this.stats.damage, '#ffcc00');
+                        this.events.emit('enemy-hit'); // Sound
+                    }
+                }
+            } else {
+                e.takeDamage(this.stats.damage, '#ffcc00'); // Gold for physical
+                e.pushback(player.x, player.y, this.stats.knockback);
+            }
         });
 
         this.physics.add.overlap(this.attackHitbox, this.bossGroup, (_hitbox, boss) => {
             const b = boss as BossEnemy;
-            b.takeDamage(this.stats.damage, '#ffcc00');
-            b.pushback(player.x, player.y, this.stats.knockback);
+            if (this.networkManager?.role === 'client') {
+                const now = Date.now();
+                const lastReq = b.getData('lastHitRequest') || 0;
+                if (now - lastReq > 250) {
+                    b.setData('lastHitRequest', now);
+                    this.networkManager.broadcast({
+                        t: PacketType.GAME_EVENT,
+                        ev: {
+                            type: 'hit_request',
+                            data: {
+                                enemyId: 'boss',
+                                hitX: this.attackHitbox.x,
+                                hitY: this.attackHitbox.y,
+                                damage: this.stats.damage
+                            }
+                        },
+                        ts: this.networkManager.getServerTime()
+                    });
+
+                    if (this.poolManager) {
+                        this.poolManager.getDamageText(b.x, b.y - 30, this.stats.damage, '#ffcc00');
+                        this.events.emit('enemy-hit');
+                    }
+                }
+            } else {
+                b.takeDamage(this.stats.damage, '#ffcc00');
+                b.pushback(player.x, player.y, this.stats.knockback);
+            }
         });
 
         // Player Hit Logic (Event-Driven)
@@ -469,11 +524,11 @@ class MainScene extends Phaser.Scene implements IMainScene {
         }
     }
 
-    private handleNetworkPacket(packet: SyncPacket, _conn: DataConnection) {
+    private handleNetworkPacket(packet: SyncPacket, conn: DataConnection) {
         switch (packet.t) {
             case PacketType.PLAYER_SYNC:
-                if (packet.p) this.updateRemotePlayer(packet.p);
-                if (packet.ps) packet.ps.forEach(p => this.updateRemotePlayer(p));
+                if (packet.p) this.updateRemotePlayer(packet.p, packet.ts);
+                if (packet.ps) packet.ps.forEach(p => this.updateRemotePlayer(p, packet.ts));
                 break;
             case PacketType.ENEMY_SYNC:
                 // Only clients receive this from host
@@ -483,6 +538,39 @@ class MainScene extends Phaser.Scene implements IMainScene {
                 break;
             case PacketType.GAME_EVENT:
                 if (packet.ev) {
+                    if (packet.ev.type === 'hit_request' && this.networkManager?.role === 'host') {
+                        // Host validates the hit using Lag Compensation (Rewind)
+                        const req = packet.ev.data;
+                        let enemy: Enemy | BossEnemy | null = null;
+
+                        if (req.enemyId === 'boss') {
+                            enemy = this.bossGroup.getFirstAlive() as BossEnemy;
+                        } else {
+                            enemy = this.waves.findEnemyById(req.enemyId);
+                        }
+
+                        if (enemy && enemy.active && !enemy.getData('isDead')) { // Using isDead getter safely
+                            const historicalPos = enemy.getHistoricalPosition(packet.ts);
+                            if (historicalPos) {
+                                const dist = Phaser.Math.Distance.Between(historicalPos.x, historicalPos.y, req.hitX, req.hitY);
+                                // The player's attack hitbox radius is 50. Allow 70px for precision grace.
+                                if (dist <= 70) {
+                                    console.log(`[Host] Validated client hit on ${req.enemyId} at lag ${this.networkManager.getServerTime() - packet.ts}ms. Distance: ${dist}`);
+                                    enemy.takeDamage(req.damage, '#ffcc00');
+
+                                    // Remote player pushback source
+                                    const remoteSprite = this.remotePlayers.get(conn.peer);
+                                    if (remoteSprite) {
+                                        enemy.pushback(remoteSprite.x, remoteSprite.y, this.stats.knockback);
+                                    }
+                                } else {
+                                    console.warn(`[Host] Rejected client hit on ${req.enemyId}. Distance ${dist} too far at historical time.`);
+                                }
+                            }
+                        }
+                        break; // Do not broadcast hit_requests
+                    }
+
                     this.handleGameEvent(packet.ev);
                     // Relay to all if host
                     if (this.networkManager?.role === 'host') {
@@ -500,49 +588,41 @@ class MainScene extends Phaser.Scene implements IMainScene {
         }
     }
 
-    private updateRemotePlayer(p: any) {
+    private updateRemotePlayer(p: PackedPlayer, ts: number) {
+        const [id, px, py, _anim, _flipX, _hp, _weapon, name] = p;
+
         // Use the registry peer ID (not private NetworkManager.peer) to skip ourselves
         const myId = this.game.registry.get('networkConfig')?.peer.id;
-        if (p.id === myId) return;
+        if (id === myId) return;
 
-        let remotePlayer = this.remotePlayers.get(p.id);
+        let remotePlayer = this.remotePlayers.get(id);
         if (!remotePlayer) {
-            remotePlayer = this.physics.add.sprite(p.x, p.y, 'player-idle');
+            remotePlayer = this.physics.add.sprite(px, py, 'player-idle');
             remotePlayer.setScale(2);
             remotePlayer.setDepth(100);
-            this.remotePlayers.set(p.id, remotePlayer);
+            this.remotePlayers.set(id, remotePlayer);
 
             // Add nickname tag
-            const label = this.add.text(p.x, p.y - 40, p.name || 'Spiller', {
+            const label = this.add.text(px, py - 40, name || 'Spiller', {
                 fontSize: '12px',
                 fontFamily: 'Alagard',
                 color: '#ffffff',
                 backgroundColor: '#00000088',
                 padding: { x: 4, y: 2 }
             }).setOrigin(0.5).setDepth(101);
-            this.playerNicknames.set(p.id, label);
+            this.playerNicknames.set(id, label);
         }
 
-        // Store target for smooth lerping Instead of physics velocity which overshoots
-        remotePlayer.setData('targetX', p.x);
-        remotePlayer.setData('targetY', p.y);
-
-        const dx = p.x - remotePlayer.x;
-        const dy = p.y - remotePlayer.y;
-
-        // Snap if distance is too large
-        if (Math.abs(dx) > 150 || Math.abs(dy) > 150) {
-            remotePlayer.setPosition(p.x, p.y);
+        // Push to JitterBuffer instead of applying instantly
+        let buffer = this.playerBuffers.get(id);
+        if (!buffer) {
+            buffer = new JitterBuffer<PackedPlayer>(30);
+            this.playerBuffers.set(id, buffer);
         }
-        remotePlayer.setVelocity(0, 0);
-
-        if (remotePlayer.anims.currentAnim?.key !== p.anim) {
-            remotePlayer.play(p.anim);
-        }
-        remotePlayer.setFlipX(p.flipX);
+        buffer.push(ts, p);
 
         // Cache latest packet so host can relay it to other clients
-        this.remotePlayerPackets.set(p.id, p);
+        this.remotePlayerPackets.set(id, p);
     }
 
     private handleGameEvent(event: any) {
@@ -662,25 +742,40 @@ class MainScene extends Phaser.Scene implements IMainScene {
         this.ambient.setTheme(level);
     }
 
-    update(_time: number, delta: number) {
+    update(_time: number, _delta: number) {
         const player = this.data.get('player') as Phaser.Physics.Arcade.Sprite;
         if (this.playerShadow) {
             this.playerShadow.setPosition(player.x, player.y + 28);
         }
 
         // --- Iterating Remote Players for dead reckoning updates ---
+        const renderTime = this.networkManager ? this.networkManager.getServerTime() - 100 : Date.now();
+
         this.remotePlayers.forEach((remotePlayer, id) => {
-            const tx = remotePlayer.getData('targetX');
-            const ty = remotePlayer.getData('targetY');
+            const buffer = this.playerBuffers.get(id);
+            if (buffer) {
+                const sample = buffer.sample(renderTime);
+                if (sample) {
+                    const pPrev = sample.prev.state;
+                    const pNext = sample.next.state;
+                    const f = sample.factor;
 
-            if (tx !== undefined && ty !== undefined) {
-                const dx = tx - remotePlayer.x;
-                const dy = ty - remotePlayer.y;
+                    // Interpolate X and Y
+                    const x = pPrev[1] + (pNext[1] - pPrev[1]) * f;
+                    const y = pPrev[2] + (pNext[2] - pPrev[2]) * f;
 
-                // Smooth lerp: close the distance over approx 40ms
-                const moveFactor = Math.min(1, delta / 40);
-                remotePlayer.x += dx * moveFactor;
-                remotePlayer.y += dy * moveFactor;
+                    remotePlayer.setPosition(x, y);
+
+                    // Use discrete state (animation/flip) from the active nearest boundary
+                    const activeState = f > 0.5 ? pNext : pPrev;
+                    const anim = activeState[3];
+                    const flipX = activeState[4];
+
+                    if (remotePlayer.anims.currentAnim?.key !== anim) {
+                        remotePlayer.play(anim);
+                    }
+                    remotePlayer.setFlipX(flipX === 1);
+                }
             }
 
             const label = this.playerNicknames.get(id);
@@ -1071,22 +1166,22 @@ class MainScene extends Phaser.Scene implements IMainScene {
         const player = this.data.get('player') as Phaser.Physics.Arcade.Sprite;
         if (!player || !this.networkManager) return;
 
-        const now = Date.now();
+        const now = this.networkManager.getServerTime();
         const myId = this.game.registry.get('networkConfig')?.peer.id || 'unknown';
-        const playerPacket: PlayerPacket = {
-            id: myId,
-            x: Math.round(player.x),
-            y: Math.round(player.y),
-            anim: player.anims.currentAnim?.key || 'player-idle',
-            flipX: player.flipX,
-            hp: this.registry.get('playerHP'),
-            weapon: this.registry.get('currentWeapon'),
-            name: this.registry.get('nickname')
-        };
+        const playerPacket: PackedPlayer = [
+            myId,
+            Math.round(player.x),
+            Math.round(player.y),
+            player.anims.currentAnim?.key || 'player-idle',
+            player.flipX ? 1 : 0,
+            this.registry.get('playerHP'),
+            this.registry.get('currentWeapon'),
+            this.registry.get('nickname')
+        ];
 
         if (this.networkManager.role === 'host') {
             // Host broadcasts its own position + all remote (client) positions
-            const allPlayers: PlayerPacket[] = [playerPacket, ...Array.from(this.remotePlayerPackets.values())];
+            const allPlayers: PackedPlayer[] = [playerPacket, ...Array.from(this.remotePlayerPackets.values())];
 
             this.networkManager.broadcast({
                 t: PacketType.PLAYER_SYNC,

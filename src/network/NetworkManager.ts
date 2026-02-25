@@ -9,6 +9,8 @@ export class NetworkManager {
     private unreliableConnections: Map<string, DataConnection> = new Map();
     private onPacketReceived: (packet: SyncPacket, connection: DataConnection) => void;
     public role: 'host' | 'client';
+    public timeOffset: number = 0;
+    private pingInterval: ReturnType<typeof setInterval> | null = null;
     private tickInterval: ReturnType<typeof setInterval> | null = null;
     private onTick: (() => void) | null = null;
 
@@ -47,6 +49,9 @@ export class NetworkManager {
         const onOpen = () => {
             if (conn.label === 'reliable') {
                 this.reliableConnections.set(conn.peer, conn);
+                if (this.role === 'client') {
+                    this.startPingLoop(conn);
+                }
             } else {
                 this.unreliableConnections.set(conn.peer, conn);
             }
@@ -59,7 +64,37 @@ export class NetworkManager {
         }
 
         conn.on('data', (data: any) => {
-            this.onPacketReceived(data as SyncPacket, conn);
+            const packet = data as SyncPacket;
+
+            // Handle NTP Ping/Pong transparently
+            if (packet.t === PacketType.PING && packet.pi) {
+                // Host replies to Client's PING
+                if (conn.open) {
+                    conn.send({
+                        t: PacketType.PONG,
+                        po: {
+                            clientTime: packet.pi.clientTime,
+                            serverTime: Date.now()
+                        },
+                        ts: Date.now()
+                    });
+                }
+                return;
+            } else if (packet.t === PacketType.PONG && packet.po) {
+                // Client calculates network time offset
+                const rtt = Date.now() - packet.po.clientTime;
+                const newOffset = packet.po.serverTime - (packet.po.clientTime + rtt / 2);
+
+                // Smooth the offset using EMA (Exponential Moving Average)
+                if (this.timeOffset === 0) {
+                    this.timeOffset = newOffset;
+                } else {
+                    this.timeOffset = this.timeOffset * 0.8 + newOffset * 0.2;
+                }
+                return;
+            }
+
+            this.onPacketReceived(packet, conn);
         });
 
         conn.on('close', () => {
@@ -79,6 +114,24 @@ export class NetworkManager {
                 this.unreliableConnections.delete(conn.peer);
             }
         });
+    }
+
+    private startPingLoop(conn: DataConnection) {
+        if (this.pingInterval) clearInterval(this.pingInterval);
+
+        const sendPing = () => {
+            if (conn.open) {
+                conn.send({
+                    t: PacketType.PING,
+                    pi: { clientTime: Date.now() },
+                    ts: Date.now()
+                });
+            }
+        };
+
+        // Ping immediately, then every 1 second
+        sendPing();
+        this.pingInterval = setInterval(sendPing, 1000);
     }
 
     /**
@@ -135,6 +188,14 @@ export class NetworkManager {
         return this.peer.id;
     }
 
+    /** 
+     * Returns the globally synchronized time.
+     * Host returns local time. Client returns local time + network offset.
+     */
+    public getServerTime(): number {
+        return Date.now() + (this.role === 'client' ? this.timeOffset : 0);
+    }
+
     public getConnectedPeerCount(): number {
         // Reliable represents solid connection count securely
         return this.reliableConnections.size;
@@ -146,5 +207,6 @@ export class NetworkManager {
         this.reliableConnections.clear();
         this.unreliableConnections.clear();
         if (this.tickInterval) clearInterval(this.tickInterval);
+        if (this.pingInterval) clearInterval(this.pingInterval);
     }
 }

@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { Enemy } from './Enemy';
-import type { EnemyPacket } from '../network/SyncSchemas';
+import type { PackedEnemy } from '../network/SyncSchemas';
 import { Coin } from './Coin';
 import { SaveManager } from './SaveManager';
 import { GAME_CONFIG } from '../config/GameConfig';
@@ -240,18 +240,18 @@ export class WaveManager {
             }
         }
     }
-    public getEnemySyncData(): EnemyPacket[] {
-        const data: EnemyPacket[] = [];
+    public getEnemySyncData(): PackedEnemy[] {
+        const data: PackedEnemy[] = [];
         this.scene.enemies.children.iterate((child: any) => {
             if (child.active && !child.isDead) {
-                data.push({
-                    id: child.id || child.name,
-                    x: Math.round(child.x),
-                    y: Math.round(child.y),
-                    hp: child.hp,
-                    anim: child.anims.currentAnim?.key || '',
-                    flipX: child.flipX
-                });
+                data.push([
+                    child.id || child.name,
+                    Math.round(child.x),
+                    Math.round(child.y),
+                    child.hp,
+                    child.anims.currentAnim?.key || '',
+                    child.flipX ? 1 : 0
+                ]);
             }
             return true;
         });
@@ -259,14 +259,14 @@ export class WaveManager {
         // Also sync boss if active
         this.scene.bossGroup.children.iterate((boss: any) => {
             if (boss.active && !boss.isDead) {
-                data.push({
-                    id: 'boss',
-                    x: Math.round(boss.x),
-                    y: Math.round(boss.y),
-                    hp: boss.hp,
-                    anim: boss.anims.currentAnim?.key || '',
-                    flipX: boss.flipX
-                });
+                data.push([
+                    'boss',
+                    Math.round(boss.x),
+                    Math.round(boss.y),
+                    boss.hp,
+                    boss.anims.currentAnim?.key || '',
+                    boss.flipX ? 1 : 0
+                ]);
             }
             return true;
         });
@@ -274,43 +274,44 @@ export class WaveManager {
         return data;
     }
 
-    public syncEnemies(packets: EnemyPacket[]): void {
+    public syncEnemies(packets: PackedEnemy[]): void {
         const player = this.scene.data.get('player') as Phaser.Physics.Arcade.Sprite;
-        const activeIds = new Set(packets.map(p => p.id));
+        const activeIds = new Set(packets.map(p => p[0]));
 
         packets.forEach(p => {
+            const [id, x, y, hp, anim, flipX] = p;
             let enemy: any = null;
-            if (p.id === 'boss') {
+            if (id === 'boss') {
                 enemy = this.scene.bossGroup.getFirstAlive();
                 if (!enemy) {
                     const bossIdx = this.scene.registry.get('bossComingUp') ?? 0;
                     this.scene.events.emit('start-boss', bossIdx);
                 }
             } else {
-                enemy = this.findEnemyById(p.id);
+                enemy = this.findEnemyById(id);
                 if (!enemy) {
                     let type = 'orc';
-                    if (p.anim.includes('slime')) type = 'slime';
-                    if (p.anim.includes('skeleton')) type = 'skeleton';
-                    if (p.anim.includes('werewolf')) type = 'werewolf';
+                    if (anim.includes('slime')) type = 'slime';
+                    if (anim.includes('skeleton')) type = 'skeleton';
+                    if (anim.includes('werewolf')) type = 'werewolf';
 
-                    enemy = this.scene.enemies.get(p.x, p.y) as Enemy;
+                    enemy = this.scene.enemies.get(x, y) as Enemy;
                     if (enemy) {
-                        enemy.reset(p.x, p.y, player, 1.0, type);
-                        enemy.id = p.id;
+                        enemy.reset(x, y, player, 1.0, type);
+                        enemy.id = id;
                     }
                 }
             }
 
             if (enemy) {
-                enemy.setData('targetX', p.x);
-                enemy.setData('targetY', p.y);
+                enemy.setData('targetX', x);
+                enemy.setData('targetY', y);
                 // Also update real pos initially if it's super far (Enemy.ts handles it anyway, but safe to do)
 
-                enemy.hp = p.hp;
-                enemy.setFlipX(p.flipX);
-                if (enemy.anims.currentAnim?.key !== p.anim && p.anim) {
-                    enemy.play(p.anim);
+                enemy.hp = hp;
+                enemy.setFlipX(flipX === 1);
+                if (enemy.anims.currentAnim?.key !== anim && anim) {
+                    enemy.play(anim);
                 }
                 if (enemy.setClientMode) enemy.setClientMode(true);
             }
@@ -325,7 +326,7 @@ export class WaveManager {
         toRemove.forEach(e => (e as Enemy).disable());
     }
 
-    private findEnemyById(id: string): Enemy | null {
+    public findEnemyById(id: string): Enemy | null {
         let found: Enemy | null = null;
         this.scene.enemies.children.iterate((child: any) => {
             if ((child as any).id === id) {

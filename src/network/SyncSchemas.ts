@@ -4,33 +4,21 @@ export const PacketType = {
     GAME_EVENT: 2,
     COIN_SYNC: 3,
     BOSS_SYNC: 4,
-    GAME_STATE: 5
+    GAME_STATE: 5,
+    PING: 6,
+    PONG: 7
 } as const;
 
 export type PacketType = typeof PacketType[keyof typeof PacketType];
 
-export interface PlayerPacket {
-    id: string;
-    x: number;
-    y: number;
-    anim: string;
-    flipX: boolean;
-    hp: number;
-    weapon: string;
-    name?: string;
-}
+// [id, x, y, anim, flipX(1|0), hp, weapon, name]
+export type PackedPlayer = [string, number, number, string, number, number, string, string?];
 
-export interface EnemyPacket {
-    id: string;
-    x: number;
-    y: number;
-    hp: number;
-    anim: string;
-    flipX: boolean;
-}
+// [id, x, y, hp, anim, flipX(1|0)]
+export type PackedEnemy = [string, number, number, number, string, number];
 
 export interface GameEventPacket {
-    type: 'attack' | 'spawn' | 'death' | 'upgrade' | 'boss_ability' | 'coin_collect' | 'spawn_coins' | 'level_complete';
+    type: 'attack' | 'spawn' | 'death' | 'upgrade' | 'boss_ability' | 'coin_collect' | 'spawn_coins' | 'level_complete' | 'hit_request' | 'hit_confirm';
     data: any;
 }
 
@@ -41,12 +29,23 @@ export interface GameStatePacket {
     bossIndex?: number;
 }
 
+export interface PingPacket {
+    clientTime: number;
+}
+
+export interface PongPacket {
+    clientTime: number;
+    serverTime: number;
+}
+
 export interface SyncPacket {
     t: PacketType;
-    p?: PlayerPacket;    // Single player (client -> host)
-    ps?: PlayerPacket[]; // All players (host -> client)
-    es?: EnemyPacket[];  // All enemies (host -> client)
+    p?: PackedPlayer;    // Single player (client -> host)
+    ps?: PackedPlayer[]; // All players (host -> client)
+    es?: PackedEnemy[];  // All enemies (host -> client)
     ev?: GameEventPacket;
     gs?: GameStatePacket;
+    pi?: PingPacket;     // NTP Ping (client -> host)
+    po?: PongPacket;     // NTP Pong (host -> client)
     ts: number;          // Timestamp
 }
