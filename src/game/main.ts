@@ -391,7 +391,6 @@ class MainScene extends Phaser.Scene implements IMainScene {
 
         // Resume audio context and play music
         this.input.on('pointerdown', () => AudioManager.instance.resumeContext());
-        AudioManager.instance.playBGM('meadow_theme');
         AudioManager.instance.playBGS('forest_ambience');
         // Global Sound Listeners
         this.events.on('enemy-hit', () => AudioManager.instance.playSFX('hit'));
