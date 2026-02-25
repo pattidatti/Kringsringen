@@ -38,14 +38,10 @@ export class WaveManager {
         this.isLevelActive = true;
         this.scene.registry.set('gameLevel', this.currentLevel);
 
-        // Switch music based on level
-        if (this.currentLevel === 3) {
-            AudioManager.instance.playBGM('dragons_fury');
-        } else if (this.currentLevel === 2) {
-            AudioManager.instance.playBGM('exploration_theme');
-        } else if (this.currentLevel >= 4) {
-            AudioManager.instance.playBGM('dragons_fury');
-        }
+        // Music per level — boss music is handled separately in BossEnemy/spawnBoss
+        const bgmTracks = ['meadow_theme', 'exploration_theme', 'dragons_fury'];
+        const randomBGM = bgmTracks[Math.floor(Math.random() * bgmTracks.length)];
+        AudioManager.instance.playBGM(randomBGM);
 
         this.startWave();
     }

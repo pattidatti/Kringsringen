@@ -369,14 +369,28 @@ class MainScene extends Phaser.Scene implements IMainScene {
             loop: true
         });
 
+        // HP regen tick — applies playerRegen (Trollblod upgrade) every second
+        this.time.addEvent({
+            delay: 1000,
+            callback: () => {
+                const regen = this.registry.get('playerRegen') as number;
+                if (regen > 0) {
+                    const hp = this.registry.get('playerHP') as number;
+                    const maxHP = this.registry.get('playerMaxHP') as number;
+                    if (hp < maxHP) {
+                        this.registry.set('playerHP', Math.min(hp + regen, maxHP));
+                    }
+                }
+            },
+            callbackScope: this,
+            loop: true
+        });
+
         // Initial Start
         this.waves.startLevel(1);
 
         // Resume audio context and play music
         this.input.on('pointerdown', () => AudioManager.instance.resumeContext());
-        const bgmTracks = ['meadow_theme', 'exploration_theme', 'dragons_fury'];
-        const randomBGM = bgmTracks[Math.floor(Math.random() * bgmTracks.length)];
-        AudioManager.instance.playBGM(randomBGM);
         AudioManager.instance.playBGS('forest_ambience');
         // Global Sound Listeners
         this.events.on('enemy-hit', () => AudioManager.instance.playSFX('hit'));
