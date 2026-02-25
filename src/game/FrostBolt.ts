@@ -69,6 +69,7 @@ export class FrostBolt extends Phaser.Physics.Arcade.Sprite {
                 const damage = isCenter ? scaledDamage : scaledDamage * 0.5;
 
                 if (mainScene.networkManager?.role === 'client') {
+                    enemy.predictDamage(damage);
                     mainScene.networkManager.broadcast({
                         t: PacketType.GAME_EVENT,
                         ev: {
@@ -114,7 +115,12 @@ export class FrostBolt extends Phaser.Physics.Arcade.Sprite {
                     if (!e.active || e === slowed) return true;
                     const dist = Phaser.Math.Distance.Between(slowed.x, slowed.y, e.x, e.y);
                     if (dist <= 60) { // Smaller radius for shatter splinter
-                        (e as Enemy).takeDamage(scaledDamage * 0.25, '#00aaff');
+                        const shatterEnemy = e as Enemy;
+                        if (mainScene.networkManager?.role === 'client') {
+                            shatterEnemy.predictDamage(scaledDamage * 0.25);
+                        } else {
+                            shatterEnemy.takeDamage(scaledDamage * 0.25, '#00aaff');
+                        }
                     }
                     return true;
                 });

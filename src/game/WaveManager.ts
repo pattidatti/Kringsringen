@@ -325,10 +325,20 @@ export class WaveManager {
                 }
 
                 if (hp <= 0) {
-                    if (enemy.die) enemy.die();
-                    else enemy.disable();
+                    // Update: Only trigger death if not already in prediction
+                    // The prediction logic already triggered die/disable!
+                    if (enemy.predictedDeadUntil > 0) {
+                        enemy.predictedDeadUntil = 0; // Host confirmed, we are good!
+                    } else {
+                        if (enemy.die) enemy.die();
+                        else enemy.disable();
+                    }
                     return;
                 }
+
+                // If host confirms an HP greater than 0 but we predicted death,
+                // we DO NOT reset here. The JitterBuffer/preUpdate rollback will handle it!
+                // We just let the buffer accumulate the true state.
 
                 enemy.setData('targetX', x);
                 enemy.setData('targetY', y);

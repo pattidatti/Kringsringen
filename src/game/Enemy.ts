@@ -26,6 +26,11 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     protected originalSpeed: number = 100;
     private shadow: Phaser.GameObjects.Sprite | null = null;
     public id: string = "";
+
+    // Predictive Death (Client-side)
+    private predictedDeadUntil: number = 0;
+    private predictedHP: number = 0;
+
     /** When true this enemy is a client-side puppet — no AI, no damage, no physics body active. */
     private isClientMode: boolean = false;
 
@@ -114,6 +119,9 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         this.lastAttackTime = 0;
         this.lastAIUpdate = 0;
 
+        this.predictedDeadUntil = 0;
+        this.predictedHP = this.hp;
+
         // Clear slow state
         if (this.slowTimer) {
             this.slowTimer.remove();
@@ -150,8 +158,27 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 
         super.preUpdate(time, delta);
 
-        // CLIENT PUPPET MODE: only render shadow + HP bar, skip all AI and damage
+        // CLIENT PUPPET MODE: rendering from JitterBuffer, predicting hits
         if (this.isClientMode) {
+            if (this.predictedDeadUntil > Date.now()) {
+                // We are locally dead, waiting for host confirmation. Stays invisible.
+                return;
+            } else if (this.predictedDeadUntil > 0 && this.predictedDeadUntil < Date.now()) {
+                // ⚠️ THE ROLLBACK ⚠️ Host didn't confirm our kill in time.
+                this.predictedDeadUntil = 0;
+                this.predictedHP = this.hp; // Reset to truth
+                if (this.body) this.body.checkCollision.none = false;
+
+                // Visual glitch indicating denied hit
+                this.setTint(0x88ccff);
+                this.scene.time.delayedCall(200, () => {
+                    if (this.active && !this.isDead) this.clearTint();
+                });
+
+                this.setScale(this.config?.spriteInfo?.type === 'spritesheet' ? GAME_CONFIG.ENEMIES[this.enemyType.toUpperCase() as EnemyType]?.scale || 1.5 : 1.5);
+                this.setAlpha(1);
+            }
+
             if (this.jitterBuffer) {
                 const renderTime = (this.scene as any).networkManager ? (this.scene as any).networkManager.getServerTime() - 100 : Date.now();
                 const sample = this.jitterBuffer.sample(renderTime);
@@ -425,10 +452,12 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         if (this.isDead || !this.active) return;
 
         this.hp -= amount;
+        this.predictedHP = this.hp;
+
         this.scene.events.emit('enemy-hit');
         this.setTint(0xff0000);
         this.scene.time.delayedCall(100, () => {
-            if (this.active && !this.isDead) this.clearTint();
+            if (this.active && !this.isDead && !this.predictedDeadUntil) this.clearTint();
         });
 
         if ((this.scene as any).poolManager) {
@@ -439,6 +468,58 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
             console.log(`Enemy ${this.enemyType} reached 0 HP, calling die()`);
             this.die();
         }
+    }
+
+    /**
+     * Predictive damage allows the client to immediately react to their own hits,
+     * without waiting for the host to validate.
+     */
+    predictDamage(amount: number) {
+        if (!this.isClientMode || !this.active || this.predictedDeadUntil > 0) return;
+
+        this.predictedHP -= amount;
+
+        if (this.predictedHP <= 0) {
+            this.predictDeath();
+        }
+    }
+
+    /**
+     * Executes the visual death sequence immediately for the local client,
+     * hiding the enemy and disabling collisions while waiting for host confirmation.
+     */
+    protected predictDeath() {
+        if (this.predictedDeadUntil > 0) return; // Already predicted
+
+        // Give host 500ms to confirm the kill via enemy_death event, else rollback
+        this.predictedDeadUntil = Date.now() + 500;
+
+        if (this.body) this.body.checkCollision.none = true;
+        this.hpBar.clear();
+
+        if ((this.scene as any).poolManager) {
+            (this.scene as any).poolManager.spawnBloodEffect(this.x, this.y);
+        }
+
+        this.setTint(0xffffff);
+        this.spawnDeathSparks();
+
+        const popScale = this.scaleX * 1.25;
+        this.setScale(popScale);
+
+        this.scene.time.delayedCall(80, () => {
+            if (this.active) this.setTint(0x555555);
+        });
+
+        this.scene.tweens.add({
+            targets: this,
+            alpha: 0,
+            scaleX: 0,
+            scaleY: 0,
+            duration: 380,
+            ease: 'Cubic.in'
+            // We DO NOT disable() here. We wait for host to call either disable/die, or rollback happens
+        });
     }
 
     protected die() {
@@ -507,14 +588,18 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 
     /**
      * Call with `true` on clients to make this a position-only puppet.
-     * The physics body is disabled so the enemy won't block the local player
-     * or emit damage events. The host is the sole authority.
+     * The physics body remains active to register overlaps (hit_requests),
+     * but we disable its response to physics forces. 
      */
     public setClientMode(enabled: boolean) {
         this.isClientMode = enabled;
         if (this.body) {
-            // Disabling the body prevents arcade-physics collisions and overlap callbacks
-            this.body.enable = !enabled;
+            // ULTRATHINK BUGFIX: Do NOT set enable = false. 
+            // We need enable = true to trigger overlaps.
+            // We set moves = false so arcade physics doesn't try to displace it against JitterBuffer.
+            const arcadeBody = this.body as Phaser.Physics.Arcade.Body;
+            arcadeBody.moves = !enabled;
+            this.body.checkCollision.none = false; // Reset collision state
         }
         if (enabled && !this.jitterBuffer) {
             this.jitterBuffer = new JitterBuffer<PackedEnemy>(30);

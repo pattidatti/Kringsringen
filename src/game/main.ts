@@ -327,9 +327,14 @@ class MainScene extends Phaser.Scene implements IMainScene {
         this.physics.add.collider(player, this.enemies);
         this.physics.add.collider(this.enemies, this.enemies);
         this.physics.add.collider(player, this.obstacles);
+        // Only host handles hard physical separation for enemies to avoid rubberbanding
+        if (this.networkManager?.role !== 'client') {
+            this.physics.add.collider(player, this.enemies);
+            this.physics.add.collider(this.bossGroup, this.obstacles);
+        }
+
         this.physics.add.collider(this.enemies, this.obstacles);
         this.physics.add.collider(player, this.bossGroup);
-        this.physics.add.collider(this.bossGroup, this.obstacles);
 
         this.physics.add.overlap(this.attackHitbox, this.enemies, (_hitbox, enemy) => {
             const e = enemy as Enemy;
@@ -352,7 +357,8 @@ class MainScene extends Phaser.Scene implements IMainScene {
                         ts: this.networkManager.getServerTime()
                     });
 
-                    // Client-side prediction (visual only)
+                    // Client-side prediction (visual and physical)
+                    e.predictDamage(this.stats.damage);
                     if (this.poolManager) {
                         this.poolManager.getDamageText(e.x, e.y - 30, this.stats.damage, '#ffcc00');
                         this.events.emit('enemy-hit'); // Sound
@@ -385,6 +391,7 @@ class MainScene extends Phaser.Scene implements IMainScene {
                         ts: this.networkManager.getServerTime()
                     });
 
+                    // Client-side prediction (visual only)
                     if (this.poolManager) {
                         this.poolManager.getDamageText(b.x, b.y - 30, this.stats.damage, '#ffcc00');
                         this.events.emit('enemy-hit');

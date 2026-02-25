@@ -212,6 +212,7 @@ export class LightningBolt extends Phaser.Physics.Arcade.Sprite {
                 mainScene.poolManager.getDamageText(hitEnemy.x, hitEnemy.y - 30, this.damage, this.colorStr);
                 this.scene.events.emit('enemy-hit');
             }
+            hitEnemy.predictDamage(this.damage);
         } else {
             // Deal damage
             hitEnemy.takeDamage(this.damage, this.colorStr);

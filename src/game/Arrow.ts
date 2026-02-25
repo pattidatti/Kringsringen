@@ -66,7 +66,8 @@ export class Arrow extends Phaser.Physics.Arcade.Sprite {
                     ts: mainScene.networkManager.getServerTime()
                 });
 
-                // Client-side prediction (visual only)
+                // Client-side prediction (visual and physical)
+                e.predictDamage(this.damage);
                 if (mainScene.poolManager) {
                     mainScene.poolManager.getDamageText(e.x, e.y - 30, this.damage, '#ffffff');
                     mainScene.events.emit('enemy-hit');
@@ -144,7 +145,14 @@ export class Arrow extends Phaser.Physics.Arcade.Sprite {
             const e = enemy as Enemy;
             if (!hitExplosionEnemies.has(e)) {
                 hitExplosionEnemies.add(e);
-                e.takeDamage(explosionDamage, '#ffaa00');
+                if (mainScene.networkManager?.role === 'client') {
+                    e.predictDamage(explosionDamage);
+                    if (mainScene.poolManager) {
+                        mainScene.poolManager.getDamageText(e.x, e.y - 30, explosionDamage, '#ffaa00');
+                    }
+                } else {
+                    e.takeDamage(explosionDamage, '#ffaa00');
+                }
             }
         }
     }

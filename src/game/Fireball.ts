@@ -125,6 +125,7 @@ export class Fireball extends Phaser.Physics.Arcade.Sprite {
                     mainScene.poolManager.getDamageText(directHit.x, directHit.y - 30, scaledDamage, '#ff6e24');
                     mainScene.events.emit('enemy-hit');
                 }
+                directHit.predictDamage(scaledDamage);
             } else {
                 directHit.takeDamage(scaledDamage, '#ff6e24'); // Bright orange/fire
                 directHit.pushback(this.startX, this.startY, 200);
@@ -137,7 +138,11 @@ export class Fireball extends Phaser.Physics.Arcade.Sprite {
             if (!e.active || e === directHit) return true;
             const dist = Phaser.Math.Distance.Between(hitX, hitY, e.x, e.y);
             if (dist <= fireballRadius) {
-                (e as Enemy).takeDamage(scaledDamage * 0.5, '#ff6e24');
+                if (mainScene.networkManager?.role === 'client') {
+                    (e as Enemy).predictDamage(scaledDamage * 0.5);
+                } else {
+                    (e as Enemy).takeDamage(scaledDamage * 0.5, '#ff6e24');
+                }
                 (e as Enemy).pushback(hitX, hitY, 100);
                 hitEnemies.push(e as Enemy);
             }
@@ -154,7 +159,11 @@ export class Fireball extends Phaser.Physics.Arcade.Sprite {
                     if (!e.active) return true;
                     const dist = Phaser.Math.Distance.Between(hitX, hitY, e.x, e.y);
                     if (dist <= fireballRadius && e !== directHit && !hitEnemies.includes(e)) {
-                        (e as Enemy).takeDamage(scaledDamage * 0.3, '#ff6e24');
+                        if (mainScene.networkManager?.role === 'client') {
+                            (e as Enemy).predictDamage(scaledDamage * 0.3);
+                        } else {
+                            (e as Enemy).takeDamage(scaledDamage * 0.3, '#ff6e24');
+                        }
                         (e as Enemy).pushback(hitX, hitY, 80);
                     }
                     return true;
