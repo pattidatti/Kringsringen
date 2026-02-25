@@ -18,8 +18,8 @@
 
 # Boss battles
 - Sjekke at alle bosser fungerer riktig, har animations osv. 
-- Orkehøvding har noe feil med hitbox, får ikke til å skade den. Bare lighting med seeking greier å treffe, alt annen bommer totalt, går rett gjennom. 
-- Orkehøvding virker til å bli svært lett stuck, og kan ikke bevege seg; blir dermed ingen stor trussel. 
+-[x] Orkehøvding har noe feil med hitbox, får ikke til å skade den. Bare lighting med seeking greier å treffe, alt annen bommer totalt, går rett gjennom. 
+-[x] Orkehøvding virker til å bli svært lett stuck, og kan ikke bevege seg; blir dermed ingen stor trussel. 
 
 - Multiplayer orkehøvding; spiller B får hitbaren over hodet, men den er gigalang, og  den er "tom" i HP baren på toppen. 
 
@@ -28,6 +28,7 @@
 
 # Spell
 - Lighting ser fremdeles ikke helt bra ut. 
+- Lighting er fremdeles for overpowered. 
 - Ser ut som man kan caste fortere enn cooldownen tillater. 
 - [ ] Lag når det er 3+ lyn samtidig, begynner det å lagge, må optimaliseres betraktelig! 
 # musikk
@@ -35,7 +36,8 @@
 
 
 # Bugs
-- [] Generell dårlig pathing på fiender, de setter seg fast i alt mulig. 
+- [ ] Når man skriver navn på death screen, får man ikke bruke alle bokstaver; WASD er blokket. 
+- [x] Generell dårlig pathing på fiender, de setter seg fast i alt mulig. 
 - [] Det er ikke regn på hele skjermen, det mangler litt på høyre side.
 - [?] Spillet crasher når man skyter bue og treffer noe med (ihvertfall med eksplosjon ulocked )
 - [x] Virker som gull forsvinner etter en stund, det må bli liggende. 

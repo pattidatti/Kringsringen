@@ -41,7 +41,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     private jitterBuffer: JitterBuffer<PackedEnemy> | null = null;
 
     // Static Buffers for AI (GC Hardening)
-    private static readonly NUM_RAYS = 8;
+    private static readonly NUM_RAYS = 16;
     private static readonly INTEREST_BUFFER = new Array(Enemy.NUM_RAYS).fill(0);
     private static readonly DANGER_BUFFER = new Array(Enemy.NUM_RAYS).fill(0);
 
@@ -323,7 +323,6 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         if (!this.active) return;
         const speed = this.movementSpeed;
         const numRays = Enemy.NUM_RAYS;
-        const rayLength = 80;
 
         // Zero out the static buffers instead of allocating `new Array()`
         for (let i = 0; i < numRays; i++) {
@@ -364,16 +363,23 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         // Dangers (Obstacles)
         const obstacles = (this.scene as any).obstacles as Phaser.Physics.Arcade.StaticGroup;
         if (obstacles) {
+            const myRadius = Math.max(this.body!.width, this.body!.height) * 0.5;
+
             obstacles.getChildren().forEach((obs: any) => {
                 if (!obs.active) return;
+
+                const obsBody = obs.body as Phaser.Physics.Arcade.Body;
+                const obsRadius = obsBody ? Math.max(obsBody.width, obsBody.height) * 0.5 : 20;
+                const minClearance = myRadius + obsRadius + 40; // 40px extra clearance padding
+
                 const dist = Phaser.Math.Distance.Between(this.x, this.y, obs.x, obs.y);
-                if (dist < rayLength) {
+                if (dist < minClearance) {
                     const ang = Phaser.Math.Angle.Between(this.x, this.y, obs.x, obs.y);
                     for (let i = 0; i < numRays; i++) {
                         const rayAngle = (i / numRays) * Math.PI * 2;
                         let dot = Math.cos(rayAngle - ang);
                         if (dot > 0.7) {
-                            dangers[i] = Math.max(dangers[i], dot * (1 - dist / rayLength));
+                            dangers[i] = Math.max(dangers[i], dot * (1 - dist / minClearance));
                         }
                     }
                 }
@@ -383,12 +389,15 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         // Separation using Spatial Grid
         const grid = (this.scene as any).spatialGrid; // Access grid from scene
         if (grid) {
+            const myRadius = Math.max(this.body!.width, this.body!.height) * 0.5;
+            const searchRadius = myRadius + 50; // Increased radius to check
+
             const neighbors = grid.findNearby({
                 x: this.x,
                 y: this.y,
                 width: this.body!.width,
                 height: this.body!.height
-            }, 50); // Look for neighbors within 50px
+            }, searchRadius);
 
             for (const neighbor of neighbors) {
                 // Approximate distance check since grid returns candidates
@@ -396,14 +405,19 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
                 // Skip self check is hard without ID, but valid coordinates check works
                 if (Math.abs(neighbor.x - this.x) < 1 && Math.abs(neighbor.y - this.y) < 1) continue;
 
+                // Neighbor radius approximation
+                const neighborRadius = neighbor.width ? Math.max(neighbor.width, neighbor.height) * 0.5 : 20;
+                const minSeparation = myRadius + neighborRadius + 10;
+
                 const dist = Phaser.Math.Distance.Between(this.x, this.y, neighbor.x, neighbor.y);
-                if (dist < 40) {
+                if (dist < minSeparation) {
                     const ang = Phaser.Math.Angle.Between(this.x, this.y, neighbor.x, neighbor.y);
                     for (let i = 0; i < numRays; i++) {
                         const rayAngle = (i / numRays) * Math.PI * 2;
                         let dot = Math.cos(rayAngle - ang);
+                        // Increase sensitivity for separation
                         if (dot > 0.5) {
-                            dangers[i] = Math.max(dangers[i], dot * 0.5);
+                            dangers[i] = Math.max(dangers[i], dot * (1 - dist / minSeparation));
                         }
                     }
                 }
