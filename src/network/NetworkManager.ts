@@ -14,6 +14,7 @@ export class NetworkManager {
     private tickInterval: ReturnType<typeof setInterval> | null = null;
     private tickWorker: Worker | null = null;
     private onTick: (() => void) | null = null;
+    public latencyMs: number = 0; // For debug simulation
 
     constructor(
         peer: Peer,
@@ -142,14 +143,12 @@ export class NetworkManager {
         const isReliable = packet.t === PacketType.GAME_EVENT || packet.t === PacketType.GAME_STATE;
         const targetMap = isReliable ? this.reliableConnections : this.unreliableConnections;
 
-        // PeerJS naturally serializes objects via JS internal cloning before WebRTC bridging.
-        // We removed the heavy JSON.stringify() to skip large V8 Garbage Collection pauses.
         targetMap.forEach(conn => {
             if (conn.open) {
-                try {
-                    conn.send(packet);
-                } catch (err) {
-                    console.warn(`[Network] Failed to broadcast on ${conn.label}:`, err);
+                if (this.latencyMs > 0) {
+                    setTimeout(() => this.safeSend(conn, packet), this.latencyMs);
+                } else {
+                    this.safeSend(conn, packet);
                 }
             }
         });
@@ -163,11 +162,19 @@ export class NetworkManager {
         const conn = isReliable ? this.reliableConnections.get(peerId) : this.unreliableConnections.get(peerId);
 
         if (conn && conn.open) {
-            try {
-                conn.send(packet);
-            } catch (err) {
-                console.warn(`[Network] Failed to sendTo on ${conn.label}:`, err);
+            if (this.latencyMs > 0) {
+                setTimeout(() => this.safeSend(conn, packet), this.latencyMs);
+            } else {
+                this.safeSend(conn, packet);
             }
+        }
+    }
+
+    private safeSend(conn: DataConnection, packet: any) {
+        try {
+            conn.send(packet);
+        } catch (err) {
+            console.warn(`[Network] Failed to send on ${conn.label}:`, err);
         }
     }
 

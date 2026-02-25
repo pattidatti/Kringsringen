@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { Enemy } from './Enemy';
 import { AudioManager } from './AudioManager';
+import { PacketType } from '../network/SyncSchemas';
 
 export class Fireball extends Phaser.Physics.Arcade.Sprite {
     private damage: number = 0;
@@ -103,8 +104,31 @@ export class Fireball extends Phaser.Physics.Arcade.Sprite {
 
         // Direct hit
         if (directHit) {
-            directHit.takeDamage(scaledDamage, '#ff6e24'); // Bright orange/fire
-            directHit.pushback(this.startX, this.startY, 200);
+            if (mainScene.networkManager?.role === 'client') {
+                mainScene.networkManager.broadcast({
+                    t: PacketType.GAME_EVENT,
+                    ev: {
+                        type: 'projectile_hit_request',
+                        data: {
+                            projectileType: 'fireball',
+                            targetId: directHit.id,
+                            hitX: hitX,
+                            hitY: hitY,
+                            damage: scaledDamage,
+                            timestamp: mainScene.networkManager.getServerTime()
+                        }
+                    },
+                    ts: mainScene.networkManager.getServerTime()
+                });
+
+                if (mainScene.poolManager) {
+                    mainScene.poolManager.getDamageText(directHit.x, directHit.y - 30, scaledDamage, '#ff6e24');
+                    mainScene.events.emit('enemy-hit');
+                }
+            } else {
+                directHit.takeDamage(scaledDamage, '#ff6e24'); // Bright orange/fire
+                directHit.pushback(this.startX, this.startY, 200);
+            }
         }
 
         // Splash damage to nearby enemies

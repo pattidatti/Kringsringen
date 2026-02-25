@@ -163,7 +163,8 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
                     const nRy = pNext[2];
 
                     // Snap immediately if teleporting long distances
-                    if (Math.abs(pRx - nRx) > 150 || Math.abs(pRy - nRy) > 150) {
+                    if (Math.abs(pRx - nRx) > 200 || Math.abs(pRy - nRy) > 200) {
+                        console.warn(`[Desync] Hard snapping enemy ${this.id} due to large delta`);
                         this.setPosition(pNext[1], pNext[2]);
                     } else {
                         // Smoothly interpolate between the two network states inside the jitter buffer

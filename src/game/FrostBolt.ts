@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { Enemy } from './Enemy';
 import { AudioManager } from './AudioManager';
+import { PacketType } from '../network/SyncSchemas';
 
 export class FrostBolt extends Phaser.Physics.Arcade.Sprite {
     private damage: number = 0;
@@ -64,13 +65,41 @@ export class FrostBolt extends Phaser.Physics.Arcade.Sprite {
             const dist = Phaser.Math.Distance.Between(hitX, hitY, e.x, e.y);
             if (dist <= frostRadius) {
                 const isCenter = dist < 20;
-                (e as Enemy).takeDamage(isCenter ? scaledDamage : scaledDamage * 0.5, '#00aaff');
-                (e as Enemy).pushback(hitX, hitY, isCenter ? 220 : 120);
+                const enemy = e as Enemy;
+                const damage = isCenter ? scaledDamage : scaledDamage * 0.5;
 
-                // Apply slow effect if unlocked
-                if (frostSlowDuration > 0) {
-                    (e as Enemy).applySlow(frostSlowDuration);
-                    slowedEnemies.push(e as Enemy);
+                if (mainScene.networkManager?.role === 'client') {
+                    mainScene.networkManager.broadcast({
+                        t: PacketType.GAME_EVENT,
+                        ev: {
+                            type: 'projectile_hit_request',
+                            data: {
+                                projectileType: 'frost',
+                                targetId: enemy.id,
+                                hitX: hitX,
+                                hitY: hitY,
+                                damage: damage,
+                                timestamp: mainScene.networkManager.getServerTime(),
+                                isSlow: frostSlowDuration > 0,
+                                slowDuration: frostSlowDuration
+                            }
+                        },
+                        ts: mainScene.networkManager.getServerTime()
+                    });
+
+                    if (mainScene.poolManager) {
+                        mainScene.poolManager.getDamageText(enemy.x, enemy.y - 30, damage, '#00aaff');
+                        this.scene.events.emit('enemy-hit');
+                    }
+                } else {
+                    enemy.takeDamage(damage, '#00aaff');
+                    enemy.pushback(hitX, hitY, isCenter ? 220 : 120);
+
+                    // Apply slow effect if unlocked
+                    if (frostSlowDuration > 0) {
+                        enemy.applySlow(frostSlowDuration);
+                        slowedEnemies.push(enemy);
+                    }
                 }
             }
             return true;

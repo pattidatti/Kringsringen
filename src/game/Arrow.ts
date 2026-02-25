@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { Enemy } from './Enemy';
 import { AudioManager } from './AudioManager';
+import { PacketType } from '../network/SyncSchemas';
 
 export class Arrow extends Phaser.Physics.Arcade.Sprite {
     private damage: number = 0;
@@ -48,8 +49,32 @@ export class Arrow extends Phaser.Physics.Arcade.Sprite {
             this.hitEnemies.add(e);
             this.hitCount++;
 
-            e.takeDamage(this.damage, '#ffffff');
-            e.pushback(this.startX, this.startY, 150);
+            if (mainScene.networkManager?.role === 'client') {
+                mainScene.networkManager.broadcast({
+                    t: PacketType.GAME_EVENT,
+                    ev: {
+                        type: 'projectile_hit_request',
+                        data: {
+                            projectileType: 'arrow',
+                            targetId: e.id,
+                            hitX: this.x,
+                            hitY: this.y,
+                            damage: this.damage,
+                            timestamp: mainScene.networkManager.getServerTime()
+                        }
+                    },
+                    ts: mainScene.networkManager.getServerTime()
+                });
+
+                // Client-side prediction (visual only)
+                if (mainScene.poolManager) {
+                    mainScene.poolManager.getDamageText(e.x, e.y - 30, this.damage, '#ffffff');
+                    mainScene.events.emit('enemy-hit');
+                }
+            } else {
+                e.takeDamage(this.damage, '#ffffff');
+                e.pushback(this.startX, this.startY, 150);
+            }
 
             // Handle explosion on impact
             if (this.explosiveLevel > 0) {

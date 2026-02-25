@@ -29,10 +29,35 @@ export class JitterBuffer<T> {
             return { prev: this.buffer[0], next: this.buffer[0], factor: 0 };
         }
 
-        // If target time is newer than the newest we have, clamp to newest
-        // (Extrapolation could be added here later if needed)
-        if (targetTime >= this.buffer[this.buffer.length - 1].ts) {
+        // If target time is newer than the newest we have, perform linear extrapolation
+        // to prevent stuttering/hopping when packets are late.
+        if (targetTime > this.buffer[this.buffer.length - 1].ts) {
             const latest = this.buffer[this.buffer.length - 1];
+
+            // We need at least two packets to calculate velocity/drift
+            if (this.buffer.length >= 2) {
+                const prev = this.buffer[this.buffer.length - 2];
+                const dt = latest.ts - prev.ts;
+
+                if (dt > 0) {
+                    const extrapolationTime = Math.min(targetTime - latest.ts, 200); // Cap to 200ms
+                    const factor = extrapolationTime / dt;
+
+                    // We return the latest as both prev and next, but with a factor > 1
+                    // The caller must handle factors > 1 if they want true extrapolation,
+                    // or we can synthesize a "future" packet here.
+                    // Synthesizing a future state is cleaner for the caller.
+
+                    return {
+                        prev: latest,
+                        next: {
+                            ts: targetTime,
+                            state: this.extrapolateState(latest.state, prev.state, factor)
+                        },
+                        factor: 1.0 // Force it to the synthesized next state
+                    };
+                }
+            }
             return { prev: latest, next: latest, factor: 0 };
         }
 
@@ -49,6 +74,25 @@ export class JitterBuffer<T> {
         }
 
         return null;
+    }
+
+    /**
+     * Synthesizes a future state based on current velocity.
+     * T is assumed to be an array of values (PackedPlayer or PackedEnemy).
+     */
+    private extrapolateState(latest: T, prev: T, factor: number): T {
+        if (!Array.isArray(latest) || !Array.isArray(prev)) return latest;
+
+        const nextState = [...latest] as any;
+        // Indices 1 and 2 are usually X and Y in Kringsringen's packed schemas
+        if (typeof nextState[1] === 'number' && typeof prev[1] === 'number') {
+            nextState[1] = latest[1] + (latest[1] - (prev as any)[1]) * factor;
+        }
+        if (typeof nextState[2] === 'number' && typeof prev[2] === 'number') {
+            nextState[2] = latest[2] + (latest[2] - (prev as any)[2]) * factor;
+        }
+
+        return nextState as T;
     }
 
     public clear() {

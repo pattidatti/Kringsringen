@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { Enemy } from './Enemy';
 import { AudioManager } from './AudioManager';
+import { PacketType } from '../network/SyncSchemas';
 
 export class LightningBolt extends Phaser.Physics.Arcade.Sprite {
     private damage: number = 0;
@@ -189,9 +190,33 @@ export class LightningBolt extends Phaser.Physics.Arcade.Sprite {
         const hitX = this.x;
         const hitY = this.y;
 
-        // Deal damage
-        hitEnemy.takeDamage(this.damage, this.colorStr);
-        hitEnemy.pushback(this.x, this.y, 150);
+        const mainScene = this.scene as any;
+        if (mainScene.networkManager?.role === 'client') {
+            mainScene.networkManager.broadcast({
+                t: PacketType.GAME_EVENT,
+                ev: {
+                    type: 'projectile_hit_request',
+                    data: {
+                        projectileType: 'lightning',
+                        targetId: hitEnemy.id || 'boss',
+                        hitX: hitX,
+                        hitY: hitY,
+                        damage: this.damage,
+                        timestamp: mainScene.networkManager.getServerTime()
+                    }
+                },
+                ts: mainScene.networkManager.getServerTime()
+            });
+
+            if (mainScene.poolManager) {
+                mainScene.poolManager.getDamageText(hitEnemy.x, hitEnemy.y - 30, this.damage, this.colorStr);
+                this.scene.events.emit('enemy-hit');
+            }
+        } else {
+            // Deal damage
+            hitEnemy.takeDamage(this.damage, this.colorStr);
+            hitEnemy.pushback(this.x, this.y, 150);
+        }
 
         // Add to hit set
         this.hitEnemies.add(hitEnemy);

@@ -88,6 +88,8 @@ class MainScene extends Phaser.Scene implements IMainScene {
     /** Cache of last-received packet per remote peer — used by Host to relay all positions */
     private remotePlayerPackets: Map<string, PackedPlayer> = new Map();
     private lastSyncTime: number = 0;
+    private lastSentPlayerStates: Map<string, string> = new Map();
+    private networkTickCount: number = 0;
 
     constructor() {
         super('MainScene');
@@ -571,6 +573,33 @@ class MainScene extends Phaser.Scene implements IMainScene {
                         break; // Do not broadcast hit_requests
                     }
 
+                    if (packet.ev.type === 'projectile_hit_request' && this.networkManager?.role === 'host') {
+                        const req = packet.ev.data;
+                        const enemy = this.waves.findEnemyById(req.targetId) || (req.targetId === 'boss' ? this.bossGroup.getFirstAlive() as any : null);
+
+                        if (enemy && enemy.active && !enemy.getData('isDead')) {
+                            const historicalPos = enemy.getHistoricalPosition(req.timestamp || packet.ts);
+                            if (historicalPos) {
+                                const dist = Phaser.Math.Distance.Between(historicalPos.x, historicalPos.y, req.hitX, req.hitY);
+                                // Projectile hitbox grace: 60px base + 40px lag grace
+                                if (dist <= 100) {
+                                    console.log(`[Host] Validated client ${req.projectileType} hit on ${req.targetId} at lag ${this.networkManager.getServerTime() - (req.timestamp || packet.ts)}ms. Distance: ${dist}`);
+                                    enemy.takeDamage(req.damage, req.projectileType === 'frost' ? '#00aaff' : '#ffcc00');
+
+                                    if (req.projectileType === 'frost' && req.isSlow) {
+                                        enemy.applySlow(req.slowDuration);
+                                    }
+
+                                    // Apply pushback from impact point
+                                    enemy.pushback(req.hitX, req.hitY, 150);
+                                } else {
+                                    console.warn(`[Host] Rejected client ${req.projectileType} hit on ${req.targetId}. Distance ${dist} too far.`);
+                                }
+                            }
+                        }
+                        break;
+                    }
+
                     this.handleGameEvent(packet.ev);
                     // Relay to all if host
                     if (this.networkManager?.role === 'host') {
@@ -776,6 +805,11 @@ class MainScene extends Phaser.Scene implements IMainScene {
                     const x = pPrev[1] + (pNext[1] - pPrev[1]) * f;
                     const y = pPrev[2] + (pNext[2] - pPrev[2]) * f;
 
+                    // Hard Snapping (Resilience): If distance is too large, log it
+                    const dist = Phaser.Math.Distance.Between(remotePlayer.x, remotePlayer.y, x, y);
+                    if (dist > 300) {
+                        console.warn(`[Desync] Hard snapping remote player ${id} (dist: ${Math.round(dist)}px)`);
+                    }
                     remotePlayer.setPosition(x, y);
 
                     // Use discrete state (animation/flip) from the active nearest boundary
@@ -1192,21 +1226,43 @@ class MainScene extends Phaser.Scene implements IMainScene {
         ];
 
         if (this.networkManager.role === 'host') {
-            // Host broadcasts its own position + all remote (client) positions
-            const allPlayers: PackedPlayer[] = [playerPacket, ...Array.from(this.remotePlayerPackets.values())];
+            this.networkTickCount++;
+            const forceFullSync = this.networkTickCount % 20 === 0;
+            const playersToSync: PackedPlayer[] = [];
 
-            this.networkManager.broadcast({
-                t: PacketType.PLAYER_SYNC,
-                ps: allPlayers,
-                ts: now
-            });
+            const processPlayer = (p: PackedPlayer) => {
+                const id = p[0];
+                // [id, x, y, anim, flip, hp, weapon, name]
+                const stateStr = `${p[1]},${p[2]},${p[3]},${p[4]},${p[5]},${p[6]}`;
+                const lastState = this.lastSentPlayerStates.get(id);
+
+                if (forceFullSync || lastState !== stateStr) {
+                    this.lastSentPlayerStates.set(id, stateStr);
+                    playersToSync.push(p);
+                }
+            };
+
+            // Process local player
+            processPlayer(playerPacket);
+            // Process remote players
+            this.remotePlayerPackets.forEach(p => processPlayer(p));
+
+            if (playersToSync.length > 0) {
+                this.networkManager.broadcast({
+                    t: PacketType.PLAYER_SYNC,
+                    ps: playersToSync,
+                    ts: now
+                });
+            }
 
             const enemies = this.waves.getEnemySyncData();
-            this.networkManager.broadcast({
-                t: PacketType.ENEMY_SYNC,
-                es: enemies,
-                ts: now
-            });
+            if (enemies.length > 0) {
+                this.networkManager.broadcast({
+                    t: PacketType.ENEMY_SYNC,
+                    es: enemies,
+                    ts: now
+                });
+            }
 
             // Periodic Game State Sync (Throatled to 1 per second to save bandwidth)
             if (now - this.lastSyncTime > 1000) {
@@ -1223,12 +1279,18 @@ class MainScene extends Phaser.Scene implements IMainScene {
                 });
             }
         } else if (this.networkManager.role === 'client') {
-            // Client sends local state to host
-            this.networkManager.broadcast({
-                t: PacketType.PLAYER_SYNC,
-                p: playerPacket,
-                ts: now
-            });
+            const id = playerPacket[0];
+            const stateStr = `${playerPacket[1]},${playerPacket[2]},${playerPacket[3]},${playerPacket[4]},${playerPacket[5]},${playerPacket[6]}`;
+            const lastState = this.lastSentPlayerStates.get(id);
+
+            if (lastState !== stateStr) {
+                this.lastSentPlayerStates.set(id, stateStr);
+                this.networkManager.broadcast({
+                    t: PacketType.PLAYER_SYNC,
+                    p: playerPacket,
+                    ts: now
+                });
+            }
         }
     }
 }
