@@ -8,6 +8,7 @@ import { MenuAnchor } from './ui/MenuAnchor';
 import { FantasyBook, type BookMode } from './ui/FantasyBook';
 import { BossSplashScreen } from './ui/BossSplashScreen';
 import { BossHUD } from './ui/BossHUD';
+import { HighscoreNotification } from './ui/HighscoreNotification';
 
 import { setGameInstance } from '../hooks/useGameRegistry';
 import type { NetworkConfig } from '../App';
@@ -200,6 +201,7 @@ export const GameContainer: React.FC<GameContainerProps> = ({ networkConfig }) =
                         isOpen={isBookOpen}
                         onClick={handleToggleBook}
                     />
+                    <HighscoreNotification />
                 </div>
 
                 {/* Hotbar - Bottom Center */}

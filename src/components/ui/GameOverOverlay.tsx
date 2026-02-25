@@ -14,8 +14,43 @@ export const GameOverOverlay: React.FC = () => {
     const [submitting, setSubmitting] = useState(false);
     const [submitError, setSubmitError] = useState<string | null>(null);
     const [submitted, setSubmitted] = useState(false);
+    const [calculatedRank, setCalculatedRank] = useState<number | null>(null);
 
     const score = level * 1000 + wave * 100 + coins;
+
+    React.useEffect(() => {
+        if (hp > 0) return; // Only fetch when game is over
+
+        let isMounted = true;
+        const fetchRank = async () => {
+            try {
+                const scores = await HighscoreManager.fetchHighscores(25);
+                if (!isMounted) return;
+
+                let rank = 26;
+                for (let i = 0; i < scores.length; i++) {
+                    if (score > scores[i].score) {
+                        rank = i + 1;
+                        break;
+                    }
+                }
+
+                if (rank === 26 && scores.length < 25) {
+                    rank = scores.length + 1;
+                }
+
+                if (rank <= 25) {
+                    setCalculatedRank(rank);
+                }
+            } catch (err) {
+                console.error("Failed to calculate rank", err);
+            }
+        };
+
+        fetchRank();
+
+        return () => { isMounted = false; };
+    }, [hp, score]);
 
     const handleSubmitScore = useCallback(async () => {
         const trimmedName = playerName.trim();
@@ -132,9 +167,21 @@ export const GameOverOverlay: React.FC = () => {
                         placeholder="Skriv inn navn..."
                         value={playerName}
                         onChange={e => setPlayerName(e.target.value)}
-                        disabled={submitting}
+                        disabled={submitting || submitted}
                         className="w-full bg-black/80 border-2 border-red-800/60 text-white font-cinzel text-base text-center px-4 py-3 rounded outline-none focus:border-red-500 placeholder:text-red-800 tracking-widest disabled:opacity-50 disabled:cursor-not-allowed"
                     />
+
+                    {/* Rank Indicator */}
+                    {!submitted && calculatedRank !== null && (
+                        <motion.p
+                            className="text-amber-400 font-cinzel text-sm text-center tracking-widest mt-2"
+                            initial={{ opacity: 0, y: -5 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.5 }}
+                        >
+                            Du ligger an til en {calculatedRank}. plass på listen!
+                        </motion.p>
+                    )}
                 </div>
 
                 {/* Error message */}
@@ -151,7 +198,7 @@ export const GameOverOverlay: React.FC = () => {
 
                 {/* Buttons */}
                 {!submitted ? (
-                    <div className="w-full flex gap-4">
+                    <div className="w-full flex gap-4 mt-2">
                         <FantasyButton
                             label="Send Score"
                             variant="secondary"
@@ -169,14 +216,19 @@ export const GameOverOverlay: React.FC = () => {
                     </div>
                 ) : (
                     <motion.div
-                        className="text-center mb-2"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ duration: 0.5 }}
+                        className="text-center mb-2 mt-4"
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ duration: 0.5, type: 'spring' }}
                     >
-                        <p className="font-cinzel text-green-400 text-lg tracking-widest uppercase">
+                        <p className="font-cinzel text-green-400 text-lg tracking-widest uppercase mb-1">
                             Poengsum lagret!
                         </p>
+                        {calculatedRank !== null && (
+                            <p className="font-cinzel text-amber-300 text-md tracking-widest">
+                                Du kom på {calculatedRank}. plass!
+                            </p>
+                        )}
                     </motion.div>
                 )}
 

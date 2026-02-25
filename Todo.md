@@ -1,17 +1,17 @@
 # Ideer
-- [ ] Pil og bue, med egen hotkey
+- [x] Pil og bue, med egen hotkey
 - [ ] Spells - med spelleffekts
 - [ ] Ulike maps - Samme trær rundt og slikt, men erstatte noen gress tiles med litt annet snacks. 
-- [ ] Ulike mobs
-- [ ] Faser per map/lvl. 
+- [ ] Ulike mobs med ranged og spells (finne sprite for mages)
+- [x] Faser per map/lvl. 
 - [ ] Quester/challenges 
 - [ ] Powerups man kan finne på kartet. 
 - [ ] Items, inventory, équipment. 
 - [ ] Vanskelighetsgrader. 
-- [ ] Onboarding med forklaring av controls og slikt. Kan huke av at det ikke skal vises igjen, lagre i cash. 
+- [x] Onboarding med forklaring av controls og slikt. Kan huke av at det ikke skal vises igjen, lagre i cash. 
 
 # Dash
-- [ ] Dash må implementeres, med en cooldown, 20 sec default. Hotkey 
+- [ ] Dash må implementeres, med en cooldown, 20 sec default. Hotkey Shift (må også ligges inn i onboarding. )
 
 # Score 
 - [x] Score ingame oppe ved siden av mynter

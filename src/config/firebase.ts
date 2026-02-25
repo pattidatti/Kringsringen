@@ -148,9 +148,14 @@ export class HighscoreManager {
     try {
       const db = initializeFirebase();
       const highscoresRef = ref(db, 'highscores');
+      const q = query(
+        highscoresRef,
+        orderByChild('score'),
+        limitToLast(25)
+      );
 
       const unsubscribe = onValue(
-        highscoresRef,
+        q,
         (snapshot) => {
           const data = snapshot.val();
           const scores: Highscore[] = [];
