@@ -16,7 +16,7 @@ export class FrostBolt extends Phaser.Physics.Arcade.Sprite {
         this.setScale(1.5);
         this.setBodySize(1, 1); // Physics body disabled during use
         this.setDepth(200);
-        this.setPipeline('Light2D');
+        if (this.scene.lights.active) this.setPipeline('Light2D');
     }
 
     fire(x: number, y: number, targetX: number, targetY: number, damage: number) {

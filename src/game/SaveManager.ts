@@ -4,6 +4,7 @@ export interface SaveData {
     highStage: number;
     unlockedWeapons: string[];
     audioSettings?: any; // Avoiding circular dependency, will be typed in AudioManager
+    graphicsQuality?: string;
     tutorialSeen?: boolean;
 }
 
@@ -20,7 +21,8 @@ export class SaveManager {
                     upgradeLevels: parsed.upgradeLevels || {},
                     highStage: parsed.highStage || 1,
                     unlockedWeapons: parsed.unlockedWeapons || ['sword'],
-                    audioSettings: parsed.audioSettings
+                    audioSettings: parsed.audioSettings,
+                    graphicsQuality: parsed.graphicsQuality
                 };
             }
         } catch (e) {

@@ -139,6 +139,8 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         }
         if ((this.scene as any).quality?.lightingEnabled) {
             this.setPipeline('Light2D');
+        } else {
+            this.resetPipeline();
         }
 
         // Animation Listeners (Clean previous listeners to avoid duplicates if not careful, 
@@ -515,12 +517,19 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     }
 
     protected updateHPBar() {
+        const quality = (this.scene as any).quality;
+
+        if (quality?.hpBarsEnabled === false) {
+            this.hpBar.clear();
+            return;
+        }
+
         if (this.isDead || !this.active) {
             this.hpBar.clear();
             return;
         }
 
-        const mode = (this.scene as any).quality?.hpBarUpdateMode || 'continuous';
+        const mode = quality?.hpBarUpdateMode || 'continuous';
         if (mode === 'reactive' && this.hp === this.lastDrawnHP) {
             return;
         }

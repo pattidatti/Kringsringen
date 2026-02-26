@@ -77,10 +77,13 @@ export class EnemyProjectile extends Phaser.Physics.Arcade.Sprite {
             this.postFX.addGlow(tint, 4, 0, false, 0.1, 10);
         } else {
             this.setTexture('arrow');
-            this.play({ key: '' }); // Clear animation if any
+            this.play(`${this.projectileType}-proj-anim`);
             this.setScale(1.5);
+            this.setDepth(150);
+
+            if (this.scene.lights.active) this.setPipeline('Light2D');
+
             this.setBodySize(20, 10);
-            this.setPipeline('Light2D');
 
             this.trail = this.scene.add.particles(x, y, 'arrow', {
                 lifespan: 120,

@@ -148,6 +148,11 @@ class MainScene extends Phaser.Scene implements IMainScene {
         const qualityLevel = (this.game.registry.get('graphicsQuality') as GraphicsQuality) || GAME_CONFIG.QUALITY.DEFAULT;
         this.quality = getQualityConfig(qualityLevel);
 
+        this.game.registry.events.on('changedata-graphicsQuality', (_parent: any, val: GraphicsQuality) => {
+            this.quality = getQualityConfig(val);
+            this.applyQualitySettings();
+        });
+
         // Initialize Network Manager if in multiplayer
         if (netConfig) {
             this.networkManager = new NetworkManager(
@@ -232,21 +237,7 @@ class MainScene extends Phaser.Scene implements IMainScene {
         });
         this.deathSparkEmitter.setDepth(600);
 
-        // --- LIGHT SYSTEM ---
-        if (this.quality.lightingEnabled) {
-            this.lights.enable();
-            this.lights.setAmbientColor(0x0a0a0a); // Near black edges
-        } else {
-            this.lights.disable();
-        }
-
-        // Three-layer player light for a "ultra-smooth" halo effect
-        // 3. Wide ambient glow (near invisible but smooths the final falloff)
-        if (this.quality.lightingEnabled) {
-            this.playerLight = this.lights.addLight(this.mapWidth / 2, this.mapHeight / 2, 250, 0xfffaf0, 0.7);
-            this.outerPlayerLight = this.lights.addLight(this.mapWidth / 2, this.mapHeight / 2, 600, 0xfffaf0, 0.4);
-            this.haloPlayerLight = this.lights.addLight(this.mapWidth / 2, this.mapHeight / 2, 1200, 0xfffaf0, 0.2);
-        }
+        this.applyQualitySettings();
 
         // --- POST PROCESSING ---
         // Vignette — starts invisible; strength is driven by HP in update().
@@ -708,6 +699,60 @@ class MainScene extends Phaser.Scene implements IMainScene {
         if (this.networkManager?.role === 'client') {
             // Handled via netConfig.hostPeerId in create()
         }
+    }
+
+    private applyQualitySettings() {
+        // --- LIGHT SYSTEM ---
+        const player = this.data ? this.data.get('player') as Phaser.Physics.Arcade.Sprite : null;
+
+        if (this.quality.lightingEnabled) {
+            this.lights.enable();
+            this.lights.setAmbientColor(0x0a0a0a); // Near black edges
+
+            if (player) player.setPipeline('Light2D');
+            if (this.enemies) this.enemies.children.iterate((e: any) => { e.setPipeline('Light2D'); return true; });
+            if (this.bossGroup) this.bossGroup.children.iterate((e: any) => { e.setPipeline('Light2D'); return true; });
+            if (this.currentMap) this.currentMap.setLightingEnabled(true);
+            if (this.poolManager) this.poolManager.setLightingEnabled(true);
+            if (this.coins) this.coins.children.iterate((c: any) => { c.setPipeline('Light2D'); return true; });
+            if (this.enemyProjectiles) this.enemyProjectiles.children.iterate((p: any) => { p.setPipeline('Light2D'); return true; });
+
+            // Re-create or re-enable lights if needed
+            if (!this.playerLight) {
+                this.playerLight = this.lights.addLight(0, 0, 250, 0xfffaf0, 0.7);
+                this.outerPlayerLight = this.lights.addLight(0, 0, 600, 0xfffaf0, 0.4);
+                this.haloPlayerLight = this.lights.addLight(0, 0, 1200, 0xfffaf0, 0.2);
+            } else {
+                this.playerLight.setVisible(true);
+                this.outerPlayerLight.setVisible(true);
+                this.haloPlayerLight.setVisible(true);
+            }
+        } else {
+            this.lights.disable();
+
+            if (player) player.resetPipeline();
+            if (this.enemies) this.enemies.children.iterate((e: any) => { e.resetPipeline(); return true; });
+            if (this.bossGroup) this.bossGroup.children.iterate((e: any) => { e.resetPipeline(); return true; });
+            if (this.currentMap) this.currentMap.setLightingEnabled(false);
+            if (this.poolManager) this.poolManager.setLightingEnabled(false);
+            if (this.coins) this.coins.children.iterate((c: any) => { c.resetPipeline(); return true; });
+            if (this.enemyProjectiles) this.enemyProjectiles.children.iterate((p: any) => { p.resetPipeline(); return true; });
+
+            if (this.playerLight) {
+                this.playerLight.setVisible(false);
+                this.outerPlayerLight.setVisible(false);
+                this.haloPlayerLight.setVisible(false);
+            }
+        }
+
+        // Post-FX Vignette
+        if (this.vignetteEffect) {
+            this.vignetteEffect.active = this.quality.postFXEnabled;
+        }
+
+        // Notify managers
+        if (this.weather) this.weather.updateQuality(this.quality);
+        if (this.ambient) this.ambient.updateQuality(this.quality);
     }
 
     private handleNetworkPacket(packet: SyncPacket, conn: DataConnection) {
@@ -1809,6 +1854,10 @@ export const createGame = (containerId: string, networkConfig?: NetworkConfig | 
     if (networkConfig) {
         game.registry.set('networkConfig', networkConfig);
     }
+
+    // Initialize registry with saved quality or default
+    const saved = SaveManager.load();
+    game.registry.set('graphicsQuality', saved.graphicsQuality || 'medium');
 
     return game;
 };

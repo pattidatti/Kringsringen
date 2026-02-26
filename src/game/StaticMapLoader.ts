@@ -34,7 +34,7 @@ export class StaticMapLoader {
         const floor = this.scene.add.tileSprite(cx, cy, this.mapWidth, this.mapHeight, 'fantasy-ground', mapDef.groundFrame);
         floor.setScale(this.scale);
         floor.setDepth(-100);
-        floor.setPipeline('Light2D');
+        if (this.scene.lights.active) floor.setPipeline('Light2D');
         this.createdObjects.push(floor);
 
         // 2. Ground detail tiles (flowers, dirt patches inside clearing)
@@ -42,7 +42,7 @@ export class StaticMapLoader {
             const img = this.scene.add.image(d.x, d.y, 'fantasy-ground', d.frame);
             img.setScale(this.scale);
             img.setDepth(-98);
-            img.setPipeline('Light2D');
+            if (this.scene.lights.active) img.setPipeline('Light2D');
             this.createdObjects.push(img);
         }
 
@@ -66,18 +66,32 @@ export class StaticMapLoader {
         return this.clearingRadius;
     }
 
+    public setLightingEnabled(enabled: boolean): void {
+        for (const obj of this.createdObjects) {
+            if (enabled) {
+                if ('setPipeline' in obj && typeof (obj as any).setPipeline === 'function') {
+                    (obj as any).setPipeline('Light2D');
+                }
+            } else {
+                if ('resetPipeline' in obj && typeof (obj as any).resetPipeline === 'function') {
+                    (obj as any).resetPipeline();
+                }
+            }
+        }
+    }
+
     private placeObject(assetId: string, x: number, y: number, usePhysics: boolean): void {
         if (usePhysics) {
             const s = this.obstacles.create(x, y, assetId) as Phaser.Physics.Arcade.Image;
             s.setScale(this.scale);
             s.setDepth(y + s.height * this.scale * 0.5);
-            s.setPipeline('Light2D');
+            if (this.scene.lights.active) s.setPipeline('Light2D');
             this.createdObjects.push(s);
         } else {
             const s = this.scene.add.image(x, y, assetId);
             s.setScale(this.scale);
             s.setDepth(y + s.height * this.scale * 0.5);
-            s.setPipeline('Light2D');
+            if (this.scene.lights.active) s.setPipeline('Light2D');
             this.createdObjects.push(s);
         }
     }

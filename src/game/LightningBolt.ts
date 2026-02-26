@@ -30,7 +30,7 @@ export class LightningBolt extends Phaser.Physics.Arcade.Sprite {
         this.setScale(1.5);
         this.setBodySize(16, 16);
         this.setDepth(200);
-        this.setPipeline('Light2D');
+        if (this.scene.lights.active) this.setPipeline('Light2D');
 
         // Setup overlap detection with enemies
         const mainScene = scene as any;
@@ -272,7 +272,7 @@ export class LightningBolt extends Phaser.Physics.Arcade.Sprite {
             this.impactSprite.play('lightning-impact');
             this.impactSprite.setScale(1.5);
             this.impactSprite.setDepth(199);
-            this.impactSprite.setPipeline('Light2D');
+            if (this.scene.lights.active) this.impactSprite.setPipeline('Light2D');
         }
 
         // Impact light

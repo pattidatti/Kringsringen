@@ -120,13 +120,33 @@ export class WeatherManager {
         this.fogParticles.setDepth(10); // Below player mostly
         this.fogParticles.setScrollFactor(0); // Fixed to screen, covers viewport
 
-        if (quality?.lightingEnabled) {
+        if (quality?.lightingEnabled && this.scene.lights.active) {
             this.fogParticles.setPipeline('Light2D');
         }
 
         // Add a subtle tint to the scene for "mood"
         this.scene.cameras.main.setBackgroundColor(0x0a1525);
         // We don't actually want to fade out, we use a very subtle tint overlay if needed
+    }
+
+    public updateQuality(quality: any) {
+        const multiplier = quality.particleMultiplier;
+
+        // Update rain if active
+        if (this.rainEmitter) {
+            this.rainEmitter.setQuantity(Math.max(1, Math.floor(4 * multiplier)));
+            this.rainEmitter.setFrequency(Math.max(1, Math.floor(1 / multiplier)));
+        }
+
+        // Update fog if active
+        if (this.fogParticles) {
+            this.fogParticles.setFrequency(Math.max(1, Math.floor(120 / multiplier)));
+            if (quality.lightingEnabled && this.scene.lights.active) {
+                this.fogParticles.setPipeline('Light2D');
+            } else {
+                this.fogParticles.resetPipeline();
+            }
+        }
     }
 
     public update() {

@@ -113,7 +113,7 @@ export class Arrow extends Phaser.Physics.Arcade.Sprite {
         this.setVisible(true);
         this.setPosition(x, y);
         this.setRotation(angle);
-        this.setPipeline('Light2D');
+        if (this.scene.lights.active) this.setPipeline('Light2D');
 
         if (this.trail) {
             this.trail.start();

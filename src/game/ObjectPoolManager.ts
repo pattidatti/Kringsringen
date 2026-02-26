@@ -212,7 +212,7 @@ export class ObjectPoolManager {
             impact = this.scene.add.sprite(x, y, 'lightning_impact');
             impact.setScale(1.5);
             impact.setDepth(199);
-            impact.setPipeline('Light2D');
+            if (this.scene.lights.active) impact.setPipeline('Light2D');
         }
 
         impact.play('lightning-impact');
@@ -258,5 +258,18 @@ export class ObjectPoolManager {
         } else {
             projectile.destroy();
         }
+    }
+
+    public setLightingEnabled(enabled: boolean) {
+        const resetOrSet = (obj: any) => {
+            if (enabled) {
+                if ('setPipeline' in obj && typeof obj.setPipeline === 'function') obj.setPipeline('Light2D');
+            } else {
+                if ('resetPipeline' in obj && typeof obj.resetPipeline === 'function') obj.resetPipeline();
+            }
+        };
+
+        this.lightningImpactPool.forEach(resetOrSet);
+        this.enemyProjectilePool.forEach(resetOrSet);
     }
 }

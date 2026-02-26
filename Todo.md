@@ -17,11 +17,17 @@
 - [x] Score ingame oppe ved siden av mynter
 
 # Boss battles
+- [ ] Orkehøvding er altfor lett å drepe. Trenger litt mer hp, bør være raskere, bruke dash? Kom med forslag. 
 - Sjekke at alle bosser fungerer riktig, har animations osv. 
 -[x] Orkehøvding har noe feil med hitbox, får ikke til å skade den. Bare lighting med seeking greier å treffe, alt annen bommer totalt, går rett gjennom. 
 -[x] Orkehøvding virker til å bli svært lett stuck, og kan ikke bevege seg; blir dermed ingen stor trussel. 
 -[x] Multiplayer orkehøvding; spiller B får hitbaren over hodet, men den er gigalang, og  den er "tom" i HP baren på toppen. 
 
+# grafikk
+- [x] Implementert Grafikk-innstillinger i hovedmeny og in-game (Low, Medium, High).
+- [x] Lav settings: Uten lys ser man omtrent ingenting. Løst ved resette shader pipeline.
+- [ ] Lav setting: Ser ikke spillerkarakter, og samme problem med healthbars. 
+- [ ] Medium settings: Ser greit ut, men når enemies slutter å ha hp bar over hode fordi de ikke er oppdatert, så henger de igjen i lufta. 
 
 # Monsters
 - [x] En del enemies blinker mens de går, ligger antageligvis en frame for mange i sprite sheeten. 

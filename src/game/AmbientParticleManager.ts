@@ -101,6 +101,33 @@ export class AmbientParticleManager {
         this.emitters = [];
     }
 
+    public updateQuality(quality: any) {
+        const multiplier = quality.particleMultiplier;
+
+        for (const emitter of this.emitters) {
+            // Map original frequency based on current multiplier
+            // Using a heuristic: if freq was 500 at 1.0, it should be 500/multiplier
+            // We'll use a conservative update since we don't store original fancies
+            const tex = emitter.texture.key;
+            let baseFreq = 500;
+            let baseQty = 1;
+
+            if (tex === 'ambient_firefly') {
+                baseFreq = 500;
+                baseQty = 1;
+            } else if (tex === 'ambient_leaf') {
+                baseFreq = 700;
+                baseQty = 1;
+            } else if (tex === 'ambient_ember') {
+                baseFreq = 120;
+                baseQty = 2;
+            }
+
+            emitter.setQuantity(Math.max(1, Math.floor(baseQty * multiplier)));
+            emitter.setFrequency(Math.max(1, Math.floor(baseFreq / multiplier)));
+        }
+    }
+
     public destroy() {
         this.clear();
     }
