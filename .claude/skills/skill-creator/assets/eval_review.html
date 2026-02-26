@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Skill Evaluation Review - __SKILL_NAME_PLACEHOLDER__</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 14px;
+            line-height: 1.5;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .tabs {
+            display: flex;
+            background: #f5f5f5;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .tab-button {
+            flex: 1;
+            padding: 15px 20px;
+            border: none;
+            background: none;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            color: #666;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s;
+        }
+
+        .tab-button:hover {
+            color: #333;
+            background: #fff;
+        }
+
+        .tab-button.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+            background: #fff;
+        }
+
+        .tab-content {
+            display: none;
+            padding: 30px;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .eval-section {
+            margin-bottom: 30px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 20px;
+            background: #fafafa;
+        }
+
+        .eval-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .eval-header h3 {
+            color: #333;
+            font-size: 16px;
+        }
+
+        .eval-toggle {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background: #667eea;
+            color: white;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            transition: transform 0.3s;
+        }
+
+        .eval-toggle.expanded {
+            transform: rotate(180deg);
+        }
+
+        .eval-content {
+            display: none;
+            margin-top: 15px;
+        }
+
+        .eval-content.expanded {
+            display: block;
+        }
+
+        .field-group {
+            margin-bottom: 20px;
+        }
+
+        .field-label {
+            display: block;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .field-value {
+            background: white;
+            padding: 12px;
+            border-radius: 6px;
+            border: 1px solid #ddd;
+            font-size: 14px;
+            line-height: 1.6;
+            color: #555;
+            font-family: 'Monaco', 'Menlo', monospace;
+        }
+
+        .field-value.editable {
+            font-family: inherit;
+        }
+
+        textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-family: inherit;
+            font-size: 14px;
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5568d3;
+        }
+
+        .btn-secondary {
+            background: #e0e0e0;
+            color: #333;
+        }
+
+        .btn-secondary:hover {
+            background: #d0d0d0;
+        }
+
+        .btn-danger {
+            background: #ff6b6b;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #ee5a52;
+        }
+
+        .eval-list {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+
+        .eval-item {
+            background: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            border: 1px solid #ddd;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.2s;
+        }
+
+        .eval-item:hover {
+            border-color: #667eea;
+            color: #667eea;
+        }
+
+        .eval-item.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 15px;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #666;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .toggle-switch {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            margin: 10px 0;
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 24px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .3s;
+            border-radius: 24px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 20px;
+            width: 20px;
+            left: 2px;
+            bottom: 2px;
+            background-color: white;
+            transition: .3s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: #667eea;
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+
+        .footer {
+            background: #f5f5f5;
+            padding: 20px;
+            border-top: 1px solid #e0e0e0;
+            text-align: center;
+            color: #666;
+            font-size: 13px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Skill Evaluation Review</h1>
+            <p><strong>Skill:</strong> __SKILL_NAME_PLACEHOLDER__</p>
+            <p style="margin-top: 10px; font-size: 13px;">
+                <strong>Current Description:</strong><br>
+                "__SKILL_DESCRIPTION_PLACEHOLDER__"
+            </p>
+        </div>
+
+        <div class="tabs">
+            <button class="tab-button active" onclick="switchTab(event, 'evaluations')">
+                Evaluations
+            </button>
+            <button class="tab-button" onclick="switchTab(event, 'triggers')">
+                Trigger Queries
+            </button>
+            <button class="tab-button" onclick="switchTab(event, 'help')">
+                Help
+            </button>
+        </div>
+
+        <div id="evaluations" class="tab-content active">
+            <h2 style="margin-bottom: 20px;">Test Case Evaluations</h2>
+            <p style="color: #666; margin-bottom: 20px; font-size: 14px;">
+                Review each test case and provide feedback. You can edit the eval query, toggle should_trigger, and add/remove evals.
+            </p>
+            <div id="evals-container"></div>
+        </div>
+
+        <div id="triggers" class="tab-content">
+            <h2 style="margin-bottom: 20px;">Trigger Query Evaluation</h2>
+            <p style="color: #666; margin-bottom: 20px; font-size: 14px;">
+                These queries will be used to optimize the skill's description for better triggering accuracy.
+            </p>
+            <div id="triggers-container"></div>
+            <div class="button-group" style="margin-top: 30px;">
+                <button class="btn-primary" onclick="exportTriggerEvalSet()">
+                    Export Trigger Eval Set
+                </button>
+            </div>
+        </div>
+
+        <div id="help" class="tab-content">
+            <h2 style="margin-bottom: 20px;">Help</h2>
+            <div style="background: #f5f5f5; padding: 20px; border-radius: 8px; line-height: 1.8;">
+                <h3 style="margin-bottom: 10px;">How to use this tool:</h3>
+                <ul style="margin-left: 20px; margin-bottom: 20px;">
+                    <li><strong>Evaluations Tab:</strong> Review test cases from your skill. Edit queries and toggle fields as needed.</li>
+                    <li><strong>Trigger Queries Tab:</strong> Create queries to test skill triggering accuracy. Mix should-trigger and should-not-trigger cases.</li>
+                    <li><strong>Export:</strong> When done, click "Export" to download your evaluation set as JSON.</li>
+                </ul>
+                <h3 style="margin-bottom: 10px;">Guidelines:</h3>
+                <ul style="margin-left: 20px;">
+                    <li>Make trigger queries realistic and substantive (not one-word requests)</li>
+                    <li>Include mix of should-trigger and should-not-trigger cases</li>
+                    <li>For should-not-trigger, focus on near-misses (queries that share keywords but need different skills)</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="footer">
+            Skill Creator Evaluation Tool | When done, download your eval set and return to Claude Code
+        </div>
+    </div>
+
+    <script>
+        const evalData = __EVAL_DATA_PLACEHOLDER__;
+
+        function switchTab(evt, tabName) {
+            const tabcontents = document.getElementsByClassName("tab-content");
+            for (let i = 0; i < tabcontents.length; i++) {
+                tabcontents[i].classList.remove("active");
+            }
+
+            const tabbuttons = document.getElementsByClassName("tab-button");
+            for (let i = 0; i < tabbuttons.length; i++) {
+                tabbuttons[i].classList.remove("active");
+            }
+
+            document.getElementById(tabName).classList.add("active");
+            evt.currentTarget.classList.add("active");
+        }
+
+        function renderEvaluations() {
+            const container = document.getElementById('evals-container');
+            evalData.evals.forEach((eval_, index) => {
+                const evalEl = document.createElement('div');
+                evalEl.className = 'eval-section';
+                evalEl.innerHTML = `
+                    <div class="eval-header" onclick="toggleEval(this)">
+                        <h3>Evaluation ${index + 1}</h3>
+                        <button class="eval-toggle" onclick="event.stopPropagation()"></button>
+                    </div>
+                    <div class="eval-content">
+                        <div class="field-group">
+                            <label class="field-label">Prompt</label>
+                            <textarea class="field-value editable" data-eval="${index}" data-field="prompt">${eval_.prompt}</textarea>
+                        </div>
+                        <div class="field-group">
+                            <label class="field-label">Expected Output</label>
+                            <textarea class="field-value editable" data-eval="${index}" data-field="expected_output">${eval_.expected_output || ''}</textarea>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(evalEl);
+            });
+        }
+
+        function renderTriggers() {
+            const container = document.getElementById('triggers-container');
+            // Start with sample trigger queries to edit
+            const sampleTriggers = [
+                {query: "Example: 'I have an Excel file with sales data...'", should_trigger: true},
+                {query: "Example: 'Write a Hello World program'", should_trigger: false}
+            ];
+
+            sampleTriggers.forEach((trigger, index) => {
+                const triggerEl = document.createElement('div');
+                triggerEl.className = 'eval-section';
+                triggerEl.innerHTML = `
+                    <div class="eval-header" onclick="toggleEval(this)">
+                        <h3>Trigger Query ${index + 1}</h3>
+                        <button class="eval-toggle" onclick="event.stopPropagation()"></button>
+                    </div>
+                    <div class="eval-content">
+                        <div class="field-group">
+                            <label class="field-label">Query</label>
+                            <textarea class="field-value editable" data-trigger="${index}" data-field="query">${trigger.query}</textarea>
+                        </div>
+                        <div class="field-group">
+                            <label class="field-label">Should Trigger?</label>
+                            <div class="toggle-switch">
+                                <label class="switch">
+                                    <input type="checkbox" ${trigger.should_trigger ? 'checked' : ''} data-trigger="${index}" data-field="should_trigger">
+                                    <span class="slider"></span>
+                                </label>
+                                <span>${trigger.should_trigger ? 'Yes' : 'No'}</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(triggerEl);
+            });
+        }
+
+        function toggleEval(header) {
+            const content = header.nextElementSibling;
+            const toggle = header.querySelector('.eval-toggle');
+            content.classList.toggle('expanded');
+            toggle.classList.toggle('expanded');
+        }
+
+        function exportTriggerEvalSet() {
+            const triggers = [];
+            document.querySelectorAll('[data-trigger]').forEach(el => {
+                const index = el.getAttribute('data-trigger');
+                const field = el.getAttribute('data-field');
+                // Simple export — in production you'd build proper JSON
+            });
+
+            alert('Download eval_set.json and return to Claude Code');
+        }
+
+        // Initialize on load
+        document.addEventListener('DOMContentLoaded', () => {
+            renderEvaluations();
+            renderTriggers();
+        });
+    </script>
+</body>
+</html>

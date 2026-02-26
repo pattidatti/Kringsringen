@@ -1,0 +1,44 @@
+{
+  "skill_name": "my-skill",
+  "evals": [
+    {
+      "id": 0,
+      "prompt": "A realistic user prompt describing what they want the skill to do. Include context, file names, specific details. Not abstract, not one-word. Something a real user would actually ask for.",
+      "expected_output": "Brief description of what a successful output looks like. Not the entire expected result, just enough to understand success criteria.",
+      "files": [],
+      "assertions": [
+        {
+          "name": "primary_objective",
+          "description": "Readable description of what this assertion checks. This text appears in the benchmark viewer.",
+          "type": "custom"
+        }
+      ]
+    },
+    {
+      "id": 1,
+      "prompt": "Another realistic test case. Different from the first one in some way (different file type, complexity level, edge case, etc.).",
+      "expected_output": "What success looks like for this case.",
+      "files": [],
+      "assertions": [
+        {
+          "name": "secondary_objective",
+          "description": "What this checks.",
+          "type": "custom"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Optional third test case. Can test an edge case, uncommon scenario, or variant of the main use case.",
+      "expected_output": "Success criteria for this case.",
+      "files": [],
+      "assertions": [
+        {
+          "name": "edge_case_check",
+          "description": "What this checks.",
+          "type": "custom"
+        }
+      ]
+    }
+  ]
+}
