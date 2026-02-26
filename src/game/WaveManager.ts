@@ -287,7 +287,7 @@ export class WaveManager {
         const player = this.scene.data.get('player') as Phaser.Physics.Arcade.Sprite;
 
         packets.forEach(p => {
-            const [id, x, y, hp, anim, flipX] = p;
+            const [id, x, y, hp, _anim, flipX] = p;
             let enemy: any = null;
 
             if (id === 'boss') {
@@ -309,13 +309,22 @@ export class WaveManager {
                     }
 
                     let type = 'orc';
-                    if (anim.includes('slime')) type = 'slime';
-                    if (anim.includes('skeleton')) type = 'skeleton';
-                    if (anim.includes('werewolf')) type = 'werewolf';
+                    // Parse ID format: "elite_orc-1234abcd..."
+                    const lastDashIdx = id.lastIndexOf('-');
+                    if (lastDashIdx > 0) {
+                        const parsedType = id.substring(0, lastDashIdx);
+                        type = parsedType; // Assuming config exists, ENEMY_TYPES would be the ultimate check but we'll trust the ID
+                    }
+
+                    // Dynamically calculate the same hpMultiplier the Host used for this wave
+                    const currentLevel = this.scene.registry.get('gameLevel') || 1;
+                    const config = this.LEVEL_CONFIG[Math.min(currentLevel - 1, this.LEVEL_CONFIG.length - 1)];
+                    const playerCount = this.getPlayerCount();
+                    const hpMultiplier = config.multiplier * (1 + (playerCount - 1) * 0.5);
 
                     enemy = this.scene.enemies.get(x, y) as Enemy;
                     if (enemy) {
-                        enemy.reset(x, y, player, 1.0, type);
+                        enemy.reset(x, y, player, hpMultiplier, type);
                         enemy.id = id;
                     }
                 }
@@ -346,6 +355,13 @@ export class WaveManager {
                 enemy.setData('targetX', x);
                 enemy.setData('targetY', y);
                 enemy.hp = hp;
+
+                // Sync protection: If host sends an HP higher than our local maxHP,
+                // our prediction/multiplier was off (e.g. joined mid-game), so forcefully correct it.
+                if (hp > enemy.maxHP) {
+                    enemy.maxHP = hp;
+                }
+
                 enemy.setFlipX(flipX === 1);
 
                 if (id === 'boss') {

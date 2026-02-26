@@ -801,6 +801,16 @@ class MainScene extends Phaser.Scene implements IMainScene {
                 this.registry.set('gameLevel', nextLevel - 1); // Set current before increment in event
                 this.events.emit('level-complete');
             }
+        } else if (event.type === 'sync_pause') {
+            this.events.emit('sync_pause', event.data);
+        } else if (event.type === 'player_loaded') {
+            this.events.emit('player_loaded', event.data);
+        } else if (event.type === 'player_ready') {
+            this.events.emit('player_ready', event.data);
+        } else if (event.type === 'start_level') {
+            this.events.emit('start_level', event.data);
+        } else if (event.type === 'resume_game') {
+            this.events.emit('resume_game', event.data);
         }
     }
 
@@ -858,6 +868,8 @@ class MainScene extends Phaser.Scene implements IMainScene {
 
         // Swap ambient particle theme to match the new level
         this.ambient.setTheme(level);
+
+        this.events.emit('map-ready', { level });
     }
 
     update(_time: number, _delta: number) {

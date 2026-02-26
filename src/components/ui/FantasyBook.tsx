@@ -27,6 +27,13 @@ interface FantasyBookProps {
         onSelectPerk: (id: string) => void;
         onBuyUpgrade: (id: string, cost: number) => void;
     }
+
+    // Multiplayer State
+    isMultiplayer?: boolean;
+    isWaitingReady?: boolean;
+    readyPlayersCount?: number;
+    expectedPlayersCount?: number;
+    readyReason?: 'unpause' | 'next_level' | null;
 }
 
 type TabKey = 'character' | 'upgrades' | 'settings';
@@ -59,7 +66,12 @@ export const FantasyBook: React.FC<FantasyBookProps> = React.memo(({
     isOpen,
     mode,
     onClose,
-    actions
+    actions,
+    isMultiplayer,
+    isWaitingReady,
+    readyPlayersCount = 0,
+    expectedPlayersCount = 1,
+    readyReason
 }) => {
     const [activeTab, setActiveTab] = useState<TabKey>('character');
     const [activeShopCategory, setActiveShopCategory] = useState<UpgradeConfig['category']>('Sverd');
@@ -458,15 +470,25 @@ export const FantasyBook: React.FC<FantasyBookProps> = React.memo(({
                         <div className="flex gap-3">
                             {mode === 'shop' ? (
                                 <FantasyButton
-                                    variant={bossComingUp >= 0 ? 'danger' : 'success'}
+                                    variant={bossComingUp >= 0 && !isMultiplayer ? 'danger' : 'success'}
                                     onClick={onClose}
-                                    label={bossComingUp >= 0 ? '💀 Møt sjefen' : `Til level ${level + 1}`}
+                                    label={
+                                        isMultiplayer
+                                            ? (isWaitingReady && readyReason === 'next_level' ? `Venter (${readyPlayersCount}/${expectedPlayersCount})` : 'Klar')
+                                            : (bossComingUp >= 0 ? '💀 Møt sjefen' : `Til level ${level + 1}`)
+                                    }
+                                    disabled={isWaitingReady}
                                 />
                             ) : (
                                 <FantasyButton
                                     variant="secondary"
                                     onClick={onClose}
-                                    label="Lukk boken"
+                                    label={
+                                        isMultiplayer
+                                            ? (isWaitingReady && readyReason === 'unpause' ? `Venter (${readyPlayersCount}/${expectedPlayersCount})` : 'Klar')
+                                            : "Lukk boken"
+                                    }
+                                    disabled={isWaitingReady}
                                 />
                             )}
                         </div>

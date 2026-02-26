@@ -9,6 +9,7 @@ import { FantasyBook, type BookMode } from './ui/FantasyBook';
 import { BossSplashScreen } from './ui/BossSplashScreen';
 import { BossHUD } from './ui/BossHUD';
 import { HighscoreNotification } from './ui/HighscoreNotification';
+import { PacketType } from '../network/SyncSchemas';
 
 import { setGameInstance } from '../hooks/useGameRegistry';
 import type { NetworkConfig } from '../App';
@@ -21,11 +22,16 @@ export const GameContainer: React.FC<GameContainerProps> = ({ networkConfig }) =
     const gameContainerRef = useRef<HTMLDivElement>(null);
     const gameInstanceRef = useRef<Phaser.Game | null>(null);
 
-
-
     // Book State
     const [isBookOpen, setIsBookOpen] = useState(false);
     const [bookMode, setBookMode] = useState<BookMode>('view');
+
+    // Multiplayer Sync State
+    const [readyPlayers, setReadyPlayers] = useState<Set<string>>(new Set());
+    const [loadedPlayers, setLoadedPlayers] = useState<Set<string>>(new Set());
+    const [isWaitingReady, setIsWaitingReady] = useState(false);
+    const [isLoadingLevel, setIsLoadingLevel] = useState(false);
+    const [readyReason, setReadyReason] = useState<'unpause' | 'next_level' | null>(null);
 
     const isBookOpenRef = useRef(isBookOpen);
     const bookModeRef = useRef(bookMode);
@@ -44,22 +50,40 @@ export const GameContainer: React.FC<GameContainerProps> = ({ networkConfig }) =
             const key = e.key.toLowerCase();
             const currentIsOpen = isBookOpenRef.current;
             const currentMode = bookModeRef.current;
+            const isMultiplayer = !!networkConfig;
 
             // Toggle Book
             if (key === 'b') {
                 if (currentIsOpen) {
                     if (currentMode === 'view') {
-                        setIsBookOpen(false);
+                        if (isMultiplayer) {
+                            // Can't directly close in MP without syncing
+                            // Expected to click Fortsett, but B can trigger it
+                            // Will be handled by the close function if needed, but let's ignore B to close in MP for safety
+                        } else {
+                            setIsBookOpen(false);
+                        }
                     }
                 } else {
-                    setBookMode('view');
-                    setIsBookOpen(true);
+                    if (isMultiplayer) {
+                        const nm = (gameInstanceRef.current?.scene.getScene('MainScene') as any)?.networkManager;
+                        nm?.broadcast({
+                            t: PacketType.GAME_EVENT,
+                            ev: { type: 'sync_pause', data: { isPaused: true, reason: 'book' } },
+                            ts: Date.now()
+                        });
+                        setBookMode('view');
+                        setIsBookOpen(true);
+                    } else {
+                        setBookMode('view');
+                        setIsBookOpen(true);
+                    }
                 }
             }
 
             // Close with Escape
             if (key === 'escape') {
-                if (currentIsOpen && currentMode === 'view') {
+                if (currentIsOpen && currentMode === 'view' && !isMultiplayer) {
                     setIsBookOpen(false);
                 }
             }
@@ -67,7 +91,7 @@ export const GameContainer: React.FC<GameContainerProps> = ({ networkConfig }) =
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, []); // Empty dependency array for stable listener
+    }, [networkConfig]); // Dependency required now
 
     useEffect(() => {
         if (gameContainerRef.current && !gameInstanceRef.current) {
@@ -77,30 +101,125 @@ export const GameContainer: React.FC<GameContainerProps> = ({ networkConfig }) =
             // Initialize the singleton for hooks
             setGameInstance(game);
 
-
             // Handle Level Up - Need to wait for scene to be ready
             const setupSceneListeners = () => {
                 const mainScene = game.scene.getScene('MainScene');
                 if (mainScene) {
                     mainScene.events.on('level-up', () => {
                         // Level up is now automatic in MainScene without opening the book
-                        // We can still pause and heal here if desired, but GDD says heal on level complete.
                     });
 
                     mainScene.events.on('level-complete', () => {
-                        // Open Book in Shop Mode
                         setBookMode('shop');
                         setIsBookOpen(true);
                     });
 
                     mainScene.events.on('boss-defeated', () => {
-                        // Post-boss shop: clear boss flag so no warning shown
                         game.registry.set('bossComingUp', -1);
                         setBookMode('shop');
                         setIsBookOpen(true);
                     });
+
+                    // Multi-player specific events
+                    mainScene.events.on('map-ready', (data: any) => {
+                        if (networkConfig) {
+                            const nm = (mainScene as any).networkManager;
+                            if (nm) {
+                                setIsLoadingLevel(true);
+                                nm.broadcast({
+                                    t: PacketType.GAME_EVENT,
+                                    ev: { type: 'player_loaded', data: { playerId: networkConfig.peer.id, level: data.level } },
+                                    ts: Date.now()
+                                });
+                            }
+                            if (networkConfig.role === 'host') {
+                                setLoadedPlayers(prev => new Set(prev).add(networkConfig.peer.id));
+                            }
+                        }
+                    });
+
+                    mainScene.events.on('sync_pause', (data: any) => {
+                        if (networkConfig) {
+                            setIsBookOpen(data.isPaused);
+                            if (data.reason === 'book') setBookMode('view');
+                        }
+                    });
+
+                    mainScene.events.on('player_loaded', (data: any) => {
+                        if (networkConfig?.role === 'host') {
+                            setLoadedPlayers(prev => {
+                                const next = new Set(prev).add(data.playerId);
+                                const nm = (mainScene as any).networkManager;
+                                const total = nm ? nm.getConnectedPeerCount() + 1 : 1;
+                                if (next.size >= total) {
+                                    nm?.broadcast({
+                                        t: PacketType.GAME_EVENT,
+                                        ev: { type: 'start_level', data: { level: data.level } },
+                                        ts: Date.now()
+                                    });
+                                    setIsLoadingLevel(false);
+                                    setIsWaitingReady(false);
+                                    setLoadedPlayers(new Set());
+                                }
+                                return next;
+                            });
+                        }
+                    });
+
+                    mainScene.events.on('player_ready', (data: any) => {
+                        if (networkConfig?.role === 'host') {
+                            setReadyPlayers(prev => {
+                                const next = new Set(prev).add(data.playerId);
+                                const nm = (mainScene as any).networkManager;
+                                const total = nm ? nm.getConnectedPeerCount() + 1 : 1;
+                                if (next.size >= total) {
+                                    if (data.reason === 'unpause') {
+                                        nm?.broadcast({
+                                            t: PacketType.GAME_EVENT,
+                                            ev: { type: 'resume_game', data: {} },
+                                            ts: Date.now()
+                                        });
+                                        setIsBookOpen(false);
+                                        setReadyPlayers(new Set());
+                                        setIsWaitingReady(false);
+                                        setReadyReason(null);
+                                    } else {
+                                        nm?.broadcast({
+                                            t: PacketType.GAME_EVENT,
+                                            ev: { type: 'start_level', data: {} },
+                                            ts: Date.now()
+                                        });
+                                        mainScene.events.emit('start-next-level');
+                                        setIsBookOpen(false);
+                                        setReadyPlayers(new Set());
+                                        setIsWaitingReady(false);
+                                        setReadyReason(null);
+                                    }
+                                }
+                                return next;
+                            });
+                        }
+                    });
+
+                    mainScene.events.on('start_level', () => {
+                        if (networkConfig?.role === 'client') {
+                            setIsLoadingLevel(false);
+                            setIsBookOpen(false);
+                            setIsWaitingReady(false);
+                            setReadyReason(null);
+                            mainScene.events.emit('start-next-level');
+                        }
+                    });
+
+                    mainScene.events.on('resume_game', () => {
+                        if (networkConfig?.role === 'client') {
+                            setIsBookOpen(false);
+                            setIsWaitingReady(false);
+                            setReadyReason(null);
+                        }
+                    });
+
                 } else {
-                    // Try again in a bit if scene isn't ready yet
                     setTimeout(setupSceneListeners, 100);
                 }
             };
@@ -114,7 +233,59 @@ export const GameContainer: React.FC<GameContainerProps> = ({ networkConfig }) =
                 }
             };
         }
-    }, []);
+    }, [networkConfig]);
+
+    // Disconnect safety check
+    useEffect(() => {
+        if (!networkConfig || networkConfig.role !== 'host') return;
+        if (!isWaitingReady && !isLoadingLevel) return;
+
+        const interval = setInterval(() => {
+            const nm = (gameInstanceRef.current?.scene.getScene('MainScene') as any)?.networkManager;
+            if (!nm) return;
+
+            const total = nm.getConnectedPeerCount() + 1;
+
+            // Re-evaluate Loading state based on newly pruned peer count
+            if (isLoadingLevel && loadedPlayers.size >= total) {
+                nm.broadcast({
+                    t: PacketType.GAME_EVENT,
+                    ev: { type: 'start_level', data: {} },
+                    ts: Date.now()
+                });
+                setIsLoadingLevel(false);
+                setLoadedPlayers(new Set());
+            }
+
+            // Re-evaluate Ready state based on newly pruned peer count
+            if (isWaitingReady && readyPlayers.size >= total) {
+                if (readyReason === 'unpause') {
+                    nm.broadcast({
+                        t: PacketType.GAME_EVENT,
+                        ev: { type: 'resume_game', data: {} },
+                        ts: Date.now()
+                    });
+                    setIsBookOpen(false);
+                    setReadyPlayers(new Set());
+                    setIsWaitingReady(false);
+                    setReadyReason(null);
+                } else if (readyReason === 'next_level') {
+                    nm.broadcast({
+                        t: PacketType.GAME_EVENT,
+                        ev: { type: 'start_level', data: {} },
+                        ts: Date.now()
+                    });
+                    gameInstanceRef.current?.scene.getScene('MainScene')?.events.emit('start-next-level');
+                    setIsBookOpen(false);
+                    setReadyPlayers(new Set());
+                    setIsWaitingReady(false);
+                    setReadyReason(null);
+                }
+            }
+        }, 1500);
+
+        return () => clearInterval(interval);
+    }, [networkConfig, isWaitingReady, isLoadingLevel, loadedPlayers.size, readyPlayers.size, readyReason]);
 
     // Centralized Pause Management
     useEffect(() => {
@@ -122,12 +293,12 @@ export const GameContainer: React.FC<GameContainerProps> = ({ networkConfig }) =
         const scene = gameInstanceRef.current.scene.getScene('MainScene');
         if (!scene) return;
 
-        if (isBookOpen) {
+        if (isBookOpen || isLoadingLevel) {
             if (!scene.sys.isPaused()) scene.scene.pause();
         } else {
             if (scene.sys.isPaused()) scene.scene.resume();
         }
-    }, [isBookOpen]);
+    }, [isBookOpen, isLoadingLevel]);
 
     // Play paper sounds when book opens/closes
     useEffect(() => {
@@ -140,21 +311,33 @@ export const GameContainer: React.FC<GameContainerProps> = ({ networkConfig }) =
         if (!gameInstanceRef.current) return;
         const mainScene = gameInstanceRef.current.scene.getScene('MainScene');
 
-        // Deduct coins in Phaser
         const currentCoins = gameInstanceRef.current.registry.get('playerCoins') || 0;
         gameInstanceRef.current.registry.set('playerCoins', currentCoins - cost);
 
-        // Apply stats in Phaser (will also increment level)
         mainScene.events.emit('apply-upgrade', upgradeId);
     }, []);
 
     const handleContinue = useCallback(() => {
         if (!gameInstanceRef.current) return;
         const mainScene = gameInstanceRef.current.scene.getScene('MainScene');
-        const bossComingUp = gameInstanceRef.current.registry.get('bossComingUp') as number ?? -1;
 
+        if (networkConfig) {
+            setReadyReason('next_level');
+            setIsWaitingReady(true);
+            const nm = (mainScene as any).networkManager;
+            nm?.broadcast({
+                t: PacketType.GAME_EVENT,
+                ev: { type: 'player_ready', data: { playerId: networkConfig.peer.id, reason: 'next_level' } },
+                ts: Date.now()
+            });
+            if (networkConfig.role === 'host') {
+                setReadyPlayers(prev => new Set(prev).add(networkConfig.peer.id));
+            }
+            return;
+        }
+
+        const bossComingUp = gameInstanceRef.current.registry.get('bossComingUp') as number ?? -1;
         if (bossComingUp >= 0) {
-            // Clear flag so post-boss shop won't re-trigger
             gameInstanceRef.current.registry.set('bossComingUp', -1);
             mainScene.events.emit('start-boss', bossComingUp);
         } else {
@@ -162,32 +345,50 @@ export const GameContainer: React.FC<GameContainerProps> = ({ networkConfig }) =
         }
 
         setIsBookOpen(false);
-        // Pause handling is now automatic via useEffect watching isBookOpen
-    }, []);
-
+    }, [networkConfig]);
 
     const handleBookClose = useCallback(() => {
-        // Cannot close while leveling logic removed as leveling is gone
-
         if (bookMode === 'shop') {
-            handleContinue(); // Trigger next level
+            handleContinue();
         } else {
-            setIsBookOpen(false);
+            if (networkConfig) {
+                setReadyReason('unpause');
+                setIsWaitingReady(true);
+                const nm = (gameInstanceRef.current?.scene.getScene('MainScene') as any)?.networkManager;
+                nm?.broadcast({
+                    t: PacketType.GAME_EVENT,
+                    ev: { type: 'player_ready', data: { playerId: networkConfig.peer.id, reason: 'unpause' } },
+                    ts: Date.now()
+                });
+                if (networkConfig.role === 'host') {
+                    setReadyPlayers(prev => new Set(prev).add(networkConfig.peer.id));
+                }
+            } else {
+                setIsBookOpen(false);
+            }
         }
-    }, [bookMode, handleContinue]);
+    }, [bookMode, handleContinue, networkConfig]);
 
     const handleToggleBook = useCallback(() => {
         if (isBookOpen) {
             handleBookClose();
         } else {
+            if (networkConfig) {
+                const nm = (gameInstanceRef.current?.scene.getScene('MainScene') as any)?.networkManager;
+                nm?.broadcast({
+                    t: PacketType.GAME_EVENT,
+                    ev: { type: 'sync_pause', data: { isPaused: true, reason: 'book' } },
+                    ts: Date.now()
+                });
+            }
             setBookMode('view');
             setIsBookOpen(true);
         }
-    }, [isBookOpen, handleBookClose]);
+    }, [isBookOpen, handleBookClose, networkConfig]);
 
     // Memoize actions to prevent re-renders in children
     const bookActions = useMemo(() => ({
-        onSelectPerk: () => { }, // No longer used for leveling
+        onSelectPerk: () => { },
         onBuyUpgrade: applyShopUpgrade
     }), [applyShopUpgrade]);
 
@@ -220,12 +421,31 @@ export const GameContainer: React.FC<GameContainerProps> = ({ networkConfig }) =
                         isGamePaused={isBookOpen}
                         availablePerks={[]}
                         actions={bookActions}
+                        isMultiplayer={!!networkConfig}
+                        isWaitingReady={isWaitingReady}
+                        readyPlayersCount={readyPlayers.size}
+                        expectedPlayersCount={(gameInstanceRef.current?.scene.getScene('MainScene') as any)?.networkManager?.getConnectedPeerCount() + 1 || 1}
+                        readyReason={readyReason}
                     />
                 </div>
             </div>
 
             {/* Boss HUD — visible above Hotbar during boss fights */}
             <BossHUD />
+
+            {/* Loading Overlay */}
+            {isLoadingLevel && (
+                <div className="absolute inset-0 z-[100] bg-black/80 flex items-center justify-center pointer-events-auto backdrop-blur-sm">
+                    <div className="flex flex-col items-center gap-4">
+                        <div className="text-amber-100 font-cinzel text-3xl animate-pulse tracking-widest uppercase">
+                            Laster Verden...
+                        </div>
+                        <div className="text-amber-500/70 font-crimson text-xl">
+                            {'['} {loadedPlayers.size} / {(gameInstanceRef.current?.scene.getScene('MainScene') as any)?.networkManager?.getConnectedPeerCount() + 1 || 1} {']'} Klare
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Boss Splash Screen — full-screen intro on boss start */}
             <BossSplashScreen />
