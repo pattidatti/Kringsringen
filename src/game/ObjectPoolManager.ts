@@ -6,6 +6,7 @@ export class ObjectPoolManager {
     private bloodPool: Phaser.GameObjects.Sprite[] = [];
     private explosionPool: Phaser.GameObjects.Sprite[] = [];
     private frostExplosionPool: Phaser.GameObjects.Sprite[] = [];
+    private lightningImpactPool: Phaser.GameObjects.Sprite[] = [];
     private enemyProjectilePool: EnemyProjectile[] = [];
 
     // Config
@@ -178,7 +179,41 @@ export class ObjectPoolManager {
         }
     }
 
-    public getEnemyProjectile(x: number, y: number, angle: number, damage: number, type: 'arrow' | 'fireball'): EnemyProjectile {
+    public spawnLightningImpact(x: number, y: number): Phaser.GameObjects.Sprite {
+        let impact: Phaser.GameObjects.Sprite;
+
+        if (this.lightningImpactPool.length > 0) {
+            impact = this.lightningImpactPool.pop()!;
+            impact.setPosition(x, y);
+            impact.setActive(true);
+            impact.setVisible(true);
+            impact.setAlpha(1);
+        } else {
+            impact = this.scene.add.sprite(x, y, 'lightning_impact');
+            impact.setScale(1.5);
+            impact.setDepth(199);
+            impact.setPipeline('Light2D');
+        }
+
+        impact.play('lightning-impact');
+        impact.once('animationcomplete', () => {
+            this.returnLightningImpact(impact);
+        });
+
+        return impact;
+    }
+
+    private returnLightningImpact(impact: Phaser.GameObjects.Sprite) {
+        if (this.lightningImpactPool.length < this.MAX_EXPLOSION_POOL) { // Reuse MAX_EXPLOSION_POOL for simplicity
+            impact.setActive(false);
+            impact.setVisible(false);
+            this.lightningImpactPool.push(impact);
+        } else {
+            impact.destroy();
+        }
+    }
+
+    public getEnemyProjectile(x: number, y: number, angle: number, damage: number, type: 'arrow' | 'fireball' | 'frostball'): EnemyProjectile {
         let projectile: EnemyProjectile;
         const mainScene = this.scene as any;
         const group = mainScene.enemyProjectiles;

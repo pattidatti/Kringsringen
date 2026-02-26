@@ -1116,7 +1116,8 @@ class MainScene extends Phaser.Scene implements IMainScene {
                     y: enemy.y,
                     width: enemy.body?.width || 40,
                     height: enemy.body?.height || 40,
-                    id: (enemy as any).id
+                    id: (enemy as any).id,
+                    ref: enemy
                 });
             }
             return true;
@@ -1129,7 +1130,8 @@ class MainScene extends Phaser.Scene implements IMainScene {
                     y: boss.y,
                     width: boss.body?.width || 80,
                     height: boss.body?.height || 80,
-                    id: 'boss'
+                    id: 'boss',
+                    ref: boss
                 });
             }
             return true;

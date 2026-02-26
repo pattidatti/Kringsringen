@@ -197,7 +197,21 @@ export function createAnimations(scene: Phaser.Scene): void {
     });
 
     // Ranged Enemy Animations
-    // Wizard - Walk (row 1: 15-22), Attack (row 2: 30-41)
+    // Frost Wizard (Current) - Walk (row 1: 15-22), Attack (row 2: 30-41)
+    safeAnims({
+        key: 'frost-wizard-walk',
+        frames: scene.anims.generateFrameNumbers('wizard', { start: 15, end: 22 }),
+        frameRate: 10,
+        repeat: -1
+    });
+    safeAnims({
+        key: 'frost-wizard-attack',
+        frames: scene.anims.generateFrameNumbers('wizard', { start: 30, end: 41 }),
+        frameRate: 12,
+        repeat: 0
+    });
+
+    // Fireball Wizard (New) - Walk (row 1: 15-22), Attack (row 3: 45-56)
     safeAnims({
         key: 'wizard-walk',
         frames: scene.anims.generateFrameNumbers('wizard', { start: 15, end: 22 }),
@@ -206,7 +220,7 @@ export function createAnimations(scene: Phaser.Scene): void {
     });
     safeAnims({
         key: 'wizard-attack',
-        frames: scene.anims.generateFrameNumbers('wizard', { start: 30, end: 41 }),
+        frames: scene.anims.generateFrameNumbers('wizard', { start: 45, end: 56 }),
         frameRate: 12,
         repeat: 0
     });
@@ -225,10 +239,19 @@ export function createAnimations(scene: Phaser.Scene): void {
         repeat: 0
     });
 
-    // Wizard Fireball Projectile
+    // Frost Wizard's Projectile (currently looks like blue fire)
+    safeAnims({
+        key: 'frost-wizard-projectile-fly',
+        frames: scene.anims.generateFrameNumbers('wizard_fireball', { start: 0, end: 9 }),
+        frameRate: 12,
+        repeat: -1
+    });
+
+    // Fireball Wizard's Projectile (from wizard.png third-to-last row)
+    // Row 7 (15 cols/row) starts at 105.
     safeAnims({
         key: 'wizard-fireball-fly',
-        frames: scene.anims.generateFrameNumbers('wizard_fireball', { start: 0, end: 9 }),
+        frames: scene.anims.generateFrameNumbers('wizard', { start: 105, end: 114 }),
         frameRate: 12,
         repeat: -1
     });

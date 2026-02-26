@@ -11,7 +11,9 @@ export class LightningBolt extends Phaser.Physics.Arcade.Sprite {
     private speed: number = 400;
     private light: Phaser.GameObjects.Light | null = null;
     private impactSprite: Phaser.GameObjects.Sprite | null = null;
-    private turnRate: number = 1.2; // Fra 4.0 ned til 1.2 for at den skal bomme oftere
+    private turnRate: number = 1.2;
+    private targetSearchTimer: number = 0;
+    private glowEffect: any = null;
     private currentAngle: number = 0;
     private lifespan: number = 2500; // 2.5 sekunder
     private colorHex: number = 0xffffff;
@@ -75,8 +77,12 @@ export class LightningBolt extends Phaser.Physics.Arcade.Sprite {
         this.setPosition(x, y);
         this.play(animKey);
 
-        // Add Glow FX
-        this.postFX.addGlow(this.colorHex, 4, 0, false, 0.1, 10);
+        // Add Glow FX - only add once
+        if (!this.glowEffect) {
+            this.glowEffect = this.postFX.addGlow(this.colorHex, 4, 0, false, 0.1, 10);
+        } else {
+            this.glowEffect.color = this.colorHex;
+        }
 
         // Add Dynamic Light
         this.light = this.scene.lights.addLight(x, y, 150, this.colorHex, 1.0);
@@ -99,31 +105,56 @@ export class LightningBolt extends Phaser.Physics.Arcade.Sprite {
 
     private findNearestEnemy(searchX: number, searchY: number): Enemy | null {
         const mainScene = this.scene as any;
+        const grid = mainScene.spatialGrid;
+
         let nearest: Enemy | null = null;
         let minDist = Infinity;
 
-        mainScene.enemies.children.iterate((e: any) => {
-            if (!e.active) return true;
-            if (this.hitEnemies.has(e)) return true;
+        // Use spatial grid to find nearby candidates
+        const candidates = grid ? grid.findNearby({ x: searchX, y: searchY, width: 32, height: 32 }, 600) : [];
 
-            const dist = Phaser.Math.Distance.Between(searchX, searchY, e.x, e.y);
-            if (dist < minDist) {
-                minDist = dist;
-                nearest = e as Enemy;
+        if (candidates.length > 0) {
+            for (const c of candidates) {
+                // BUGFIX: Use c.ref to get the actual Enemy instance
+                const e = c.ref as Enemy;
+                if (!e || !e.active || e.getIsDead()) continue;
+                if (this.hitEnemies.has(e)) continue;
+
+                const dist = Phaser.Math.Distance.Between(searchX, searchY, e.x, e.y);
+                if (dist < minDist) {
+                    minDist = dist;
+                    nearest = e;
+                }
             }
-            return true;
-        });
+        }
 
-        // Check boss
+        // Fallback to boss
         if (mainScene.bossGroup) {
             mainScene.bossGroup.children.iterate((e: any) => {
-                if (!e.active) return true;
+                if (!e.active || e.getIsDead()) return true;
                 if (this.hitEnemies.has(e)) return true;
 
                 const dist = Phaser.Math.Distance.Between(searchX, searchY, e.x, e.y);
                 if (dist < minDist) {
                     minDist = dist;
                     nearest = e as Enemy;
+                }
+                return true;
+            });
+        }
+
+        // CRITICAL BUGFIX: If no target found yet, ALWAYS do a wide fallback search.
+        // The previous condition "candidates.length === 0" was too restrictive.
+        if (!nearest) {
+            mainScene.enemies.children.iterate((e: any) => {
+                const enemy = e as Enemy;
+                if (!enemy.active || enemy.getIsDead()) return true;
+                if (this.hitEnemies.has(enemy)) return true;
+
+                const dist = Phaser.Math.Distance.Between(searchX, searchY, enemy.x, enemy.y);
+                if (dist < minDist) {
+                    minDist = dist;
+                    nearest = enemy;
                 }
                 return true;
             });
@@ -165,22 +196,30 @@ export class LightningBolt extends Phaser.Physics.Arcade.Sprite {
         }
 
         // Check if target is still valid
-        if (!this.targetEnemy || !this.targetEnemy.active) {
-            this.targetEnemy = this.findNearestEnemy(this.x, this.y);
-            if (!this.targetEnemy) {
-                // No more targets, deactivate
-                this.deactivate();
-                return;
+        if (!this.targetEnemy || !this.targetEnemy.active || this.targetEnemy.getIsDead()) {
+            this.targetSearchTimer += delta;
+            if (this.targetSearchTimer >= 100) { // Throttle search
+                this.targetSearchTimer = 0;
+                this.targetEnemy = this.findNearestEnemy(this.x, this.y);
+                if (!this.targetEnemy) {
+                    this.deactivate();
+                    return;
+                }
             }
         }
 
-        // Steer toward target
-        this.steerTowardTarget(deltaSeconds);
+        if (this.targetEnemy) {
+            // Steer toward target
+            this.steerTowardTarget(deltaSeconds);
+        }
 
         // Check if close enough to target to trigger impact
-        const distToTarget = Phaser.Math.Distance.Between(this.x, this.y, this.targetEnemy.x, this.targetEnemy.y);
-        if (distToTarget < 30) {
-            this.impact(this.targetEnemy);
+        const target = this.targetEnemy;
+        if (target) {
+            const distToTarget = Phaser.Math.Distance.Between(this.x, this.y, target.x, target.y);
+            if (distToTarget < 30) {
+                this.impact(target);
+            }
         }
     }
 
@@ -208,11 +247,11 @@ export class LightningBolt extends Phaser.Physics.Arcade.Sprite {
                 ts: mainScene.networkManager.getServerTime()
             });
 
-            if (mainScene.poolManager) {
+            if (mainScene.poolManager && hitEnemy) {
                 mainScene.poolManager.getDamageText(hitEnemy.x, hitEnemy.y - 30, this.damage, this.colorStr);
                 this.scene.events.emit('enemy-hit');
             }
-            hitEnemy.predictDamage(this.damage);
+            if (hitEnemy) hitEnemy.predictDamage(this.damage);
         } else {
             // Deal damage
             hitEnemy.takeDamage(this.damage, this.colorStr);
@@ -225,12 +264,16 @@ export class LightningBolt extends Phaser.Physics.Arcade.Sprite {
         // Deactivate this bolt
         this.deactivate();
 
-        // Spawn impact animation sprite (separate from this bolt)
-        this.impactSprite = this.scene.add.sprite(hitX, hitY, 'lightning_impact');
-        this.impactSprite.play('lightning-impact');
-        this.impactSprite.setScale(1.5);
-        this.impactSprite.setDepth(199);
-        this.impactSprite.setPipeline('Light2D');
+        // Spawn impact animation sprite via pool
+        if (mainScene.poolManager) {
+            this.impactSprite = mainScene.poolManager.spawnLightningImpact(hitX, hitY);
+        } else {
+            this.impactSprite = this.scene.add.sprite(hitX, hitY, 'lightning_impact');
+            this.impactSprite.play('lightning-impact');
+            this.impactSprite.setScale(1.5);
+            this.impactSprite.setDepth(199);
+            this.impactSprite.setPipeline('Light2D');
+        }
 
         // Impact light
         const flash = this.scene.lights.addLight(hitX, hitY, 250, this.colorHex, 2.0);
@@ -263,13 +306,15 @@ export class LightningBolt extends Phaser.Physics.Arcade.Sprite {
             });
         }
 
-        // Cleanup impact sprite after animation
-        this.impactSprite.once('animationcomplete-lightning-impact', () => {
-            if (this.impactSprite) {
-                this.impactSprite.destroy();
-                this.impactSprite = null;
-            }
-        });
+        // Cleanup impact sprite logic (pool handles it now)
+        if (!mainScene.poolManager) {
+            this.impactSprite?.once('animationcomplete-lightning-impact', () => {
+                if (this.impactSprite) {
+                    this.impactSprite.destroy();
+                    this.impactSprite = null;
+                }
+            });
+        }
     }
 
     private deactivate(): void {
@@ -281,10 +326,8 @@ export class LightningBolt extends Phaser.Physics.Arcade.Sprite {
             this.light = null;
         }
         this.postFX.clear();
-        if (this.impactSprite) {
-            this.impactSprite.destroy();
-            this.impactSprite = null;
-        }
+        this.glowEffect = null;
+        this.impactSprite = null;
     }
 
     private toggleColor(): void {
@@ -301,7 +344,8 @@ export class LightningBolt extends Phaser.Physics.Arcade.Sprite {
             this.light.setColor(this.colorHex);
         }
 
-        this.postFX.clear();
-        this.postFX.addGlow(this.colorHex, 4, 0, false, 0.1, 10);
+        if (this.glowEffect) {
+            this.glowEffect.color = this.colorHex;
+        }
     }
 }

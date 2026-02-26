@@ -111,13 +111,24 @@ export const GAME_CONFIG = {
             bodySize: { width: 45, height: 65 },
             knockbackResistance: 0.9
         },
-        WIZARD: {
+        FROST_WIZARD: {
             baseHP: 80,
-            baseDamage: 30,
+            baseDamage: 25,
             baseSpeed: 70,
             baseXP: 40,
             attackRange: 350,
             attackCooldown: 2500,
+            scale: 1.8,
+            bodySize: { width: 30, height: 50 },
+            knockbackResistance: 0.3
+        },
+        WIZARD: {
+            baseHP: 100,
+            baseDamage: 35,
+            baseSpeed: 75,
+            baseXP: 50,
+            attackRange: 400,
+            attackCooldown: 2200,
             scale: 1.8,
             bodySize: { width: 30, height: 50 },
             knockbackResistance: 0.3

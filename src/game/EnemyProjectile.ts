@@ -8,7 +8,7 @@ export class EnemyProjectile extends Phaser.Physics.Arcade.Sprite {
     private startY: number = 0;
     private trail: Phaser.GameObjects.Particles.ParticleEmitter | null = null;
     private light: Phaser.GameObjects.Light | null = null;
-    private projectileType: 'arrow' | 'fireball' = 'arrow';
+    private projectileType: 'arrow' | 'fireball' | 'frostball' = 'arrow';
 
     constructor(scene: Phaser.Scene, x: number, y: number) {
         super(scene, x, y, 'arrow'); // Default texture
@@ -19,7 +19,7 @@ export class EnemyProjectile extends Phaser.Physics.Arcade.Sprite {
         this.setDepth(200);
     }
 
-    fire(x: number, y: number, angle: number, damage: number, type: 'arrow' | 'fireball') {
+    fire(x: number, y: number, angle: number, damage: number, type: 'arrow' | 'fireball' | 'frostball') {
         this.startX = x;
         this.startY = y;
         this.damage = damage;
@@ -45,26 +45,36 @@ export class EnemyProjectile extends Phaser.Physics.Arcade.Sprite {
             this.light = null;
         }
 
-        if (type === 'fireball') {
-            this.setTexture('wizard_fireball');
-            this.play('wizard-fireball-fly');
-            this.setScale(1.2);
+        if (type === 'fireball' || type === 'frostball') {
+            if (type === 'fireball') {
+                this.setTexture('wizard');
+                this.play('wizard-fireball-fly');
+                this.setScale(1.5); // Slightly larger for the new fireball from sprite
+            } else {
+                this.setTexture('wizard_fireball');
+                this.play('frost-wizard-projectile-fly');
+                this.setScale(1.2);
+            }
+
             this.setBodySize(20, 20);
 
-            this.trail = this.scene.add.particles(x, y, 'wizard_fireball', {
+            const tint = type === 'fireball' ? 0xffaa00 : 0x00ffff;
+            const followTexture = type === 'fireball' ? 'wizard' : 'wizard_fireball';
+
+            this.trail = this.scene.add.particles(x, y, followTexture, {
                 lifespan: 200,
                 scale: { start: 0.5, end: 0 },
                 alpha: { start: 0.5, end: 0 },
                 frequency: 25,
                 follow: this,
-                tint: 0xffaa00,
+                tint: tint,
                 blendMode: 'ADD'
             });
             this.trail.setDepth(this.depth - 1);
 
             // Wizard fireball light intensity is 1/3 of player's (player's is 1.0)
-            this.light = this.scene.lights.addLight(x, y, 150, 0xffaa00, 0.33);
-            this.postFX.addGlow(0xffaa00, 4, 0, false, 0.1, 10);
+            this.light = this.scene.lights.addLight(x, y, 150, tint, 0.33);
+            this.postFX.addGlow(tint, 4, 0, false, 0.1, 10);
         } else {
             this.setTexture('arrow');
             this.play({ key: '' }); // Clear animation if any
@@ -82,6 +92,10 @@ export class EnemyProjectile extends Phaser.Physics.Arcade.Sprite {
                 blendMode: 'ADD'
             });
             this.trail.setDepth(this.depth - 1);
+
+            // Subtle arrow light (intensity 0.1, 1/10th of player light)
+            this.light = this.scene.lights.addLight(x, y, 80, 0xffffff, 0.1);
+            this.postFX.addGlow(0xffffff, 2, 0, false, 0.05, 5);
         }
 
         if (this.body) {
@@ -112,12 +126,17 @@ export class EnemyProjectile extends Phaser.Physics.Arcade.Sprite {
         }
         this.postFX.clear();
 
-        if (this.projectileType === 'fireball') {
+        if (this.projectileType === 'fireball' || this.projectileType === 'frostball') {
             const mainScene = this.scene as any;
             if (mainScene.poolManager) {
-                mainScene.poolManager.spawnFireballExplosion(this.x, this.y);
+                if (this.projectileType === 'frostball') {
+                    mainScene.poolManager.spawnFrostExplosion(this.x, this.y);
+                    AudioManager.instance.playSFX('ice_throw'); // Frosty hit sound
+                } else {
+                    mainScene.poolManager.spawnFireballExplosion(this.x, this.y);
+                    AudioManager.instance.playSFX('fireball_hit');
+                }
             }
-            AudioManager.instance.playSFX('fireball_hit');
         } else {
             AudioManager.instance.playSFX('bow_impact');
         }

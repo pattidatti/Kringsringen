@@ -18,7 +18,7 @@ export interface EnemyConfig {
     bodySize: { width: number, height: number };
     knockbackResistance: number; // 0 = full knockback, 1 = immovable
     attackDamageFrame?: number; // Which animation frame triggers damage (defaults to 3)
-    rangedProjectile?: 'arrow' | 'fireball';
+    rangedProjectile?: 'arrow' | 'fireball' | 'frostball';
     attackRange?: number;
 }
 
@@ -183,9 +183,30 @@ export const ENEMY_TYPES: Record<string, EnemyConfig> = {
         knockbackResistance: 0.9,
         attackDamageFrame: 4 // 9-frame animation (row 2)
     },
+    frost_wizard: {
+        id: 'frost_wizard',
+        name: 'Frost Wizard',
+        spriteInfo: {
+            type: 'spritesheet',
+            texture: 'wizard',
+            anims: {
+                walk: 'frost-wizard-walk',
+                attack: 'frost-wizard-attack'
+            }
+        },
+        baseHP: 80,
+        baseSpeed: 70,
+        baseDamage: 25,
+        xpValue: 40,
+        scale: 1.8,
+        bodySize: { width: 30, height: 50 },
+        knockbackResistance: 0.3,
+        attackDamageFrame: 5,
+        rangedProjectile: 'frostball'
+    },
     wizard: {
         id: 'wizard',
-        name: 'Wizard',
+        name: 'Fireball Wizard',
         spriteInfo: {
             type: 'spritesheet',
             texture: 'wizard',
@@ -194,10 +215,10 @@ export const ENEMY_TYPES: Record<string, EnemyConfig> = {
                 attack: 'wizard-attack'
             }
         },
-        baseHP: 80,
-        baseSpeed: 70,
-        baseDamage: 25,
-        xpValue: 40,
+        baseHP: 100,
+        baseSpeed: 75,
+        baseDamage: 30,
+        xpValue: 50,
         scale: 1.8,
         bodySize: { width: 30, height: 50 },
         knockbackResistance: 0.3,

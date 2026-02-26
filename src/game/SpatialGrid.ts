@@ -3,7 +3,8 @@ export interface GridClient {
     y: number;
     width: number;
     height: number;
-    id?: string | number; // Optional ID for debugging or exclusion
+    id?: string | number;
+    ref?: any; // Reference to the actual entity (Enemy, etc.)
 }
 
 export class SpatialHashGrid {
