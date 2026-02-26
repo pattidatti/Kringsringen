@@ -15,7 +15,7 @@ import '../styles/pixel-ui.css';
 //  Publisher ID : AdSense → Account → Account information
 //  Ad slot ID   : AdSense → Ads → By ad unit → select your unit
 // ─────────────────────────────────────────────────────────────
-const ADSENSE_CLIENT = 'ca-pub-XXXXXXXXXXXXXXXXX';
+const ADSENSE_CLIENT = 'ca-pub-2743819524126234';
 const ADSENSE_SLOT   = 'XXXXXXXXXX';
 
 interface LandingPageProps {
