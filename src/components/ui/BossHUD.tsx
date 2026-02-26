@@ -29,19 +29,17 @@ export const BossHUD: React.FC = React.memo(() => {
 
         // Animate the bar fill on HP change
         const onBossHPChange = (_parent: any, newHP: number) => {
-            hpValueRef.current = newHP;
-
             // Update the ref with smooth transition using CSS
             if (hpBarRef.current) {
                 const hpFraction = bossMaxHP > 0 ? Math.max(0, newHP / bossMaxHP) : 0;
-                const width = `${hpFraction * 100}%`;
-
-                // Use CSS transition for smooth animation (60fps native)
-                hpBarRef.current.style.width = width;
+                hpBarRef.current.style.width = `${hpFraction * 100}%`;
             }
 
-            // Update display HP text every 10 damage (reduce updates for text)
-            setDisplayHP(newHP);
+            // Update display HP text every 10 damage (reduce re-renders for text)
+            if (Math.abs(newHP - hpValueRef.current) >= 10 || newHP <= 0) {
+                setDisplayHP(newHP);
+            }
+            hpValueRef.current = newHP;
         };
 
         registry.events.on('changedata-bossHP', onBossHPChange);

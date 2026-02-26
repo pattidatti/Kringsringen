@@ -40,6 +40,8 @@ export const GameContainer: React.FC<GameContainerProps> = ({ networkConfig }) =
 
     const isBookOpenRef = useRef(isBookOpen);
     const bookModeRef = useRef(bookMode);
+    const readyPlayersRef = useRef<Set<string>>(new Set());
+    const syncStateRef = useRef(syncState);
 
     useEffect(() => {
         isBookOpenRef.current = isBookOpen;
@@ -48,6 +50,9 @@ export const GameContainer: React.FC<GameContainerProps> = ({ networkConfig }) =
     useEffect(() => {
         bookModeRef.current = bookMode;
     }, [bookMode]);
+
+    useEffect(() => { readyPlayersRef.current = readyPlayers; }, [readyPlayers]);
+    useEffect(() => { syncStateRef.current = syncState; }, [syncState]);
 
     // Robust Hotkey Listener for 'B' and 'Escape'
     useEffect(() => {
@@ -156,7 +161,7 @@ export const GameContainer: React.FC<GameContainerProps> = ({ networkConfig }) =
                         setReadyReason(null);
                         setReadyPlayers(new Set());
                         setLoadedPlayers(new Set());
-                        setSyncState({ loaded: 0, ready: 0, expected: networkConfig ? syncState.expected : 1 });
+                        setSyncState({ loaded: 0, ready: 0, expected: networkConfig ? syncStateRef.current.expected : 1 });
                     });
 
                     mainScene.events.on('player_loaded', (data: any) => {
@@ -169,11 +174,11 @@ export const GameContainer: React.FC<GameContainerProps> = ({ networkConfig }) =
 
                                 nm?.broadcast({
                                     t: PacketType.GAME_EVENT,
-                                    ev: { type: 'sync_players_state', data: { loaded: next.size, ready: readyPlayers.size, expected: total } },
+                                    ev: { type: 'sync_players_state', data: { loaded: next.size, ready: readyPlayersRef.current.size, expected: total } },
                                     ts: Date.now()
                                 });
-                                setSyncState({ loaded: next.size, ready: readyPlayers.size, expected: total });
-                                gameInstanceRef.current?.registry.set('syncState', { loaded: next.size, ready: readyPlayers.size, expected: total });
+                                setSyncState({ loaded: next.size, ready: readyPlayersRef.current.size, expected: total });
+                                gameInstanceRef.current?.registry.set('syncState', { loaded: next.size, ready: readyPlayersRef.current.size, expected: total });
 
                                 if (next.size >= total) {
                                     const bossIdx = gameInstanceRef.current?.registry.get('bossComingUp') ?? -1;
