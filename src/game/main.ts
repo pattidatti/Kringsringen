@@ -3,6 +3,7 @@ import type { NetworkConfig } from '../App';
 import { Enemy } from './Enemy';
 import { BossEnemy } from './BossEnemy';
 import { BOSS_CONFIGS } from '../config/bosses';
+import { GAME_CONFIG } from '../config/GameConfig';
 import { StaticMapLoader } from './StaticMapLoader';
 import { STATIC_MAPS } from './StaticMapData';
 import { Arrow } from './Arrow';
@@ -26,6 +27,7 @@ import { NetworkManager } from '../network/NetworkManager';
 import { PacketType, type SyncPacket, type PackedPlayer } from '../network/SyncSchemas';
 import type { DataConnection } from 'peerjs';
 import { JitterBuffer } from '../network/JitterBuffer';
+import { EnemyProjectile } from './EnemyProjectile';
 
 
 class MainScene extends Phaser.Scene implements IMainScene {
@@ -50,6 +52,7 @@ class MainScene extends Phaser.Scene implements IMainScene {
     private frostBolts!: Phaser.Physics.Arcade.Group;
     private lightningBolts!: Phaser.Physics.Arcade.Group;
     public bossGroup!: Phaser.Physics.Arcade.Group;
+    private enemyProjectiles!: Phaser.Physics.Arcade.Group;
     public poolManager!: ObjectPoolManager;
 
     // Managers
@@ -323,6 +326,13 @@ class MainScene extends Phaser.Scene implements IMainScene {
             maxSize: 5000
         });
 
+        // Enemy Projectile Group
+        this.enemyProjectiles = this.physics.add.group({
+            classType: EnemyProjectile,
+            runChildUpdate: true,
+            maxSize: 50
+        });
+
         // Collisions
         this.physics.add.collider(player, this.enemies);
         this.physics.add.collider(this.enemies, this.enemies);
@@ -335,6 +345,10 @@ class MainScene extends Phaser.Scene implements IMainScene {
 
         this.physics.add.collider(this.enemies, this.obstacles);
         this.physics.add.collider(player, this.bossGroup);
+
+        this.physics.add.overlap(this.enemyProjectiles, player, (_projectile, _player) => {
+            (_projectile as EnemyProjectile).onHitPlayer(_player);
+        });
 
         this.physics.add.overlap(this.attackHitbox, this.enemies, (_hitbox, enemy) => {
             const e = enemy as Enemy;
@@ -527,6 +541,41 @@ class MainScene extends Phaser.Scene implements IMainScene {
             const minion = this.enemies.get(x, y) as Enemy | null;
             if (minion) {
                 minion.reset(x, y, p, 1.0, type);
+            }
+        });
+
+        // Enemy Projectile Events
+        this.events.on('enemy-fire-projectile', (x: number, y: number, angle: number, damage: number, type: 'arrow' | 'fireball') => {
+            if (this.networkManager?.role === 'client') return; // Only host/singleplayer fires
+
+            this.poolManager.getEnemyProjectile(x, y, angle, damage, type);
+
+            // Broadcast to clients
+            this.networkManager?.broadcast({
+                t: PacketType.GAME_EVENT,
+                ev: { type: 'spawn_enemy_projectile', data: { x, y, angle, damage, type } },
+                ts: Date.now()
+            });
+        });
+
+        this.events.on('enemy-projectile-hit-player', (damage: number, _type: string, x: number, y: number, target: any) => {
+            const player = this.data.get('player');
+            if (target === player) {
+                this.combat.takePlayerDamage(damage, x, y);
+            } else if (this.networkManager?.role === 'host') {
+                // Host validates and notifies client
+                let targetPeerId: string | null = null;
+                this.remotePlayers.forEach((sprite, peerId) => {
+                    if (sprite === target) targetPeerId = peerId;
+                });
+
+                if (targetPeerId) {
+                    this.networkManager.sendTo(targetPeerId, {
+                        t: PacketType.GAME_EVENT,
+                        ev: { type: 'damage_player', data: { damage, x, y } },
+                        ts: Date.now()
+                    });
+                }
             }
         });
 
@@ -764,6 +813,11 @@ class MainScene extends Phaser.Scene implements IMainScene {
                     }
                 }
             }
+        } else if (event.type === 'party_dead') {
+            this.registry.set('partyDead', true);
+            this.events.emit('party_dead');
+        } else if (event.type === 'restart_game') {
+            this.restartGame();
         } else if (event.type === 'revive_request') {
             const { targetId } = event.data;
             if (this.networkManager?.role === 'host') {
@@ -792,6 +846,11 @@ class MainScene extends Phaser.Scene implements IMainScene {
                     remoteSprite.setBlendMode(Phaser.BlendModes.NORMAL);
                     remoteSprite.setAlpha(1.0);
                 }
+            }
+        } else if (event.type === 'spawn_enemy_projectile') {
+            const { x, y, angle, damage, type } = event.data;
+            if (this.networkManager?.role === 'client') {
+                this.poolManager.getEnemyProjectile(x, y, angle, damage, type);
             }
         } else if (event.type === 'spawn_coins') {
             const { x, y, count, coins } = event.data;
@@ -1432,6 +1491,19 @@ class MainScene extends Phaser.Scene implements IMainScene {
             });
             this.registry.set('partyState', partyState);
 
+            // Check for party death
+            const allDead = partyState.every(p => p.isDead);
+            if (allDead && partyState.length > 0 && !this.registry.get('partyDead')) {
+                this.registry.set('partyDead', true);
+                this.events.emit('party_dead');
+                this.networkManager.broadcast({
+                    t: PacketType.GAME_EVENT,
+                    ev: { type: 'party_dead', data: {} },
+                    ts: now
+                });
+                console.log("[Host] Whole party is dead! Broadcasting party_dead.");
+            }
+
             // Process local player
             processPlayer(playerPacket);
             // Process remote players
@@ -1482,6 +1554,73 @@ class MainScene extends Phaser.Scene implements IMainScene {
                 });
             }
         }
+    }
+
+    private restartGame() {
+        console.log("[Game] Restarting run...");
+
+        // Reset Local Registry State
+        this.registry.set('playerMaxHP', GAME_CONFIG.PLAYER.BASE_MAX_HP);
+        this.registry.set('playerHP', GAME_CONFIG.PLAYER.BASE_MAX_HP);
+        this.registry.set('playerCoins', 0);
+        this.registry.set('gameLevel', 1);
+        this.registry.set('currentWave', 1);
+        this.registry.set('isBossActive', false);
+        this.registry.set('bossComingUp', -1);
+        this.registry.set('reviveCount', 0);
+        this.registry.set('unlockedWeapons', ['sword']);
+        this.registry.set('currentWeapon', 'sword');
+        this.registry.set('partyDead', false);
+        this.registry.set('upgradeLevels', {});
+
+        // Clear Game World
+        this.enemies.clear(true, true);
+        this.bossGroup.clear(true, true);
+        this.coins.clear(true, true);
+        this.arrows.clear(true, true);
+        this.fireballs.clear(true, true);
+        this.frostBolts.clear(true, true);
+        this.lightningBolts.clear(true, true);
+
+        // Reset Player instance
+        const player = this.data.get('player') as Phaser.Physics.Arcade.Sprite;
+        if (player) {
+            player.setPosition(this.mapWidth / 2, this.mapHeight / 2);
+            player.clearTint();
+            player.setBlendMode(Phaser.BlendModes.NORMAL);
+            player.setAlpha(1.0);
+            if (this.playerLight) this.playerLight.setRadius(250);
+            if (this.outerPlayerLight) this.outerPlayerLight.setRadius(600);
+            if (this.haloPlayerLight) this.haloPlayerLight.setRadius(1200);
+        }
+
+        // Reset remote players visuals
+        this.remotePlayers.forEach(rp => {
+            rp.clearTint();
+            rp.setBlendMode(Phaser.BlendModes.NORMAL);
+            rp.setAlpha(1.0);
+        });
+
+        // Refresh stats
+        this.stats.recalculateStats();
+
+        // Reset Map & Waves
+        this.regenerateMap(1);
+        if (this.networkManager?.role !== 'client') {
+            this.waves.startLevel(1);
+        }
+
+        // Host notifies clients
+        if (this.networkManager?.role === 'host') {
+            this.networkManager.broadcast({
+                t: PacketType.GAME_EVENT,
+                ev: { type: 'restart_game', data: {} },
+                ts: Date.now()
+            });
+        }
+
+        // Notify React UI
+        this.events.emit('restart_game');
     }
 }
 

@@ -1,7 +1,7 @@
 # Ideer
 - [x] Pil og bue, med egen hotkey
-- [ ] Spells - med spelleffekts
-- [ ] Ulike maps - Samme trær rundt og slikt, men erstatte noen gress tiles med litt annet snacks. 
+- [x] Spells - med spelleffekts
+- [x] Ulike maps - Samme trær rundt og slikt, men erstatte noen gress tiles med litt annet snacks. 
 - [ ] Ulike mobs med ranged og spells (finne sprite for mages)
 - [x] Faser per map/lvl. 
 - [ ] Quester/challenges 
@@ -38,13 +38,11 @@
 # MP
 - [ ] Når hele party er døde, skal man kunne starte på nytt uten å lage en helt ny server osv. Bare en retry knapp som dukker opp med readystate x/y spillere.  
 
-- [ ] 
-
 # Bugs
-- [ ] Orkehøvding ikke synlig for andre enn host. 
+- [x] Orkehøvding ikke synlig for andre enn host. 
 - [x] HP bar for alle andre enn host, er cracy stor, virker som å justere seg når de tar damage. 
-- [ ] Man må kunne gjenopplive folk etter et level er over, via boken og det koster masse gull . Øker i kostnad for hver gang man gjør det. 
-- [ ] Når spillere dør, skal de bli spøkelser, som kan plukke opp gull, men de kan ikke skade fiender. De er spectating (hvit glow og tint og mindre lysradius enn levende spillere). Monstere skal ikke angripe døde spillere. 
+- [x] Man må kunne gjenopplive folk etter et level er over, via boken og det koster masse gull . Øker i kostnad for hver gang man gjør det. 
+- [x] Når spillere dør, skal de bli spøkelser, som kan plukke opp gull, men de kan ikke skade fiender. De er spectating (hvit glow og tint og mindre lysradius enn levende spillere). Monstere skal ikke angripe døde spillere. 
 - [x] Når man skriver navn på death screen, får man ikke bruke alle bokstaver; WASD er blokket. 
 - [x] Generell dårlig pathing på fiender, de setter seg fast i alt mulig. 
 - [] Det er ikke regn på hele skjermen, det mangler litt på høyre side.

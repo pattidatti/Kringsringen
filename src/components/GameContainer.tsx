@@ -31,7 +31,7 @@ export const GameContainer: React.FC<GameContainerProps> = ({ networkConfig }) =
     const [loadedPlayers, setLoadedPlayers] = useState<Set<string>>(new Set());
     const [isWaitingReady, setIsWaitingReady] = useState(false);
     const [isLoadingLevel, setIsLoadingLevel] = useState(false);
-    const [readyReason, setReadyReason] = useState<'unpause' | 'next_level' | null>(null);
+    const [readyReason, setReadyReason] = useState<'unpause' | 'next_level' | 'retry' | null>(null);
 
     // Official Host-driven Sync State
     const [syncState, setSyncState] = useState({ loaded: 0, ready: 0, expected: 1 });
@@ -69,6 +69,9 @@ export const GameContainer: React.FC<GameContainerProps> = ({ networkConfig }) =
                     }
                 } else {
                     if (isMultiplayer) {
+                        const hp = gameInstanceRef.current?.registry.get('playerHP') || 0;
+                        if (hp <= 0) return; // Can't open book if dead
+
                         const nm = (gameInstanceRef.current?.scene.getScene('MainScene') as any)?.networkManager;
                         nm?.broadcast({
                             t: PacketType.GAME_EVENT,
@@ -148,6 +151,22 @@ export const GameContainer: React.FC<GameContainerProps> = ({ networkConfig }) =
                         }
                     });
 
+                    mainScene.events.on('party_dead', () => {
+                        // Clear ready state for retry
+                        setReadyPlayers(new Set());
+                        setReadyReason(null);
+                        setIsWaitingReady(false);
+                    });
+
+                    mainScene.events.on('restart_game', () => {
+                        setIsBookOpen(false);
+                        setIsWaitingReady(false);
+                        setReadyReason(null);
+                        setReadyPlayers(new Set());
+                        setLoadedPlayers(new Set());
+                        setSyncState({ loaded: 0, ready: 0, expected: networkConfig ? syncState.expected : 1 });
+                    });
+
                     mainScene.events.on('player_loaded', (data: any) => {
                         if (networkConfig?.role === 'host') {
                             setLoadedPlayers(prev => {
@@ -164,6 +183,7 @@ export const GameContainer: React.FC<GameContainerProps> = ({ networkConfig }) =
                                 });
                                 // Keep local state updated immediately for host
                                 setSyncState({ loaded: next.size, ready: readyPlayers.size, expected: total });
+                                gameInstanceRef.current?.registry.set('syncState', { loaded: next.size, ready: readyPlayers.size, expected: total });
 
                                 if (next.size >= total) {
                                     const bossIdx = gameInstanceRef.current?.registry.get('bossComingUp') ?? -1;
@@ -183,6 +203,7 @@ export const GameContainer: React.FC<GameContainerProps> = ({ networkConfig }) =
 
                     mainScene.events.on('sync_players_state', (data: { loaded: number, ready: number, expected: number }) => {
                         setSyncState(data);
+                        gameInstanceRef.current?.registry.set('syncState', data);
                     });
 
                     mainScene.events.on('start_level', (data: any) => {
@@ -206,6 +227,22 @@ export const GameContainer: React.FC<GameContainerProps> = ({ networkConfig }) =
                             setIsBookOpen(false);
                             setIsWaitingReady(false);
                             setReadyReason(null);
+                        }
+                    });
+
+                    mainScene.events.on('request-retry', () => {
+                        if (networkConfig) {
+                            setReadyReason('retry');
+                            setIsWaitingReady(true);
+                            const nm = (mainScene as any).networkManager;
+                            nm?.broadcast({
+                                t: PacketType.GAME_EVENT,
+                                ev: { type: 'player_ready', data: { playerId: networkConfig.peer.id, reason: 'retry' } },
+                                ts: Date.now()
+                            });
+                            if (networkConfig.role === 'host') {
+                                setReadyPlayers(prev => new Set(prev).add(networkConfig.peer.id));
+                            }
                         }
                     });
 
@@ -254,12 +291,13 @@ export const GameContainer: React.FC<GameContainerProps> = ({ networkConfig }) =
             }
 
             const total = nm.getConnectedPeerCount() + 1;
+            const currentState = { loaded: loadedPlayers.size, ready: readyPlayers.size, expected: total };
 
             // Sync state if expected count changed due to drops
             if ((isLoadingLevel || isWaitingReady) && total !== syncState.expected) {
-                const currentState = { loaded: loadedPlayers.size, ready: readyPlayers.size, expected: total };
                 nm.broadcast({ t: PacketType.GAME_EVENT, ev: { type: 'sync_players_state', data: currentState }, ts: Date.now() });
                 setSyncState(currentState);
+                gameInstanceRef.current?.registry.set('syncState', currentState);
             }
 
             if (isLoadingLevel && loadedPlayers.size >= total) {
@@ -272,10 +310,10 @@ export const GameContainer: React.FC<GameContainerProps> = ({ networkConfig }) =
                 setIsLoadingLevel(false);
                 setLoadedPlayers(new Set());
 
-                // Clear state
                 const nextState = { loaded: 0, ready: readyPlayers.size, expected: total };
                 nm.broadcast({ t: PacketType.GAME_EVENT, ev: { type: 'sync_players_state', data: nextState }, ts: Date.now() });
                 setSyncState(nextState);
+                gameInstanceRef.current?.registry.set('syncState', nextState);
             }
 
             // Re-evaluate Ready state based on newly pruned peer count
@@ -301,17 +339,25 @@ export const GameContainer: React.FC<GameContainerProps> = ({ networkConfig }) =
                     setReadyPlayers(new Set());
                     setIsWaitingReady(false);
                     setReadyReason(null);
+                } else if (readyReason === 'retry') {
+                    // Host triggers restart
+                    (gameInstanceRef.current?.scene.getScene('MainScene') as any)?.restartGame();
+                    setIsBookOpen(false);
+                    setReadyPlayers(new Set());
+                    setIsWaitingReady(false);
+                    setReadyReason(null);
                 }
 
                 // Clear state
                 const nextState = { loaded: loadedPlayers.size, ready: 0, expected: total };
                 nm.broadcast({ t: PacketType.GAME_EVENT, ev: { type: 'sync_players_state', data: nextState }, ts: Date.now() });
                 setSyncState(nextState);
+                gameInstanceRef.current?.registry.set('syncState', nextState);
             }
         }, 1500);
 
         return () => clearInterval(interval);
-    }, [networkConfig, isWaitingReady, isLoadingLevel, loadedPlayers.size, readyPlayers.size, readyReason]);
+    }, [networkConfig, isWaitingReady, isLoadingLevel, loadedPlayers.size, readyPlayers.size, readyReason, syncState.expected]);
 
     // Centralized Pause Management
     useEffect(() => {

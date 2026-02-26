@@ -34,7 +34,7 @@ interface FantasyBookProps {
     isWaitingReady?: boolean;
     readyPlayersCount?: number;
     expectedPlayersCount?: number;
-    readyReason?: 'unpause' | 'next_level' | null;
+    readyReason?: 'unpause' | 'next_level' | 'retry' | null;
 }
 
 type TabKey = 'character' | 'upgrades' | 'settings';

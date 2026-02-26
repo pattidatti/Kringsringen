@@ -18,6 +18,8 @@ export interface EnemyConfig {
     bodySize: { width: number, height: number };
     knockbackResistance: number; // 0 = full knockback, 1 = immovable
     attackDamageFrame?: number; // Which animation frame triggers damage (defaults to 3)
+    rangedProjectile?: 'arrow' | 'fireball';
+    attackRange?: number;
 }
 
 export const ENEMY_TYPES: Record<string, EnemyConfig> = {
@@ -180,5 +182,47 @@ export const ENEMY_TYPES: Record<string, EnemyConfig> = {
         bodySize: { width: 45, height: 65 },
         knockbackResistance: 0.9,
         attackDamageFrame: 4 // 9-frame animation (row 2)
+    },
+    wizard: {
+        id: 'wizard',
+        name: 'Wizard',
+        spriteInfo: {
+            type: 'spritesheet',
+            texture: 'wizard',
+            anims: {
+                walk: 'wizard-walk',
+                attack: 'wizard-attack'
+            }
+        },
+        baseHP: 80,
+        baseSpeed: 70,
+        baseDamage: 25,
+        xpValue: 40,
+        scale: 1.8,
+        bodySize: { width: 30, height: 50 },
+        knockbackResistance: 0.3,
+        attackDamageFrame: 5,
+        rangedProjectile: 'fireball'
+    },
+    skeleton_archer: {
+        id: 'skeleton_archer',
+        name: 'Skeleton Archer',
+        spriteInfo: {
+            type: 'spritesheet',
+            texture: 'skeleton_archer',
+            anims: {
+                walk: 'skeleton-archer-walk',
+                attack: 'skeleton-archer-attack'
+            }
+        },
+        baseHP: 60,
+        baseSpeed: 90,
+        baseDamage: 15,
+        xpValue: 25,
+        scale: 1.8,
+        bodySize: { width: 30, height: 50 },
+        knockbackResistance: 0.2,
+        attackDamageFrame: 6,
+        rangedProjectile: 'arrow'
     }
 };

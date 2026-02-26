@@ -110,6 +110,28 @@ export const GAME_CONFIG = {
             scale: 2.1,
             bodySize: { width: 45, height: 65 },
             knockbackResistance: 0.9
+        },
+        WIZARD: {
+            baseHP: 80,
+            baseDamage: 30,
+            baseSpeed: 70,
+            baseXP: 40,
+            attackRange: 350,
+            attackCooldown: 2500,
+            scale: 1.8,
+            bodySize: { width: 30, height: 50 },
+            knockbackResistance: 0.3
+        },
+        SKELETON_ARCHER: {
+            baseHP: 60,
+            baseDamage: 20,
+            baseSpeed: 90,
+            baseXP: 25,
+            attackRange: 400,
+            attackCooldown: 2000,
+            scale: 1.8,
+            bodySize: { width: 30, height: 50 },
+            knockbackResistance: 0.2
         }
     } as const,
     WAVES: {

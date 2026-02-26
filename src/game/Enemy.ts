@@ -291,10 +291,14 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
                 const target = this.getNearestTarget();
                 if (target && target.active) {
                     const distance = Phaser.Math.Distance.Between(this.x, this.y, target.x, target.y);
-                    // Allow slightly more range than attackRange to feel fair (the swing has reach)
-                    if (distance <= this.attackRange + 10) {
-                        this.hasHit = true;
 
+                    if (this.config.rangedProjectile) {
+                        this.hasHit = true;
+                        // Fire Projectile
+                        const angle = Phaser.Math.Angle.Between(this.x, this.y, target.x, target.y);
+                        this.scene.events.emit('enemy-fire-projectile', this.x, this.y, angle, this.damage, this.config.rangedProjectile);
+                    } else if (distance <= this.attackRange + 10) {
+                        this.hasHit = true;
                         // Emit to scene - mainScene identifies which player was hit
                         this.scene.events.emit('enemy-hit-player', this.damage, this.enemyType, this.x, this.y, target);
                     }

@@ -1,3 +1,4 @@
+import { EnemyProjectile } from './EnemyProjectile';
 
 export class ObjectPoolManager {
     private scene: Phaser.Scene;
@@ -5,11 +6,13 @@ export class ObjectPoolManager {
     private bloodPool: Phaser.GameObjects.Sprite[] = [];
     private explosionPool: Phaser.GameObjects.Sprite[] = [];
     private frostExplosionPool: Phaser.GameObjects.Sprite[] = [];
+    private enemyProjectilePool: EnemyProjectile[] = [];
 
     // Config
     private readonly MAX_TEXT_POOL = 50;
     private readonly MAX_BLOOD_POOL = 50;
     private readonly MAX_EXPLOSION_POOL = 20;
+    private readonly MAX_PROJECTILE_POOL = 30;
 
     constructor(scene: Phaser.Scene) {
         this.scene = scene;
@@ -172,6 +175,31 @@ export class ObjectPoolManager {
             this.frostExplosionPool.push(explosion);
         } else {
             explosion.destroy();
+        }
+    }
+
+    public getEnemyProjectile(x: number, y: number, angle: number, damage: number, type: 'arrow' | 'fireball'): EnemyProjectile {
+        let projectile: EnemyProjectile;
+
+        if (this.enemyProjectilePool.length > 0) {
+            projectile = this.enemyProjectilePool.pop()!;
+            projectile.fire(x, y, angle, damage, type);
+        } else {
+            projectile = new EnemyProjectile(this.scene, x, y);
+            projectile.fire(x, y, angle, damage, type);
+        }
+
+        return projectile;
+    }
+
+    public returnEnemyProjectile(projectile: EnemyProjectile) {
+        if (this.enemyProjectilePool.length < this.MAX_PROJECTILE_POOL) {
+            projectile.setActive(false);
+            projectile.setVisible(false);
+            if (projectile.body) projectile.body.enable = false;
+            this.enemyProjectilePool.push(projectile);
+        } else {
+            projectile.destroy();
         }
     }
 }

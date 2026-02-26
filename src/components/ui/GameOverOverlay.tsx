@@ -10,6 +10,8 @@ export const GameOverOverlay: React.FC = () => {
     const wave = useGameRegistry('currentWave', 1);
     const coins = useGameRegistry('playerCoins', 0);
     const isMultiplayer = useGameRegistry('isMultiplayer', false);
+    const partyDead = useGameRegistry('partyDead', false);
+    const syncState = useGameRegistry<{ loaded: number, ready: number, expected: number }>('syncState', { loaded: 0, ready: 0, expected: 1 });
 
     const [playerName, setPlayerName] = useState('');
     const [submitting, setSubmitting] = useState(false);
@@ -19,8 +21,10 @@ export const GameOverOverlay: React.FC = () => {
 
     const score = level * 1000 + wave * 100 + coins;
 
+    const [isWaitingRetry, setIsWaitingRetry] = useState(false);
+
     React.useEffect(() => {
-        if (hp > 0) return; // Only fetch when game is over
+        if (hp > 0 && !partyDead) return; // Only fetch when game is over
 
         let isMounted = true;
         const fetchRank = async () => {
@@ -51,7 +55,7 @@ export const GameOverOverlay: React.FC = () => {
         fetchRank();
 
         return () => { isMounted = false; };
-    }, [hp, score]);
+    }, [hp, partyDead, score]);
 
     const handleSubmitScore = useCallback(async () => {
         const trimmedName = playerName.trim();
@@ -85,13 +89,25 @@ export const GameOverOverlay: React.FC = () => {
     }, [playerName, score, level, wave, coins]);
 
     const handleRestart = useCallback(() => {
-        import('../../game/SaveManager').then(({ SaveManager }) => {
-            SaveManager.clearRun();
-            window.location.reload();
-        });
-    }, []);
+        if (isMultiplayer) {
+            import('../../hooks/useGameRegistry').then(({ getGameInstance }) => {
+                const game = getGameInstance();
+                game?.events.emit('request-retry');
+                setIsWaitingRetry(true);
+            });
+        } else {
+            import('../../game/SaveManager').then(({ SaveManager }) => {
+                SaveManager.clearRun();
+                window.location.reload();
+            });
+        }
+    }, [isMultiplayer]);
 
-    if (hp > 0 || isMultiplayer) return null;
+    if (hp > 0 && !partyDead) return null;
+
+    const retryLabel = isMultiplayer
+        ? (isWaitingRetry ? `Venter (${syncState.ready}/${syncState.expected})` : 'Prøv Igjen')
+        : 'Prøv Igjen';
 
     return (
         <motion.div
@@ -120,7 +136,7 @@ export const GameOverOverlay: React.FC = () => {
                 {/* Title */}
                 <div className="text-center">
                     <motion.h1
-                        className="font-cinzel text-8xl tracking-[0.15em] uppercase"
+                        className="font-cinzel text-8xl tracking-[0.15em] uppercase text-center"
                         style={{
                             color: '#ff2222',
                             textShadow: '0 0 40px rgba(255,0,0,0.9), 0 0 80px rgba(180,0,0,0.5), 3px 3px 0 #000, -3px -3px 0 #000, 3px -3px 0 #000, -3px 3px 0 #000',
@@ -130,8 +146,8 @@ export const GameOverOverlay: React.FC = () => {
                     >
                         Falnet
                     </motion.h1>
-                    <p className="font-cinzel text-base tracking-[0.35em] text-red-400 uppercase mt-2">
-                        Din saga ender her
+                    <p className="font-cinzel text-base tracking-[0.35em] text-red-400 uppercase mt-2 text-center">
+                        {partyDead ? "Hele følget har falt" : "Din saga ender her"}
                     </p>
                 </div>
 
@@ -157,41 +173,43 @@ export const GameOverOverlay: React.FC = () => {
                     </div>
                 </div>
 
-                {/* Name input */}
-                <div className="w-full flex flex-col gap-2">
-                    <label className="font-cinzel text-sm text-red-400 uppercase tracking-widest text-center">
-                        Ditt navn
-                    </label>
-                    <input
-                        type="text"
-                        maxLength={20}
-                        placeholder="Skriv inn navn..."
-                        value={playerName}
-                        onChange={e => setPlayerName(e.target.value)}
-                        onKeyDown={e => {
-                            e.stopPropagation();
-                            e.nativeEvent.stopImmediatePropagation();
-                        }}
-                        onKeyUp={e => {
-                            e.stopPropagation();
-                            e.nativeEvent.stopImmediatePropagation();
-                        }}
-                        disabled={submitting || submitted}
-                        className="w-full bg-black/80 border-2 border-red-800/60 text-white font-cinzel text-base text-center px-4 py-3 rounded outline-none focus:border-red-500 placeholder:text-red-800 tracking-widest disabled:opacity-50 disabled:cursor-not-allowed"
-                    />
+                {/* Name input - Hide for clients in partyDead if they're still alive (ghosts) */}
+                {(hp <= 0 || !isMultiplayer) && (
+                    <div className="w-full flex flex-col gap-2">
+                        <label className="font-cinzel text-sm text-red-400 uppercase tracking-widest text-center">
+                            Ditt navn
+                        </label>
+                        <input
+                            type="text"
+                            maxLength={20}
+                            placeholder="Skriv inn navn..."
+                            value={playerName}
+                            onChange={e => setPlayerName(e.target.value)}
+                            onKeyDown={e => {
+                                e.stopPropagation();
+                                e.nativeEvent.stopImmediatePropagation();
+                            }}
+                            onKeyUp={e => {
+                                e.stopPropagation();
+                                e.nativeEvent.stopImmediatePropagation();
+                            }}
+                            disabled={submitting || submitted}
+                            className="w-full bg-black/80 border-2 border-red-800/60 text-white font-cinzel text-base text-center px-4 py-3 rounded outline-none focus:border-red-500 placeholder:text-red-800 tracking-widest disabled:opacity-50 disabled:cursor-not-allowed"
+                        />
 
-                    {/* Rank Indicator */}
-                    {!submitted && calculatedRank !== null && (
-                        <motion.p
-                            className="text-amber-400 font-cinzel text-sm text-center tracking-widest mt-2"
-                            initial={{ opacity: 0, y: -5 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.5 }}
-                        >
-                            Du ligger an til en {calculatedRank}. plass på listen!
-                        </motion.p>
-                    )}
-                </div>
+                        {/* Rank Indicator */}
+                        {!submitted && calculatedRank !== null && (
+                            <motion.p
+                                className="text-amber-400 font-cinzel text-sm text-center tracking-widest mt-2"
+                                initial={{ opacity: 0, y: -5 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ duration: 0.5 }}
+                            >
+                                Du ligger an til en {calculatedRank}. plass på listen!
+                            </motion.p>
+                        )}
+                    </div>
+                )}
 
                 {/* Error message */}
                 {submitError && (
@@ -206,7 +224,7 @@ export const GameOverOverlay: React.FC = () => {
                 )}
 
                 {/* Buttons */}
-                {!submitted ? (
+                {!submitted && (hp <= 0 || !isMultiplayer) ? (
                     <div className="w-full flex gap-4 mt-2">
                         <FantasyButton
                             label="Send Score"
@@ -216,39 +234,43 @@ export const GameOverOverlay: React.FC = () => {
                             className="flex-1 text-lg"
                         />
                         <FantasyButton
-                            label="Prøv Igjen"
+                            label={retryLabel}
                             variant="danger"
                             onClick={handleRestart}
-                            disabled={submitting}
+                            disabled={submitting || isWaitingRetry}
                             className="flex-1 text-lg"
                         />
                     </div>
                 ) : (
-                    <motion.div
-                        className="text-center mb-2 mt-4"
-                        initial={{ opacity: 0, scale: 0.8 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ duration: 0.5, type: 'spring' }}
-                    >
-                        <p className="font-cinzel text-green-400 text-lg tracking-widest uppercase mb-1">
-                            Poengsum lagret!
-                        </p>
-                        {calculatedRank !== null && (
-                            <p className="font-cinzel text-amber-300 text-md tracking-widest">
-                                Du kom på {calculatedRank}. plass!
-                            </p>
+                    <div className="flex flex-col items-center gap-4">
+                        {submitted && (
+                            <motion.div
+                                className="text-center mb-2 mt-4"
+                                initial={{ opacity: 0, scale: 0.8 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                transition={{ duration: 0.5, type: 'spring' }}
+                            >
+                                <p className="font-cinzel text-green-400 text-lg tracking-widest uppercase mb-1 text-center">
+                                    Poengsum lagret!
+                                </p>
+                                {calculatedRank !== null && (
+                                    <p className="font-cinzel text-amber-300 text-md tracking-widest text-center">
+                                        Du kom på {calculatedRank}. plass!
+                                    </p>
+                                )}
+                            </motion.div>
                         )}
-                    </motion.div>
-                )}
 
-                {/* Restart button (always visible after submit) */}
-                {submitted && (
-                    <FantasyButton
-                        label="Prøv Igjen"
-                        variant="danger"
-                        onClick={handleRestart}
-                        className="w-56 text-xl"
-                    />
+                        {(partyDead || !isMultiplayer) && (
+                            <FantasyButton
+                                label={retryLabel}
+                                variant="danger"
+                                onClick={handleRestart}
+                                disabled={isWaitingRetry}
+                                className="w-64 text-xl"
+                            />
+                        )}
+                    </div>
                 )}
             </motion.div>
         </motion.div>

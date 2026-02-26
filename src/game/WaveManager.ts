@@ -138,7 +138,7 @@ export class WaveManager {
         // Select Enemy Type
         let allowedTypes: string[] = ['orc', 'slime'];
         if (this.currentLevel >= 2) {
-            allowedTypes.push('skeleton', 'armored_skeleton');
+            allowedTypes.push('skeleton', 'armored_skeleton', 'wizard', 'skeleton_archer');
         }
         if (this.currentLevel >= 3) {
             allowedTypes.push('werewolf', 'armored_orc');

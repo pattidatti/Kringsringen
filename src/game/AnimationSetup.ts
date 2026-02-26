@@ -74,7 +74,7 @@ export function createAnimations(scene: Phaser.Scene): void {
     // Slime sheet: 12 cols × 6 rows = 72 frames. Walk = row 0 (0–5). Attack = row 2 (24–35).
     scene.anims.create({
         key: 'slime-attack',
-        frames: scene.anims.generateFrameNumbers('slime', { start: 24, end: 35 }),
+        frames: scene.anims.generateFrameNumbers('slime', { start: 24, end: 29 }),
         frameRate: 12,
         repeat: 0
     });
@@ -89,14 +89,14 @@ export function createAnimations(scene: Phaser.Scene): void {
     // Skeleton sheet: 8 cols × 7 rows = 56 frames. Walk = row 1 (8–15). Attack = row 2 (16–23).
     scene.anims.create({
         key: 'skeleton-attack',
-        frames: scene.anims.generateFrameNumbers('skeleton', { start: 16, end: 23 }),
+        frames: scene.anims.generateFrameNumbers('skeleton', { start: 16, end: 21 }),
         frameRate: 10,
         repeat: 0
     });
 
     scene.anims.create({
         key: 'werewolf-walk',
-        frames: scene.anims.generateFrameNumbers('werewolf', { start: 13, end: 25 }),
+        frames: scene.anims.generateFrameNumbers('werewolf', { start: 13, end: 20 }),
         frameRate: 12,
         repeat: -1
     });
@@ -104,14 +104,14 @@ export function createAnimations(scene: Phaser.Scene): void {
     // Werewolf sheet: 13 cols × 6 rows = 78 frames. Walk = row 1 (13–25). Attack = row 2 (26–38).
     scene.anims.create({
         key: 'werewolf-attack',
-        frames: scene.anims.generateFrameNumbers('werewolf', { start: 26, end: 38 }),
+        frames: scene.anims.generateFrameNumbers('werewolf', { start: 26, end: 34 }),
         frameRate: 12,
         repeat: 0
     });
 
     scene.anims.create({
         key: 'greatsword-walk',
-        frames: scene.anims.generateFrameNumbers('greatsword_skeleton', { start: 12, end: 23 }),
+        frames: scene.anims.generateFrameNumbers('greatsword_skeleton', { start: 12, end: 20 }),
         frameRate: 8,
         repeat: -1
     });
@@ -119,7 +119,7 @@ export function createAnimations(scene: Phaser.Scene): void {
     // Greatsword skeleton sheet: 12 cols × 7 rows = 84 frames. Walk = row 1 (12–23). Attack = row 2 (24–35).
     scene.anims.create({
         key: 'greatsword-attack',
-        frames: scene.anims.generateFrameNumbers('greatsword_skeleton', { start: 24, end: 35 }),
+        frames: scene.anims.generateFrameNumbers('greatsword_skeleton', { start: 24, end: 32 }),
         frameRate: 8,
         repeat: 0
     });
@@ -127,7 +127,7 @@ export function createAnimations(scene: Phaser.Scene): void {
     // Elite Enemies
     scene.anims.create({
         key: 'armored-skeleton-walk',
-        frames: scene.anims.generateFrameNumbers('armored_skeleton', { start: 8, end: 15 }),
+        frames: scene.anims.generateFrameNumbers('armored_skeleton', { start: 9, end: 15 }),
         frameRate: 10,
         repeat: -1
     });
@@ -135,14 +135,14 @@ export function createAnimations(scene: Phaser.Scene): void {
     // Armored skeleton sheet: 9 cols × 6 rows = 54 frames. Attack = row 2 (18–26).
     scene.anims.create({
         key: 'armored-skeleton-attack',
-        frames: scene.anims.generateFrameNumbers('armored_skeleton', { start: 18, end: 26 }),
+        frames: scene.anims.generateFrameNumbers('armored_skeleton', { start: 18, end: 25 }),
         frameRate: 10,
         repeat: 0
     });
 
     scene.anims.create({
         key: 'elite-orc-walk',
-        frames: scene.anims.generateFrameNumbers('elite_orc', { start: 8, end: 15 }),
+        frames: scene.anims.generateFrameNumbers('elite_orc', { start: 11, end: 18 }),
         frameRate: 10,
         repeat: -1
     });
@@ -150,14 +150,14 @@ export function createAnimations(scene: Phaser.Scene): void {
     // Elite orc sheet: 11 cols × 7 rows = 77 frames. Attack = row 2 (22–32).
     scene.anims.create({
         key: 'elite-orc-attack',
-        frames: scene.anims.generateFrameNumbers('elite_orc', { start: 22, end: 32 }),
+        frames: scene.anims.generateFrameNumbers('elite_orc', { start: 22, end: 28 }),
         frameRate: 10,
         repeat: 0
     });
 
     scene.anims.create({
         key: 'armored-orc-walk',
-        frames: scene.anims.generateFrameNumbers('armored_orc', { start: 8, end: 15 }),
+        frames: scene.anims.generateFrameNumbers('armored_orc', { start: 9, end: 15 }),
         frameRate: 10,
         repeat: -1
     });
@@ -165,7 +165,7 @@ export function createAnimations(scene: Phaser.Scene): void {
     // Armored orc sheet: 9 cols × 8 rows = 72 frames. Attack = row 2 (18–26).
     scene.anims.create({
         key: 'armored-orc-attack',
-        frames: scene.anims.generateFrameNumbers('armored_orc', { start: 18, end: 26 }),
+        frames: scene.anims.generateFrameNumbers('armored_orc', { start: 18, end: 24 }),
         frameRate: 10,
         repeat: 0
     });
@@ -176,6 +176,43 @@ export function createAnimations(scene: Phaser.Scene): void {
         frames: scene.anims.generateFrameNumbers('armored_orc', { start: 36, end: 44 }),
         frameRate: 10,
         repeat: 0
+    });
+
+    // Ranged Enemy Animations
+    // Wizard - Walk (row 1: 12-17), Attack (row 2: 24-35)
+    scene.anims.create({
+        key: 'wizard-walk',
+        frames: scene.anims.generateFrameNumbers('wizard', { start: 12, end: 17 }),
+        frameRate: 10,
+        repeat: -1
+    });
+    scene.anims.create({
+        key: 'wizard-attack',
+        frames: scene.anims.generateFrameNumbers('wizard', { start: 24, end: 35 }),
+        frameRate: 12,
+        repeat: 0
+    });
+
+    // Skeleton Archer - Walk (row 1: 12-19), Attack (row 2: 24-35)
+    scene.anims.create({
+        key: 'skeleton-archer-walk',
+        frames: scene.anims.generateFrameNumbers('skeleton_archer', { start: 12, end: 19 }),
+        frameRate: 10,
+        repeat: -1
+    });
+    scene.anims.create({
+        key: 'skeleton-archer-attack',
+        frames: scene.anims.generateFrameNumbers('skeleton_archer', { start: 24, end: 35 }),
+        frameRate: 12,
+        repeat: 0
+    });
+
+    // Wizard Fireball Projectile
+    scene.anims.create({
+        key: 'wizard-fireball-fly',
+        frames: scene.anims.generateFrameNumbers('wizard_fireball', { start: 0, end: 9 }),
+        frameRate: 12,
+        repeat: -1
     });
 
     // Blood Effects
