@@ -4,6 +4,7 @@ import '../styles/medieval-ui.css';
 import { GameOverOverlay } from './ui/GameOverOverlay';
 import { Hotbar } from './ui/Hotbar';
 import { TopHUD } from './ui/TopHUD';
+import { DashCooldownBar } from './ui/DashCooldownBar';
 import { MenuAnchor } from './ui/MenuAnchor';
 import { FantasyBook, type BookMode } from './ui/FantasyBook';
 import { BossSplashScreen } from './ui/BossSplashScreen';
@@ -61,9 +62,7 @@ export const GameContainer: React.FC<GameContainerProps> = ({ networkConfig }) =
                 if (currentIsOpen) {
                     if (currentMode === 'view') {
                         if (isMultiplayer) {
-                            // Can't directly close in MP without syncing
-                            // Expected to click Fortsett, but B can trigger it
-                            // Will be handled by the close function if needed, but let's ignore B to close in MP for safety
+                            // Ignore B to close in MP for safety
                         } else {
                             setIsBookOpen(false);
                         }
@@ -98,24 +97,18 @@ export const GameContainer: React.FC<GameContainerProps> = ({ networkConfig }) =
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [networkConfig]); // Dependency required now
+    }, [networkConfig]);
 
     useEffect(() => {
         if (gameContainerRef.current && !gameInstanceRef.current) {
             const game = createGame(gameContainerRef.current.id, networkConfig);
             gameInstanceRef.current = game;
 
-            // Initialize the singleton for hooks
             setGameInstance(game);
 
-            // Handle Level Up - Need to wait for scene to be ready
             const setupSceneListeners = () => {
                 const mainScene = game.scene.getScene('MainScene') as IMainScene;
                 if (mainScene) {
-                    mainScene.events.on('level-up', () => {
-                        // Level up is now automatic in MainScene without opening the book
-                    });
-
                     mainScene.events.on('level-complete', () => {
                         setBookMode('shop');
                         setIsBookOpen(true);
@@ -127,7 +120,6 @@ export const GameContainer: React.FC<GameContainerProps> = ({ networkConfig }) =
                         setIsBookOpen(true);
                     });
 
-                    // Multi-player specific events
                     mainScene.events.on('map-ready', (data: any) => {
                         if (networkConfig) {
                             const nm = (mainScene as any).networkManager;
@@ -153,7 +145,6 @@ export const GameContainer: React.FC<GameContainerProps> = ({ networkConfig }) =
                     });
 
                     mainScene.events.on('party_dead', () => {
-                        // Clear ready state for retry
                         setReadyPlayers(new Set());
                         setReadyReason(null);
                         setIsWaitingReady(false);
@@ -176,13 +167,11 @@ export const GameContainer: React.FC<GameContainerProps> = ({ networkConfig }) =
                                 const nm = (mainScene as any).networkManager;
                                 const total = nm ? nm.getConnectedPeerCount() + 1 : 1;
 
-                                // Broadcast updated state to all clients
                                 nm?.broadcast({
                                     t: PacketType.GAME_EVENT,
                                     ev: { type: 'sync_players_state', data: { loaded: next.size, ready: readyPlayers.size, expected: total } },
                                     ts: Date.now()
                                 });
-                                // Keep local state updated immediately for host
                                 setSyncState({ loaded: next.size, ready: readyPlayers.size, expected: total });
                                 gameInstanceRef.current?.registry.set('syncState', { loaded: next.size, ready: readyPlayers.size, expected: total });
 
@@ -245,7 +234,6 @@ export const GameContainer: React.FC<GameContainerProps> = ({ networkConfig }) =
                                 setReadyPlayers(prev => new Set(prev).add(networkConfig.peer.id));
                             }
                         } else {
-                            // Single player: Direct restart
                             mainScene.restartGame();
                         }
                     });
@@ -266,7 +254,6 @@ export const GameContainer: React.FC<GameContainerProps> = ({ networkConfig }) =
         }
     }, [networkConfig]);
 
-    // Safety check & Client Retry Mechanism
     useEffect(() => {
         if (!networkConfig) return;
         if (!isWaitingReady && !isLoadingLevel) return;
@@ -276,7 +263,6 @@ export const GameContainer: React.FC<GameContainerProps> = ({ networkConfig }) =
             if (!nm) return;
 
             if (networkConfig.role === 'client') {
-                // Client Retry Mechanism for dropped packets during async WebRTC startup
                 if (isLoadingLevel) {
                     const level = gameInstanceRef.current?.registry.get('gameLevel') || 1;
                     nm.broadcast({
@@ -291,13 +277,12 @@ export const GameContainer: React.FC<GameContainerProps> = ({ networkConfig }) =
                         ts: Date.now()
                     });
                 }
-                return; // Host logic below
+                return;
             }
 
             const total = nm.getConnectedPeerCount() + 1;
             const currentState = { loaded: loadedPlayers.size, ready: readyPlayers.size, expected: total };
 
-            // Sync state if expected count changed due to drops
             if ((isLoadingLevel || isWaitingReady) && total !== syncState.expected) {
                 nm.broadcast({ t: PacketType.GAME_EVENT, ev: { type: 'sync_players_state', data: currentState }, ts: Date.now() });
                 setSyncState(currentState);
@@ -306,11 +291,7 @@ export const GameContainer: React.FC<GameContainerProps> = ({ networkConfig }) =
 
             if (isLoadingLevel && loadedPlayers.size >= total) {
                 const bossIdx = gameInstanceRef.current?.registry.get('bossComingUp') ?? -1;
-                nm.broadcast({
-                    t: PacketType.GAME_EVENT,
-                    ev: { type: 'start_level', data: { bossIndex: bossIdx } },
-                    ts: Date.now()
-                });
+                nm.broadcast({ t: PacketType.GAME_EVENT, ev: { type: 'start_level', data: { bossIndex: bossIdx } }, ts: Date.now() });
                 setIsLoadingLevel(false);
                 setLoadedPlayers(new Set());
 
@@ -320,31 +301,21 @@ export const GameContainer: React.FC<GameContainerProps> = ({ networkConfig }) =
                 gameInstanceRef.current?.registry.set('syncState', nextState);
             }
 
-            // Re-evaluate Ready state based on newly pruned peer count
             if (isWaitingReady && readyPlayers.size >= total) {
                 if (readyReason === 'unpause') {
-                    nm.broadcast({
-                        t: PacketType.GAME_EVENT,
-                        ev: { type: 'resume_game', data: {} },
-                        ts: Date.now()
-                    });
+                    nm.broadcast({ t: PacketType.GAME_EVENT, ev: { type: 'resume_game', data: {} }, ts: Date.now() });
                     setIsBookOpen(false);
                     setReadyPlayers(new Set());
                     setIsWaitingReady(false);
                     setReadyReason(null);
                 } else if (readyReason === 'next_level') {
-                    nm.broadcast({
-                        t: PacketType.GAME_EVENT,
-                        ev: { type: 'start_level', data: {} },
-                        ts: Date.now()
-                    });
+                    nm.broadcast({ t: PacketType.GAME_EVENT, ev: { type: 'start_level', data: {} }, ts: Date.now() });
                     gameInstanceRef.current?.scene.getScene('MainScene')?.events.emit('start-next-level');
                     setIsBookOpen(false);
                     setReadyPlayers(new Set());
                     setIsWaitingReady(false);
                     setReadyReason(null);
                 } else if (readyReason === 'retry') {
-                    // Host triggers restart
                     (gameInstanceRef.current?.scene.getScene('MainScene') as any)?.restartGame();
                     setIsBookOpen(false);
                     setReadyPlayers(new Set());
@@ -352,7 +323,6 @@ export const GameContainer: React.FC<GameContainerProps> = ({ networkConfig }) =
                     setReadyReason(null);
                 }
 
-                // Clear state
                 const nextState = { loaded: loadedPlayers.size, ready: 0, expected: total };
                 nm.broadcast({ t: PacketType.GAME_EVENT, ev: { type: 'sync_players_state', data: nextState }, ts: Date.now() });
                 setSyncState(nextState);
@@ -363,7 +333,6 @@ export const GameContainer: React.FC<GameContainerProps> = ({ networkConfig }) =
         return () => clearInterval(interval);
     }, [networkConfig, isWaitingReady, isLoadingLevel, loadedPlayers.size, readyPlayers.size, readyReason, syncState.expected]);
 
-    // Centralized Pause Management
     useEffect(() => {
         if (!gameInstanceRef.current) return;
         const scene = gameInstanceRef.current.scene.getScene('MainScene');
@@ -376,7 +345,6 @@ export const GameContainer: React.FC<GameContainerProps> = ({ networkConfig }) =
         }
     }, [isBookOpen, isLoadingLevel]);
 
-    // Play paper sounds when book opens/closes
     useEffect(() => {
         import('../game/AudioManager').then(({ AudioManager }) => {
             AudioManager.instance.playSFX(isBookOpen ? 'paper_open' : 'paper_close');
@@ -386,22 +354,17 @@ export const GameContainer: React.FC<GameContainerProps> = ({ networkConfig }) =
     const applyShopUpgrade = useCallback((upgradeId: string, cost: number) => {
         if (!gameInstanceRef.current) return;
         const mainScene = gameInstanceRef.current.scene.getScene('MainScene');
-
         const currentCoins = gameInstanceRef.current.registry.get('playerCoins') || 0;
         gameInstanceRef.current.registry.set('playerCoins', currentCoins - cost);
-
         mainScene.events.emit('apply-upgrade', upgradeId);
     }, []);
 
     const applyRevive = useCallback((targetId: string, cost: number) => {
         if (!gameInstanceRef.current) return;
         const mainScene = gameInstanceRef.current.scene.getScene('MainScene');
-
         const currentCoins = gameInstanceRef.current.registry.get('playerCoins') || 0;
         if (currentCoins >= cost) {
             gameInstanceRef.current.registry.set('playerCoins', currentCoins - cost);
-
-            // Delegate to the game engine to handle syncing appropriately
             mainScene.events.emit('buy-revive', targetId);
         }
     }, []);
@@ -409,7 +372,6 @@ export const GameContainer: React.FC<GameContainerProps> = ({ networkConfig }) =
     const handleContinue = useCallback(() => {
         if (!gameInstanceRef.current) return;
         const mainScene = gameInstanceRef.current.scene.getScene('MainScene');
-
         if (networkConfig) {
             setReadyReason('next_level');
             setIsWaitingReady(true);
@@ -432,7 +394,6 @@ export const GameContainer: React.FC<GameContainerProps> = ({ networkConfig }) =
         } else {
             mainScene.events.emit('start-next-level');
         }
-
         setIsBookOpen(false);
     }, [networkConfig]);
 
@@ -475,7 +436,6 @@ export const GameContainer: React.FC<GameContainerProps> = ({ networkConfig }) =
         }
     }, [isBookOpen, handleBookClose, networkConfig]);
 
-    // Memoize actions to prevent re-renders in children
     const bookActions = useMemo(() => ({
         onSelectPerk: () => { },
         onBuyUpgrade: applyShopUpgrade,
@@ -484,24 +444,19 @@ export const GameContainer: React.FC<GameContainerProps> = ({ networkConfig }) =
 
     return (
         <div id="game-container" ref={gameContainerRef} className="w-full h-full relative overflow-hidden bg-slate-950 font-sans selection:bg-cyan-500/30">
-            {/* UI Layer - Pointer events managed internally */}
             <div id="ui-layer" className="absolute inset-0 z-10 pointer-events-none">
-                <div className={`pointer-events-auto transition-all duration-500`}>
+                <div className="pointer-events-auto transition-all duration-500">
                     <TopHUD />
-                    <MenuAnchor
-                        isOpen={isBookOpen}
-                        onClick={handleToggleBook}
-                    />
+                    <MenuAnchor isOpen={isBookOpen} onClick={handleToggleBook} />
                     <HighscoreNotification />
                 </div>
 
-                {/* Hotbar - Bottom Center */}
-                <div className={`absolute bottom-6 left-1/2 -translate-x-1/2 pointer-events-auto transition-all duration-500`}>
+                <div className="absolute bottom-6 left-1/2 -translate-x-1/2 pointer-events-auto transition-all duration-500 flex flex-col items-center gap-2">
+                    <DashCooldownBar />
                     <Hotbar />
                 </div>
             </div>
 
-            {/* Book/Modal Layer */}
             <div className="absolute inset-0 z-[60] pointer-events-none">
                 <div className="pointer-events-auto">
                     <FantasyBook
@@ -520,10 +475,8 @@ export const GameContainer: React.FC<GameContainerProps> = ({ networkConfig }) =
                 </div>
             </div>
 
-            {/* Boss HUD — visible above Hotbar during boss fights */}
             <BossHUD />
 
-            {/* Loading Overlay */}
             {isLoadingLevel && (
                 <div className="absolute inset-0 z-[100] bg-black/80 flex items-center justify-center pointer-events-auto backdrop-blur-sm">
                     <div className="flex flex-col items-center gap-4">
@@ -537,10 +490,7 @@ export const GameContainer: React.FC<GameContainerProps> = ({ networkConfig }) =
                 </div>
             )}
 
-            {/* Boss Splash Screen — full-screen intro on boss start */}
             <BossSplashScreen />
-
-            {/* Game Over Overlay */}
             <GameOverOverlay />
         </div>
     );

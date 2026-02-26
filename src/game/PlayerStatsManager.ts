@@ -137,6 +137,14 @@ export class PlayerStatsManager {
         // Misc
         this.scene.registry.set('playerLuck', 1.0);
         this.scene.registry.set('playerCritChance', this.baseCritChance);
+
+        // Dash stats
+        const dashCdLvl = levels['dash_cooldown'] || 0;
+        const dashDistLvl = levels['dash_distance'] || 0;
+        const dashCooldownMs = GAME_CONFIG.PLAYER.DASH_COOLDOWN_MS - dashCdLvl * 2000;
+        const dashDistance = GAME_CONFIG.PLAYER.DASH_DISTANCE + dashDistLvl * 50;
+        this.scene.registry.set('dashCooldown', Math.max(8000, dashCooldownMs));
+        this.scene.registry.set('dashDistance', dashDistance);
     }
 
     /** Apply an upgrade by ID (increments level, saves, recalculates) */
@@ -176,6 +184,13 @@ export class PlayerStatsManager {
     /** Queue coins for batched flush to the registry (GC-friendly) */
     addCoins(amount: number): void {
         this.pendingEconomy.coins += amount;
+    }
+
+    /** HP healed on a successful dash (from dash_lifesteal upgrade) */
+    getDashLifestealHP(): number {
+        const levels = this.scene.registry.get('upgradeLevels') || {};
+        const lvl = levels['dash_lifesteal'] || 0;
+        return lvl * 5;
     }
 
     /** Flush pending economy updates to registry and save */

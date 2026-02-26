@@ -42,6 +42,7 @@ class MainScene extends Phaser.Scene implements IMainScene {
         S: Phaser.Input.Keyboard.Key;
         D: Phaser.Input.Keyboard.Key;
         SPACE: Phaser.Input.Keyboard.Key;
+        SHIFT: Phaser.Input.Keyboard.Key;
     };
     private hotkeys!: {
         [key: string]: Phaser.Input.Keyboard.Key;
@@ -452,7 +453,8 @@ class MainScene extends Phaser.Scene implements IMainScene {
             A: Phaser.Input.Keyboard.KeyCodes.A,
             S: Phaser.Input.Keyboard.KeyCodes.S,
             D: Phaser.Input.Keyboard.KeyCodes.D,
-            SPACE: Phaser.Input.Keyboard.KeyCodes.SPACE
+            SPACE: Phaser.Input.Keyboard.KeyCodes.SPACE,
+            SHIFT: Phaser.Input.Keyboard.KeyCodes.SHIFT
         }) as any;
 
         this.hotkeys = this.input.keyboard?.addKeys({
@@ -624,6 +626,7 @@ class MainScene extends Phaser.Scene implements IMainScene {
         this.events.on('fireball-cast', () => AudioManager.instance.playSFX('fireball_cast'));
         this.events.on('frost-cast', () => AudioManager.instance.playSFX('ice_throw'));
         this.events.on('lightning-cast', () => AudioManager.instance.playSFX('fireball_cast')); // Using fireball_cast as placeholder
+        this.events.on('player-dash', () => AudioManager.instance.playSFX('swing')); // Using swing as placeholder
 
         // Listen for weapon changes
         this.registry.events.on('changedata-currentWeapon', () => {
@@ -1137,8 +1140,77 @@ class MainScene extends Phaser.Scene implements IMainScene {
             return true;
         });
 
-        if (isAttacking || this.combat.isKnockedBack) {
-            if (isAttacking) player.setVelocity(0, 0);
+        if (isAttacking || this.combat.isKnockedBack || this.data.get('isDashing')) {
+            if (isAttacking || this.data.get('isDashing')) {
+                // Keep movement during dash handled by tween, but block WASD
+                if (isAttacking) player.setVelocity(0, 0);
+            }
+            return;
+        }
+
+        // --- Handle Dash (Shift) ---
+        const dashState = this.registry.get('dashState') || { isActive: false, readyAt: 0 };
+        let hp = this.registry.get('playerHP') || 0;
+        if (this.wasd?.SHIFT?.isDown && hp > 0 && Date.now() >= dashState.readyAt && !this.data.get('isDashing')) {
+            const dashCooldown = this.registry.get('dashCooldown') || 20000;
+            const dashDistance = this.registry.get('dashDistance') || 220;
+            const dashDuration = GAME_CONFIG.PLAYER.DASH_DURATION_MS;
+
+            this.data.set('isDashing', true);
+            this.registry.set('dashState', { isActive: true, readyAt: Date.now() + dashCooldown });
+
+            // Invincibility
+            this.combat.setDashIframe(true);
+
+            // Determine direction
+            let dx = 0;
+            let dy = 0;
+            if (this.wasd.W.isDown) dy -= 1;
+            if (this.wasd.S.isDown) dy += 1;
+            if (this.wasd.A.isDown) dx -= 1;
+            if (this.wasd.D.isDown) dx += 1;
+
+            if (dx === 0 && dy === 0) {
+                // Dash towards mouse if stationary
+                const angle = Phaser.Math.Angle.Between(player.x, player.y, pointer.worldX, pointer.worldY);
+                dx = Math.cos(angle);
+                dy = Math.sin(angle);
+            } else {
+                // Normalize WASD vector
+                const len = Math.sqrt(dx * dx + dy * dy);
+                dx /= len;
+                dy /= len;
+            }
+
+            // Visuals
+            player.play('player-walk'); // or specific dash anim if we had one
+            player.setAlpha(0.7);
+            this.events.emit('player-dash');
+
+            // Movement via Tween for precision
+            this.tweens.add({
+                targets: player,
+                x: player.x + dx * dashDistance,
+                y: player.y + dy * dashDistance,
+                duration: dashDuration,
+                ease: 'Cubic.out',
+                onComplete: () => {
+                    this.data.set('isDashing', false);
+                    player.setAlpha(1);
+                    this.combat.setDashIframe(false);
+                    player.play('player-idle');
+
+                    // Lifesteal upgrade effect
+                    const heal = this.stats.getDashLifestealHP();
+                    if (heal > 0) {
+                        const curHP = this.registry.get('playerHP');
+                        const maxHP = this.registry.get('playerMaxHP');
+                        this.registry.set('playerHP', Math.min(maxHP, curHP + heal));
+                        this.poolManager.getDamageText(player.x, player.y - 40, `+${heal}`, "#55ff55");
+                    }
+                }
+            });
+
             return;
         }
 
@@ -1191,7 +1263,7 @@ class MainScene extends Phaser.Scene implements IMainScene {
 
         // Handle Attack (Left Click or Spacebar)
         const spacePressed = this.wasd?.SPACE?.isDown;
-        const hp = this.registry.get('playerHP') || 0;
+        hp = this.registry.get('playerHP') || 0;
         if (hp > 0 && (pointer.leftButtonDown() || spacePressed) && !blockPressed) {
             const lastCd = this.registry.get('weaponCooldown');
             if (lastCd && Date.now() < lastCd.timestamp + lastCd.duration) {

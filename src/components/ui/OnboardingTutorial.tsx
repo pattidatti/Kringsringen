@@ -115,6 +115,8 @@ export const OnboardingTutorial: React.FC<OnboardingTutorialProps> = ({ onStart 
                         }
                     />
                     <Row label="Blokk" keys={<Key wide>RMB</Key>} />
+                    <Row label="Dash" keys={<Key wide>Shift</Key>} />
+
 
                     <Divider label="Våpen" />
                     <Row

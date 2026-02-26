@@ -164,4 +164,9 @@ export class PlayerCombatManager {
             this.pendingHPChange = 0;
         }
     }
+
+    /** Manually set invincibility frames (used by Dash) */
+    public setDashIframe(active: boolean): void {
+        this.isInvincible = active;
+    }
 }

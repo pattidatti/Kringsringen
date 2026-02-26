@@ -53,6 +53,37 @@ export const UPGRADES: UpgradeConfig[] = [
         priceScale: 1.7,
         description: (lvl) => `+1 Rustning (Nå: ${lvl})`
     },
+    // --- DASH ---
+    {
+        id: 'dash_cooldown',
+        title: 'Vindstøt',
+        icon: 'item_lightning',
+        category: 'Karakter',
+        maxLevel: 6,
+        basePrice: 80,
+        priceScale: 1.7,
+        description: (lvl) => `-2 sek dash-cooldown (Nå: ${20 - lvl * 2} sek)`
+    },
+    {
+        id: 'dash_distance',
+        title: 'Lynskritt',
+        icon: 'item_lightning',
+        category: 'Karakter',
+        maxLevel: 5,
+        basePrice: 100,
+        priceScale: 1.8,
+        description: (lvl) => `+50px dash-distanse (Nå: ${220 + lvl * 50}px)`
+    },
+    {
+        id: 'dash_lifesteal',
+        title: 'Blodsug',
+        icon: 'item_potion_red',
+        category: 'Karakter',
+        maxLevel: 3,
+        basePrice: 180,
+        priceScale: 2.0,
+        description: (lvl) => `+${lvl * 5} HP ved dash`
+    },
 
     // --- SVERD ---
     {

@@ -20,7 +20,11 @@ export const GAME_CONFIG = {
         BASE_CRIT_CHANCE: 0.05,
         BASE_PROJECTILES: 1,
         PICKUP_RANGE: 60, // Default collection range
-        MAGNET_RANGE: 250 // Default magnet range
+        MAGNET_RANGE: 250, // Default magnet range
+        // --- DASH ---
+        DASH_COOLDOWN_MS: 20000, // 20 seconds default
+        DASH_DISTANCE: 220,      // pixels
+        DASH_DURATION_MS: 160    // ms — short, punchy burst
     },
     ENEMIES: {
         ORC: {
