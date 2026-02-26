@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { HighscoreManager } from '../../config/firebase';
-import { useGameRegistry } from '../../hooks/useGameRegistry';
+import { useGameRegistry, getGameInstance } from '../../hooks/useGameRegistry';
 import { FantasyIcon } from './FantasyIcon';
 
 interface Threshold {
@@ -13,14 +13,35 @@ export const HighscoreNotification: React.FC = () => {
     const level = useGameRegistry('gameLevel', 1);
     const wave = useGameRegistry('currentWave', 1);
     const coins = useGameRegistry('playerCoins', 0);
-    const hp = useGameRegistry('playerHP', 100);
 
+    // Track HP via ref (not useState) to avoid re-renders on every damage
+    const hpRef = useRef(100);
     const currentScore = level * 1000 + wave * 100 + coins;
 
     const [thresholds, setThresholds] = useState<Threshold[]>([]);
     const [currentRank, setCurrentRank] = useState<number | null>(null);
     const [hasFetched, setHasFetched] = useState(false);
     const [isVisible, setIsVisible] = useState(false);
+
+    // Subscribe to HP changes directly from Phaser (not via useGameRegistry)
+    // This avoids triggering re-renders on every damage tick
+    useEffect(() => {
+        const game = getGameInstance();
+        if (!game) return;
+
+        const registry = game.registry;
+        hpRef.current = registry.get('playerHP') ?? 100;
+
+        const onHPChange = (_parent: any, newHP: number) => {
+            hpRef.current = newHP;
+        };
+
+        registry.events.on('changedata-playerHP', onHPChange);
+
+        return () => {
+            registry.events.off('changedata-playerHP', onHPChange);
+        };
+    }, []);
 
     // Fetch top 25 scores ONCE when component mounts
     useEffect(() => {
@@ -58,9 +79,9 @@ export const HighscoreNotification: React.FC = () => {
         };
     }, []);
 
-    // Evaluate rank constantly as score changes
+    // Evaluate rank constantly as score changes (but NOT on HP changes)
     useEffect(() => {
-        if (!hasFetched || thresholds.length === 0 || hp <= 0) return;
+        if (!hasFetched || thresholds.length === 0 || hpRef.current <= 0) return;
 
         // Find the BEST (lowest number) rank the player has beaten
         let bestRankFound: number | null = null;
@@ -79,7 +100,7 @@ export const HighscoreNotification: React.FC = () => {
                 setIsVisible(true);
             }
         }
-    }, [currentScore, thresholds, hasFetched, currentRank, hp]);
+    }, [currentScore, thresholds, hasFetched, currentRank]);
 
     // Handle auto-hide timeout
     useEffect(() => {
@@ -92,7 +113,7 @@ export const HighscoreNotification: React.FC = () => {
     }, [isVisible, currentRank]);
 
     // Don't show anything if dead
-    if (hp <= 0) return null;
+    if (hpRef.current <= 0) return null;
 
     return (
         <div className="absolute top-36 left-1/2 -translate-x-1/2 z-50 pointer-events-none flex flex-col items-center">

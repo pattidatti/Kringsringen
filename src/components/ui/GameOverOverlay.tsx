@@ -6,13 +6,16 @@ import { HighscoreManager } from '../../config/firebase';
 import { SaveManager } from '../../game/SaveManager';
 import { getGameInstance } from '../../hooks/useGameRegistry';
 
-export const GameOverOverlay: React.FC = () => {
-    const hp = useGameRegistry('playerHP', 100);
+/**
+ * Inner component: subscribes to all 7 registry keys.
+ * Only mounted when the overlay should be visible (hp <= 0 || partyDead).
+ * This delays listener creation until needed.
+ */
+const GameOverContent: React.FC<{ hp: number; partyDead: boolean }> = ({ hp: hpProp, partyDead: partyDeadProp }) => {
     const level = useGameRegistry('gameLevel', 1);
     const wave = useGameRegistry('currentWave', 1);
     const coins = useGameRegistry('playerCoins', 0);
     const isMultiplayer = useGameRegistry('isMultiplayer', false);
-    const partyDead = useGameRegistry('partyDead', false);
     const syncState = useGameRegistry<{ loaded: number, ready: number, expected: number }>('syncState', { loaded: 0, ready: 0, expected: 1 });
 
     const [playerName, setPlayerName] = useState('');
@@ -26,8 +29,6 @@ export const GameOverOverlay: React.FC = () => {
     const [isWaitingRetry, setIsWaitingRetry] = useState(false);
 
     React.useEffect(() => {
-        if (hp > 0 && !partyDead) return; // Only fetch when game is over
-
         let isMounted = true;
         const fetchRank = async () => {
             try {
@@ -57,7 +58,7 @@ export const GameOverOverlay: React.FC = () => {
         fetchRank();
 
         return () => { isMounted = false; };
-    }, [hp, partyDead, score]);
+    }, [score]);
 
     const handleSubmitScore = useCallback(async () => {
         const trimmedName = playerName.trim();
@@ -103,8 +104,6 @@ export const GameOverOverlay: React.FC = () => {
         }
     }, [isMultiplayer]);
 
-    if (hp > 0 && !partyDead) return null;
-
     const retryLabel = isMultiplayer
         ? (isWaitingRetry ? `Venter (${syncState.ready}/${syncState.expected})` : 'Prøv Igjen')
         : 'Prøv Igjen';
@@ -147,7 +146,7 @@ export const GameOverOverlay: React.FC = () => {
                         Falnet
                     </motion.h1>
                     <p className="font-cinzel text-base tracking-[0.35em] text-red-400 uppercase mt-2 text-center">
-                        {partyDead ? "Hele følget har falt" : "Din saga ender her"}
+                        {partyDeadProp ? "Hele følget har falt" : "Din saga ender her"}
                     </p>
                 </div>
 
@@ -174,7 +173,7 @@ export const GameOverOverlay: React.FC = () => {
                 </div>
 
                 {/* Name input - Hide for clients in partyDead if they're still alive (ghosts) */}
-                {(hp <= 0 || !isMultiplayer) && (
+                {(hpProp <= 0 || !isMultiplayer) && (
                     <div className="w-full flex flex-col gap-2">
                         <label className="font-cinzel text-sm text-red-400 uppercase tracking-widest text-center">
                             Ditt navn
@@ -224,7 +223,7 @@ export const GameOverOverlay: React.FC = () => {
                 )}
 
                 {/* Buttons */}
-                {!submitted && (hp <= 0 || !isMultiplayer) ? (
+                {!submitted && (hpProp <= 0 || !isMultiplayer) ? (
                     <div className="w-full flex gap-4 mt-2">
                         <FantasyButton
                             label="Send Score"
@@ -261,7 +260,7 @@ export const GameOverOverlay: React.FC = () => {
                             </motion.div>
                         )}
 
-                        {(partyDead || !isMultiplayer) && (
+                        {(partyDeadProp || !isMultiplayer) && (
                             <FantasyButton
                                 label={retryLabel}
                                 variant="danger"
@@ -275,4 +274,18 @@ export const GameOverOverlay: React.FC = () => {
             </motion.div>
         </motion.div>
     );
+};
+
+/**
+ * Outer component: subscribes to hp and partyDead only (low frequency).
+ * Only renders GameOverContent when overlay should be visible.
+ */
+export const GameOverOverlay: React.FC = () => {
+    const hp = useGameRegistry('playerHP', 100);
+    const partyDead = useGameRegistry('partyDead', false);
+
+    // Show overlay only when dead or party is dead
+    if (hp > 0 && !partyDead) return null;
+
+    return <GameOverContent hp={hp} partyDead={partyDead} />;
 };

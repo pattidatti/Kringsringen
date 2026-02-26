@@ -301,7 +301,7 @@ class MainScene extends Phaser.Scene implements IMainScene {
         // Arrow Group
         this.arrows = this.physics.add.group({
             classType: Arrow,
-            runChildUpdate: false
+            runChildUpdate: true
         });
 
         // Fireball Group

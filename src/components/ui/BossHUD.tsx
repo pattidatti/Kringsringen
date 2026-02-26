@@ -1,16 +1,55 @@
-import React from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useGameRegistry } from '../../hooks/useGameRegistry';
+import { useGameRegistry, getGameInstance } from '../../hooks/useGameRegistry';
 
-export const BossHUD: React.FC = () => {
+export const BossHUD: React.FC = React.memo(() => {
     const isBossActive = useGameRegistry('isBossActive', false);
-    const bossHP = useGameRegistry('bossHP', 0);
     const bossMaxHP = useGameRegistry('bossMaxHP', 1);
     const bossName = useGameRegistry('bossName', '');
     const bossPhase = useGameRegistry<number>('bossPhase', 1);
 
-    const hpFraction = bossMaxHP > 0 ? Math.max(0, bossHP / bossMaxHP) : 0;
+    // Direct ref to HP bar fill — updated via RAF, not React state
+    const hpBarRef = useRef<HTMLDivElement>(null);
+    const hpValueRef = useRef<number>(0);
+    const [displayHP, setDisplayHP] = useState(0);
+
     const isPhase2 = bossPhase === 2;
+
+    // Subscribe to bossHP directly via Phaser events (NOT via useGameRegistry)
+    // This avoids React re-renders while still updating the DOM ref
+    useEffect(() => {
+        const game = getGameInstance();
+        if (!game) return;
+
+        const registry = game.registry;
+
+        // Set initial HP
+        hpValueRef.current = registry.get('bossHP') ?? 0;
+        setDisplayHP(hpValueRef.current);
+
+        // Animate the bar fill on HP change
+        const onBossHPChange = (_parent: any, newHP: number) => {
+            hpValueRef.current = newHP;
+
+            // Update the ref with smooth transition using CSS
+            if (hpBarRef.current) {
+                const hpFraction = bossMaxHP > 0 ? Math.max(0, newHP / bossMaxHP) : 0;
+                const width = `${hpFraction * 100}%`;
+
+                // Use CSS transition for smooth animation (60fps native)
+                hpBarRef.current.style.width = width;
+            }
+
+            // Update display HP text every 10 damage (reduce updates for text)
+            setDisplayHP(newHP);
+        };
+
+        registry.events.on('changedata-bossHP', onBossHPChange);
+
+        return () => {
+            registry.events.off('changedata-bossHP', onBossHPChange);
+        };
+    }, [bossMaxHP]);
 
     return (
         <AnimatePresence>
@@ -37,7 +76,7 @@ export const BossHUD: React.FC = () => {
                             {bossName}
                         </span>
                         <span className="font-mono text-xs text-red-300/70 select-none">
-                            {Math.ceil(bossHP)} / {Math.ceil(bossMaxHP)}
+                            {Math.ceil(displayHP)} / {Math.ceil(bossMaxHP)}
                         </span>
                     </div>
 
@@ -50,16 +89,17 @@ export const BossHUD: React.FC = () => {
                             boxShadow: isPhase2 ? '0 0 10px rgba(255,0,0,0.4)' : 'none',
                         }}
                     >
-                        {/* HP fill */}
-                        <motion.div
-                            animate={{ width: `${hpFraction * 100}%` }}
-                            transition={{ duration: 0.2 }}
+                        {/* HP fill — direct DOM ref, CSS transition for smooth animation */}
+                        <div
+                            ref={hpBarRef}
                             className="absolute inset-y-0 left-0 rounded"
                             style={{
+                                width: '100%',
                                 background: isPhase2
                                     ? 'linear-gradient(90deg, #7f0000, #cc0000, #ff3333)'
                                     : 'linear-gradient(90deg, #7f1d1d, #b91c1c, #ef4444)',
                                 boxShadow: isPhase2 ? 'inset 0 0 8px rgba(255,100,100,0.5)' : 'none',
+                                transition: 'width 0.2s ease-out',
                             }}
                         />
 
@@ -102,4 +142,4 @@ export const BossHUD: React.FC = () => {
             )}
         </AnimatePresence>
     );
-};
+});
