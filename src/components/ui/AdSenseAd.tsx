@@ -15,14 +15,12 @@ interface AdSenseAdProps {
     adClient: string;
     /** The ad-unit slot ID from your AdSense dashboard */
     adSlot: string;
-    /** Pixel width for the ad container (default 300) */
+    /** Max pixel width for the container (default 300) */
     width?: number;
-    /** Pixel height for the ad container (default 250) */
-    height?: number;
 }
 
 /**
- * Renders a single Google AdSense ad unit.
+ * Renders a single Google AdSense ad unit (auto format, responsive).
  *
  * The adsbygoogle.js script must already be present in index.html
  * (see the <script async> tag in <head>).
@@ -31,7 +29,6 @@ export const AdSenseAd: React.FC<AdSenseAdProps> = ({
     adClient,
     adSlot,
     width = 300,
-    height = 250,
 }) => {
     const pushed = useRef(false);
 
@@ -52,18 +49,18 @@ export const AdSenseAd: React.FC<AdSenseAdProps> = ({
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 1.2, ease: 'easeOut' }}
-            style={{ width, height }}
+            style={{ width }}
             className="overflow-hidden rounded-sm"
             // Prevent the ad area from triggering game interactions
             onMouseDown={e => e.stopPropagation()}
         >
             <ins
                 className="adsbygoogle"
-                style={{ display: 'block', width, height }}
+                style={{ display: 'block' }}
                 data-ad-client={adClient}
                 data-ad-slot={adSlot}
-                data-ad-format="fixed"
-                data-full-width-responsive="false"
+                data-ad-format="auto"
+                data-full-width-responsive="true"
             />
         </motion.div>
     );

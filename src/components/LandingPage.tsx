@@ -16,7 +16,7 @@ import '../styles/pixel-ui.css';
 //  Ad slot ID   : AdSense → Ads → By ad unit → select your unit
 // ─────────────────────────────────────────────────────────────
 const ADSENSE_CLIENT = 'ca-pub-2743819524126234';
-const ADSENSE_SLOT   = 'XXXXXXXXXX';
+const ADSENSE_SLOT   = '6930156530';
 
 interface LandingPageProps {
     onStart: () => void;
@@ -192,7 +192,6 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart, onStartMP }) => {
                     adClient={ADSENSE_CLIENT}
                     adSlot={ADSENSE_SLOT}
                     width={300}
-                    height={250}
                 />
             </div>
 
