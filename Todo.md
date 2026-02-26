@@ -25,7 +25,7 @@
 
 # Monsters
 - [x] En del enemies blinker mens de går, ligger antageligvis en frame for mange i sprite sheeten. 
-- [] Ny wizard: Healer. Caster en healing spell på andre monstere, som gjør at de får en grønn glow mens de blir healed. Spelleffekt: @622.png i grønn (rad 3, 14 frames). Attack animation: public/assets/sprites/wizard.png rad 3, 8 frames. Trenger egen spelleffekt lyd (bruk placeholder for nå). Spelleffekt må ha glow/lys slik som de andre spelleffektene vi har. Den skal spawne oppå dem som blir healed, og forsvinne etter en stund. Vi må introdusere antall healere sakte i waves. Kan vi gi dem en grønn tint, på samme måte som vi har på block på spilleren? Dette er vel enkleste måte å få dem til å se annerledes ut. Mens healingen pågår, kan de ikke bevege seg, og er dermed sårbare, de lyser også opp svakt grønt. 
+- [x] Ny wizard: Healer. Caster en healing spell på andre monstere, som gjør at de får en grønn glow mens de blir healed. Spelleffekt: @622.png i grønn (rad 3, 14 frames). Attack animation: public/assets/sprites/wizard.png rad 3, 8 frames. Trenger egen spelleffekt lyd (bruk placeholder for nå). Spelleffekt må ha glow/lys slik som de andre spelleffektene vi har. Den skal spawne oppå dem som blir healed, og forsvinne etter en stund. Vi må introdusere antall healere sakte i waves. Kan vi gi dem en grønn tint, på samme måte som vi har på block på spilleren? Dette er vel enkleste måte å få dem til å se annerledes ut. Mens healingen pågår, kan de ikke bevege seg, og er dermed sårbare, de lyser også opp svakt grønt. 
 
 # Spell
 - Lighting ser fremdeles ikke helt bra ut. 

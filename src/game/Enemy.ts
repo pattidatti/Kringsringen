@@ -144,6 +144,13 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 
         // Reset HP Bar
         this.updateHPBar();
+
+        // Visual Refinement: Healer and Fire Wizard permanent tint
+        if (this.enemyType === 'healer_wizard') {
+            this.setTint(0xaaffaa);
+        } else if (this.enemyType === 'wizard') {
+            this.setTint(0xffaaaa);
+        }
     }
 
     public getIsDead(): boolean {
@@ -173,7 +180,15 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
                 // Visual glitch indicating denied hit
                 this.setTint(0x88ccff);
                 this.scene.time.delayedCall(200, () => {
-                    if (this.active && !this.isDead) this.clearTint();
+                    if (this.active && !this.isDead) {
+                        if (this.enemyType === 'healer_wizard') {
+                            this.setTint(0xaaffaa);
+                        } else if (this.enemyType === 'wizard') {
+                            this.setTint(0xffaaaa);
+                        } else {
+                            this.clearTint();
+                        }
+                    }
                 });
 
                 this.setScale(this.config?.spriteInfo?.type === 'spritesheet' ? GAME_CONFIG.ENEMIES[this.enemyType.toUpperCase() as EnemyType]?.scale || 1.5 : 1.5);
@@ -213,6 +228,25 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
                         this.play(anim);
                     }
                     this.setFlipX(flipX === 1);
+
+                    // Healer and Fire Wizard visuals in client mode
+                    if (this.enemyType === 'healer_wizard') {
+                        this.setTint(0xaaffaa);
+
+                        // Weak glow during healing animation on client
+                        if (anim === 'healer-wizard-heal') {
+                            if (!this.attackLight) {
+                                this.attackLight = this.scene.lights.addLight(this.x, this.y, 80, 0x00ff00, 1.2);
+                            } else {
+                                this.attackLight.setPosition(this.x, this.y);
+                                this.attackLight.setVisible(true);
+                            }
+                        } else if (this.attackLight) {
+                            this.attackLight.setVisible(false);
+                        }
+                    } else if (this.enemyType === 'wizard') {
+                        this.setTint(0xffaaaa);
+                    }
                 } else {
                     // Fallback interpolation if no buffer bounds exist yet
                     const tx = this.getData('targetX');
@@ -272,8 +306,11 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
             this.setVelocity(0, 0);
 
             // Special Visuals for Healer Wizard during cast
+            // Refined: We maintain the tint, and the Light2D provides the "glow"
             if (this.enemyType === 'healer_wizard') {
-                this.setTint(0x88ff88); // Distinct green glow
+                this.setTint(0xaaffaa);
+            } else if (this.enemyType === 'wizard') {
+                this.setTint(0xffaaaa);
             }
 
             // ULTRATHINK BUGFIX: Use native Light2D for guaranteed visibility
@@ -500,7 +537,15 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         this.scene.events.emit('enemy-hit');
         this.setTint(0xff0000);
         this.scene.time.delayedCall(100, () => {
-            if (this.active && !this.isDead && !this.predictedDeadUntil) this.clearTint();
+            if (this.active && !this.isDead && !this.predictedDeadUntil) {
+                if (this.enemyType === 'healer_wizard') {
+                    this.setTint(0xaaffaa);
+                } else if (this.enemyType === 'wizard') {
+                    this.setTint(0xffaaaa);
+                } else {
+                    this.clearTint();
+                }
+            }
         });
 
         if ((this.scene as any).poolManager) {
