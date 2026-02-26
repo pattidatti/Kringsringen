@@ -485,6 +485,27 @@ class MainScene extends Phaser.Scene implements IMainScene {
             this.stats.applyUpgrade(upgradeId);
         });
 
+        // Listen for Revive Purchases
+        this.events.off('buy-revive');
+        this.events.on('buy-revive', (targetId: string) => {
+            if (this.networkManager?.role === 'client') {
+                // Client requests host to revive them
+                this.networkManager.broadcast({
+                    t: PacketType.GAME_EVENT,
+                    ev: { type: 'revive_request', data: { targetId } },
+                    ts: Date.now()
+                });
+            } else {
+                // Host does it instantly and tells everyone
+                this.handleGameEvent({ type: 'player_revived', data: { targetId } } as any);
+                this.networkManager?.broadcast({
+                    t: PacketType.GAME_EVENT,
+                    ev: { type: 'player_revived', data: { targetId } },
+                    ts: Date.now()
+                });
+            }
+        });
+
         // Listen for Next Level
         this.events.on('start-next-level', () => {
             this.waves.startLevel(this.registry.get('gameLevel') + 1);
@@ -751,12 +772,16 @@ class MainScene extends Phaser.Scene implements IMainScene {
                     ev: { type: 'player_revived', data: { targetId } },
                     ts: Date.now()
                 });
-                if (targetId === this.networkManager.peerId) {
-                    this.events.emit('local-player-revived');
-                }
+                // Handle locally immediately for the host
+                this.handleGameEvent({ type: 'player_revived', data: { targetId } } as any);
             }
         } else if (event.type === 'player_revived') {
             const { targetId } = event.data;
+
+            // Increment the cost multiplier across all clients synced via this event
+            const currentReviveCount = this.registry.get('reviveCount') || 0;
+            this.registry.set('reviveCount', currentReviveCount + 1);
+
             const isLocal = targetId === this.networkManager?.peerId || !this.networkManager?.role;
             if (isLocal) {
                 this.events.emit('local-player-revived');

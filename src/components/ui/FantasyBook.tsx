@@ -83,6 +83,7 @@ export const FantasyBook: React.FC<FantasyBookProps> = React.memo(({
     const upgradeLevels = useGameRegistry<Record<string, number>>('upgradeLevels', {});
     const bossComingUp = useGameRegistry('bossComingUp', -1);
     const partyState = useGameRegistry<{ id: string, name: string, isDead: boolean }[]>('partyState', []);
+    const reviveCount = useGameRegistry('reviveCount', 0);
 
     // Detailed Stats for Status Page
     const maxHp = useGameRegistry('playerMaxHP', 100);
@@ -291,7 +292,7 @@ export const FantasyBook: React.FC<FantasyBookProps> = React.memo(({
                     <AnimatePresence mode="popLayout" initial={false}>
                         {isMultiplayer && partyState.length > 0 && (
                             partyState.filter(p => p.isDead).map(p => {
-                                const reviveCost = 500 + (level * 250);
+                                const reviveCost = 500 + (reviveCount * 500);
                                 const canAfford = coins >= reviveCost;
                                 return (
                                     <motion.div

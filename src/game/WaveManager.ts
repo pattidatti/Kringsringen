@@ -299,6 +299,9 @@ export class WaveManager {
                         this.scene.events.emit('start-boss', bossIdx);
                     }
                 }
+
+                // If boss is still null (e.g., spawn event lag), don't process further packets yet
+                if (!enemy) return;
             } else {
                 enemy = this.findEnemyById(id);
                 if (!enemy && hp > 0) {

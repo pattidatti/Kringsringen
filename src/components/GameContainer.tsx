@@ -166,9 +166,10 @@ export const GameContainer: React.FC<GameContainerProps> = ({ networkConfig }) =
                                 setSyncState({ loaded: next.size, ready: readyPlayers.size, expected: total });
 
                                 if (next.size >= total) {
+                                    const bossIdx = gameInstanceRef.current?.registry.get('bossComingUp') ?? -1;
                                     nm?.broadcast({
                                         t: PacketType.GAME_EVENT,
-                                        ev: { type: 'start_level', data: { level: data.level } },
+                                        ev: { type: 'start_level', data: { level: data.level, bossIndex: bossIdx } },
                                         ts: Date.now()
                                     });
                                     setIsLoadingLevel(false);
@@ -180,62 +181,23 @@ export const GameContainer: React.FC<GameContainerProps> = ({ networkConfig }) =
                         }
                     });
 
-                    mainScene.events.on('player_ready', (data: any) => {
-                        if (networkConfig?.role === 'host') {
-                            setReadyPlayers(prev => {
-                                if (prev.has(data.playerId)) return prev;
-                                const next = new Set(prev).add(data.playerId);
-                                const nm = (mainScene as any).networkManager;
-                                const total = nm ? nm.getConnectedPeerCount() + 1 : 1;
-
-                                // Broadcast updated state to all clients
-                                nm?.broadcast({
-                                    t: PacketType.GAME_EVENT,
-                                    ev: { type: 'sync_players_state', data: { loaded: loadedPlayers.size, ready: next.size, expected: total } },
-                                    ts: Date.now()
-                                });
-                                setSyncState({ loaded: loadedPlayers.size, ready: next.size, expected: total });
-
-                                if (next.size >= total) {
-                                    if (data.reason === 'unpause') {
-                                        nm?.broadcast({
-                                            t: PacketType.GAME_EVENT,
-                                            ev: { type: 'resume_game', data: {} },
-                                            ts: Date.now()
-                                        });
-                                        setIsBookOpen(false);
-                                        setReadyPlayers(new Set());
-                                        setIsWaitingReady(false);
-                                        setReadyReason(null);
-                                    } else {
-                                        nm?.broadcast({
-                                            t: PacketType.GAME_EVENT,
-                                            ev: { type: 'start_level', data: {} },
-                                            ts: Date.now()
-                                        });
-                                        mainScene.events.emit('start-next-level');
-                                        setIsBookOpen(false);
-                                        setReadyPlayers(new Set());
-                                        setIsWaitingReady(false);
-                                        setReadyReason(null);
-                                    }
-                                }
-                                return next;
-                            });
-                        }
-                    });
-
                     mainScene.events.on('sync_players_state', (data: { loaded: number, ready: number, expected: number }) => {
                         setSyncState(data);
                     });
 
-                    mainScene.events.on('start_level', () => {
+                    mainScene.events.on('start_level', (data: any) => {
                         if (networkConfig?.role === 'client') {
                             setIsLoadingLevel(false);
                             setIsBookOpen(false);
                             setIsWaitingReady(false);
                             setReadyReason(null);
-                            mainScene.events.emit('start-next-level');
+
+                            const bossIndex = data?.bossIndex ?? -1;
+                            if (bossIndex >= 0) {
+                                mainScene.events.emit('start-boss', bossIndex);
+                            } else {
+                                mainScene.events.emit('start-next-level');
+                            }
                         }
                     });
 
@@ -301,9 +263,10 @@ export const GameContainer: React.FC<GameContainerProps> = ({ networkConfig }) =
             }
 
             if (isLoadingLevel && loadedPlayers.size >= total) {
+                const bossIdx = gameInstanceRef.current?.registry.get('bossComingUp') ?? -1;
                 nm.broadcast({
                     t: PacketType.GAME_EVENT,
-                    ev: { type: 'start_level', data: {} },
+                    ev: { type: 'start_level', data: { bossIndex: bossIdx } },
                     ts: Date.now()
                 });
                 setIsLoadingLevel(false);
@@ -383,21 +346,13 @@ export const GameContainer: React.FC<GameContainerProps> = ({ networkConfig }) =
     const applyRevive = useCallback((targetId: string, cost: number) => {
         if (!gameInstanceRef.current) return;
         const mainScene = gameInstanceRef.current.scene.getScene('MainScene');
-        const nm = (mainScene as any).networkManager;
 
         const currentCoins = gameInstanceRef.current.registry.get('playerCoins') || 0;
         if (currentCoins >= cost) {
             gameInstanceRef.current.registry.set('playerCoins', currentCoins - cost);
 
-            // Broadcast the revive request
-            nm?.broadcast({
-                t: PacketType.GAME_EVENT,
-                ev: { type: 'revive_request', data: { targetId } },
-                ts: Date.now()
-            });
-
-            // Local host revive (if host revives self or someone else)
-            // It gets routed back through main.ts's 'revive_request' handler anyway
+            // Delegate to the game engine to handle syncing appropriately
+            mainScene.events.emit('buy-revive', targetId);
         }
     }, []);
 
