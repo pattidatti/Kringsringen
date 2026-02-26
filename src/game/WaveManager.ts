@@ -8,6 +8,7 @@ import { AudioManager } from './AudioManager';
 import { PacketType } from '../network/SyncSchemas';
 import type { IMainScene } from './IMainScene';
 import { getBossForLevel } from '../config/bosses';
+import { getWaveComposition, weightedRandom } from '../config/wave_compositions';
 
 /**
  * Manages level/wave lifecycle: spawning enemies, tracking progress,
@@ -19,6 +20,10 @@ export class WaveManager {
     private currentLevel: number = 1;
     private currentWave: number = 1;
     private enemiesToSpawnInWave: number = 0;
+    /** Snapshot of total enemies at wave start — used for ranged fraction math */
+    private enemiesToSpawnInWave_total: number = 0;
+    /** How many ranged enemies have spawned so far this wave */
+    private rangedSpawnedThisWave: number = 0;
     private enemiesAlive: number = 0;
     private isLevelActive: boolean = false;
     private bgmPlaylist: string[] = [];
@@ -73,6 +78,10 @@ export class WaveManager {
 
         // Scaling: +25% more enemies per extra player
         this.enemiesToSpawnInWave = Math.round(config.enemiesPerWave * (1 + (playerCount - 1) * 0.25));
+
+        // Snapshot total for ranged budget calculation + reset counter
+        this.enemiesToSpawnInWave_total = this.enemiesToSpawnInWave;
+        this.rangedSpawnedThisWave = 0;
 
         // Sync to registry
         this.scene.registry.set('currentWave', this.currentWave);
@@ -135,19 +144,8 @@ export class WaveManager {
         // Scaling: +50% HP per extra player
         const hpMultiplier = config.multiplier * (1 + (playerCount - 1) * 0.5);
 
-        // Select Enemy Type
-        let allowedTypes: string[] = ['orc', 'slime'];
-        if (this.currentLevel >= 2) {
-            allowedTypes.push('skeleton', 'armored_skeleton', 'wizard', 'skeleton_archer');
-        }
-        if (this.currentLevel >= 3) {
-            allowedTypes.push('werewolf', 'frost_wizard', 'armored_orc');
-        }
-        if (this.currentLevel >= 4) {
-            allowedTypes.push('elite_orc', 'greatsword_skeleton');
-        }
-
-        let type = Phaser.Utils.Array.GetRandom(allowedTypes);
+        // Select Enemy Type using weighted composition table
+        let type = this.selectEnemyType();
 
         // Spawn using Pool
         let enemy = this.scene.enemies.get(x, y) as Enemy;
@@ -212,6 +210,35 @@ export class WaveManager {
                 ts: Date.now()
             });
         });
+    }
+
+    /**
+     * Picks an enemy type for this spawn slot using the wave composition table.
+     * Respects the per-wave ranged cap (maxRangedFraction) to prevent
+     * ranged enemies from dominating early waves.
+     */
+    private selectEnemyType(): string {
+        const comp = getWaveComposition(this.currentLevel, this.currentWave);
+
+        const maxRangedForWave = Math.floor(
+            this.enemiesToSpawnInWave_total * comp.maxRangedFraction
+        );
+
+        // Attempt to use ranged pool if budget allows and pool is non-empty
+        const canUseRanged =
+            comp.rangedPool.length > 0 &&
+            this.rangedSpawnedThisWave < maxRangedForWave;
+
+        // Blend: use ranged with probability equal to the fraction cap,
+        // so they're spread throughout the wave rather than front-loaded.
+        const useRanged = canUseRanged && Math.random() < comp.maxRangedFraction;
+
+        if (useRanged) {
+            this.rangedSpawnedThisWave++;
+            return weightedRandom(comp.rangedPool);
+        }
+
+        return weightedRandom(comp.meleePool);
     }
 
     private checkWaveProgress(): void {
