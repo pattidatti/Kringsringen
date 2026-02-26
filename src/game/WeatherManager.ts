@@ -49,6 +49,9 @@ export class WeatherManager {
 
         const { width } = this.scene.scale;
 
+        const quality = (this.scene as any).quality;
+        const multiplier = quality?.particleMultiplier || 1.0;
+
         this.rainEmitter = this.scene.add.particles(0, 0, 'raindrop', {
             x: { min: -200, max: width + 50 },
             y: { min: -20, max: -20 },
@@ -57,8 +60,8 @@ export class WeatherManager {
             speedX: { min: -30, max: 10 },  // Reduced left-drift so right edge is covered
             scaleY: { min: 0.8, max: 1.2 },
             alpha: { start: 0.3, end: 0.1 },
-            quantity: 4,
-            frequency: 1,
+            quantity: Math.max(1, Math.floor(4 * multiplier)),
+            frequency: Math.max(1, Math.floor(1 / multiplier)),
             blendMode: 'ADD'
         });
 
@@ -98,6 +101,9 @@ export class WeatherManager {
     public enableFog() {
         const { width, height } = this.scene.scale;
 
+        const quality = (this.scene as any).quality;
+        const multiplier = quality?.particleMultiplier || 1.0;
+
         // Use a particle emitter for fog so it can interact with Light2D
         this.fogParticles = this.scene.add.particles(0, 0, 'fog_cloud', {
             x: { min: -width * 1.5, max: width * 1.5 },
@@ -107,13 +113,16 @@ export class WeatherManager {
             rotate: { min: 0, max: 360 },
             speed: { min: 10, max: 40 },
             lifespan: 12000,
-            frequency: 120,
+            frequency: Math.max(1, Math.floor(120 / multiplier)),
             blendMode: 'NORMAL'
         });
 
         this.fogParticles.setDepth(10); // Below player mostly
         this.fogParticles.setScrollFactor(0); // Fixed to screen, covers viewport
-        this.fogParticles.setPipeline('Light2D');
+
+        if (quality?.lightingEnabled) {
+            this.fogParticles.setPipeline('Light2D');
+        }
 
         // Add a subtle tint to the scene for "mood"
         this.scene.cameras.main.setBackgroundColor(0x0a1525);

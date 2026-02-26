@@ -11,6 +11,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     public maxHP: number = 50;
     protected hpBar: Phaser.GameObjects.Graphics;
     protected isDead: boolean = false;
+    private lastDrawnHP: number = -1;
     private attackRange: number = 60;
     private attackCooldown: number = 1500;
     private lastAttackTime: number = 0;
@@ -136,7 +137,9 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         if (this.config.spriteInfo.type === 'spritesheet' && this.config.spriteInfo.anims) {
             this.play(this.config.spriteInfo.anims.walk);
         }
-        this.setPipeline('Light2D');
+        if ((this.scene as any).quality?.lightingEnabled) {
+            this.setPipeline('Light2D');
+        }
 
         // Animation Listeners (Clean previous listeners to avoid duplicates if not careful, 
         // but Phaser usually handles 'on' by adding. We should check if listener exists or just use internal flags)
@@ -512,8 +515,18 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     }
 
     protected updateHPBar() {
+        if (this.isDead || !this.active) {
+            this.hpBar.clear();
+            return;
+        }
+
+        const mode = (this.scene as any).quality?.hpBarUpdateMode || 'continuous';
+        if (mode === 'reactive' && this.hp === this.lastDrawnHP) {
+            return;
+        }
+
+        this.lastDrawnHP = this.hp;
         this.hpBar.clear();
-        if (this.isDead || !this.active) return;
 
         const width = 40;
         const height = 5;

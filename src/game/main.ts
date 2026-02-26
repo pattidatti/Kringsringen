@@ -28,6 +28,7 @@ import { PacketType, type SyncPacket, type PackedPlayer } from '../network/SyncS
 import type { DataConnection } from 'peerjs';
 import { JitterBuffer } from '../network/JitterBuffer';
 import { EnemyProjectile } from './EnemyProjectile';
+import { getQualityConfig, type QualitySettings, type GraphicsQuality } from '../config/QualityConfig';
 
 
 class MainScene extends Phaser.Scene implements IMainScene {
@@ -96,6 +97,7 @@ class MainScene extends Phaser.Scene implements IMainScene {
     private lastSyncTime: number = 0;
     private lastSentPlayerStates: Map<string, string> = new Map();
     private networkTickCount: number = 0;
+    public quality!: QualitySettings;
 
     constructor() {
         super('MainScene');
@@ -141,6 +143,10 @@ class MainScene extends Phaser.Scene implements IMainScene {
         this.poolManager = new ObjectPoolManager(this);
         this.weather = new WeatherManager(this);
         this.ambient = new AmbientParticleManager(this);
+
+        // Quality Initialization
+        const qualityLevel = (this.game.registry.get('graphicsQuality') as GraphicsQuality) || GAME_CONFIG.QUALITY.DEFAULT;
+        this.quality = getQualityConfig(qualityLevel);
 
         // Initialize Network Manager if in multiplayer
         if (netConfig) {
@@ -227,21 +233,27 @@ class MainScene extends Phaser.Scene implements IMainScene {
         this.deathSparkEmitter.setDepth(600);
 
         // --- LIGHT SYSTEM ---
-        this.lights.enable();
-        this.lights.setAmbientColor(0x0a0a0a); // Near black edges
+        if (this.quality.lightingEnabled) {
+            this.lights.enable();
+            this.lights.setAmbientColor(0x0a0a0a); // Near black edges
+        } else {
+            this.lights.disable();
+        }
 
         // Three-layer player light for a "ultra-smooth" halo effect
-        // 1. Core light (sharpest but low intensity)
-        this.playerLight = this.lights.addLight(this.mapWidth / 2, this.mapHeight / 2, 250, 0xfffaf0, 0.7);
-        // 2. Mid-range halo
-        this.outerPlayerLight = this.lights.addLight(this.mapWidth / 2, this.mapHeight / 2, 600, 0xfffaf0, 0.4);
         // 3. Wide ambient glow (near invisible but smooths the final falloff)
-        this.haloPlayerLight = this.lights.addLight(this.mapWidth / 2, this.mapHeight / 2, 1200, 0xfffaf0, 0.2);
+        if (this.quality.lightingEnabled) {
+            this.playerLight = this.lights.addLight(this.mapWidth / 2, this.mapHeight / 2, 250, 0xfffaf0, 0.7);
+            this.outerPlayerLight = this.lights.addLight(this.mapWidth / 2, this.mapHeight / 2, 600, 0xfffaf0, 0.4);
+            this.haloPlayerLight = this.lights.addLight(this.mapWidth / 2, this.mapHeight / 2, 1200, 0xfffaf0, 0.2);
+        }
 
         // --- POST PROCESSING ---
         // Vignette — starts invisible; strength is driven by HP in update().
         // Gives a subtle border darkening at all times and pulses red at low HP.
-        this.vignetteEffect = this.cameras.main.postFX.addVignette(0.5, 0.5, 0.85, 0.15);
+        if (this.quality.postFXEnabled) {
+            this.vignetteEffect = this.cameras.main.postFX.addVignette(0.5, 0.5, 0.85, 0.15);
+        }
 
         // Background: Map Generation with Variety
         // Set World Bounds
@@ -1082,6 +1094,7 @@ class MainScene extends Phaser.Scene implements IMainScene {
     }
 
     update(_time: number, _delta: number) {
+        this.poolManager.update();
         const player = this.data.get('player') as Phaser.Physics.Arcade.Sprite;
         if (this.playerShadow) {
             this.playerShadow.setPosition(player.x, player.y + 28);
@@ -1137,19 +1150,23 @@ class MainScene extends Phaser.Scene implements IMainScene {
             if (label) label.setPosition(remotePlayer.x, remotePlayer.y - 40);
         });
 
-        // Update Player Lights
-        this.playerLight.setPosition(player.x, player.y - 10);
-        this.outerPlayerLight.setPosition(player.x, player.y - 10);
-        this.haloPlayerLight.setPosition(player.x, player.y - 10);
+        // Update Light Positions based on player
+        const playerHP = this.registry.get('playerHP') as number;
+        const playerMaxHP = this.registry.get('playerMaxHP') as number;
+        const hpPercent = playerHP / playerMaxHP;
 
-        // ── Vignette HP warning ──────────────────────────────────────────────
-        // Below 30 % HP the vignette pulses with increasing intensity, giving a
-        // clear "danger" signal without interrupting gameplay.
-        if (this.vignetteEffect) {
-            const hp = this.registry.get('playerHP') as number;
-            const maxHP = this.registry.get('playerMaxHP') as number;
-            if (maxHP > 0) {
-                const ratio = hp / maxHP;
+        if (this.quality.lightingEnabled) {
+            this.playerLight.setPosition(player.x, player.y);
+            this.outerPlayerLight.setPosition(player.x, player.y);
+            this.haloPlayerLight.setPosition(player.x, player.y);
+        }
+
+        // --- VIGNETTE & LOW HP Pulsing ---
+        if (this.quality.postFXEnabled && this.vignetteEffect) {
+            // Below 30 % HP the vignette pulses with increasing intensity, giving a
+            // clear "danger" signal without interrupting gameplay.
+            if (playerMaxHP > 0) {
+                const ratio = hpPercent;
                 if (ratio < 0.3) {
                     // Pulse strength between 0.30 and 0.75, speed scales with danger
                     const urgency = 1 + (0.3 - ratio) * 5; // faster at lower HP

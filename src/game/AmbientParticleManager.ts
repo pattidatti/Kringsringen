@@ -115,6 +115,9 @@ export class AmbientParticleManager {
     private spawnFireflies() {
         const { width, height } = this.scene.scale;
 
+        const quality = (this.scene as any).quality;
+        const multiplier = quality?.particleMultiplier || 1.0;
+
         const emitter = this.scene.add.particles(0, 0, 'ambient_firefly', {
             x: { min: 0, max: width },
             y: { min: height * 0.1, max: height * 0.9 },
@@ -124,8 +127,8 @@ export class AmbientParticleManager {
             scale: { min: 0.3, max: 0.8 },
             // Alpha eases in then out over the particle's life, giving a soft blink
             alpha: { start: 0, end: 0, ease: 'Sine.easeInOut' },
-            quantity: 1,
-            frequency: 500,
+            quantity: Math.max(1, Math.floor(1 * multiplier)),
+            frequency: Math.max(1, Math.floor(500 / multiplier)),
             blendMode: 'ADD',
         });
 
@@ -149,6 +152,9 @@ export class AmbientParticleManager {
     private spawnLeaves() {
         const { width } = this.scene.scale;
 
+        const quality = (this.scene as any).quality;
+        const multiplier = quality?.particleMultiplier || 1.0;
+
         const emitter = this.scene.add.particles(0, 0, 'ambient_leaf', {
             x: { min: -60, max: width + 60 },
             y: -20,
@@ -158,8 +164,8 @@ export class AmbientParticleManager {
             rotate: { start: 0, end: 360 },
             scale: { min: 0.6, max: 1.4 },
             alpha: { start: 0.75, end: 0.05 },
-            quantity: 1,
-            frequency: 700,
+            quantity: Math.max(1, Math.floor(1 * multiplier)),
+            frequency: Math.max(1, Math.floor(700 / multiplier)),
             blendMode: 'NORMAL',
         });
 
@@ -176,6 +182,9 @@ export class AmbientParticleManager {
     private spawnEmbers() {
         const { width, height } = this.scene.scale;
 
+        const quality = (this.scene as any).quality;
+        const multiplier = quality?.particleMultiplier || 1.0;
+
         const emitter = this.scene.add.particles(0, 0, 'ambient_ember', {
             x: { min: 0, max: width },
             y: { min: height * 0.75, max: height + 10 },
@@ -184,8 +193,8 @@ export class AmbientParticleManager {
             speedX: { min: -25, max: 25 },
             scale: { start: 0.7, end: 0.05 },
             alpha: { start: 1.0, end: 0.0 },
-            quantity: 2,
-            frequency: 120,
+            quantity: Math.max(1, Math.floor(2 * multiplier)),
+            frequency: Math.max(1, Math.floor(120 / multiplier)),
             blendMode: 'ADD',
         });
 

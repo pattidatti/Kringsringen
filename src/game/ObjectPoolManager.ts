@@ -8,12 +8,13 @@ export class ObjectPoolManager {
     private frostExplosionPool: Phaser.GameObjects.Sprite[] = [];
     private lightningImpactPool: Phaser.GameObjects.Sprite[] = [];
     private enemyProjectilePool: EnemyProjectile[] = [];
+    private activeDamageTexts: { text: Phaser.GameObjects.Text, startTime: number, x: number, y: number, driftX: number }[] = [];
 
     // Config
-    private readonly MAX_TEXT_POOL = 50;
+    private readonly MAX_TEXT_POOL = 100;
     private readonly MAX_BLOOD_POOL = 50;
-    private readonly MAX_EXPLOSION_POOL = 20;
-    private readonly MAX_PROJECTILE_POOL = 30;
+    private readonly MAX_EXPLOSION_POOL = 30;
+    private readonly MAX_PROJECTILE_POOL = 50;
 
     constructor(scene: Phaser.Scene) {
         this.scene = scene;
@@ -47,29 +48,42 @@ export class ObjectPoolManager {
 
         const driftX = Phaser.Math.Between(-30, 30);
 
-        // Pop and Drift Animation
-        this.scene.tweens.add({
-            targets: text,
-            scale: { from: 0.4, to: 1.4 },
-            duration: 100,
-            ease: 'Back.out',
-            onComplete: () => {
-                this.scene.tweens.add({
-                    targets: text,
-                    scale: 1.0,
-                    y: y - 80,
-                    x: x + driftX,
-                    alpha: 0,
-                    duration: 700,
-                    ease: 'Cubic.out',
-                    onComplete: () => {
-                        this.returnDamageText(text);
-                    }
-                });
-            }
+        // MANUAL ANIMATION TRACKING (GC Optimization)
+        this.activeDamageTexts.push({
+            text,
+            startTime: this.scene.time.now,
+            x,
+            y,
+            driftX
         });
 
         return text;
+    }
+
+    public update() {
+        const now = this.scene.time.now;
+
+        for (let i = this.activeDamageTexts.length - 1; i >= 0; i--) {
+            const entry = this.activeDamageTexts[i];
+            const elapsed = now - entry.startTime;
+
+            if (elapsed < 100) {
+                // Pop phase
+                const f = elapsed / 100;
+                entry.text.setScale(0.4 + 1.0 * f);
+            } else if (elapsed < 800) {
+                // Drift phase
+                const f = (elapsed - 100) / 700;
+                entry.text.setScale(1.4 - 0.4 * f);
+                entry.text.setY(entry.y - 80 * f);
+                entry.text.setX(entry.x + entry.driftX * f);
+                entry.text.setAlpha(1 - f);
+            } else {
+                // Done
+                this.returnDamageText(entry.text);
+                this.activeDamageTexts.splice(i, 1);
+            }
+        }
     }
 
     private returnDamageText(text: Phaser.GameObjects.Text) {
@@ -128,7 +142,10 @@ export class ObjectPoolManager {
             explosion = this.scene.add.sprite(x, y, 'fireball_explosion');
             explosion.setScale(2);
             explosion.setDepth(500);
-            explosion.postFX.addGlow(0xff6600, 4, 0.5, false, 0.1, 20);
+
+            if ((this.scene as any).quality?.bloomEnabled) {
+                explosion.postFX.addGlow(0xff6600, 4, 0.5, false, 0.1, 20);
+            }
         }
 
         explosion.play('fireball-explode');
@@ -160,7 +177,10 @@ export class ObjectPoolManager {
             explosion = this.scene.add.sprite(x, y, 'frost_explosion');
             explosion.setScale(2);
             explosion.setDepth(500);
-            explosion.postFX.addGlow(0x00aaff, 4, 0.5, false, 0.1, 20);
+
+            if ((this.scene as any).quality?.bloomEnabled) {
+                explosion.postFX.addGlow(0x00aaff, 4, 0.5, false, 0.1, 20);
+            }
         }
 
         explosion.play('frost-explode');

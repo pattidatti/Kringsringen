@@ -1,3 +1,5 @@
+import { DEFAULT_QUALITY } from './QualityConfig';
+
 export interface EnemyStats {
     baseHP: number;
     baseDamage: number;
@@ -172,6 +174,9 @@ export const GAME_CONFIG = {
     DROPS: {
         COIN_LIFETIME: 10000, // Disappear after 10s if not collected (optimization)
         XP_GEM_LIFETIME: 30000
+    },
+    QUALITY: {
+        DEFAULT: DEFAULT_QUALITY
     }
 };
 
