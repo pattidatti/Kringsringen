@@ -40,7 +40,7 @@ export class BossEnemy extends Enemy {
         this.setScale(config.scale);
         this.setBodySize(config.bodySize.width, config.bodySize.height, true);
         const offsetY = (this.height * 0.5) - (config.bodySize.height * 0.5);
-        this.setOffset(this.body!.offset.x, offsetY + 10);
+        this.setOffset(this.body!.offset.x, offsetY);
         this.setDrag(0);
 
         // Registry

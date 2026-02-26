@@ -552,8 +552,8 @@ class MainScene extends Phaser.Scene implements IMainScene {
         this.events.on('enemy-fire-projectile', (x: number, y: number, angle: number, damage: number, type: 'arrow' | 'fireball') => {
             if (this.networkManager?.role === 'client') return; // Only host/singleplayer fires
 
-            const proj = this.poolManager.getEnemyProjectile(x, y, angle, damage, type);
-            this.enemyProjectiles.add(proj);
+            this.poolManager.getEnemyProjectile(x, y, angle, damage, type);
+            // Group addition now handled in poolManager
 
             // Broadcast to clients
             this.networkManager?.broadcast({

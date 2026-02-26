@@ -180,15 +180,17 @@ export class ObjectPoolManager {
 
     public getEnemyProjectile(x: number, y: number, angle: number, damage: number, type: 'arrow' | 'fireball'): EnemyProjectile {
         let projectile: EnemyProjectile;
+        const mainScene = this.scene as any;
+        const group = mainScene.enemyProjectiles;
 
         if (this.enemyProjectilePool.length > 0) {
             projectile = this.enemyProjectilePool.pop()!;
-            projectile.fire(x, y, angle, damage, type);
         } else {
             projectile = new EnemyProjectile(this.scene, x, y);
-            projectile.fire(x, y, angle, damage, type);
+            if (group) group.add(projectile);
         }
 
+        projectile.fire(x, y, angle, damage, type);
         return projectile;
     }
 
