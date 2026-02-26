@@ -59,9 +59,8 @@ export class FrostBolt extends Phaser.Physics.Arcade.Sprite {
         const scaledDamage = this.damage * frostDamageMulti;
         const slowedEnemies: Enemy[] = [];
 
-        // Splash damage to all enemies near impact point
-        mainScene.enemies.children.iterate((e: any) => {
-            if (!e.active) return true;
+        const applyFrostSplash = (e: any) => {
+            if (!e.active) return;
             const dist = Phaser.Math.Distance.Between(hitX, hitY, e.x, e.y);
             if (dist <= frostRadius) {
                 const isCenter = dist < 20;
@@ -76,7 +75,7 @@ export class FrostBolt extends Phaser.Physics.Arcade.Sprite {
                             type: 'projectile_hit_request',
                             data: {
                                 projectileType: 'frost',
-                                targetId: enemy.id,
+                                targetId: enemy.id || 'boss',
                                 hitX: hitX,
                                 hitY: hitY,
                                 damage: damage,
@@ -103,8 +102,13 @@ export class FrostBolt extends Phaser.Physics.Arcade.Sprite {
                     }
                 }
             }
-            return true;
-        });
+        };
+
+        // Splash damage to all enemies near impact point
+        mainScene.enemies.children.iterate((e: any) => { applyFrostSplash(e); return true; });
+        if (mainScene.bossGroup) {
+            mainScene.bossGroup.children.iterate((e: any) => { applyFrostSplash(e); return true; });
+        }
 
         // Shatter effect: slowed enemies take extra damage and cause secondary splash
         if (frostShatterLvl > 0) {

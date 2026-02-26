@@ -53,6 +53,7 @@ class MainScene extends Phaser.Scene implements IMainScene {
     private lightningBolts!: Phaser.Physics.Arcade.Group;
     public bossGroup!: Phaser.Physics.Arcade.Group;
     private enemyProjectiles!: Phaser.Physics.Arcade.Group;
+    private players!: Phaser.Physics.Arcade.Group;
     public poolManager!: ObjectPoolManager;
 
     // Managers
@@ -333,6 +334,9 @@ class MainScene extends Phaser.Scene implements IMainScene {
             maxSize: 50
         });
 
+        this.players = this.physics.add.group();
+        this.players.add(player);
+
         // Collisions
         this.physics.add.collider(player, this.enemies);
         this.physics.add.collider(this.enemies, this.enemies);
@@ -346,8 +350,8 @@ class MainScene extends Phaser.Scene implements IMainScene {
         this.physics.add.collider(this.enemies, this.obstacles);
         this.physics.add.collider(player, this.bossGroup);
 
-        this.physics.add.overlap(this.enemyProjectiles, player, (_projectile, _player) => {
-            (_projectile as EnemyProjectile).onHitPlayer(_player);
+        this.physics.add.overlap(this.enemyProjectiles, this.players, (_projectile, _target) => {
+            (_projectile as EnemyProjectile).onHitPlayer(_target);
         });
 
         this.physics.add.overlap(this.attackHitbox, this.enemies, (_hitbox, enemy) => {
@@ -548,7 +552,8 @@ class MainScene extends Phaser.Scene implements IMainScene {
         this.events.on('enemy-fire-projectile', (x: number, y: number, angle: number, damage: number, type: 'arrow' | 'fireball') => {
             if (this.networkManager?.role === 'client') return; // Only host/singleplayer fires
 
-            this.poolManager.getEnemyProjectile(x, y, angle, damage, type);
+            const proj = this.poolManager.getEnemyProjectile(x, y, angle, damage, type);
+            this.enemyProjectiles.add(proj);
 
             // Broadcast to clients
             this.networkManager?.broadcast({
@@ -755,6 +760,7 @@ class MainScene extends Phaser.Scene implements IMainScene {
             remotePlayer.setScale(2);
             remotePlayer.setDepth(100);
             this.remotePlayers.set(id, remotePlayer);
+            this.players.add(remotePlayer);
 
             // Add nickname tag
             const label = this.add.text(px, py - 40, name || 'Spiller', {
@@ -850,7 +856,8 @@ class MainScene extends Phaser.Scene implements IMainScene {
         } else if (event.type === 'spawn_enemy_projectile') {
             const { x, y, angle, damage, type } = event.data;
             if (this.networkManager?.role === 'client') {
-                this.poolManager.getEnemyProjectile(x, y, angle, damage, type);
+                const proj = this.poolManager.getEnemyProjectile(x, y, angle, damage, type);
+                this.enemyProjectiles.add(proj);
             }
         } else if (event.type === 'spawn_coins') {
             const { x, y, count, coins } = event.data;

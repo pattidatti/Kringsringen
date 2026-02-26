@@ -34,7 +34,7 @@ export function loadAssets(scene: Phaser.Scene): void {
     // Ranged Enemies
     scene.load.spritesheet('wizard', 'assets/sprites/wizard.png', { frameWidth: 100, frameHeight: 100 });
     scene.load.spritesheet('skeleton_archer', 'assets/sprites/skeleton_archer.png', { frameWidth: 100, frameHeight: 100 });
-    scene.load.spritesheet('wizard_fireball', 'assets/sprites/effects/wizard_fireball.png', { frameWidth: 64, frameHeight: 64 });
+    scene.load.spritesheet('wizard_fireball', 'assets/sprites/effects/wizard_fireball.png', { frameWidth: 100, frameHeight: 100 });
 
     // Fantasy Tileset Assets
     scene.load.spritesheet('fantasy-ground', 'assets/fantasy/Art/Ground Tileset/Tileset_Ground.png', { frameWidth: 16, frameHeight: 16 });

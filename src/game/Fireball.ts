@@ -26,6 +26,13 @@ export class Fireball extends Phaser.Physics.Arcade.Sprite {
             if (!this.active) return;
             this.hit(enemy as Enemy);
         });
+
+        if (mainScene.bossGroup) {
+            scene.physics.add.overlap(this, mainScene.bossGroup, (_fireball, boss) => {
+                if (!this.active) return;
+                this.hit(boss as Enemy);
+            });
+        }
     }
 
     fire(x: number, y: number, angle: number, damage: number) {
@@ -111,7 +118,7 @@ export class Fireball extends Phaser.Physics.Arcade.Sprite {
                         type: 'projectile_hit_request',
                         data: {
                             projectileType: 'fireball',
-                            targetId: directHit.id,
+                            targetId: directHit.id || 'boss',
                             hitX: hitX,
                             hitY: hitY,
                             damage: scaledDamage,
@@ -134,8 +141,9 @@ export class Fireball extends Phaser.Physics.Arcade.Sprite {
 
         // Splash damage to nearby enemies
         const hitEnemies: Enemy[] = [];
-        mainScene.enemies.children.iterate((e: any) => {
-            if (!e.active || e === directHit) return true;
+
+        const applySplash = (e: any) => {
+            if (!e.active || e === directHit) return;
             const dist = Phaser.Math.Distance.Between(hitX, hitY, e.x, e.y);
             if (dist <= fireballRadius) {
                 if (mainScene.networkManager?.role === 'client') {
@@ -146,8 +154,12 @@ export class Fireball extends Phaser.Physics.Arcade.Sprite {
                 (e as Enemy).pushback(hitX, hitY, 100);
                 hitEnemies.push(e as Enemy);
             }
-            return true;
-        });
+        };
+
+        mainScene.enemies.children.iterate((e: any) => { applySplash(e); return true; });
+        if (mainScene.bossGroup) {
+            mainScene.bossGroup.children.iterate((e: any) => { applySplash(e); return true; });
+        }
 
         mainScene.poolManager.spawnFireballExplosion(hitX, hitY);
         AudioManager.instance.playSFX('fireball_hit');

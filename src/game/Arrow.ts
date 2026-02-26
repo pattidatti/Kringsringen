@@ -39,55 +39,64 @@ export class Arrow extends Phaser.Physics.Arcade.Sprite {
         // Setup overlap in constructor once
         const mainScene = scene as any;
         scene.physics.add.overlap(this, mainScene.enemies, (_arrow, enemy) => {
-            if (!this.active) return;
-            const e = enemy as Enemy;
-
-            // Check if already hit this enemy
-            if (this.hitEnemies.has(e)) return;
-
-            // Mark as hit
-            this.hitEnemies.add(e);
-            this.hitCount++;
-
-            if (mainScene.networkManager?.role === 'client') {
-                mainScene.networkManager.broadcast({
-                    t: PacketType.GAME_EVENT,
-                    ev: {
-                        type: 'projectile_hit_request',
-                        data: {
-                            projectileType: 'arrow',
-                            targetId: e.id,
-                            hitX: this.x,
-                            hitY: this.y,
-                            damage: this.damage,
-                            timestamp: mainScene.networkManager.getServerTime()
-                        }
-                    },
-                    ts: mainScene.networkManager.getServerTime()
-                });
-
-                // Client-side prediction (visual and physical)
-                e.predictDamage(this.damage);
-                if (mainScene.poolManager) {
-                    mainScene.poolManager.getDamageText(e.x, e.y - 30, this.damage, '#ffffff');
-                    mainScene.events.emit('enemy-hit');
-                }
-            } else {
-                e.takeDamage(this.damage, '#ffffff');
-                e.pushback(this.startX, this.startY, 150);
-            }
-
-            // Handle explosion on impact
-            if (this.explosiveLevel > 0) {
-                this.explode(e.x, e.y);
-            }
-
-            // Check if pierce count exceeded
-            // pierceCount = 0 means hit 1 enemy then stop, 1 = hit 2 enemies, etc
-            if (this.hitCount > this.pierceCount) {
-                this.hit();
-            }
+            this.handleOverlap(enemy as Enemy, mainScene);
         });
+
+        if (mainScene.bossGroup) {
+            scene.physics.add.overlap(this, mainScene.bossGroup, (_arrow, boss) => {
+                this.handleOverlap(boss as Enemy, mainScene);
+            });
+        }
+    }
+
+    private handleOverlap(e: Enemy, mainScene: any) {
+        if (!this.active) return;
+
+        // Check if already hit this enemy
+        if (this.hitEnemies.has(e)) return;
+
+        // Mark as hit
+        this.hitEnemies.add(e);
+        this.hitCount++;
+
+        if (mainScene.networkManager?.role === 'client') {
+            mainScene.networkManager.broadcast({
+                t: PacketType.GAME_EVENT,
+                ev: {
+                    type: 'projectile_hit_request',
+                    data: {
+                        projectileType: 'arrow',
+                        targetId: e.id || 'boss',
+                        hitX: this.x,
+                        hitY: this.y,
+                        damage: this.damage,
+                        timestamp: mainScene.networkManager.getServerTime()
+                    }
+                },
+                ts: mainScene.networkManager.getServerTime()
+            });
+
+            // Client-side prediction (visual and physical)
+            e.predictDamage(this.damage);
+            if (mainScene.poolManager) {
+                mainScene.poolManager.getDamageText(e.x, e.y - 30, this.damage, '#ffffff');
+                mainScene.events.emit('enemy-hit');
+            }
+        } else {
+            e.takeDamage(this.damage, '#ffffff');
+            e.pushback(this.startX, this.startY, 150);
+        }
+
+        // Handle explosion on impact
+        if (this.explosiveLevel > 0) {
+            this.explode(e.x, e.y);
+        }
+
+        // Check if pierce count exceeded
+        // pierceCount = 0 means hit 1 enemy then stop, 1 = hit 2 enemies, etc
+        if (this.hitCount > this.pierceCount) {
+            this.hit();
+        }
     }
 
     fire(x: number, y: number, angle: number, damage: number, speed: number = 700, pierceCount: number = 0, explosiveLevel: number = 0) {

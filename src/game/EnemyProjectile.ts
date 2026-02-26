@@ -30,6 +30,11 @@ export class EnemyProjectile extends Phaser.Physics.Arcade.Sprite {
         this.setPosition(x, y);
         this.setRotation(angle);
 
+        if (this.body) {
+            this.body.enable = true;
+            (this.body as Phaser.Physics.Arcade.Body).reset(x, y);
+        }
+
         if (this.trail) {
             this.trail.destroy();
             this.trail = null;
@@ -80,7 +85,6 @@ export class EnemyProjectile extends Phaser.Physics.Arcade.Sprite {
         }
 
         if (this.body) {
-            this.body.enable = true;
             const speed = type === 'fireball' ? 350 : 500;
             this.scene.physics.velocityFromRotation(angle, speed, this.body.velocity);
         }
@@ -95,9 +99,11 @@ export class EnemyProjectile extends Phaser.Physics.Arcade.Sprite {
 
         if (this.trail) {
             this.trail.stop();
+            const currentTrail = this.trail;
             this.scene.time.delayedCall(500, () => {
-                if (this.trail && !this.active) this.trail.destroy();
+                if (currentTrail && currentTrail.active) currentTrail.destroy();
             });
+            this.trail = null;
         }
 
         if (this.light) {
@@ -114,6 +120,12 @@ export class EnemyProjectile extends Phaser.Physics.Arcade.Sprite {
             AudioManager.instance.playSFX('fireball_hit');
         } else {
             AudioManager.instance.playSFX('bow_impact');
+        }
+
+        // Return to pool
+        const mainScene = this.scene as any;
+        if (mainScene.poolManager) {
+            mainScene.poolManager.returnEnemyProjectile(this);
         }
     }
 
