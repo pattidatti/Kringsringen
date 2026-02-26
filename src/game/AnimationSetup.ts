@@ -211,17 +211,32 @@ export function createAnimations(scene: Phaser.Scene): void {
         repeat: 0
     });
 
-    // Fireball Wizard (New) - Walk (row 1: 15-22), Attack (row 5: 75-86)
     safeAnims({
-        key: 'wizard-walk',
+        key: 'wizard-attack',
+        frames: scene.anims.generateFrameNumbers('wizard', { start: 75, end: 86 }),
+        frameRate: 12,
+        repeat: 0
+    });
+
+    // Healer Wizard (New) - Walk (row 1: 15-22), Heal (row 3: 45-52)
+    safeAnims({
+        key: 'healer-wizard-walk',
         frames: scene.anims.generateFrameNumbers('wizard', { start: 15, end: 22 }),
         frameRate: 10,
         repeat: -1
     });
     safeAnims({
-        key: 'wizard-attack',
-        frames: scene.anims.generateFrameNumbers('wizard', { start: 75, end: 86 }),
+        key: 'healer-wizard-heal',
+        frames: scene.anims.generateFrameNumbers('wizard', { start: 45, end: 52 }),
         frameRate: 12,
+        repeat: 0
+    });
+
+    // Heal Spell Effect - Row 3, 14 frames (indices 45-58)
+    safeAnims({
+        key: 'heal-effect-anim',
+        frames: scene.anims.generateFrameNumbers('heal_effect', { start: 45, end: 58 }),
+        frameRate: 18,
         repeat: 0
     });
 

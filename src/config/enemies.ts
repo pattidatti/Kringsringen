@@ -249,5 +249,26 @@ export const ENEMY_TYPES: Record<string, EnemyConfig> = {
         attackDamageFrame: 6,
         rangedProjectile: 'arrow',
         attackGlowColor: 0xfff9e0
+    },
+    healer_wizard: {
+        id: 'healer_wizard',
+        name: 'Healer Wizard',
+        spriteInfo: {
+            type: 'spritesheet',
+            texture: 'wizard',
+            anims: {
+                walk: 'healer-wizard-walk',
+                attack: 'healer-wizard-heal'
+            }
+        },
+        baseHP: 120,
+        baseSpeed: 80,
+        baseDamage: 20, // Heal amount
+        xpValue: 45,
+        scale: 1.8,
+        bodySize: { width: 30, height: 50 },
+        knockbackResistance: 0.3,
+        attackDamageFrame: 4,
+        attackGlowColor: 0x00ff00
     }
 };

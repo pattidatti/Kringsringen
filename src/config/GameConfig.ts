@@ -146,7 +146,22 @@ export const GAME_CONFIG = {
             attackCooldown: 2000,
             scale: 1.8,
             bodySize: { width: 30, height: 50 },
-            knockbackResistance: 0.2
+            knockbackResistance: 0.2,
+            attackDamageFrame: 6,
+            rangedProjectile: 'arrow',
+            attackGlowColor: 0xfff9e0
+        },
+        HEALER_WIZARD: {
+            baseHP: 120,
+            baseDamage: 20, // This will represent heal amount
+            baseSpeed: 80,
+            baseXP: 45,
+            attackRange: 350,
+            attackCooldown: 3000,
+            scale: 1.8,
+            bodySize: { width: 30, height: 50 },
+            knockbackResistance: 0.3,
+            attackDamageFrame: 4 // When the heal triggers
         }
     } as const,
     WAVES: {

@@ -95,7 +95,7 @@ const COMPOSITIONS: Record<string, WaveComposition> = {
     '3-3': {
         maxRangedFraction: 0.30,
         meleePool: [['armored_orc', 2], ['werewolf', 2], ['armored_skeleton', 1]],
-        rangedPool: [['frost_wizard', 2], ['wizard', 1], ['skeleton_archer', 1]]
+        rangedPool: [['frost_wizard', 2], ['wizard', 1], ['skeleton_archer', 1], ['healer_wizard', 1]]
     },
 
     // ─── LEVEL 4 ── Elite enemies enter, ranged at 30% ceiling ───────────
@@ -117,7 +117,7 @@ const COMPOSITIONS: Record<string, WaveComposition> = {
     '4-4': {
         maxRangedFraction: 0.30,
         meleePool: [['elite_orc', 3], ['greatsword_skeleton', 2], ['armored_orc', 1]],
-        rangedPool: [['frost_wizard', 2], ['wizard', 2], ['skeleton_archer', 1]]
+        rangedPool: [['frost_wizard', 2], ['wizard', 2], ['skeleton_archer', 1], ['healer_wizard', 1]]
     },
 
     // ─── LEVEL 5+ ── Full chaos, 35% ranged ceiling maintained ───────────
@@ -144,7 +144,7 @@ const COMPOSITIONS: Record<string, WaveComposition> = {
     '5-5': {
         maxRangedFraction: 0.35,
         meleePool: [['elite_orc', 3], ['greatsword_skeleton', 2], ['armored_orc', 1]],
-        rangedPool: [['frost_wizard', 3], ['wizard', 3], ['skeleton_archer', 2]]
+        rangedPool: [['frost_wizard', 3], ['wizard', 3], ['skeleton_archer', 2], ['healer_wizard', 2]]
     },
 };
 

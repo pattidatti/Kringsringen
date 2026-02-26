@@ -565,6 +565,48 @@ class MainScene extends Phaser.Scene implements IMainScene {
             });
         });
 
+        // Healer Wizard Events
+        this.events.on('enemy-heal-ally', (healer: Enemy, target: Enemy, amount: number) => {
+            if (this.networkManager?.role === 'client') return;
+
+            // Apply heal logic (Host/Singleplayer authority)
+            const healedAmount = Math.min(amount, target.maxHP - target.hp);
+            if (healedAmount <= 0) return;
+
+            target.hp += healedAmount;
+
+            // Visual feedback
+            const effect = this.add.sprite(target.x, target.y, 'heal_effect');
+            effect.setDepth(target.depth + 1);
+            effect.setScale(target.scale * 1.5);
+            effect.play('heal-effect-anim');
+            effect.on('animationcomplete', () => effect.destroy());
+
+            this.poolManager.getDamageText(target.x, target.y - 40, `+${Math.round(healedAmount)}`, '#55ff55');
+
+            // Apply slight green glow to target
+            target.setTint(0xccffcc);
+            this.time.delayedCall(500, () => {
+                if (target.active && !target.getIsDead()) target.clearTint();
+            });
+
+            // Sync heal event to clients
+            this.networkManager?.broadcast({
+                t: PacketType.GAME_EVENT,
+                ev: {
+                    type: 'enemy_heal',
+                    data: {
+                        targetId: target.id,
+                        healerId: healer.id,
+                        amount: healedAmount,
+                        tx: target.x,
+                        ty: target.y
+                    }
+                },
+                ts: Date.now()
+            });
+        });
+
         this.events.on('enemy-projectile-hit-player', (damage: number, _type: string, x: number, y: number, target: any) => {
             const player = this.data.get('player');
             if (target === player) {
@@ -957,6 +999,27 @@ class MainScene extends Phaser.Scene implements IMainScene {
             this.events.emit('resume_game', event.data);
         } else if (event.type === 'sync_players_state') {
             this.events.emit('sync_players_state', event.data);
+        } else if (event.type === 'enemy_heal') {
+            // Client-side visual sync for healing
+            const { targetId, amount } = event.data;
+            const target = this.waves.findEnemyById(targetId);
+            if (target) {
+                target.hp += amount;
+
+                // Spawn effect on client
+                const effect = this.add.sprite(target.x, target.y, 'heal_effect');
+                effect.setDepth(target.depth + 1);
+                effect.setScale(target.scale * 1.5);
+                effect.play('heal-effect-anim');
+                effect.on('animationcomplete', () => effect.destroy());
+
+                this.poolManager.getDamageText(target.x, target.y - 40, `+${Math.round(amount)}`, '#55ff55');
+
+                target.setTint(0xccffcc);
+                this.time.delayedCall(500, () => {
+                    if (target.active && !target.getIsDead()) target.clearTint();
+                });
+            }
         }
     }
 

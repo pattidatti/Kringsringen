@@ -271,6 +271,11 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         if (this.isAttacking) {
             this.setVelocity(0, 0);
 
+            // Special Visuals for Healer Wizard during cast
+            if (this.enemyType === 'healer_wizard') {
+                this.setTint(0x88ff88); // Distinct green glow
+            }
+
             // ULTRATHINK BUGFIX: Use native Light2D for guaranteed visibility
             if (this.config.attackGlowColor !== undefined) {
                 if (!this.attackLight) {
@@ -309,19 +314,27 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
             // Check for Damage Frame
             const damageFrame = this.config.attackDamageFrame ?? this.DEFAULT_DAMAGE_FRAME;
             if (currentFrameIndex === damageFrame && !this.hasHit) {
-                const target = this.getNearestTarget();
-                if (target && target.active) {
-                    const distance = Phaser.Math.Distance.Between(this.x, this.y, target.x, target.y);
+                if (this.enemyType === 'healer_wizard') {
+                    this.hasHit = true;
+                    const target = this.getNearestDamagedAlly();
+                    if (target) {
+                        this.scene.events.emit('enemy-heal-ally', this, target, this.damage);
+                    }
+                } else {
+                    const target = this.getNearestTarget();
+                    if (target && target.active) {
+                        const distance = Phaser.Math.Distance.Between(this.x, this.y, target.x, target.y);
 
-                    if (this.config.rangedProjectile) {
-                        this.hasHit = true;
-                        // Fire Projectile
-                        const angle = Phaser.Math.Angle.Between(this.x, this.y, target.x, target.y);
-                        this.scene.events.emit('enemy-fire-projectile', this.x, this.y, angle, this.damage, this.config.rangedProjectile);
-                    } else if (distance <= this.attackRange + 10) {
-                        this.hasHit = true;
-                        // Emit to scene - mainScene identifies which player was hit
-                        this.scene.events.emit('enemy-hit-player', this.damage, this.enemyType, this.x, this.y, target);
+                        if (this.config.rangedProjectile) {
+                            this.hasHit = true;
+                            // Fire Projectile
+                            const angle = Phaser.Math.Angle.Between(this.x, this.y, target.x, target.y);
+                            this.scene.events.emit('enemy-fire-projectile', this.x, this.y, angle, this.damage, this.config.rangedProjectile);
+                        } else if (distance <= this.attackRange + 10) {
+                            this.hasHit = true;
+                            // Emit to scene - mainScene identifies which player was hit
+                            this.scene.events.emit('enemy-hit-player', this.damage, this.enemyType, this.x, this.y, target);
+                        }
                     }
                 }
             }
@@ -360,7 +373,12 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 
         // --- Multi-Targeting Logic (Host Only) ---
         // Find nearest player among local player and all remote players
-        let nearestTarget = this.getNearestTarget();
+        let nearestTarget = this.enemyType === 'healer_wizard' ? this.getNearestDamagedAlly() : this.getNearestTarget();
+
+        // If healer but no damaged allies, stick with player follow but maybe keep distance
+        if (!nearestTarget) {
+            nearestTarget = this.getNearestTarget();
+        }
 
         const targetAngle = Phaser.Math.Angle.Between(this.x, this.y, nearestTarget.x, nearestTarget.y);
 
@@ -778,5 +796,39 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         }
 
         return nearestTarget;
+    }
+
+    private getNearestDamagedAlly(): Enemy | null {
+        const grid = (this.scene as any).spatialGrid;
+        if (!grid) return null;
+
+        // Search in a larger radius for allies
+        const searchRadius = this.attackRange * 1.5;
+        const neighbors = grid.findNearby({
+            x: this.x,
+            y: this.y,
+            width: this.body!.width,
+            height: this.body!.height
+        }, searchRadius);
+
+        let nearestAlly: Enemy | null = null;
+        let minDist = searchRadius;
+
+        for (const neighbor of neighbors) {
+            if (neighbor === this) continue;
+
+            // neighbor is from grid, we need to check if it's an Enemy
+            // Assuming grid stores Enemy bodies or objects with hp
+            const enemy = neighbor as Enemy;
+            if (enemy && enemy.active && !enemy.getIsDead() && enemy.hp < enemy.maxHP) {
+                const dist = Phaser.Math.Distance.Between(this.x, this.y, enemy.x, enemy.y);
+                if (dist < minDist) {
+                    minDist = dist;
+                    nearestAlly = enemy;
+                }
+            }
+        }
+
+        return nearestAlly;
     }
 }
