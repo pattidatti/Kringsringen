@@ -26,6 +26,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     protected originalSpeed: number = 100;
     private shadow: Phaser.GameObjects.Sprite | null = null;
     public id: string = "";
+    private attackLight: Phaser.GameObjects.Light | null = null;
 
     // Predictive Death (Client-side)
     private predictedDeadUntil: number = 0;
@@ -269,7 +270,27 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 
         if (this.isAttacking) {
             this.setVelocity(0, 0);
+
+            // ULTRATHINK BUGFIX: Use native Light2D for guaranteed visibility
+            if (this.config.attackGlowColor !== undefined) {
+                if (!this.attackLight) {
+                    // ADJUST HERE: (x, y, radius, color, intensity)
+                    // Lower radius and intensity to make the glow subtle.
+                    this.attackLight = this.scene.lights.addLight(this.x, this.y, 60, this.config.attackGlowColor, 0.5);
+                }
+                this.attackLight.setPosition(this.x, this.y);
+                this.attackLight.setVisible(true);
+            }
         } else {
+            // Restore Light2D for ambient consistency
+            if (this.attackLight) {
+                this.attackLight.setVisible(false);
+            }
+
+            // Clear glow if not attacking
+            if (this.config.attackGlowColor !== undefined && this.postFX.list.length > 0) {
+                this.postFX.clear();
+            }
             // Throttled AI
             if (time > this.lastAIUpdate + this.AI_UPDATE_INTERVAL) {
                 this.lastAIUpdate = time;
@@ -540,7 +561,9 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 
         // ── Death visual sequence ────────────────────────────────────────────
         // 1. Brief white flash to signal the killing blow.
+        this.clearTint();
         this.setTint(0xffffff);
+        this.postFX.clear();
 
         // 2. Spark burst at death position (uses 'spark' texture created in MainScene).
         this.spawnDeathSparks();
@@ -586,6 +609,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         if (this.body) this.body.enable = false;
         if (this.shadow) this.shadow.setVisible(false);
         if (this.hpBar) this.hpBar.clear();
+        if (this.attackLight) this.attackLight.setVisible(false);
         this.isClientMode = false;
         // Do NOT call destroy() — keep in pool for reuse
     }
@@ -630,6 +654,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 
         this.clearTint();
         this.setTint(0xffffff);
+        this.postFX.clear();
 
         const angle = Phaser.Math.Angle.Between(sourceX, sourceY, this.x, this.y);
         this.setVelocity(

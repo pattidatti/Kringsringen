@@ -23,4 +23,5 @@ export interface IMainScene extends Phaser.Scene {
     deathSparkEmitter: Phaser.GameObjects.Particles.ParticleEmitter;
     networkManager?: NetworkManager;
     pendingDeaths: Set<string>;
+    restartGame(): void;
 }

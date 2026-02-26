@@ -211,7 +211,7 @@ export function createAnimations(scene: Phaser.Scene): void {
         repeat: 0
     });
 
-    // Fireball Wizard (New) - Walk (row 1: 15-22), Attack (row 3: 45-56)
+    // Fireball Wizard (New) - Walk (row 1: 15-22), Attack (row 5: 75-86)
     safeAnims({
         key: 'wizard-walk',
         frames: scene.anims.generateFrameNumbers('wizard', { start: 15, end: 22 }),
@@ -220,7 +220,7 @@ export function createAnimations(scene: Phaser.Scene): void {
     });
     safeAnims({
         key: 'wizard-attack',
-        frames: scene.anims.generateFrameNumbers('wizard', { start: 45, end: 56 }),
+        frames: scene.anims.generateFrameNumbers('wizard', { start: 75, end: 86 }),
         frameRate: 12,
         repeat: 0
     });
@@ -251,7 +251,7 @@ export function createAnimations(scene: Phaser.Scene): void {
     // Row 7 (15 cols/row) starts at 105.
     safeAnims({
         key: 'wizard-fireball-fly',
-        frames: scene.anims.generateFrameNumbers('wizard', { start: 105, end: 114 }),
+        frames: scene.anims.generateFrameNumbers('wizard', { start: 105, end: 111 }),
         frameRate: 12,
         repeat: -1
     });

@@ -20,6 +20,7 @@ export interface EnemyConfig {
     attackDamageFrame?: number; // Which animation frame triggers damage (defaults to 3)
     rangedProjectile?: 'arrow' | 'fireball' | 'frostball';
     attackRange?: number;
+    attackGlowColor?: number;
 }
 
 export const ENEMY_TYPES: Record<string, EnemyConfig> = {
@@ -202,7 +203,8 @@ export const ENEMY_TYPES: Record<string, EnemyConfig> = {
         bodySize: { width: 30, height: 50 },
         knockbackResistance: 0.3,
         attackDamageFrame: 5,
-        rangedProjectile: 'frostball'
+        rangedProjectile: 'frostball',
+        attackGlowColor: 0x00ffff
     },
     wizard: {
         id: 'wizard',
@@ -223,7 +225,8 @@ export const ENEMY_TYPES: Record<string, EnemyConfig> = {
         bodySize: { width: 30, height: 50 },
         knockbackResistance: 0.3,
         attackDamageFrame: 5,
-        rangedProjectile: 'fireball'
+        rangedProjectile: 'fireball',
+        attackGlowColor: 0xffaa00
     },
     skeleton_archer: {
         id: 'skeleton_archer',
@@ -244,6 +247,7 @@ export const ENEMY_TYPES: Record<string, EnemyConfig> = {
         bodySize: { width: 30, height: 50 },
         knockbackResistance: 0.2,
         attackDamageFrame: 6,
-        rangedProjectile: 'arrow'
+        rangedProjectile: 'arrow',
+        attackGlowColor: 0xfff9e0
     }
 };

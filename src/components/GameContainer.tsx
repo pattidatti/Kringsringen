@@ -13,6 +13,7 @@ import { PacketType } from '../network/SyncSchemas';
 
 import { setGameInstance } from '../hooks/useGameRegistry';
 import type { NetworkConfig } from '../App';
+import type { IMainScene } from '../game/IMainScene';
 
 interface GameContainerProps {
     networkConfig?: NetworkConfig | null;
@@ -109,7 +110,7 @@ export const GameContainer: React.FC<GameContainerProps> = ({ networkConfig }) =
 
             // Handle Level Up - Need to wait for scene to be ready
             const setupSceneListeners = () => {
-                const mainScene = game.scene.getScene('MainScene');
+                const mainScene = game.scene.getScene('MainScene') as IMainScene;
                 if (mainScene) {
                     mainScene.events.on('level-up', () => {
                         // Level up is now automatic in MainScene without opening the book
@@ -243,6 +244,9 @@ export const GameContainer: React.FC<GameContainerProps> = ({ networkConfig }) =
                             if (networkConfig.role === 'host') {
                                 setReadyPlayers(prev => new Set(prev).add(networkConfig.peer.id));
                             }
+                        } else {
+                            // Single player: Direct restart
+                            mainScene.restartGame();
                         }
                     });
 
@@ -439,7 +443,7 @@ export const GameContainer: React.FC<GameContainerProps> = ({ networkConfig }) =
             if (networkConfig) {
                 setReadyReason('unpause');
                 setIsWaitingReady(true);
-                const nm = (gameInstanceRef.current?.scene.getScene('MainScene') as any)?.networkManager;
+                const nm = (gameInstanceRef.current?.scene.getScene('MainScene') as IMainScene)?.networkManager;
                 nm?.broadcast({
                     t: PacketType.GAME_EVENT,
                     ev: { type: 'player_ready', data: { playerId: networkConfig.peer.id, reason: 'unpause' } },

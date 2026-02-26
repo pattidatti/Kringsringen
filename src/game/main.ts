@@ -1565,7 +1565,7 @@ class MainScene extends Phaser.Scene implements IMainScene {
         }
     }
 
-    private restartGame() {
+    public restartGame() {
         console.log("[Game] Restarting run...");
 
         // Reset Local Registry State

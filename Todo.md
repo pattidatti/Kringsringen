@@ -25,7 +25,8 @@
 
 
 # Monsters
-- [ ] En del enemies blinker mens de går, ligger antageligvis en frame for mange i sprite sheeten. 
+- [x] En del enemies blinker mens de går, ligger antageligvis en frame for mange i sprite sheeten. 
+- [] Ny wizard: Healer. Caster en healing spell på andre monstere, som gjør at de får en grønn glow mens de blir healed. Spelleffekt: @622.png i grønn (rad 3, 14 frames). Attack animation: public/assets/sprites/wizard.png rad 3, 8 frames. 
 
 # Spell
 - Lighting ser fremdeles ikke helt bra ut. 

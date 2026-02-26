@@ -3,6 +3,8 @@ import { motion } from 'framer-motion';
 import { useGameRegistry } from '../../hooks/useGameRegistry';
 import { FantasyButton } from './FantasyButton';
 import { HighscoreManager } from '../../config/firebase';
+import { SaveManager } from '../../game/SaveManager';
+import { getGameInstance } from '../../hooks/useGameRegistry';
 
 export const GameOverOverlay: React.FC = () => {
     const hp = useGameRegistry('playerHP', 100);
@@ -89,17 +91,15 @@ export const GameOverOverlay: React.FC = () => {
     }, [playerName, score, level, wave, coins]);
 
     const handleRestart = useCallback(() => {
+        if (!isMultiplayer) {
+            SaveManager.clearRun();
+        }
+
+        const game = getGameInstance();
+        game?.events.emit('request-retry');
+
         if (isMultiplayer) {
-            import('../../hooks/useGameRegistry').then(({ getGameInstance }) => {
-                const game = getGameInstance();
-                game?.events.emit('request-retry');
-                setIsWaitingRetry(true);
-            });
-        } else {
-            import('../../game/SaveManager').then(({ SaveManager }) => {
-                SaveManager.clearRun();
-                window.location.reload();
-            });
+            setIsWaitingRetry(true);
         }
     }, [isMultiplayer]);
 
