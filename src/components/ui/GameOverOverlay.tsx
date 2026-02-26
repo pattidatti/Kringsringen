@@ -9,6 +9,7 @@ export const GameOverOverlay: React.FC = () => {
     const level = useGameRegistry('gameLevel', 1);
     const wave = useGameRegistry('currentWave', 1);
     const coins = useGameRegistry('playerCoins', 0);
+    const isMultiplayer = useGameRegistry('isMultiplayer', false);
 
     const [playerName, setPlayerName] = useState('');
     const [submitting, setSubmitting] = useState(false);
@@ -90,7 +91,7 @@ export const GameOverOverlay: React.FC = () => {
         });
     }, []);
 
-    if (hp > 0) return null;
+    if (hp > 0 || isMultiplayer) return null;
 
     return (
         <motion.div

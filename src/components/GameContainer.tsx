@@ -33,6 +33,9 @@ export const GameContainer: React.FC<GameContainerProps> = ({ networkConfig }) =
     const [isLoadingLevel, setIsLoadingLevel] = useState(false);
     const [readyReason, setReadyReason] = useState<'unpause' | 'next_level' | null>(null);
 
+    // Official Host-driven Sync State
+    const [syncState, setSyncState] = useState({ loaded: 0, ready: 0, expected: 1 });
+
     const isBookOpenRef = useRef(isBookOpen);
     const bookModeRef = useRef(bookMode);
 
@@ -148,9 +151,20 @@ export const GameContainer: React.FC<GameContainerProps> = ({ networkConfig }) =
                     mainScene.events.on('player_loaded', (data: any) => {
                         if (networkConfig?.role === 'host') {
                             setLoadedPlayers(prev => {
+                                if (prev.has(data.playerId)) return prev;
                                 const next = new Set(prev).add(data.playerId);
                                 const nm = (mainScene as any).networkManager;
                                 const total = nm ? nm.getConnectedPeerCount() + 1 : 1;
+
+                                // Broadcast updated state to all clients
+                                nm?.broadcast({
+                                    t: PacketType.GAME_EVENT,
+                                    ev: { type: 'sync_players_state', data: { loaded: next.size, ready: readyPlayers.size, expected: total } },
+                                    ts: Date.now()
+                                });
+                                // Keep local state updated immediately for host
+                                setSyncState({ loaded: next.size, ready: readyPlayers.size, expected: total });
+
                                 if (next.size >= total) {
                                     nm?.broadcast({
                                         t: PacketType.GAME_EVENT,
@@ -169,9 +183,19 @@ export const GameContainer: React.FC<GameContainerProps> = ({ networkConfig }) =
                     mainScene.events.on('player_ready', (data: any) => {
                         if (networkConfig?.role === 'host') {
                             setReadyPlayers(prev => {
+                                if (prev.has(data.playerId)) return prev;
                                 const next = new Set(prev).add(data.playerId);
                                 const nm = (mainScene as any).networkManager;
                                 const total = nm ? nm.getConnectedPeerCount() + 1 : 1;
+
+                                // Broadcast updated state to all clients
+                                nm?.broadcast({
+                                    t: PacketType.GAME_EVENT,
+                                    ev: { type: 'sync_players_state', data: { loaded: loadedPlayers.size, ready: next.size, expected: total } },
+                                    ts: Date.now()
+                                });
+                                setSyncState({ loaded: loadedPlayers.size, ready: next.size, expected: total });
+
                                 if (next.size >= total) {
                                     if (data.reason === 'unpause') {
                                         nm?.broadcast({
@@ -199,6 +223,10 @@ export const GameContainer: React.FC<GameContainerProps> = ({ networkConfig }) =
                                 return next;
                             });
                         }
+                    });
+
+                    mainScene.events.on('sync_players_state', (data: { loaded: number, ready: number, expected: number }) => {
+                        setSyncState(data);
                     });
 
                     mainScene.events.on('start_level', () => {
@@ -235,18 +263,43 @@ export const GameContainer: React.FC<GameContainerProps> = ({ networkConfig }) =
         }
     }, [networkConfig]);
 
-    // Disconnect safety check
+    // Safety check & Client Retry Mechanism
     useEffect(() => {
-        if (!networkConfig || networkConfig.role !== 'host') return;
+        if (!networkConfig) return;
         if (!isWaitingReady && !isLoadingLevel) return;
 
         const interval = setInterval(() => {
             const nm = (gameInstanceRef.current?.scene.getScene('MainScene') as any)?.networkManager;
             if (!nm) return;
 
+            if (networkConfig.role === 'client') {
+                // Client Retry Mechanism for dropped packets during async WebRTC startup
+                if (isLoadingLevel) {
+                    const level = gameInstanceRef.current?.registry.get('gameLevel') || 1;
+                    nm.broadcast({
+                        t: PacketType.GAME_EVENT,
+                        ev: { type: 'player_loaded', data: { playerId: networkConfig.peer.id, level } },
+                        ts: Date.now()
+                    });
+                } else if (isWaitingReady && readyReason) {
+                    nm.broadcast({
+                        t: PacketType.GAME_EVENT,
+                        ev: { type: 'player_ready', data: { playerId: networkConfig.peer.id, reason: readyReason } },
+                        ts: Date.now()
+                    });
+                }
+                return; // Host logic below
+            }
+
             const total = nm.getConnectedPeerCount() + 1;
 
-            // Re-evaluate Loading state based on newly pruned peer count
+            // Sync state if expected count changed due to drops
+            if ((isLoadingLevel || isWaitingReady) && total !== syncState.expected) {
+                const currentState = { loaded: loadedPlayers.size, ready: readyPlayers.size, expected: total };
+                nm.broadcast({ t: PacketType.GAME_EVENT, ev: { type: 'sync_players_state', data: currentState }, ts: Date.now() });
+                setSyncState(currentState);
+            }
+
             if (isLoadingLevel && loadedPlayers.size >= total) {
                 nm.broadcast({
                     t: PacketType.GAME_EVENT,
@@ -255,6 +308,11 @@ export const GameContainer: React.FC<GameContainerProps> = ({ networkConfig }) =
                 });
                 setIsLoadingLevel(false);
                 setLoadedPlayers(new Set());
+
+                // Clear state
+                const nextState = { loaded: 0, ready: readyPlayers.size, expected: total };
+                nm.broadcast({ t: PacketType.GAME_EVENT, ev: { type: 'sync_players_state', data: nextState }, ts: Date.now() });
+                setSyncState(nextState);
             }
 
             // Re-evaluate Ready state based on newly pruned peer count
@@ -281,6 +339,11 @@ export const GameContainer: React.FC<GameContainerProps> = ({ networkConfig }) =
                     setIsWaitingReady(false);
                     setReadyReason(null);
                 }
+
+                // Clear state
+                const nextState = { loaded: loadedPlayers.size, ready: 0, expected: total };
+                nm.broadcast({ t: PacketType.GAME_EVENT, ev: { type: 'sync_players_state', data: nextState }, ts: Date.now() });
+                setSyncState(nextState);
             }
         }, 1500);
 
@@ -315,6 +378,27 @@ export const GameContainer: React.FC<GameContainerProps> = ({ networkConfig }) =
         gameInstanceRef.current.registry.set('playerCoins', currentCoins - cost);
 
         mainScene.events.emit('apply-upgrade', upgradeId);
+    }, []);
+
+    const applyRevive = useCallback((targetId: string, cost: number) => {
+        if (!gameInstanceRef.current) return;
+        const mainScene = gameInstanceRef.current.scene.getScene('MainScene');
+        const nm = (mainScene as any).networkManager;
+
+        const currentCoins = gameInstanceRef.current.registry.get('playerCoins') || 0;
+        if (currentCoins >= cost) {
+            gameInstanceRef.current.registry.set('playerCoins', currentCoins - cost);
+
+            // Broadcast the revive request
+            nm?.broadcast({
+                t: PacketType.GAME_EVENT,
+                ev: { type: 'revive_request', data: { targetId } },
+                ts: Date.now()
+            });
+
+            // Local host revive (if host revives self or someone else)
+            // It gets routed back through main.ts's 'revive_request' handler anyway
+        }
     }, []);
 
     const handleContinue = useCallback(() => {
@@ -389,8 +473,9 @@ export const GameContainer: React.FC<GameContainerProps> = ({ networkConfig }) =
     // Memoize actions to prevent re-renders in children
     const bookActions = useMemo(() => ({
         onSelectPerk: () => { },
-        onBuyUpgrade: applyShopUpgrade
-    }), [applyShopUpgrade]);
+        onBuyUpgrade: applyShopUpgrade,
+        onBuyRevive: applyRevive
+    }), [applyShopUpgrade, applyRevive]);
 
     return (
         <div id="game-container" ref={gameContainerRef} className="w-full h-full relative overflow-hidden bg-slate-950 font-sans selection:bg-cyan-500/30">
@@ -423,8 +508,8 @@ export const GameContainer: React.FC<GameContainerProps> = ({ networkConfig }) =
                         actions={bookActions}
                         isMultiplayer={!!networkConfig}
                         isWaitingReady={isWaitingReady}
-                        readyPlayersCount={readyPlayers.size}
-                        expectedPlayersCount={(gameInstanceRef.current?.scene.getScene('MainScene') as any)?.networkManager?.getConnectedPeerCount() + 1 || 1}
+                        readyPlayersCount={syncState.ready}
+                        expectedPlayersCount={syncState.expected}
                         readyReason={readyReason}
                     />
                 </div>
@@ -441,7 +526,7 @@ export const GameContainer: React.FC<GameContainerProps> = ({ networkConfig }) =
                             Laster Verden...
                         </div>
                         <div className="text-amber-500/70 font-crimson text-xl">
-                            {'['} {loadedPlayers.size} / {(gameInstanceRef.current?.scene.getScene('MainScene') as any)?.networkManager?.getConnectedPeerCount() + 1 || 1} {']'} Klare
+                            {'['} {syncState.loaded} / {syncState.expected} {']'} Klare
                         </div>
                     </div>
                 </div>

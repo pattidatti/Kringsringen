@@ -454,6 +454,31 @@ class MainScene extends Phaser.Scene implements IMainScene {
         this.data.set('attackAnimIndex', 0);
 
 
+        // Ghost Mode Events
+        this.events.on('player-died', () => {
+            const p = this.data.get('player') as Phaser.Physics.Arcade.Sprite;
+            p.setTint(0xaaaaff);
+            p.setBlendMode(Phaser.BlendModes.ADD);
+            p.setAlpha(0.6);
+            if (this.playerLight) this.playerLight.setRadius(50);
+            if (this.outerPlayerLight) this.outerPlayerLight.setRadius(100);
+            if (this.haloPlayerLight) this.haloPlayerLight.setRadius(150);
+            if (this.poolManager) this.poolManager.getDamageText(p.x, p.y - 50, "GHOST", "#aaaaff");
+        });
+
+        this.events.on('local-player-revived', () => {
+            const p = this.data.get('player') as Phaser.Physics.Arcade.Sprite;
+            p.clearTint();
+            p.setBlendMode(Phaser.BlendModes.NORMAL);
+            p.setAlpha(1.0);
+            if (this.playerLight) this.playerLight.setRadius(250);
+            if (this.outerPlayerLight) this.outerPlayerLight.setRadius(600);
+            if (this.haloPlayerLight) this.haloPlayerLight.setRadius(1200);
+            this.combat.flushHP();
+            this.registry.set('playerHP', this.registry.get('playerMaxHP'));
+            if (this.poolManager) this.poolManager.getDamageText(p.x, p.y - 50, "REVIVED", "#55ff55");
+        });
+
         // Listen for Upgrades
         this.events.off('apply-upgrade');
         this.events.on('apply-upgrade', (upgradeId: string) => {
@@ -718,6 +743,31 @@ class MainScene extends Phaser.Scene implements IMainScene {
                     }
                 }
             }
+        } else if (event.type === 'revive_request') {
+            const { targetId } = event.data;
+            if (this.networkManager?.role === 'host') {
+                this.networkManager.broadcast({
+                    t: PacketType.GAME_EVENT,
+                    ev: { type: 'player_revived', data: { targetId } },
+                    ts: Date.now()
+                });
+                if (targetId === this.networkManager.peerId) {
+                    this.events.emit('local-player-revived');
+                }
+            }
+        } else if (event.type === 'player_revived') {
+            const { targetId } = event.data;
+            const isLocal = targetId === this.networkManager?.peerId || !this.networkManager?.role;
+            if (isLocal) {
+                this.events.emit('local-player-revived');
+            } else {
+                const remoteSprite = this.remotePlayers.get(targetId);
+                if (remoteSprite) {
+                    remoteSprite.clearTint();
+                    remoteSprite.setBlendMode(Phaser.BlendModes.NORMAL);
+                    remoteSprite.setAlpha(1.0);
+                }
+            }
         } else if (event.type === 'spawn_coins') {
             const { x, y, count, coins } = event.data;
             const player = this.data.get('player') as Phaser.Physics.Arcade.Sprite;
@@ -811,6 +861,8 @@ class MainScene extends Phaser.Scene implements IMainScene {
             this.events.emit('start_level', event.data);
         } else if (event.type === 'resume_game') {
             this.events.emit('resume_game', event.data);
+        } else if (event.type === 'sync_players_state') {
+            this.events.emit('sync_players_state', event.data);
         }
     }
 
@@ -905,6 +957,17 @@ class MainScene extends Phaser.Scene implements IMainScene {
                     const activeState = f > 0.5 ? pNext : pPrev;
                     const anim = activeState[3];
                     const flipX = activeState[4];
+                    const hp = activeState[5];
+
+                    if (hp <= 0) {
+                        remotePlayer.setTint(0xaaaaff);
+                        remotePlayer.setBlendMode(Phaser.BlendModes.ADD);
+                        remotePlayer.setAlpha(0.6);
+                    } else {
+                        remotePlayer.clearTint();
+                        remotePlayer.setBlendMode(Phaser.BlendModes.NORMAL);
+                        remotePlayer.setAlpha(1.0);
+                    }
 
                     if (remotePlayer.anims.currentAnim?.key !== anim) {
                         remotePlayer.play(anim);
@@ -1035,7 +1098,8 @@ class MainScene extends Phaser.Scene implements IMainScene {
 
         // Handle Attack (Left Click or Spacebar)
         const spacePressed = this.wasd?.SPACE?.isDown;
-        if ((pointer.leftButtonDown() || spacePressed) && !blockPressed) {
+        const hp = this.registry.get('playerHP') || 0;
+        if (hp > 0 && (pointer.leftButtonDown() || spacePressed) && !blockPressed) {
             const lastCd = this.registry.get('weaponCooldown');
             if (lastCd && Date.now() < lastCd.timestamp + lastCd.duration) {
                 return;
@@ -1333,6 +1397,15 @@ class MainScene extends Phaser.Scene implements IMainScene {
                     playersToSync.push(p);
                 }
             };
+
+            // Sync partyState to registry for the UI (FantasyBook Revive)
+            const partyState = [
+                { id: myId, name: this.registry.get('nickname') || 'Host', isDead: this.registry.get('playerHP') <= 0 }
+            ];
+            this.remotePlayerPackets.forEach((rp, remoteId) => {
+                partyState.push({ id: remoteId, name: rp[7] || 'Spiller', isDead: rp[5] <= 0 });
+            });
+            this.registry.set('partyState', partyState);
 
             // Process local player
             processPlayer(playerPacket);

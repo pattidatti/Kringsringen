@@ -26,6 +26,7 @@ interface FantasyBookProps {
     actions: {
         onSelectPerk: (id: string) => void;
         onBuyUpgrade: (id: string, cost: number) => void;
+        onBuyRevive?: (targetId: string, cost: number) => void;
     }
 
     // Multiplayer State
@@ -81,6 +82,7 @@ export const FantasyBook: React.FC<FantasyBookProps> = React.memo(({
     const coins = useGameRegistry('playerCoins', 0);
     const upgradeLevels = useGameRegistry<Record<string, number>>('upgradeLevels', {});
     const bossComingUp = useGameRegistry('bossComingUp', -1);
+    const partyState = useGameRegistry<{ id: string, name: string, isDead: boolean }[]>('partyState', []);
 
     // Detailed Stats for Status Page
     const maxHp = useGameRegistry('playerMaxHP', 100);
@@ -287,6 +289,48 @@ export const FantasyBook: React.FC<FantasyBookProps> = React.memo(({
             <div className="flex flex-col h-full animate-in fade-in duration-300">
                 <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 -mr-2">
                     <AnimatePresence mode="popLayout" initial={false}>
+                        {isMultiplayer && partyState.length > 0 && (
+                            partyState.filter(p => p.isDead).map(p => {
+                                const reviveCost = 500 + (level * 250);
+                                const canAfford = coins >= reviveCost;
+                                return (
+                                    <motion.div
+                                        key={`revive-${p.id}`}
+                                        initial={{ opacity: 0, scale: 0.95 }}
+                                        animate={{ opacity: 1, scale: 1 }}
+                                        exit={{ opacity: 0, scale: 0.95 }}
+                                        className={`flex p-4 bg-red-950/60 border border-red-500/50 rounded-lg mb-3 shadow-[0_0_15px_rgba(255,0,0,0.15)] glow-pulse`}
+                                    >
+                                        <div className="flex-1 flex flex-col justify-center">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-10 h-10 flex items-center justify-center bg-red-900/50 rounded-lg border border-red-500/50">
+                                                    <span className="text-red-300 text-2xl">☠️</span>
+                                                </div>
+                                                <div>
+                                                    <span className="font-bold text-xl text-red-100 block">Gjenoppliv {p.name}</span>
+                                                    <span className="text-sm text-red-300/80 italic font-crimson">Deres sjel streifer rundt... Bring dem tilbake.</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="flex flex-col w-28 shrink-0 justify-center items-end">
+                                            <button
+                                                onClick={() => actions.onBuyRevive?.(p.id, reviveCost)}
+                                                disabled={!canAfford}
+                                                className={`w-full py-2 text-base font-bold border rounded-lg transition-all flex items-center justify-center gap-1.5 shadow-md
+                                                    ${canAfford
+                                                        ? 'bg-amber-400 border-amber-600 text-amber-900 hover:bg-amber-300 hover:-translate-y-0.5 active:translate-y-0'
+                                                        : 'bg-slate-800 border-slate-700 text-slate-500 cursor-not-allowed grayscale'}
+                                                `}
+                                            >
+                                                <span>{reviveCost}</span>
+                                                <div className="w-2.5 h-2.5 rounded-full bg-amber-600 shadow-[0_0_5px_rgba(180,83,9,0.5)]" />
+                                            </button>
+                                        </div>
+                                    </motion.div>
+                                );
+                            })
+                        )}
+
                         {shopItems.length === 0 ? (
                             <motion.div
                                 key="empty"

@@ -108,7 +108,17 @@ export class PlayerCombatManager {
         // Check for lethal damage (predicted)
         if (hp + this.pendingHPChange <= 0) {
             this.flushHP(); // Force immediate update to 0
-            this.scene.scene.pause();
+
+            const isMultiplayer = this.scene.registry.get('isMultiplayer') as boolean;
+            if (isMultiplayer) {
+                // Ghost Mode: Instead of pausing, emit player-died
+                // Provide a flag indicating it was the local player just now dying
+                this.scene.events.emit('player-died');
+            } else {
+                // Single Player: Traditional Game Over
+                this.scene.scene.pause();
+                this.scene.events.emit('singleplayer-game-over');
+            }
         }
     }
 

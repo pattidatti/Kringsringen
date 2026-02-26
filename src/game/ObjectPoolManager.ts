@@ -15,12 +15,13 @@ export class ObjectPoolManager {
         this.scene = scene;
     }
 
-    public getDamageText(x: number, y: number, amount: number, color: string = '#ffffff'): Phaser.GameObjects.Text {
+    public getDamageText(x: number, y: number, amount: number | string, color: string = '#ffffff'): Phaser.GameObjects.Text {
         let text: Phaser.GameObjects.Text;
+        const textStr = typeof amount === 'number' ? Math.round(amount).toString() : amount;
 
         if (this.damageTextPool.length > 0) {
             text = this.damageTextPool.pop()!;
-            text.setText(Math.round(amount).toString());
+            text.setText(textStr);
             text.setColor(color);
             text.setPosition(x, y);
             text.setActive(true);
@@ -28,7 +29,7 @@ export class ObjectPoolManager {
             text.setAlpha(1);
             text.setScale(0.4); // Start small for pop effect
         } else {
-            text = this.scene.add.text(x, y, Math.round(amount).toString(), {
+            text = this.scene.add.text(x, y, textStr, {
                 fontSize: '32px', // Larger font
                 color: color,
                 fontStyle: 'bold',

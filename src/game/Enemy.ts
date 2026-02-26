@@ -335,21 +335,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 
         // --- Multi-Targeting Logic (Host Only) ---
         // Find nearest player among local player and all remote players
-        let nearestTarget = this.targetStart as any;
-        let minDist = Phaser.Math.Distance.Between(this.x, this.y, nearestTarget.x, nearestTarget.y);
-
-        const mainScene = this.scene as any;
-        if (mainScene.remotePlayers) {
-            mainScene.remotePlayers.forEach((remotePlayer: any) => {
-                if (remotePlayer.active) {
-                    const dist = Phaser.Math.Distance.Between(this.x, this.y, remotePlayer.x, remotePlayer.y);
-                    if (dist < minDist) {
-                        minDist = dist;
-                        nearestTarget = remotePlayer;
-                    }
-                }
-            });
-        }
+        let nearestTarget = this.getNearestTarget();
 
         const targetAngle = Phaser.Math.Angle.Between(this.x, this.y, nearestTarget.x, nearestTarget.y);
 
@@ -725,21 +711,43 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     }
 
     private getNearestTarget(): any {
-        let nearestTarget = this.targetStart as any;
-        let minDist = Phaser.Math.Distance.Between(this.x, this.y, nearestTarget.x, nearestTarget.y);
-
         const mainScene = this.scene as any;
+        const partyState: { id: string, isDead: boolean }[] = mainScene.registry.get('partyState') || [];
+
+        let validTargets: any[] = [];
+
+        // Local player
+        const localIsDead = mainScene.registry.get('playerHP') <= 0;
+        if (!localIsDead && (this.targetStart as any).active) {
+            validTargets.push(this.targetStart);
+        }
+
+        // Remote players
         if (mainScene.remotePlayers) {
-            mainScene.remotePlayers.forEach((remotePlayer: any) => {
-                if (remotePlayer.active) {
-                    const dist = Phaser.Math.Distance.Between(this.x, this.y, remotePlayer.x, remotePlayer.y);
-                    if (dist < minDist) {
-                        minDist = dist;
-                        nearestTarget = remotePlayer;
-                    }
+            mainScene.remotePlayers.forEach((remotePlayer: any, id: string) => {
+                const ps = partyState.find(p => p.id === id);
+                const isDead = ps ? ps.isDead : false;
+                if (remotePlayer.active && !isDead) {
+                    validTargets.push(remotePlayer);
                 }
             });
         }
+
+        if (validTargets.length === 0) {
+            return this.targetStart; // Fallback so they don't break
+        }
+
+        let nearestTarget = validTargets[0];
+        let minDist = Phaser.Math.Distance.Between(this.x, this.y, nearestTarget.x, nearestTarget.y);
+
+        for (let i = 1; i < validTargets.length; i++) {
+            const dist = Phaser.Math.Distance.Between(this.x, this.y, validTargets[i].x, validTargets[i].y);
+            if (dist < minDist) {
+                minDist = dist;
+                nearestTarget = validTargets[i];
+            }
+        }
+
         return nearestTarget;
     }
 }

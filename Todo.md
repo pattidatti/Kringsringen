@@ -23,22 +23,25 @@
 
 -[x] Multiplayer orkehøvding; spiller B får hitbaren over hodet, men den er gigalang, og  den er "tom" i HP baren på toppen. 
 
-- En del enemies blinker mens de går, ligger antageligvis en frame for mange i sprite sheeten. 
 
+# Monsters
+- [ ] En del enemies blinker mens de går, ligger antageligvis en frame for mange i sprite sheeten. 
 
 # Spell
 - Lighting ser fremdeles ikke helt bra ut. 
-- Lighting er fremdeles for overpowered. 
-- Ser ut som man kan caste fortere enn cooldownen tillater. 
-- [ ] Lag når det er 3+ lyn samtidig, begynner det å lagge, må optimaliseres betraktelig! 
+- Lighting er fremdeles for overpowered, seeking må reduseres enda mer.  
+- [x] Ser ut som man kan caste fortere enn cooldownen tillater. 
+- [ ] Finne en annen uppgrade enn å kunne caste flere lyn samtidig ut fra spilleren. 
 # musikk
 - [x] Må bytte musikk hvert level. 
 
+# MP
+- [ ] Når hele party er døde, skal man kunne starte på nytt uten å lage en helt ny server osv. Bare en retry knapp som dukker opp med readystate x/y spillere.  
 
 - [ ] 
 
 # Bugs
-- [ ] Orkeboss ikke synlig for andre enn host. 
+- [ ] Orkehøvding ikke synlig for andre enn host. 
 - [x] HP bar for alle andre enn host, er cracy stor, virker som å justere seg når de tar damage. 
 - [ ] Man må kunne gjenopplive folk etter et level er over, via boken og det koster masse gull . Øker i kostnad for hver gang man gjør det. 
 - [ ] Når spillere dør, skal de bli spøkelser, som kan plukke opp gull, men de kan ikke skade fiender. De er spectating (hvit glow og tint og mindre lysradius enn levende spillere). Monstere skal ikke angripe døde spillere. 
