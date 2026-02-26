@@ -6,8 +6,17 @@ import { SettingsModal } from './ui/SettingsModal';
 import { OnboardingTutorial } from './ui/OnboardingTutorial';
 import { MultiplayerLobby } from './ui/MultiplayerLobby';
 import { SaveManager } from '../game/SaveManager';
+import { AdSenseAd } from './ui/AdSenseAd';
 import Peer from 'peerjs';
 import '../styles/pixel-ui.css';
+
+// ─────────────────────────────────────────────────────────────
+//  AdSense config — replace these two values with your own IDs
+//  Publisher ID : AdSense → Account → Account information
+//  Ad slot ID   : AdSense → Ads → By ad unit → select your unit
+// ─────────────────────────────────────────────────────────────
+const ADSENSE_CLIENT = 'ca-pub-XXXXXXXXXXXXXXXXX';
+const ADSENSE_SLOT   = 'XXXXXXXXXX';
 
 interface LandingPageProps {
     onStart: () => void;
@@ -176,6 +185,16 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart, onStartMP }) => {
                     <OnboardingTutorial onStart={fadeAudioAndStart} />
                 )}
             </AnimatePresence>
+
+            {/* Google AdSense — bottom-left, unobtrusive */}
+            <div className="absolute bottom-4 left-4 z-10">
+                <AdSenseAd
+                    adClient={ADSENSE_CLIENT}
+                    adSlot={ADSENSE_SLOT}
+                    width={300}
+                    height={250}
+                />
+            </div>
 
         </div>
     );
