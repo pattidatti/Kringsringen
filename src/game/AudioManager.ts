@@ -56,7 +56,10 @@ export class AudioManager {
     }
 
     public preload(scene: Phaser.Scene) {
+        // Load all non-lazy assets upfront
         AUDIO_MANIFEST.forEach(config => {
+            if (config.lazyLoad) return; // Skip lazy-loaded assets
+
             if (config.path) {
                 scene.load.audio(config.id, config.path);
             }
@@ -66,6 +69,70 @@ export class AudioManager {
                 });
             }
         });
+
+        // Load one random BGM upfront despite lazyLoad flag
+        this.loadRandomBGMUpfront(scene);
+    }
+
+    /**
+     * Selects and loads one random BGM track during preload.
+     */
+    private loadRandomBGMUpfront(scene: Phaser.Scene) {
+        const bgmTracks = AUDIO_MANIFEST.filter(c => c.category === 'bgm');
+        if (bgmTracks.length === 0) return;
+
+        const selected = bgmTracks[Math.floor(Math.random() * bgmTracks.length)];
+        if (selected.path) {
+            scene.load.audio(selected.id, selected.path);
+        }
+    }
+
+    /**
+     * Lazy-loads a BGM track if not already loaded, then plays it.
+     * Called when playBGM is invoked with a track that isn't loaded yet.
+     */
+    public loadAndPlayBGM(id: string, fadeDuration: number = 1000) {
+        if (!this.scene) return;
+
+        const config = AUDIO_MANIFEST.find(c => c.id === id);
+        if (!config || config.category !== 'bgm' || !config.path) return;
+
+        // If already loaded, just play it
+        if (this.scene.cache.audio.exists(id)) {
+            this.playBGM(id, fadeDuration);
+            return;
+        }
+
+        // Otherwise, lazy-load then play
+        this.scene.load.audio(id, config.path);
+        this.scene.load.once('complete', () => {
+            this.playBGM(id, fadeDuration);
+        });
+        this.scene.load.start();
+    }
+
+    /**
+     * Lazy-loads a BGS track if not already loaded, then plays it.
+     * Called when playBGS is invoked with a track that isn't loaded yet.
+     */
+    public loadAndPlayBGS(id: string, fadeDuration: number = 1500) {
+        if (!this.scene) return;
+
+        const config = AUDIO_MANIFEST.find(c => c.id === id);
+        if (!config || config.category !== 'bgs' || !config.path) return;
+
+        // If already loaded, just play it
+        if (this.scene.cache.audio.exists(id)) {
+            this.playBGS(id, fadeDuration);
+            return;
+        }
+
+        // Otherwise, lazy-load then play
+        this.scene.load.audio(id, config.path);
+        this.scene.load.once('complete', () => {
+            this.playBGS(id, fadeDuration);
+        });
+        this.scene.load.start();
     }
 
     /**
@@ -167,12 +234,19 @@ export class AudioManager {
 
     /**
      * Plays/Transistions background music with cross-fade.
+     * If the track is lazy-loaded and not yet in cache, it will be loaded on demand.
      */
     public playBGM(id: string, fadeDuration: number = 1000) {
         if (!this.scene || this.currentBGMId === id) return;
 
         const config = AUDIO_MANIFEST.find(c => c.id === id);
         if (!config || config.category !== 'bgm') return;
+
+        // If not loaded yet and marked as lazy, trigger lazy-load
+        if (!this.scene.cache.audio.exists(id) && config.lazyLoad) {
+            this.loadAndPlayBGM(id, fadeDuration);
+            return;
+        }
 
         if (!this.scene.cache.audio.exists(id)) {
             console.warn(`[AudioManager] Music not found in cache: ${id}`);
@@ -206,12 +280,19 @@ export class AudioManager {
 
     /**
      * Plays/Transitions a background soundscape (ambience) independently of BGM.
+     * If the track is lazy-loaded and not yet in cache, it will be loaded on demand.
      */
     public playBGS(id: string, fadeDuration: number = 1500) {
         if (!this.scene || this.currentBGSId === id) return;
 
         const config = AUDIO_MANIFEST.find(c => c.id === id);
         if (!config || config.category !== 'bgs') return;
+
+        // If not loaded yet and marked as lazy, trigger lazy-load
+        if (!this.scene.cache.audio.exists(id) && config.lazyLoad) {
+            this.loadAndPlayBGS(id, fadeDuration);
+            return;
+        }
 
         if (!this.scene.cache.audio.exists(id)) {
             console.warn(`[AudioManager] BGS not found in cache: ${id}`);

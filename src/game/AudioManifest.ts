@@ -14,24 +14,26 @@ export interface SoundConfig {
     pitchVariance?: number;
     /** Apply a short convolver reverb tail on playback. */
     reverb?: boolean;
+    /** Defer loading until explicitly requested (used for BGM tracks not needed at startup). */
+    lazyLoad?: boolean;
 }
 
 export const AUDIO_MANIFEST: SoundConfig[] = [
     // — BGM —
-    { id: 'meadow_theme', path: 'assets/audio/music/meadow_theme.mp3', category: 'bgm', volume: 0.5, loop: true },
-    { id: 'exploration_theme', path: 'assets/audio/music/exploration_theme.mp3', category: 'bgm', volume: 0.5, loop: true },
-    { id: 'dragons_fury', path: 'assets/audio/music/dragons_fury.mp3', category: 'bgm', volume: 0.6, loop: true },
-    { id: 'pixel_rush_overture', path: 'assets/audio/music/Pixel Rush Overture.mp3', category: 'bgm', volume: 0.5, loop: true },
-    { id: 'glitch_in_the_forest', path: 'assets/audio/music/Glitch in the forest.mp3', category: 'bgm', volume: 0.5, loop: true },
-    { id: 'glitch_in_the_dungeon', path: 'assets/audio/music/Glitch in the Dungeon.mp3', category: 'bgm', volume: 0.5, loop: true },
-    { id: 'glitch_in_the_catacombs', path: 'assets/audio/music/Glitch in the Catacombs.mp3', category: 'bgm', volume: 0.5, loop: true },
-    { id: 'glitch_in_the_heavens', path: 'assets/audio/music/Glitch in the heavens.mp3', category: 'bgm', volume: 0.5, loop: true },
-    { id: 'final_dungeon_loop', path: 'assets/audio/music/Final Dungeon Loop.mp3', category: 'bgm', volume: 0.6, loop: true },
-    { id: 'glitch_king', path: 'assets/audio/music/Glitch King.mp3', category: 'bgm', volume: 0.6, loop: true },
+    { id: 'meadow_theme', path: 'assets/audio/music/meadow_theme.mp3', category: 'bgm', volume: 0.5, loop: true, lazyLoad: true },
+    { id: 'exploration_theme', path: 'assets/audio/music/exploration_theme.mp3', category: 'bgm', volume: 0.5, loop: true, lazyLoad: true },
+    { id: 'dragons_fury', path: 'assets/audio/music/dragons_fury.mp3', category: 'bgm', volume: 0.6, loop: true, lazyLoad: true },
+    { id: 'pixel_rush_overture', path: 'assets/audio/music/Pixel Rush Overture.mp3', category: 'bgm', volume: 0.5, loop: true, lazyLoad: true },
+    { id: 'glitch_in_the_forest', path: 'assets/audio/music/Glitch in the forest.mp3', category: 'bgm', volume: 0.5, loop: true, lazyLoad: true },
+    { id: 'glitch_in_the_dungeon', path: 'assets/audio/music/Glitch in the Dungeon.mp3', category: 'bgm', volume: 0.5, loop: true, lazyLoad: true },
+    { id: 'glitch_in_the_catacombs', path: 'assets/audio/music/Glitch in the Catacombs.mp3', category: 'bgm', volume: 0.5, loop: true, lazyLoad: true },
+    { id: 'glitch_in_the_heavens', path: 'assets/audio/music/Glitch in the heavens.mp3', category: 'bgm', volume: 0.5, loop: true, lazyLoad: true },
+    { id: 'final_dungeon_loop', path: 'assets/audio/music/Final Dungeon Loop.mp3', category: 'bgm', volume: 0.6, loop: true, lazyLoad: true },
+    { id: 'glitch_king', path: 'assets/audio/music/Glitch King.mp3', category: 'bgm', volume: 0.6, loop: true, lazyLoad: true },
 
     // — BGS (Background Soundscapes) —
-    { id: 'forest_ambience', path: 'assets/audio/bgs/forest_day.wav', category: 'bgs', volume: 0.5, loop: true },
-    { id: 'rain', path: 'assets/audio/bgs/rain.wav', category: 'bgs', volume: 0.6, loop: true },
+    { id: 'forest_ambience', path: 'assets/audio/bgs/forest_day.ogg', category: 'bgs', volume: 0.5, loop: true },
+    { id: 'rain', path: 'assets/audio/bgs/rain.ogg', category: 'bgs', volume: 0.6, loop: true },
 
     // — Combat SFX —
     {
