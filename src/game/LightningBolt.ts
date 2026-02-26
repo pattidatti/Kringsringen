@@ -84,7 +84,11 @@ export class LightningBolt extends Phaser.Physics.Arcade.Sprite {
             this.glowEffect.color = this.colorHex;
         }
 
-        // Add Dynamic Light
+        // Add Dynamic Light (remove stale light from pool reuse first)
+        if (this.light) {
+            this.scene.lights.removeLight(this.light);
+            this.light = null;
+        }
         this.light = this.scene.lights.addLight(x, y, 150, this.colorHex, 1.0);
 
         if (this.body) {
@@ -261,9 +265,6 @@ export class LightningBolt extends Phaser.Physics.Arcade.Sprite {
         // Add to hit set
         this.hitEnemies.add(hitEnemy);
 
-        // Deactivate this bolt
-        this.deactivate();
-
         // Spawn impact animation sprite via pool
         if (mainScene.poolManager) {
             this.impactSprite = mainScene.poolManager.spawnLightningImpact(hitX, hitY);
@@ -275,17 +276,34 @@ export class LightningBolt extends Phaser.Physics.Arcade.Sprite {
             if (this.scene.lights.active) this.impactSprite.setPipeline('Light2D');
         }
 
-        // Impact light
-        const flash = this.scene.lights.addLight(hitX, hitY, 250, this.colorHex, 2.0);
-        this.scene.tweens.add({
-            targets: flash,
-            intensity: 0,
-            radius: 350,
-            duration: 300,
-            onComplete: () => {
-                this.scene.lights.removeLight(flash);
+        // Impact light handling — only for final bolt in chain (no bounces remaining)
+        if (this.bouncesLeft === 0) {
+            // Final impact — reuse travel light as impact flash
+            if (this.light) {
+                const light = this.light; // Capture for use in tween callback
+                light.setPosition(hitX, hitY).setRadius(250).setIntensity(2.0);
+                this.scene.tweens.add({
+                    targets: light,
+                    intensity: 0,
+                    radius: 350,
+                    duration: 300,
+                    onComplete: () => {
+                        if (light) this.scene.lights.removeLight(light);
+                    }
+                });
+                this.light = null;  // Null immediately to prevent double cleanup on pool reuse
             }
-        });
+            // Deactivate sprite but keep light for tween
+            this.setActive(false);
+            this.setVisible(false);
+            if (this.body) this.body.enable = false;
+            this.postFX.clear();
+            this.glowEffect = null;
+            this.impactSprite = null;
+        } else {
+            // Bouncing to next target — normal deactivate (removes travel light)
+            this.deactivate();
+        }
 
         // Play impact sound
         AudioManager.instance.playSFX('fireball_hit');

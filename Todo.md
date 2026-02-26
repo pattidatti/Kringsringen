@@ -40,6 +40,7 @@
 - [ ] Finne en annen uppgrade enn å kunne caste flere lyn samtidig ut fra spilleren. 
 # musikk
 - [x] Må bytte musikk hvert level. 
+- [ ] Er placeholder lyd på dash og healing spell?
 
 # MP
 - [ ] Når hele party er døde, skal man kunne starte på nytt uten å lage en helt ny server osv. Bare en retry knapp som dukker opp med readystate x/y spillere.  

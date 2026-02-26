@@ -70,7 +70,6 @@ class MainScene extends Phaser.Scene implements IMainScene {
     private playerShadow: Phaser.GameObjects.Sprite | null = null;
     private playerLight!: Phaser.GameObjects.Light;
     private outerPlayerLight!: Phaser.GameObjects.Light;
-    private haloPlayerLight!: Phaser.GameObjects.Light;
 
     // Audio throttle
     private lastFootstepTime: number = 0;
@@ -485,7 +484,6 @@ class MainScene extends Phaser.Scene implements IMainScene {
             p.setAlpha(0.6);
             if (this.playerLight) this.playerLight.setRadius(50);
             if (this.outerPlayerLight) this.outerPlayerLight.setRadius(100);
-            if (this.haloPlayerLight) this.haloPlayerLight.setRadius(150);
             if (this.poolManager) this.poolManager.getDamageText(p.x, p.y - 50, "GHOST", "#aaaaff");
         });
 
@@ -494,9 +492,8 @@ class MainScene extends Phaser.Scene implements IMainScene {
             p.clearTint();
             p.setBlendMode(Phaser.BlendModes.NORMAL);
             p.setAlpha(1.0);
-            if (this.playerLight) this.playerLight.setRadius(250);
-            if (this.outerPlayerLight) this.outerPlayerLight.setRadius(600);
-            if (this.haloPlayerLight) this.haloPlayerLight.setRadius(1200);
+            if (this.playerLight) this.playerLight.setRadius(200);
+            if (this.outerPlayerLight) this.outerPlayerLight.setRadius(500);
             this.combat.flushHP();
             this.registry.set('playerHP', this.registry.get('playerMaxHP'));
             if (this.poolManager) this.poolManager.getDamageText(p.x, p.y - 50, "REVIVED", "#55ff55");
@@ -707,25 +704,22 @@ class MainScene extends Phaser.Scene implements IMainScene {
 
         if (this.quality.lightingEnabled) {
             this.lights.enable();
-            this.lights.setAmbientColor(0x0a0a0a); // Near black edges
+            this.lights.setAmbientColor(0x0a0a0a); // Near black edges — essential for atmosphere
 
             if (player) player.setPipeline('Light2D');
             if (this.enemies) this.enemies.children.iterate((e: any) => { e.setPipeline('Light2D'); return true; });
             if (this.bossGroup) this.bossGroup.children.iterate((e: any) => { e.setPipeline('Light2D'); return true; });
             if (this.currentMap) this.currentMap.setLightingEnabled(true);
             if (this.poolManager) this.poolManager.setLightingEnabled(true);
-            if (this.coins) this.coins.children.iterate((c: any) => { c.setPipeline('Light2D'); return true; });
             if (this.enemyProjectiles) this.enemyProjectiles.children.iterate((p: any) => { p.setPipeline('Light2D'); return true; });
 
             // Re-create or re-enable lights if needed
             if (!this.playerLight) {
-                this.playerLight = this.lights.addLight(0, 0, 250, 0xfffaf0, 0.7);
-                this.outerPlayerLight = this.lights.addLight(0, 0, 600, 0xfffaf0, 0.4);
-                this.haloPlayerLight = this.lights.addLight(0, 0, 1200, 0xfffaf0, 0.2);
+                this.playerLight = this.lights.addLight(0, 0, 200, 0xfffaf0, 0.7);
+                this.outerPlayerLight = this.lights.addLight(0, 0, 500, 0xfffaf0, 0.4);
             } else {
                 this.playerLight.setVisible(true);
                 this.outerPlayerLight.setVisible(true);
-                this.haloPlayerLight.setVisible(true);
             }
         } else {
             this.lights.disable();
@@ -735,13 +729,11 @@ class MainScene extends Phaser.Scene implements IMainScene {
             if (this.bossGroup) this.bossGroup.children.iterate((e: any) => { e.resetPipeline(); return true; });
             if (this.currentMap) this.currentMap.setLightingEnabled(false);
             if (this.poolManager) this.poolManager.setLightingEnabled(false);
-            if (this.coins) this.coins.children.iterate((c: any) => { c.resetPipeline(); return true; });
             if (this.enemyProjectiles) this.enemyProjectiles.children.iterate((p: any) => { p.resetPipeline(); return true; });
 
             if (this.playerLight) {
                 this.playerLight.setVisible(false);
                 this.outerPlayerLight.setVisible(false);
-                this.haloPlayerLight.setVisible(false);
             }
         }
 
@@ -1203,7 +1195,6 @@ class MainScene extends Phaser.Scene implements IMainScene {
         if (this.quality.lightingEnabled) {
             this.playerLight.setPosition(player.x, player.y);
             this.outerPlayerLight.setPosition(player.x, player.y);
-            this.haloPlayerLight.setPosition(player.x, player.y);
         }
 
         // --- VIGNETTE & LOW HP Pulsing ---
@@ -1795,9 +1786,8 @@ class MainScene extends Phaser.Scene implements IMainScene {
             player.clearTint();
             player.setBlendMode(Phaser.BlendModes.NORMAL);
             player.setAlpha(1.0);
-            if (this.playerLight) this.playerLight.setRadius(250);
-            if (this.outerPlayerLight) this.outerPlayerLight.setRadius(600);
-            if (this.haloPlayerLight) this.haloPlayerLight.setRadius(1200);
+            if (this.playerLight) this.playerLight.setRadius(200);
+            if (this.outerPlayerLight) this.outerPlayerLight.setRadius(500);
         }
 
         // Reset remote players visuals
@@ -1842,6 +1832,13 @@ export const createGame = (containerId: string, networkConfig?: NetworkConfig | 
                 gravity: { x: 0, y: 0 },
                 debug: false
             }
+        },
+        render: {
+            powerPreference: 'high-performance'
+        },
+        fps: {
+            target: 60,
+            forceSetTimeOut: false
         },
         scene: [PreloadScene, MainScene],
         scale: {

@@ -46,21 +46,31 @@ export class Fireball extends Phaser.Physics.Arcade.Sprite {
         this.setRotation(angle);
         this.play('fireball-fly');
 
-        this.trail = this.scene.add.particles(x, y, 'fireball_projectile', {
-            lifespan: 200,
-            scale: { start: 0.7, end: 0 },
-            alpha: { start: 0.6, end: 0 },
-            frequency: 20,
-            follow: this,
-            tint: 0xff4400,
-            blendMode: 'ADD'
-        });
-        this.trail.setDepth(this.depth - 1);
+        // Pool trail emitter: create once, reuse on subsequent fires
+        if (!this.trail) {
+            this.trail = this.scene.add.particles(x, y, 'fireball_projectile', {
+                lifespan: 200,
+                scale: { start: 0.7, end: 0 },
+                alpha: { start: 0.6, end: 0 },
+                frequency: 20,
+                follow: this,
+                tint: 0xff4400,
+                blendMode: 'ADD'
+            });
+            this.trail.setDepth(this.depth - 1);
+        } else {
+            this.trail.setPosition(x, y);
+            this.trail.resume();
+        }
 
         // Add Glow FX
         this.postFX.addGlow(0xff4400, 4, 0, false, 0.1, 10);
 
-        // Add Dynamic Light
+        // Add Dynamic Light (remove stale light from pool reuse first)
+        if (this.light) {
+            this.scene.lights.removeLight(this.light);
+            this.light = null;
+        }
         this.light = this.scene.lights.addLight(x, y, 200, 0xff6600, 1.0);
 
         if (this.body) {
@@ -81,26 +91,25 @@ export class Fireball extends Phaser.Physics.Arcade.Sprite {
         this.setVisible(false);
         if (this.body) this.body.enable = false;
         if (this.trail) {
-            this.trail.destroy();
-            this.trail = null;
-        }
-        if (this.light) {
-            this.scene.lights.removeLight(this.light);
-            this.light = null;
+            this.trail.stop(); // Stop but keep for pooling (don't destroy)
         }
         this.postFX.clear();
 
-        // Spawn impact flash light
-        const flash = this.scene.lights.addLight(hitX, hitY, 300, 0xffaa00, 2.0);
-        this.scene.tweens.add({
-            targets: flash,
-            intensity: 0,
-            radius: 400,
-            duration: 400,
-            onComplete: () => {
-                this.scene.lights.removeLight(flash);
-            }
-        });
+        // Reuse travel light as impact flash — avoid new light allocation
+        if (this.light) {
+            const light = this.light; // Capture for use in tween callback
+            light.setPosition(hitX, hitY).setRadius(300).setIntensity(2.0);
+            this.scene.tweens.add({
+                targets: light,
+                intensity: 0,
+                radius: 400,
+                duration: 400,
+                onComplete: () => {
+                    if (light) this.scene.lights.removeLight(light);
+                }
+            });
+            this.light = null;  // Null immediately to prevent double cleanup on pool reuse
+        }
 
         const mainScene = this.scene as any;
         const fireballRadius = mainScene.registry.get('fireballRadius') || 80;

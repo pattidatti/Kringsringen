@@ -32,7 +32,11 @@ export class FrostBolt extends Phaser.Physics.Arcade.Sprite {
         // Add Glow FX
         this.postFX.addGlow(0x00aaff, 4, 0, false, 0.1, 10);
 
-        // Add cast glow
+        // Add cast glow (remove stale light from pool reuse first)
+        if (this.light) {
+            this.scene.lights.removeLight(this.light);
+            this.light = null;
+        }
         this.light = this.scene.lights.addLight(x, y, 180, 0x88ccff, 1.0);
 
         // After one full cycle of cast anim (~550ms @ 12fps × 8 frames), impact at target
@@ -40,10 +44,7 @@ export class FrostBolt extends Phaser.Physics.Arcade.Sprite {
         this.scene.time.delayedCall(castDuration, () => {
             this.setActive(false);
             this.setVisible(false);
-            if (this.light) {
-                this.scene.lights.removeLight(this.light);
-                this.light = null;
-            }
+            // Keep travel light alive — will be reused as impact flash in impact()
             this.postFX.clear();
             this.impact(targetX, targetY);
         });
@@ -135,17 +136,21 @@ export class FrostBolt extends Phaser.Physics.Arcade.Sprite {
         AudioManager.instance.playSFX('ice_freeze');
         AudioManager.instance.playSFX('frost_impact');
 
-        // Impact flash light
-        const flash = this.scene.lights.addLight(hitX, hitY, 350, 0x00aaff, 2.5);
-        this.scene.tweens.add({
-            targets: flash,
-            intensity: 0,
-            radius: 450,
-            duration: 500,
-            onComplete: () => {
-                this.scene.lights.removeLight(flash);
-            }
-        });
+        // Reuse travel light as impact flash — avoid new light allocation
+        if (this.light) {
+            const light = this.light; // Capture for use in tween callback
+            light.setPosition(hitX, hitY).setRadius(350).setIntensity(2.5);
+            this.scene.tweens.add({
+                targets: light,
+                intensity: 0,
+                radius: 450,
+                duration: 500,
+                onComplete: () => {
+                    if (light) this.scene.lights.removeLight(light);
+                }
+            });
+            this.light = null;  // Null immediately to prevent double cleanup on pool reuse
+        }
     }
 
     update() {

@@ -35,16 +35,6 @@ export class EnemyProjectile extends Phaser.Physics.Arcade.Sprite {
             (this.body as Phaser.Physics.Arcade.Body).reset(x, y);
         }
 
-        if (this.trail) {
-            this.trail.destroy();
-            this.trail = null;
-        }
-
-        if (this.light) {
-            this.scene.lights.removeLight(this.light);
-            this.light = null;
-        }
-
         if (type === 'fireball' || type === 'frostball') {
             if (type === 'fireball') {
                 this.setTexture('wizard');
@@ -61,19 +51,29 @@ export class EnemyProjectile extends Phaser.Physics.Arcade.Sprite {
             const tint = type === 'fireball' ? 0xffaa00 : 0x00ffff;
             const followTexture = type === 'fireball' ? 'wizard' : 'wizard_fireball';
 
-            this.trail = this.scene.add.particles(x, y, followTexture, {
-                lifespan: 200,
-                scale: { start: 0.5, end: 0 },
-                alpha: { start: 0.5, end: 0 },
-                frequency: 25,
-                follow: this,
-                tint: tint,
-                blendMode: 'ADD'
-            });
-            this.trail.setDepth(this.depth - 1);
+            // Pool trail emitter: create once, reuse on subsequent fires
+            if (!this.trail) {
+                this.trail = this.scene.add.particles(x, y, followTexture, {
+                    lifespan: 200,
+                    scale: { start: 0.5, end: 0 },
+                    alpha: { start: 0.5, end: 0 },
+                    frequency: 25,
+                    follow: this,
+                    tint: tint,
+                    blendMode: 'ADD'
+                });
+                this.trail.setDepth(this.depth - 1);
+            } else {
+                this.trail.setPosition(x, y);
+                this.trail.resume();
+            }
 
-            // Wizard fireball light intensity is 1/3 of player's (player's is 1.0)
-            this.light = this.scene.lights.addLight(x, y, 150, tint, 0.33);
+            // Reuse existing light instead of creating new one
+            if (!this.light) {
+                this.light = this.scene.lights.addLight(x, y, 150, tint, 0.33);
+            } else {
+                this.light.setPosition(x, y).setRadius(150).setColor(tint).setIntensity(0.33);
+            }
             this.postFX.addGlow(tint, 4, 0, false, 0.1, 10);
         } else {
             this.setTexture('arrow');
@@ -85,19 +85,29 @@ export class EnemyProjectile extends Phaser.Physics.Arcade.Sprite {
 
             this.setBodySize(20, 10);
 
-            this.trail = this.scene.add.particles(x, y, 'arrow', {
-                lifespan: 120,
-                scale: { start: 0.3, end: 0 },
-                alpha: { start: 0.4, end: 0 },
-                frequency: 20,
-                follow: this,
-                tint: 0xcccccc,
-                blendMode: 'ADD'
-            });
-            this.trail.setDepth(this.depth - 1);
+            // Pool trail emitter: create once, reuse on subsequent fires
+            if (!this.trail) {
+                this.trail = this.scene.add.particles(x, y, 'arrow', {
+                    lifespan: 120,
+                    scale: { start: 0.3, end: 0 },
+                    alpha: { start: 0.4, end: 0 },
+                    frequency: 20,
+                    follow: this,
+                    tint: 0xcccccc,
+                    blendMode: 'ADD'
+                });
+                this.trail.setDepth(this.depth - 1);
+            } else {
+                this.trail.setPosition(x, y);
+                this.trail.resume();
+            }
 
-            // Subtle arrow light (intensity 0.1, 1/10th of player light)
-            this.light = this.scene.lights.addLight(x, y, 80, 0xffffff, 0.1);
+            // Reuse existing light instead of creating new one
+            if (!this.light) {
+                this.light = this.scene.lights.addLight(x, y, 80, 0xffffff, 0.1);
+            } else {
+                this.light.setPosition(x, y).setRadius(80).setColor(0xffffff).setIntensity(0.1);
+            }
             this.postFX.addGlow(0xffffff, 2, 0, false, 0.05, 5);
         }
 
@@ -114,15 +124,12 @@ export class EnemyProjectile extends Phaser.Physics.Arcade.Sprite {
         this.setVisible(false);
         if (this.body) this.body.enable = false;
 
+        // Pool trail emitter: stop but keep for reuse (don't destroy)
         if (this.trail) {
             this.trail.stop();
-            const currentTrail = this.trail;
-            this.scene.time.delayedCall(500, () => {
-                if (currentTrail && currentTrail.active) currentTrail.destroy();
-            });
-            this.trail = null;
         }
 
+        // Keep light alive for pooling — will be reconfigured on next fire()
         if (this.light) {
             this.scene.lights.removeLight(this.light);
             this.light = null;

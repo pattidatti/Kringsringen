@@ -96,8 +96,7 @@ export const FantasyBook: React.FC<FantasyBookProps> = React.memo(({
     // Auto-switch tab based on mode when opening
     useEffect(() => {
         if (isOpen) {
-            if (mode === 'shop') setActiveTab('upgrades');
-            else setActiveTab('character');
+            setActiveTab('upgrades');
         }
     }, [isOpen, mode]);
 
@@ -127,7 +126,7 @@ export const FantasyBook: React.FC<FantasyBookProps> = React.memo(({
     };
 
     const renderStatusPage = () => (
-        <div className="space-y-4 font-crimson text-slate-800 animate-in fade-in duration-300">
+        <div className="space-y-4 font-crimson text-slate-800">
             <div className="flex items-center gap-4 mb-4 border-b border-red-900/20 pb-2">
                 <div className="w-16 h-16 bg-slate-200 border-2 border-slate-400 rounded-full flex items-center justify-center overflow-hidden">
                     {/* Placeholder Portrait */}
@@ -177,7 +176,7 @@ export const FantasyBook: React.FC<FantasyBookProps> = React.memo(({
         ];
 
         return (
-            <div className="flex flex-col h-full font-crimson animate-in fade-in duration-300">
+            <div className="flex flex-col h-full font-crimson">
                 {/* Boss warning banner */}
                 {bossComingUp >= 0 && (
                     <div className="mb-4 rounded-xl border border-red-600/60 bg-red-950/70 px-4 py-3 flex items-center gap-3 shadow-[0_0_20px_rgba(180,0,0,0.4)]">
@@ -287,7 +286,7 @@ export const FantasyBook: React.FC<FantasyBookProps> = React.memo(({
         const theme = CATEGORY_THEMES[activeShopCategory] || CATEGORY_THEMES['Karakter'];
 
         return (
-            <div className="flex flex-col h-full animate-in fade-in duration-300">
+            <div className="flex flex-col h-full">
                 <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 -mr-2">
                     <AnimatePresence mode="popLayout" initial={false}>
                         {isMultiplayer && partyState.length > 0 && (
@@ -424,6 +423,7 @@ export const FantasyBook: React.FC<FantasyBookProps> = React.memo(({
                         initial={{ scale: 0.8, opacity: 0, y: 20 }}
                         animate={{ scale: 1, opacity: 1, y: 0 }}
                         exit={{ scale: 0.8, opacity: 0, y: 20 }}
+                        transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
                         className="flex flex-col items-center gap-3"
                     >
                         {/* Level Complete Banner */}
@@ -461,7 +461,12 @@ export const FantasyBook: React.FC<FantasyBookProps> = React.memo(({
                             {renderTabButton('settings', 45)}
 
                             {/* Content Layer */}
-                            <div className="absolute inset-0 grid grid-cols-2 p-[6%] gap-[4%] pt-[3%] pb-[8%] font-crimson text-slate-900 overflow-hidden">
+                            <motion.div
+                                className="absolute inset-0 grid grid-cols-2 p-[6%] gap-[4%] pt-[3%] pb-[8%] font-crimson text-slate-900 overflow-hidden"
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                transition={{ delay: 0.18, duration: 0.2 }}
+                            >
                                 {activeTab === 'settings' ? (
                                     <div className="col-span-2 h-full">
                                         <SettingsContent inBookContext={true} />
@@ -508,7 +513,7 @@ export const FantasyBook: React.FC<FantasyBookProps> = React.memo(({
                                         </div>
                                     </>
                                 )}
-                            </div>
+                            </motion.div>
                         </div>
 
                         {/* Buttons below book */}
