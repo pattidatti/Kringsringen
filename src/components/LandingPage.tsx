@@ -77,7 +77,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart, onStartMP }) => {
         <div className="relative w-full h-screen overflow-hidden bg-slate-950">
             <audio
                 ref={audioRef}
-                src={import.meta.env.BASE_URL + 'assets/audio/bgs/forest_day.wav'}
+                src={import.meta.env.BASE_URL + 'assets/audio/bgs/forest_day.ogg'}
                 loop
             />
 
