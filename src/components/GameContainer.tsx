@@ -362,6 +362,10 @@ export const GameContainer: React.FC<GameContainerProps> = ({ networkConfig }) =
         const currentCoins = gameInstanceRef.current.registry.get('playerCoins') || 0;
         gameInstanceRef.current.registry.set('playerCoins', currentCoins - cost);
         mainScene.events.emit('apply-upgrade', upgradeId);
+
+        import('../game/AudioManager').then(({ AudioManager }) => {
+            AudioManager.instance.playSFX('upgrade_buy');
+        });
     }, []);
 
     const applyRevive = useCallback((targetId: string, cost: number) => {
@@ -371,6 +375,10 @@ export const GameContainer: React.FC<GameContainerProps> = ({ networkConfig }) =
         if (currentCoins >= cost) {
             gameInstanceRef.current.registry.set('playerCoins', currentCoins - cost);
             mainScene.events.emit('buy-revive', targetId);
+
+            import('../game/AudioManager').then(({ AudioManager }) => {
+                AudioManager.instance.playSFX('upgrade_buy');
+            });
         }
     }, []);
 

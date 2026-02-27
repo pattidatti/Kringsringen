@@ -335,4 +335,12 @@ export function createAnimations(scene: Phaser.Scene): void {
         frameRate: 14,
         repeat: 0
     });
+
+    // Dash Effect: 1472×576 @ 64×64 → 23 cols × 9 rows. Row 6 = frames 115–137
+    safeAnims({
+        key: 'player-dash-effect',
+        frames: scene.anims.generateFrameNumbers('dash_effect', { start: 115, end: 137 }),
+        frameRate: 45, // Faster frame rate for snappier spell feel
+        repeat: 0
+    });
 }

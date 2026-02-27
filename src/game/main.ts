@@ -668,7 +668,7 @@ class MainScene extends Phaser.Scene implements IMainScene {
         this.events.on('fireball-cast', () => AudioManager.instance.playSFX('fireball_cast'));
         this.events.on('frost-cast', () => AudioManager.instance.playSFX('ice_throw'));
         this.events.on('lightning-cast', () => AudioManager.instance.playSFX('fireball_cast')); // Using fireball_cast as placeholder
-        this.events.on('player-dash', () => AudioManager.instance.playSFX('swing')); // Using swing as placeholder
+        this.events.on('player-dash', () => AudioManager.instance.playSFX('dash'));
 
         // Listen for weapon changes
         this.registry.events.on('changedata-currentWeapon', () => {
@@ -1303,6 +1303,14 @@ class MainScene extends Phaser.Scene implements IMainScene {
             player.setAlpha(0.7);
             this.events.emit('player-dash');
 
+            // Dash Visual Effect
+            const dashFx = this.add.sprite(player.x, player.y, 'dash_effect');
+            dashFx.setDepth(player.depth + 1);
+            dashFx.setScale(2);
+            dashFx.play('player-dash-effect', true);
+            // Remove automatic destruction on animation complete,
+            // the tween will handle life cycle to ensure it stays during movement.
+
             // Movement via Tween for precision
             this.tweens.add({
                 targets: player,
@@ -1310,9 +1318,17 @@ class MainScene extends Phaser.Scene implements IMainScene {
                 y: player.y + dy * dashDistance,
                 duration: dashDuration,
                 ease: 'Cubic.out',
+                onUpdate: () => {
+                    if (dashFx.active) {
+                        dashFx.setPosition(player.x, player.y);
+                    }
+                },
                 onComplete: () => {
                     this.data.set('isDashing', false);
                     player.setAlpha(1);
+                    if (dashFx.active) {
+                        dashFx.destroy();
+                    }
                     this.combat.setDashIframe(false);
                     player.play('player-idle');
 

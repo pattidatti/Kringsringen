@@ -139,5 +139,7 @@ export const AUDIO_MANIFEST: SoundConfig[] = [
     { id: 'ice_throw', path: 'assets/audio/sfx/ice_throw.wav', category: 'sfx', volume: 0.5 },
     { id: 'ice_freeze', path: 'assets/audio/sfx/ice_freeze.wav', category: 'sfx', volume: 0.55, reverb: true },
     { id: 'frost_impact', path: 'assets/audio/sfx/frost_impact.wav', category: 'sfx', volume: 0.55 },
-    { id: 'dash', variants: ['assets/audio/sfx/sword_attack_1.wav', 'assets/audio/sfx/sword_attack_2.wav'], category: 'sfx', volume: 0.6, pitchVariance: 0.2 },
+    { id: 'dash', path: 'assets/audio/sfx/whoosh_1.wav', category: 'sfx', volume: 1.0, pitchVariance: 0.1 },
+    { id: 'upgrade_buy', path: 'assets/audio/sfx/coins_gather_quick.wav', category: 'sfx', volume: 0.5 },
+    { id: 'page_turn', path: 'assets/audio/sfx/page_turn.wav', category: 'sfx', volume: 0.5 },
 ];

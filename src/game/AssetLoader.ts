@@ -76,6 +76,9 @@ export function loadAssets(scene: Phaser.Scene): void {
     scene.load.spritesheet('lightning_projectile', 'assets/sprites/effects/lightning_projectile.png', { frameWidth: 64, frameHeight: 64 });
     scene.load.spritesheet('lightning_impact', 'assets/sprites/effects/lightning_impact.png', { frameWidth: 64, frameHeight: 64 });
 
+    // Dash Effect (1472×576 @ 64px → 23 columns × 9 rows)
+    scene.load.spritesheet('dash_effect', 'assets/sprites/effects/dash_effect.png', { frameWidth: 64, frameHeight: 64 });
+
     // Preload Audio
     AudioManager.instance.preload(scene);
 }

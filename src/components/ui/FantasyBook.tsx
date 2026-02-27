@@ -100,6 +100,15 @@ export const FantasyBook: React.FC<FantasyBookProps> = React.memo(({
         }
     }, [isOpen, mode]);
 
+    // Page turn sound effect
+    useEffect(() => {
+        if (isOpen) {
+            import('../../game/AudioManager').then(({ AudioManager }) => {
+                AudioManager.instance.playSFX('page_turn');
+            });
+        }
+    }, [activeTab, isOpen]);
+
     const renderTabButton = (key: TabKey, topOffset: number) => {
         const config = TABS[key];
         const isActive = activeTab === key;
