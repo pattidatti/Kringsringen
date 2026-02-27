@@ -1,3 +1,5 @@
+import { GAME_CONFIG } from './GameConfig';
+
 export type UpgradeCategory = 'Karakter' | 'Sverd' | 'Bue' | 'Magi' | 'Synergi';
 
 export interface UpgradeConfig {
@@ -23,7 +25,7 @@ export const UPGRADES: UpgradeConfig[] = [
         maxLevel: 20,
         basePrice: 40,
         priceScale: 1.5,
-        description: (lvl) => `+20 Maks HP (Nå: ${100 + (lvl) * 20})`
+        description: (lvl) => `+20 Maks HP (Nå: ${GAME_CONFIG.PLAYER.BASE_MAX_HP + (lvl) * 20})`
     },
     {
         id: 'speed',
@@ -33,7 +35,7 @@ export const UPGRADES: UpgradeConfig[] = [
         maxLevel: 10,
         basePrice: 50,
         priceScale: 1.6,
-        description: (lvl) => `+10 Fart (Nå: ${250 + (lvl) * 10})`
+        description: (lvl) => `+10 Fart (Nå: ${GAME_CONFIG.PLAYER.BASE_SPEED + (lvl) * 10})`
     },
     {
         id: 'regen',
@@ -64,7 +66,11 @@ export const UPGRADES: UpgradeConfig[] = [
         maxLevel: 6,
         basePrice: 80,
         priceScale: 1.7,
-        description: (lvl) => `-2 sek dash-cooldown (Nå: ${20 - lvl * 2} sek)`
+        description: (lvl) => {
+            const base = GAME_CONFIG.PLAYER.DASH_COOLDOWN_MS / 1000;
+            const current = base / (1 + lvl * 0.2);
+            return `-20% dash-cooldown (Nå: ${current.toFixed(1)} sek)`;
+        }
     },
     {
         id: 'dash_distance',
@@ -74,7 +80,7 @@ export const UPGRADES: UpgradeConfig[] = [
         maxLevel: 5,
         basePrice: 100,
         priceScale: 1.8,
-        description: (lvl) => `+50px dash-distanse (Nå: ${220 + lvl * 50}px)`
+        description: (lvl) => `+50px dash-distanse (Nå: ${GAME_CONFIG.PLAYER.DASH_DISTANCE + lvl * 50}px)`
     },
     {
         id: 'dash_lifesteal',
@@ -200,7 +206,7 @@ export const UPGRADES: UpgradeConfig[] = [
         maxLevel: 5,
         basePrice: 120,
         priceScale: 1.8,
-        description: (lvl) => `+20px eksplosionsradius (Nå: ${80 + lvl * 20}px)`
+        description: (lvl) => `+30px eksplosjonsradius (Nå: ${GAME_CONFIG.WEAPONS.FIREBALL.splashRadius + lvl * 30}px)`
     },
     {
         id: 'fire_speed',
@@ -242,7 +248,7 @@ export const UPGRADES: UpgradeConfig[] = [
         maxLevel: 5,
         basePrice: 120,
         priceScale: 1.8,
-        description: (lvl) => `+20px frysningsradius (Nå: ${100 + lvl * 20}px)`
+        description: (lvl) => `+20px frysningsradius (Nå: ${GAME_CONFIG.WEAPONS.FROST.radius + lvl * 20}px)`
     },
     {
         id: 'frost_slow',
@@ -252,7 +258,7 @@ export const UPGRADES: UpgradeConfig[] = [
         maxLevel: 5,
         basePrice: 150,
         priceScale: 2.0,
-        description: (lvl) => `+0.5s frys-tid (Nå: ${1.0 + lvl * 0.5}s)`
+        description: (lvl) => `+0.8s frys-tid (Nå: ${(1000 + lvl * 800) / 1000}s)`
     },
     {
         id: 'frost_shatter',
