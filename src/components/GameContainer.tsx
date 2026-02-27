@@ -115,11 +115,15 @@ export const GameContainer: React.FC<GameContainerProps> = React.memo(({ network
                 const mainScene = game.scene.getScene('MainScene') as IMainScene;
                 if (mainScene) {
                     mainScene.events.on('level-complete', () => {
+                        setLoadedPlayers(new Set());
+                        setSyncState(s => ({ ...s, loaded: 0 }));
                         setBookMode('shop');
                         setIsBookOpen(true);
                     });
 
                     mainScene.events.on('boss-defeated', () => {
+                        setLoadedPlayers(new Set());
+                        setSyncState(s => ({ ...s, loaded: 0 }));
                         game.registry.set('bossComingUp', -1);
                         setBookMode('shop');
                         setIsBookOpen(true);
@@ -137,7 +141,13 @@ export const GameContainer: React.FC<GameContainerProps> = React.memo(({ network
                                 });
                             }
                             if (networkConfig.role === 'host') {
-                                setLoadedPlayers(prev => new Set(prev).add(networkConfig.peer.id));
+                                setLoadedPlayers(prev => {
+                                    const next = new Set(prev).add(networkConfig.peer.id);
+                                    // Update sync state immediately for UI
+                                    const total = nm ? nm.getConnectedPeerCount() + 1 : 1;
+                                    setSyncState(s => ({ ...s, loaded: next.size, expected: total }));
+                                    return next;
+                                });
                             }
                         }
                     });
@@ -167,20 +177,36 @@ export const GameContainer: React.FC<GameContainerProps> = React.memo(({ network
                     mainScene.events.on('player_loaded', (data: any) => {
                         if (networkConfig?.role === 'host') {
                             setLoadedPlayers(prev => {
-                                if (prev.has(data.playerId)) return prev;
+                                if (prev.has(data.playerId)) {
+                                    // If we already had them but they are reporting again, 
+                                    // they might have missed the start signal due to a late connection.
+                                }
                                 const next = new Set(prev).add(data.playerId);
                                 const nm = (mainScene as any).networkManager;
                                 const total = nm ? nm.getConnectedPeerCount() + 1 : 1;
+
+                                // If host is NO LONGER loading, but a client just reported as loaded,
+                                // we MUST re-send the start signal to catch them up.
+                                if (!isLoadingLevel) {
+                                    console.log(`[Host] Late player ${data.playerId} loaded. Re-sending start signal.`);
+                                    const bossIdx = gameInstanceRef.current?.registry.get('bossComingUp') ?? -1;
+                                    nm?.sendTo(data.playerId, {
+                                        t: PacketType.GAME_EVENT,
+                                        ev: { type: 'start_level', data: { level: data.level, bossIndex: bossIdx } },
+                                        ts: Date.now()
+                                    });
+                                }
 
                                 nm?.broadcast({
                                     t: PacketType.GAME_EVENT,
                                     ev: { type: 'sync_players_state', data: { loaded: next.size, ready: readyPlayersRef.current.size, expected: total } },
                                     ts: Date.now()
                                 });
+
                                 setSyncState({ loaded: next.size, ready: readyPlayersRef.current.size, expected: total });
                                 gameInstanceRef.current?.registry.set('syncState', { loaded: next.size, ready: readyPlayersRef.current.size, expected: total });
 
-                                if (next.size >= total) {
+                                if (isLoadingLevel && next.size >= total) {
                                     const bossIdx = gameInstanceRef.current?.registry.get('bossComingUp') ?? -1;
                                     nm?.broadcast({
                                         t: PacketType.GAME_EVENT,
@@ -189,7 +215,8 @@ export const GameContainer: React.FC<GameContainerProps> = React.memo(({ network
                                     });
                                     setIsLoadingLevel(false);
                                     setIsWaitingReady(false);
-                                    setLoadedPlayers(new Set());
+                                    // Note: we DO NOT clear loadedPlayers here anymore, 
+                                    // so we can detect late joiners or retries correctly.
                                 }
                                 return next;
                             });
@@ -298,9 +325,8 @@ export const GameContainer: React.FC<GameContainerProps> = React.memo(({ network
                 const bossIdx = gameInstanceRef.current?.registry.get('bossComingUp') ?? -1;
                 nm.broadcast({ t: PacketType.GAME_EVENT, ev: { type: 'start_level', data: { bossIndex: bossIdx } }, ts: Date.now() });
                 setIsLoadingLevel(false);
-                setLoadedPlayers(new Set());
 
-                const nextState = { loaded: 0, ready: readyPlayers.size, expected: total };
+                const nextState = { loaded: loadedPlayers.size, ready: readyPlayers.size, expected: total };
                 nm.broadcast({ t: PacketType.GAME_EVENT, ev: { type: 'sync_players_state', data: nextState }, ts: Date.now() });
                 setSyncState(nextState);
                 gameInstanceRef.current?.registry.set('syncState', nextState);
