@@ -162,24 +162,30 @@ export class BossEnemy extends Enemy {
     private executeDashSequence(remaining: number): void {
         if (remaining <= 0 || !this.active || this.isDead) {
             this.isCharging = false;
+            this.isSpecialMovementActive = false; // Release movement control
             return;
         }
 
         const player = (this.scene as any).data?.get('player') as any;
         if (!player || !player.active) {
             this.isCharging = false;
+            this.isSpecialMovementActive = false;
             return;
         }
 
         this.isCharging = true;
+        this.isSpecialMovementActive = true; // Take exclusive movement control
         this.setTint(0xffaa00); // Orange tint for telegraph
 
         this.scene.time.delayedCall(300, () => {
-            if (!this.active || this.isDead) return;
+            if (!this.active || this.isDead) {
+                this.isSpecialMovementActive = false;
+                return;
+            }
             this.clearTint();
 
             const angle = Phaser.Math.Angle.Between(this.x, this.y, player.x, player.y);
-            const chargeSpeed = this.bossConfig.speed * 4.5; // Faster dash
+            const chargeSpeed = this.bossConfig.speed * 5.2; // Increased from 4.5
 
             this.setVelocity(
                 Math.cos(angle) * chargeSpeed,
@@ -189,7 +195,7 @@ export class BossEnemy extends Enemy {
             // Create movement ghosts/trail
             this.scene.time.addEvent({
                 delay: 50,
-                repeat: 8,
+                repeat: 12, // Increased from 8 to match longer duration
                 callback: () => {
                     if (!this.active) return;
                     const ghost = this.scene.add.sprite(this.x, this.y, this.texture.key, this.frame.name);
@@ -206,8 +212,11 @@ export class BossEnemy extends Enemy {
                 }
             });
 
-            this.scene.time.delayedCall(500, () => {
-                if (!this.active || this.isDead) return;
+            this.scene.time.delayedCall(750, () => { // Increased from 500
+                if (!this.active || this.isDead) {
+                    this.isSpecialMovementActive = false;
+                    return;
+                }
                 this.setVelocity(0, 0);
 
                 // Pause briefly between triple dashes

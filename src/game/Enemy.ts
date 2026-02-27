@@ -53,6 +53,8 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     private static readonly INTEREST_BUFFER = new Array(Enemy.NUM_RAYS).fill(0);
     private static readonly DANGER_BUFFER = new Array(Enemy.NUM_RAYS).fill(0);
 
+    protected isSpecialMovementActive: boolean = false;
+
     public get damage(): number {
         return this.config.baseDamage; // Will be updated in reset
     }
@@ -352,7 +354,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
                 this.postFX.clear();
             }
             // Throttled AI
-            if (time > this.lastAIUpdate + this.AI_UPDATE_INTERVAL) {
+            if (!this.isSpecialMovementActive && time > this.lastAIUpdate + this.AI_UPDATE_INTERVAL) {
                 this.lastAIUpdate = time;
                 this.updateAIPathing();
             }
@@ -528,14 +530,18 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
             const currentSpeed = (this.body as Phaser.Physics.Arcade.Body).speed;
 
             // If we have strong intent to move (maxScore > 0.3) but aren't moving much
-            if (maxScore > 0.3 && currentSpeed < speed * 0.2) {
+            // ULTRATHINK BUGFIX: Bosses (id === 'boss') get stuck easier due to size, 
+            // so we make their stuck detection more aggressive.
+            const stuckThreshold = this.id === 'boss' ? speed * 0.4 : speed * 0.2;
+            if (maxScore > 0.3 && currentSpeed < stuckThreshold) {
                 this.stuckTimer += delta;
             } else {
                 this.stuckTimer = Math.max(0, this.stuckTimer - delta * 2);
             }
 
-            // If stuck for > 300ms, start avoidance
-            if (this.stuckTimer > 300 && this.avoidanceTimer <= 0) {
+            // If stuck for > 200ms (boss) or 300ms (regular), start avoidance
+            const stuckDurationLimit = this.id === 'boss' ? 200 : 300;
+            if (this.stuckTimer > stuckDurationLimit && this.avoidanceTimer <= 0) {
                 this.avoidanceTimer = 1000; // 1 second of avoidance
                 // Choose direction based on which side of the danger buffer is clearer
                 let leftDanger = 0;
