@@ -65,14 +65,6 @@ export class LightningBolt extends Phaser.Physics.Arcade.Sprite {
         // Find nearest active enemy to target position that hasn't been hit
         this.targetEnemy = this.findNearestEnemy(targetX, targetY);
 
-        if (!this.targetEnemy) {
-            // No target found, deactivate immediately
-            this.setActive(false);
-            this.setVisible(false);
-            if (this.body) this.body.enable = false;
-            return;
-        }
-
         this.setActive(true);
         this.setVisible(true);
         this.setPosition(x, y);
@@ -100,7 +92,8 @@ export class LightningBolt extends Phaser.Physics.Arcade.Sprite {
             } else if (this.targetEnemy) {
                 this.currentAngle = Phaser.Math.Angle.Between(this.x, this.y, this.targetEnemy.x, this.targetEnemy.y);
             } else {
-                this.currentAngle = 0;
+                // Fallback: Angle towards the target cursor position if no mob found at cast
+                this.currentAngle = Phaser.Math.Angle.Between(this.x, this.y, targetX, targetY);
             }
 
             this.scene.physics.velocityFromRotation(this.currentAngle, this.speed, this.body.velocity);
@@ -315,18 +308,28 @@ export class LightningBolt extends Phaser.Physics.Arcade.Sprite {
 
         // Chain to next target if bounces remaining
         if (this.bouncesLeft > 0) {
-            this.scene.time.delayedCall(150, () => {
-                const nextTarget = this.findNearestEnemy(hitX, hitY);
-                if (nextTarget) {
-                    const mainScene = this.scene as any;
-                    const bolt = mainScene.lightningBolts.get(hitX, hitY) as LightningBolt;
-                    if (bolt) {
-                        const bounceBonus = mainScene.registry.get('lightningBounceBonus') || 1;
-                        const damage = this.damage * bounceBonus; // Apply bounce damage bonus
-                        bolt.fire(hitX, hitY, nextTarget.x, nextTarget.y, damage, this.bouncesLeft - 1, this.hitEnemies, undefined, this.colorVariant);
+            // ULTRATHINK BUGFIX: Pre-calculate the next target and capture current hit-set.
+            // This prevents the "double jump" race condition where the bolt object is recycled 
+            // by the pool BEFORE the 150ms delay fires. If we didn't capture these, a recycled 
+            // bolt might use a cleared hitEnemies set.
+            const nextTarget = this.findNearestEnemy(hitX, hitY);
+            const capturedHits = this.hitEnemies;
+            const capturedColor = this.colorVariant;
+
+            if (nextTarget) {
+                this.scene.time.delayedCall(150, () => {
+                    // Verify target is still valid after the brief pause
+                    if (nextTarget.active && !nextTarget.getIsDead()) {
+                        const mainScene = this.scene as any;
+                        const bolt = mainScene.lightningBolts.get(hitX, hitY) as LightningBolt;
+                        if (bolt) {
+                            const bounceBonus = mainScene.registry.get('lightningBounceBonus') || 1;
+                            const damage = this.damage * bounceBonus;
+                            bolt.fire(hitX, hitY, nextTarget.x, nextTarget.y, damage, this.bouncesLeft - 1, capturedHits, undefined, capturedColor);
+                        }
                     }
-                }
-            });
+                });
+            }
         }
 
         // Cleanup impact sprite logic (pool handles it now)
