@@ -351,7 +351,7 @@ export const UPGRADES: UpgradeConfig[] = [
         iconTint: 'drop-shadow(0 0 4px #ff5500) hue-rotate(45deg)', // Oransje glød
         requires: {
             'fire_damage': 3,
-            'frost_damage': 3
+            'frost_slow': 3
         }
     }
 ];

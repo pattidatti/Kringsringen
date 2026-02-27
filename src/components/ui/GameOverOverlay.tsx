@@ -91,18 +91,26 @@ const GameOverContent: React.FC<{ hp: number; partyDead: boolean }> = ({ hp: hpP
         }
     }, [playerName, score, level, wave, coins]);
 
-    const handleRestart = useCallback(() => {
+    const handleRestart = useCallback(async () => {
+        const trimmedName = playerName.trim();
+
+        // Auto-submit score if name provided and not already submitted
+        if (trimmedName && !submitted && !submitting) {
+            await handleSubmitScore();
+        }
+
         if (!isMultiplayer) {
             SaveManager.clearRun();
         }
 
         const game = getGameInstance();
-        game?.events.emit('request-retry');
+        const mainScene = game?.scene.getScene('MainScene');
+        mainScene?.events.emit('request-retry');
 
         if (isMultiplayer) {
             setIsWaitingRetry(true);
         }
-    }, [isMultiplayer]);
+    }, [isMultiplayer, playerName, submitted, submitting, handleSubmitScore]);
 
     const retryLabel = isMultiplayer
         ? (isWaitingRetry ? `Venter (${syncState.ready}/${syncState.expected})` : 'Prøv Igjen')

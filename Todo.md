@@ -58,11 +58,11 @@
 - [x] Når hele party er døde, skal man kunne starte på nytt uten å lage en helt ny server osv. Bare en retry knapp som dukker opp med readystate x/y spillere.  
 
 # Bugs
-- [ ] Boss battle kan bli hengede på spilleren (splash screen), selv om kampen er startet. 
+- [x] Boss battle kan bli hengede på spilleren (splash screen), selv om kampen er startet. 
 - [ ] Man kommer ikke lengre en lvl 5 
 - [x] Level blir av og til completet selv om det er fiender igjen. 
 - [x] Splash på fire staff trigger aldri. Er det fordi hitboxen til enemies ligger for langt utenfor kroppen og dermed er for langt unna andre, eller er er radius for liten for blast? eller annet?
-- [ ] Står på Thermal shock at Iskland makt kreves, men vi bruker/skal bruke permafrost her. 
+- [x] Står på Thermal shock at Iskland makt kreves, men vi bruker/skal bruke permafrost her. 
 - [ ] Prøv igjen knappen på singleplayer fungerer ikke. Det må også være slik at hvis en har skrevet inn navnet sitt og trykker rett på prøv igjen, så skal det registreres. 
 - [ ] Sjekke kolision på alle objekter i mappet. 
 - [x] Orkehøvding ikke synlig for andre enn host. 
