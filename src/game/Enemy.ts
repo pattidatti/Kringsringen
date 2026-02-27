@@ -632,13 +632,13 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         });
 
         if ((this.scene as any).poolManager) {
-            (this.scene as any).poolManager.getDamageText(this.x, this.y - 30, amount, isShared ? '#00ffff' : color);
+            (this.scene as any).poolManager.getDamageText(this.x, this.y - 30, amount, isShared ? '#bf00ff' : color);
         }
 
         // SOUL LINK: Share damage
         if (!isShared && this.linkedEnemy && this.linkedEnemy.active && !this.linkedEnemy.getIsDead()) {
             const sharedAmount = amount * 0.4;
-            this.linkedEnemy.takeDamage(sharedAmount, '#00ffff', true);
+            this.linkedEnemy.takeDamage(sharedAmount, '#bf00ff', true);
         }
 
         if (this.hp <= 0) {
