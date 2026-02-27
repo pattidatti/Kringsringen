@@ -14,6 +14,7 @@ export interface BossConfig {
     attackCooldown: number;
     music: string;          // AudioManifest ID
     phase2Threshold: number; // HP fraction that triggers phase 2 (0–1)
+    tint?: number;
 }
 
 export const BOSS_CONFIGS: BossConfig[] = [
@@ -73,7 +74,7 @@ export const BOSS_CONFIGS: BossConfig[] = [
         afterLevel: 8,
         name: 'Trollhersker Grak',
         subtitle: 'The Troll Warlord',
-        enemyType: 'elite_orc',
+        enemyType: 'wizard',
         hp: 3500,
         damage: 90,
         speed: 95,
@@ -84,6 +85,7 @@ export const BOSS_CONFIGS: BossConfig[] = [
         attackCooldown: 850,
         music: 'glitch_in_the_dungeon',
         phase2Threshold: 0.5,
+        tint: 0x55ff55,
     },
     {
         bossIndex: 4,

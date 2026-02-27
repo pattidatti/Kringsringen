@@ -173,11 +173,9 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         // Reset HP Bar
         this.updateHPBar();
 
-        // Visual Refinement: Healer and Fire Wizard permanent tint
-        if (this.enemyType === 'healer_wizard') {
-            this.setTint(0xaaffaa);
-        } else if (this.enemyType === 'wizard') {
-            this.setTint(0xffaaaa);
+        // Visual Refinement: Data-driven permanent tint
+        if (this.config.tint !== undefined) {
+            this.setTint(this.config.tint);
         }
     }
 
@@ -209,10 +207,8 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
                 this.setTint(0x88ccff);
                 this.scene.time.delayedCall(200, () => {
                     if (this.active && !this.isDead) {
-                        if (this.enemyType === 'healer_wizard') {
-                            this.setTint(0xaaffaa);
-                        } else if (this.enemyType === 'wizard') {
-                            this.setTint(0xffaaaa);
+                        if (this.config.tint !== undefined) {
+                            this.setTint(this.config.tint);
                         } else {
                             this.clearTint();
                         }
@@ -258,171 +254,152 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
                     this.setFlipX(flipX === 1);
 
                     // Healer and Fire Wizard visuals in client mode
-                    if (this.enemyType === 'healer_wizard') {
-                        this.setTint(0xaaffaa);
-
-                        // Weak glow during healing animation on client
-                        if (anim === 'healer-wizard-heal') {
-                            if (!this.attackLight) {
-                                this.attackLight = this.scene.lights.addLight(this.x, this.y, 80, 0x00ff00, 1.2);
-                            } else {
-                                this.attackLight.setPosition(this.x, this.y);
-                                this.attackLight.setVisible(true);
-                            }
-                        } else if (this.attackLight) {
-                            this.attackLight.setVisible(false);
-                        }
-                    } else if (this.enemyType === 'wizard') {
-                        this.setTint(0xffaaaa);
-                    }
-                } else {
-                    // Fallback interpolation if no buffer bounds exist yet
-                    const tx = this.getData('targetX');
-                    const ty = this.getData('targetY');
-                    if (tx !== undefined && ty !== undefined) {
-                        const dx = tx - this.x;
-                        const dy = ty - this.y;
-                        if (Math.abs(dx) > 150 || Math.abs(dy) > 150) {
-                            this.setPosition(tx, ty);
-                        } else {
-                            const moveFactor = Math.min(1, delta / 40);
-                            this.x += dx * moveFactor;
-                            this.y += dy * moveFactor;
-                        }
-                    }
+                } else if (this.config.tint !== undefined) {
+                    this.setTint(this.config.tint);
                 }
-            }
-
-            if (this.shadow) this.shadow.setPosition(this.x, this.y + (this.height * this.scaleY * 0.3));
-            this.updateHPBar();
-            return;
-        }
-
-        if (this.isDead || this.isPushingBack || this.isStunned) {
-            if (this.isStunned && this.body) {
-                this.setVelocity(0, 0);
-            }
-            return;
-        }
-        if (!this.body) return;
-
-        const nearestTarget = this.getNearestTarget();
-        const distance = Phaser.Math.Distance.Between(this.x, this.y, nearestTarget.x, nearestTarget.y);
-        const hasAttackAnim = this.config.spriteInfo.type === 'spritesheet' && this.config.spriteInfo.anims?.attack;
-
-        if (hasAttackAnim && distance < this.attackRange && time > this.lastAttackTime + this.attackCooldown) {
-            this.isAttacking = true;
-            this.lastAttackTime = time;
-            this.setVelocity(0, 0);
-            if (this.config.spriteInfo.anims?.attack) {
-                this.hasHit = false;
-                this.play(this.config.spriteInfo.anims.attack);
-
-                // Attack animation completion handler
-                this.once(`animationcomplete-${this.config.spriteInfo.anims.attack}`, () => {
-                    if (this.active) {
-                        this.isAttacking = false;
-                        if (!this.isDead && this.config.spriteInfo.anims?.walk) {
-                            this.play(this.config.spriteInfo.anims.walk);
-                        }
-                    }
-                });
-
-                // Attack start handler
-                this.once(`animationstart-${this.config.spriteInfo.anims.attack}`, () => {
-                    this.hasHit = false;
-                });
-            }
-        }
-
-        if (this.isAttacking) {
-            this.setVelocity(0, 0);
-
-            // Special Visuals for Healer Wizard during cast
-            // Refined: We maintain the tint, and the Light2D provides the "glow"
-            if (this.enemyType === 'healer_wizard') {
-                this.setTint(0xaaffaa);
-            } else if (this.enemyType === 'wizard') {
-                this.setTint(0xffaaaa);
-            }
-
-            // ULTRATHINK BUGFIX: Use native Light2D for guaranteed visibility
-            if (this.config.attackGlowColor !== undefined) {
-                if (!this.attackLight) {
-                    // ADJUST HERE: (x, y, radius, color, intensity)
-                    // Lower radius and intensity to make the glow subtle.
-                    this.attackLight = this.scene.lights.addLight(this.x, this.y, 60, this.config.attackGlowColor, 0.5);
-                }
-                this.attackLight.setPosition(this.x, this.y);
-                this.attackLight.setVisible(true);
-            }
-        } else {
-            // Restore Light2D for ambient consistency
-            if (this.attackLight) {
+            } else if (this.attackLight) {
                 this.attackLight.setVisible(false);
             }
-
-            // Clear glow if not attacking
-            if (this.config.attackGlowColor !== undefined && this.postFX.list.length > 0) {
-                this.postFX.clear();
-            }
-            // Throttled AI
-            if (!this.isSpecialMovementActive && time > this.lastAIUpdate + this.AI_UPDATE_INTERVAL) {
-                this.lastAIUpdate = time;
-                this.updateAIPathing();
-            }
-
-            if (this.body.velocity.x !== 0) {
-                this.setFlipX(this.body.velocity.x < 0);
-            }
-        }
-
-        // Damage Frame Logic (Decoupled from Physics)
-        if (this.isAttacking && hasAttackAnim && this.anims.currentAnim?.key === this.config.spriteInfo.anims?.attack) {
-            const currentFrameIndex = this.anims.currentFrame?.index || 0;
-
-            // Check for Damage Frame
-            const damageFrame = this.config.attackDamageFrame ?? this.DEFAULT_DAMAGE_FRAME;
-            if (currentFrameIndex === damageFrame && !this.hasHit) {
-                if (this.enemyType === 'healer_wizard') {
-                    this.hasHit = true;
-                    const target = this.getNearestDamagedAlly();
-                    if (target) {
-                        this.scene.events.emit('enemy-heal-ally', this, target, this.damage);
-                    }
+        } else {
+            // Fallback interpolation if no buffer bounds exist yet
+            const tx = this.getData('targetX');
+            const ty = this.getData('targetY');
+            if (tx !== undefined && ty !== undefined) {
+                const dx = tx - this.x;
+                const dy = ty - this.y;
+                if (Math.abs(dx) > 150 || Math.abs(dy) > 150) {
+                    this.setPosition(tx, ty);
                 } else {
-                    const target = this.getNearestTarget();
-                    if (target && target.active) {
-                        const distance = Phaser.Math.Distance.Between(this.x, this.y, target.x, target.y);
+                    const moveFactor = Math.min(1, delta / 40);
+                    this.x += dx * moveFactor;
+                    this.y += dy * moveFactor;
+                }
+            }
 
-                        if (this.config.rangedProjectile) {
-                            this.hasHit = true;
-                            // Fire Projectile
-                            const angle = Phaser.Math.Angle.Between(this.x, this.y, target.x, target.y);
-                            this.scene.events.emit('enemy-fire-projectile', this.x, this.y, angle, this.damage, this.config.rangedProjectile);
-                        } else if (distance <= this.attackRange + 10) {
-                            this.hasHit = true;
-                            // Emit to scene - mainScene identifies which player was hit
-                            this.scene.events.emit('enemy-hit-player', this.damage, this.enemyType, this.x, this.y, target);
+            if (this.isDead || this.isPushingBack || this.isStunned) {
+                if (this.isStunned && this.body) {
+                    this.setVelocity(0, 0);
+                }
+                return;
+            }
+            if (!this.body) return;
+
+            const nearestTarget = this.getNearestTarget();
+            const distance = Phaser.Math.Distance.Between(this.x, this.y, nearestTarget.x, nearestTarget.y);
+            const hasAttackAnim = this.config.spriteInfo.type === 'spritesheet' && this.config.spriteInfo.anims?.attack;
+
+            if (hasAttackAnim && distance < this.attackRange && time > this.lastAttackTime + this.attackCooldown) {
+                this.isAttacking = true;
+                this.lastAttackTime = time;
+                this.setVelocity(0, 0);
+                if (this.config.spriteInfo.anims?.attack) {
+                    this.hasHit = false;
+                    this.play(this.config.spriteInfo.anims.attack);
+
+                    // Attack animation completion handler
+                    this.once(`animationcomplete-${this.config.spriteInfo.anims.attack}`, () => {
+                        if (this.active) {
+                            this.isAttacking = false;
+                            if (!this.isDead && this.config.spriteInfo.anims?.walk) {
+                                this.play(this.config.spriteInfo.anims.walk);
+                            }
+                        }
+                    });
+
+                    // Attack start handler
+                    this.once(`animationstart-${this.config.spriteInfo.anims.attack}`, () => {
+                        this.hasHit = false;
+                    });
+                }
+            }
+
+            if (this.isAttacking) {
+                this.setVelocity(0, 0);
+
+                // Special Visuals for Healer Wizard during cast
+                // Refined: We maintain the tint, and the Light2D provides the "glow"
+                if (this.config.tint !== undefined) {
+                    this.setTint(this.config.tint);
+                }
+
+                // ULTRATHINK BUGFIX: Use native Light2D for guaranteed visibility
+                if (this.config.attackGlowColor !== undefined) {
+                    if (!this.attackLight) {
+                        // ADJUST HERE: (x, y, radius, color, intensity)
+                        // Lower radius and intensity to make the glow subtle.
+                        this.attackLight = this.scene.lights.addLight(this.x, this.y, 60, this.config.attackGlowColor, 0.5);
+                    }
+                    this.attackLight.setPosition(this.x, this.y);
+                    this.attackLight.setVisible(true);
+                }
+            } else {
+                // Restore Light2D for ambient consistency
+                if (this.attackLight) {
+                    this.attackLight.setVisible(false);
+                }
+
+                // Clear glow if not attacking
+                if (this.config.attackGlowColor !== undefined && this.postFX.list.length > 0) {
+                    this.postFX.clear();
+                }
+                // Throttled AI
+                if (!this.isSpecialMovementActive && time > this.lastAIUpdate + this.AI_UPDATE_INTERVAL) {
+                    this.lastAIUpdate = time;
+                    this.updateAIPathing();
+                }
+
+                if (this.body.velocity.x !== 0) {
+                    this.setFlipX(this.body.velocity.x < 0);
+                }
+            }
+
+            // Damage Frame Logic (Decoupled from Physics)
+            if (this.isAttacking && hasAttackAnim && this.anims.currentAnim?.key === this.config.spriteInfo.anims?.attack) {
+                const currentFrameIndex = this.anims.currentFrame?.index || 0;
+
+                // Check for Damage Frame
+                const damageFrame = this.config.attackDamageFrame ?? this.DEFAULT_DAMAGE_FRAME;
+                if (currentFrameIndex === damageFrame && !this.hasHit) {
+                    if (this.enemyType === 'healer_wizard') {
+                        this.hasHit = true;
+                        const target = this.getNearestDamagedAlly();
+                        if (target) {
+                            this.scene.events.emit('enemy-heal-ally', this, target, this.damage);
+                        }
+                    } else {
+                        const target = this.getNearestTarget();
+                        if (target && target.active) {
+                            const distance = Phaser.Math.Distance.Between(this.x, this.y, target.x, target.y);
+
+                            if (this.config.rangedProjectile) {
+                                this.hasHit = true;
+                                // Fire Projectile
+                                const angle = Phaser.Math.Angle.Between(this.x, this.y, target.x, target.y);
+                                this.scene.events.emit('enemy-fire-projectile', this.x, this.y, angle, this.damage, this.config.rangedProjectile);
+                            } else if (distance <= this.attackRange + 10) {
+                                this.hasHit = true;
+                                // Emit to scene - mainScene identifies which player was hit
+                                this.scene.events.emit('enemy-hit-player', this.damage, this.enemyType, this.x, this.y, target);
+                            }
                         }
                     }
                 }
             }
-        }
 
-        if (this.shadow) {
-            this.shadow.setPosition(this.x, this.y + (this.height * this.scaleY * 0.3));
-        }
+            if (this.shadow) {
+                this.shadow.setPosition(this.x, this.y + (this.height * this.scaleY * 0.3));
+            }
 
-        this.updateHPBar();
+            this.updateHPBar();
 
-        if (!this.isClientMode && this.active) {
-            const now = (this.scene as any).networkManager ? (this.scene as any).networkManager.getServerTime() : Date.now();
-            this.positionHistory.push([now, this.x, this.y]);
+            if (!this.isClientMode && this.active) {
+                const now = (this.scene as any).networkManager ? (this.scene as any).networkManager.getServerTime() : Date.now();
+                this.positionHistory.push([now, this.x, this.y]);
 
-            // Retain up to 1000ms of history for lag compensation
-            while (this.positionHistory.length > 0 && now - this.positionHistory[0][0] > 1000) {
-                this.positionHistory.shift();
+                // Retain up to 1000ms of history for lag compensation
+                while (this.positionHistory.length > 0 && now - this.positionHistory[0][0] > 1000) {
+                    this.positionHistory.shift();
+                }
             }
         }
     }
@@ -649,8 +626,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         this.scene.time.delayedCall(100, () => {
             if (this.active && !this.isDead && !this.predictedDeadUntil) {
                 if (this.isStunned) this.setTint(0x8888ff);
-                else if (this.enemyType === 'healer_wizard') this.setTint(0xaaffaa);
-                else if (this.enemyType === 'wizard') this.setTint(0xffaaaa);
+                else if (this.config.tint !== undefined) this.setTint(this.config.tint);
                 else this.clearTint();
             }
         });
@@ -832,9 +808,11 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         this.stunTimer = this.scene.time.delayedCall(duration, () => {
             if (this.active && !this.isDead) {
                 this.isStunned = false;
-                this.clearTint();
-                if (this.enemyType === 'healer_wizard') this.setTint(0xaaffaa);
-                else if (this.enemyType === 'wizard') this.setTint(0xffaaaa);
+                if (this.config.tint !== undefined) {
+                    this.setTint(this.config.tint);
+                } else {
+                    this.clearTint();
+                }
             }
         });
     }
@@ -868,12 +846,12 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
             if (this.isDead) {
                 this.setTint(0x444444);
             } else {
-                this.clearTint();
                 if (this.isStunned) {
                     this.setTint(0x8888ff);
+                } else if (this.config.tint !== undefined) {
+                    this.setTint(this.config.tint);
                 } else {
-                    if (this.enemyType === 'healer_wizard') this.setTint(0xaaffaa);
-                    else if (this.enemyType === 'wizard') this.setTint(0xffaaaa);
+                    this.clearTint();
                 }
 
                 if (this.config.spriteInfo.anims?.walk && !this.isStunned) {

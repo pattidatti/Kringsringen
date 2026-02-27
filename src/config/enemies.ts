@@ -21,6 +21,7 @@ export interface EnemyConfig {
     rangedProjectile?: 'arrow' | 'fireball' | 'frostball';
     attackRange?: number;
     attackGlowColor?: number;
+    tint?: number;
 }
 
 export const ENEMY_TYPES: Record<string, EnemyConfig> = {
@@ -204,7 +205,8 @@ export const ENEMY_TYPES: Record<string, EnemyConfig> = {
         knockbackResistance: 0.3,
         attackDamageFrame: 5,
         rangedProjectile: 'frostball',
-        attackGlowColor: 0x00ffff
+        attackGlowColor: 0x00ffff,
+        tint: 0x88ccff
     },
     wizard: {
         id: 'wizard',
@@ -226,7 +228,8 @@ export const ENEMY_TYPES: Record<string, EnemyConfig> = {
         knockbackResistance: 0.3,
         attackDamageFrame: 5,
         rangedProjectile: 'fireball',
-        attackGlowColor: 0xffaa00
+        attackGlowColor: 0xffaa00,
+        tint: 0xffaaaa
     },
     skeleton_archer: {
         id: 'skeleton_archer',
@@ -269,6 +272,7 @@ export const ENEMY_TYPES: Record<string, EnemyConfig> = {
         bodySize: { width: 30, height: 50 },
         knockbackResistance: 0.3,
         attackDamageFrame: 4,
-        attackGlowColor: 0x00ff00
+        attackGlowColor: 0x00ff00,
+        tint: 0xaaffaa
     }
 };

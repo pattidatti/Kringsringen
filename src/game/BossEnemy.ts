@@ -50,6 +50,11 @@ export class BossEnemy extends Enemy {
         this.scene.registry.set('bossPhase', 1);
         this.scene.registry.set('isBossActive', true);
 
+        // Apply boss-specific tint if defined
+        if (config.tint !== undefined) {
+            this.setTint(config.tint);
+        }
+
         // Play boss music
         AudioManager.instance.playBGM(config.music);
 

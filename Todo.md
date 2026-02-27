@@ -12,7 +12,7 @@
 
 # Dash
 - [x] Dash må implementeres, med en cooldown, 20 sec default. Hotkey Shift (må også ligges inn i onboarding. ) Spilleren forflytter seg et stykke i den retningen man peker, og kan ikke skade fiender mens man dasher, man tar heller ikke skade i dash. Vi må se om vi enkelt kan få til en liten dash animation, eller effekt som indikerer det for spiller, samt en liten swoosh-lyd (bruk placeholder, skal finne riktig senere). Vi må også se om det er mulig å få til en liten dash-cooldown bar, eller noe som indikerer hvor lenge til man kan dash igjen. Denne kan gjerne ligge rett over actionbar. Vi må ha upgrades til dash i boken, som reduserer cooldown, øker distanse, og kanskje gir en liten bonus på noe annet. 
--[ ] Vindstøt upgrade, teksten gjenspeiler ikke hva nye dasj er. Default er 7 sec nå. -1 pr upgrade. 
+-[x] Vindstøt upgrade, teksten gjenspeiler ikke hva nye dasj er. Default er 7 sec nå. -1 pr upgrade. 
 
 # Score 
 - [x] Score ingame oppe ved siden av mynter
@@ -42,10 +42,10 @@
 - Lighting ser fremdeles ikke helt bra ut. 
 - Lighting er fremdeles for overpowered, seeking må reduseres enda mer.  
 - [x] Ser ut som man kan caste fortere enn cooldownen tillater. 
-- [ ] Finne en annen uppgrade enn å kunne caste flere lyn samtidig ut fra spilleren. 
-- [ ] Rebalansere upgrades og skade mellom alle spells og våpen. 
-- [ ] Lightingstaff jumper og treffer samme target, det skal alltid gå til nytt, ikke dobbel damage på ett.
-- [ ] Lightingstaff vil ikke skyte hvis du sikter i en retning det ikke er mobs.  
+- [x] Finne en annen uppgrade enn å kunne caste flere lyn samtidig ut fra spilleren. 
+- [x] Rebalansere upgrades og skade mellom alle spells og våpen. 
+- [x] Lightingstaff jumper og treffer samme target, det skal alltid gå til nytt, ikke dobbel damage på ett.
+- [x] Lightingstaff vil ikke skyte hvis du sikter i en retning det ikke er mobs.  
 # musikk
 - [x] Må bytte musikk hvert level. 
 - [x] Er placeholder lyd på dash
@@ -63,7 +63,7 @@
 - [x] Level blir av og til completet selv om det er fiender igjen. 
 - [x] Splash på fire staff trigger aldri. Er det fordi hitboxen til enemies ligger for langt utenfor kroppen og dermed er for langt unna andre, eller er er radius for liten for blast? eller annet?
 - [x] Står på Thermal shock at Iskland makt kreves, men vi bruker/skal bruke permafrost her. 
-- [ ] Prøv igjen knappen på singleplayer fungerer ikke. Det må også være slik at hvis en har skrevet inn navnet sitt og trykker rett på prøv igjen, så skal det registreres. 
+- [x] Prøv igjen knappen på singleplayer fungerer ikke. Det må også være slik at hvis en har skrevet inn navnet sitt og trykker rett på prøv igjen, så skal det registreres. 
 - [ ] Sjekke kolision på alle objekter i mappet. 
 - [x] Orkehøvding ikke synlig for andre enn host. 
 - [x] HP bar for alle andre enn host, er cracy stor, virker som å justere seg når de tar damage. 
