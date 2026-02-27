@@ -9,6 +9,8 @@ export class Arrow extends Phaser.Physics.Arcade.Sprite {
     private startX: number = 0;
     private startY: number = 0;
     private trail: Phaser.GameObjects.Particles.ParticleEmitter | null = null;
+    private light: Phaser.GameObjects.Light | null = null;
+    private glowEffect: Phaser.FX.Glow | null = null;
     private speed: number = 700;
     private pierceCount: number = 0;
     private hitEnemies: WeakSet<any> = new WeakSet();
@@ -117,6 +119,20 @@ export class Arrow extends Phaser.Physics.Arcade.Sprite {
         this.setRotation(angle);
         if (this.scene.lights.active) this.setPipeline('Light2D');
 
+        // Add glow post-FX (reuse on pool recycle)
+        if (!this.glowEffect) {
+            this.glowEffect = this.postFX.addGlow(0xffdd88, 3, 0, false, 0.1, 8);
+        }
+
+        // Add dynamic light
+        if (this.scene.lights.active) {
+            if (this.light) {
+                this.scene.lights.removeLight(this.light);
+                this.light = null;
+            }
+            this.light = this.scene.lights.addLight(x, y, 150, 0xffdd88, 0.8);
+        }
+
         if (this.trail) {
             this.trail.start();
             this.trail.follow = this;
@@ -145,6 +161,18 @@ export class Arrow extends Phaser.Physics.Arcade.Sprite {
         if (this.body) this.body.enable = false;
         if (this.trail) {
             this.trail.stop();
+        }
+        if (this.light) {
+            const light = this.light;
+            light.setPosition(this.x, this.y).setRadius(200).setIntensity(1.5);
+            this.scene.tweens.add({
+                targets: light,
+                intensity: 0,
+                radius: 280,
+                duration: 300,
+                onComplete: () => { this.scene.lights.removeLight(light); }
+            });
+            this.light = null;
         }
     }
 
@@ -180,6 +208,10 @@ export class Arrow extends Phaser.Physics.Arcade.Sprite {
 
     update() {
         if (!this.active) return;
+
+        if (this.light) {
+            this.light.setPosition(this.x, this.y);
+        }
 
         const distance = Phaser.Math.Distance.Between(this.startX, this.startY, this.x, this.y);
         if (distance > this.maxDistance) {
