@@ -15,10 +15,15 @@ export const BossSplashScreen: React.FC = () => {
         if (splashVisible) {
             setDisplayedName(bossName);
             setLocalVisible(true);
+
+            // Auto-hide after duration if not hidden by registry first
             const timer = setTimeout(() => setLocalVisible(false), SPLASH_DURATION_MS - 400);
             return () => clearTimeout(timer);
+        } else {
+            setLocalVisible(false);
         }
-    }, [splashVisible, bossName]);
+    }, [splashVisible]); // Removed bossName from deps to prevent re-triggering if it updates mid-splash.
+    // bossName is now set in main.ts before splashVisible, so it will be correct on mount.
 
     return (
         <AnimatePresence>

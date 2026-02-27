@@ -556,6 +556,11 @@ class MainScene extends Phaser.Scene implements IMainScene {
         // Boss fight start
         this.events.on('start-boss', (bossIndex: number) => {
             // Show splash screen, then spawn boss
+            const config = BOSS_CONFIGS[bossIndex];
+            if (config) {
+                this.registry.set('bossName', config.name);
+            }
+
             this.registry.set('bossSplashVisible', true);
             this.time.delayedCall(3200, () => {
                 this.registry.set('bossSplashVisible', false);
