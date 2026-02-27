@@ -41,6 +41,10 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     /** History buffer for Lag Compensation (Host only). Stores [timestamp, x, y] tuples. */
     public positionHistory: [number, number, number][] = [];
 
+    private stuckTimer: number = 0;
+    private avoidanceTimer: number = 0;
+    private avoidanceDirection: number = 1; // 1 for right, -1 for left
+
     /** Jitter buffer for smooth interpolation (Client only). */
     private jitterBuffer: JitterBuffer<PackedEnemy> | null = null;
 
@@ -128,6 +132,10 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 
         this.predictedDeadUntil = 0;
         this.predictedHP = this.hp;
+
+        this.stuckTimer = 0;
+        this.avoidanceTimer = 0;
+        this.avoidanceDirection = 1;
 
         // Clear slow state
         if (this.slowTimer) {
@@ -513,7 +521,38 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         }
 
         if (bestDir !== -1) {
-            const moveAngle = (bestDir / numRays) * Math.PI * 2;
+            let moveAngle = (bestDir / numRays) * Math.PI * 2;
+
+            // --- Stuck Detection & Lateral Avoidance (U-trap Eradication) ---
+            const delta = this.scene.game.loop.delta;
+            const currentSpeed = (this.body as Phaser.Physics.Arcade.Body).speed;
+
+            // If we have strong intent to move (maxScore > 0.3) but aren't moving much
+            if (maxScore > 0.3 && currentSpeed < speed * 0.2) {
+                this.stuckTimer += delta;
+            } else {
+                this.stuckTimer = Math.max(0, this.stuckTimer - delta * 2);
+            }
+
+            // If stuck for > 300ms, start avoidance
+            if (this.stuckTimer > 300 && this.avoidanceTimer <= 0) {
+                this.avoidanceTimer = 1000; // 1 second of avoidance
+                // Choose direction based on which side of the danger buffer is clearer
+                let leftDanger = 0;
+                let rightDanger = 0;
+                for (let i = 1; i <= 4; i++) {
+                    leftDanger += dangers[(bestDir - i + numRays) % numRays];
+                    rightDanger += dangers[(bestDir + i) % numRays];
+                }
+                this.avoidanceDirection = leftDanger <= rightDanger ? -1 : 1;
+            }
+
+            if (this.avoidanceTimer > 0) {
+                this.avoidanceTimer -= delta;
+                // Shift move angle by ~90 degrees laterally
+                moveAngle += (Math.PI / 2) * this.avoidanceDirection;
+            }
+
             this.setVelocity(
                 Math.cos(moveAngle) * speed,
                 Math.sin(moveAngle) * speed

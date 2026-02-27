@@ -2,7 +2,7 @@
 - [x] Pil og bue, med egen hotkey
 - [x] Spells - med spelleffekts
 - [x] Ulike maps - Samme trær rundt og slikt, men erstatte noen gress tiles med litt annet snacks. 
-- [ ] Ulike mobs med ranged og spells (finne sprite for mages)
+- [x] Ulike mobs med ranged og spells (finne sprite for mages)
 - [x] Faser per map/lvl. 
 - [ ] Quester/challenges 
 - [ ] Powerups man kan finne på kartet. 
@@ -17,7 +17,7 @@
 - [x] Score ingame oppe ved siden av mynter
 
 # Boss battles
-- [ ] Orkehøvding er altfor lett å drepe. Trenger litt mer hp, bør være raskere, bruke dash? Kom med forslag. 
+- [x] Orkehøvding er altfor lett å drepe. Trenger litt mer hp, bør være raskere, bruke dash? Kom med forslag. 
 - Sjekke at alle bosser fungerer riktig, har animations osv. 
 -[x] Orkehøvding har noe feil med hitbox, får ikke til å skade den. Bare lighting med seeking greier å treffe, alt annen bommer totalt, går rett gjennom. 
 -[x] Orkehøvding virker til å bli svært lett stuck, og kan ikke bevege seg; blir dermed ingen stor trussel. 
@@ -46,7 +46,7 @@
 - [x] Når man bytter side i boken skal det være en lydeffekt public/assets/audio/sfx/page_turn.wav
 
 # MP
-- [ ] Når hele party er døde, skal man kunne starte på nytt uten å lage en helt ny server osv. Bare en retry knapp som dukker opp med readystate x/y spillere.  
+- [x] Når hele party er døde, skal man kunne starte på nytt uten å lage en helt ny server osv. Bare en retry knapp som dukker opp med readystate x/y spillere.  
 
 # Bugs
 - [x] Orkehøvding ikke synlig for andre enn host. 
