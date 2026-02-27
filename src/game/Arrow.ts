@@ -17,6 +17,7 @@ export class Arrow extends Phaser.Physics.Arcade.Sprite {
     private hitCount: number = 0;
     private explosiveLevel: number = 0;
     private singularityLevel: number = 0;
+    private poisonLevel: number = 0;
 
     constructor(scene: Phaser.Scene, x: number, y: number) {
         super(scene, x, y, 'arrow');
@@ -90,6 +91,11 @@ export class Arrow extends Phaser.Physics.Arcade.Sprite {
             e.pushback(this.startX, this.startY, 150);
         }
 
+        // Apply poison on impact
+        if (this.poisonLevel > 0) {
+            e.applyPoison(this.poisonLevel, this.damage);
+        }
+
         // Handle explosion on impact
         if (this.explosiveLevel > 0) {
             this.explode(e.x, e.y);
@@ -102,7 +108,7 @@ export class Arrow extends Phaser.Physics.Arcade.Sprite {
         }
     }
 
-    fire(x: number, y: number, angle: number, damage: number, speed: number = 700, pierceCount: number = 0, explosiveLevel: number = 0, singularityLevel: number = 0) {
+    fire(x: number, y: number, angle: number, damage: number, speed: number = 700, pierceCount: number = 0, explosiveLevel: number = 0, singularityLevel: number = 0, poisonLevel: number = 0) {
         this.startX = x;
         this.startY = y;
         this.damage = damage;
@@ -110,6 +116,7 @@ export class Arrow extends Phaser.Physics.Arcade.Sprite {
         this.pierceCount = pierceCount;
         this.explosiveLevel = explosiveLevel;
         this.singularityLevel = singularityLevel;
+        this.poisonLevel = poisonLevel;
         this.hitEnemies = new WeakSet();
         this.hitCount = 0;
 

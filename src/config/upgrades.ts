@@ -323,6 +323,17 @@ export const UPGRADES: UpgradeConfig[] = [
         description: (lvl) => `Piler skaper et gravitasjonsfelt (Nå: ${150 + lvl * 30}px radius)`
     },
     {
+        id: 'poison_arrow',
+        title: 'Giftpil',
+        icon: 'item_bow',
+        category: 'Bue',
+        maxLevel: 3,
+        basePrice: 500,
+        priceScale: 2.5,
+        description: (lvl) => `Piler forgifter fiender (8% pilskade/tikk i ${[4, 6, 8][lvl - 1]} tikk)`,
+        iconTint: 'hue-rotate(80deg) brightness(1.1) drop-shadow(0 0 2px #00cc44)'
+    },
+    {
         id: 'magic_soul_link',
         title: 'Sjelelenke',
         icon: 'item_lightning_staff',

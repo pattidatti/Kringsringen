@@ -136,6 +136,10 @@ export class PlayerStatsManager {
         this.scene.registry.set('lightningStunChance', ltgStunLvl * 0.1); // 10% per level
         this.scene.registry.set('lightningBounceBonus', 1 + ltgVoltageLvl * 0.15); // +15% per bounce per level? No, let's keep it simple: 15% per level total bounce bonus
 
+        // Poison arrow
+        const poisonLvl = levels['poison_arrow'] || 0;
+        this.scene.registry.set('playerPoisonLevel', poisonLvl);
+
         // Advanced Upgrades
         const singularityLvl = levels['bow_singularity'] || 0;
         const soulLinkLvl = levels['magic_soul_link'] || 0;

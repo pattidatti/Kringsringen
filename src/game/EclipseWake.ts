@@ -66,11 +66,10 @@ export class EclipseWake extends Phaser.GameObjects.Sprite {
         const mainScene = this.scene as any;
         const radius = 60;
 
-        // Find enemies in the wake
-        const enemies = mainScene.spatialGrid?.getNearby(this.x, this.y, radius) || [];
-        for (const enemy of enemies) {
-            const e = enemy as any;
-            if (e.active && !e.getIsDead()) {
+        const nearby = mainScene.spatialGrid?.findNearby({ x: this.x, y: this.y, width: 0, height: 0 }, radius) || [];
+        for (const entry of nearby) {
+            const e = entry.ref as any;
+            if (e && e.active && !e.getIsDead()) {
                 e.takeDamage(this.damage, '#ff00ff');
             }
         }

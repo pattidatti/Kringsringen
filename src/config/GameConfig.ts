@@ -154,12 +154,12 @@ export const GAME_CONFIG = {
             attackGlowColor: 0xfff9e0
         },
         HEALER_WIZARD: {
-            baseHP: 120,
-            baseDamage: 20, // This will represent heal amount
-            baseSpeed: 80,
-            baseXP: 45,
+            baseHP: 150,
+            baseDamage: 50, // Heal amount per cast
+            baseSpeed: 95,
+            baseXP: 55,
             attackRange: 350,
-            attackCooldown: 3000,
+            attackCooldown: 2000,
             scale: 1.8,
             bodySize: { width: 30, height: 50 },
             knockbackResistance: 0.3,
@@ -210,6 +210,12 @@ export const GAME_CONFIG = {
             searchRadius: 400,
             turnRate: 0.8,
             cooldown: 800
+        },
+        POISON: {
+            damageFactor: 0.08,           // 8% of arrow damage per tick
+            tickIntervals: [1000, 1000, 750] as const, // ms between ticks per level
+            totalTicks: [4, 6, 8] as const,             // total ticks per level
+            color: 0x00cc44
         }
     }
 };

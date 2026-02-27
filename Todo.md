@@ -59,10 +59,10 @@
 - [x] Når hele party er døde, skal man kunne starte på nytt uten å lage en helt ny server osv. Bare en retry knapp som dukker opp med readystate x/y spillere.  
 
 # Bugs
-- [ ] MP: Når man trykker klar, så står det bare 0/2, selv om begge spillerne har trykket klar, lukkes ikke spillet og man gå kan videre.  
+- [x] MP: Når man trykker klar, så står det bare 0/2, selv om begge spillerne har trykket klar, lukkes ikke spillet og man gå kan videre.  
 - [ ] MP: Man må kunne se andres lys, slik at man kan se deres fog of war (bare ytterste lyset, ikke det innerste)
 - [x] Boss battle kan bli hengede på spilleren (splash screen), selv om kampen er startet. 
-- [ ] Man kommer ikke lengre en lvl 5 
+- [x] Man kommer ikke lengre en lvl 5 
 - [x] Level blir av og til completet selv om det er fiender igjen. 
 - [x] Splash på fire staff trigger aldri. Er det fordi hitboxen til enemies ligger for langt utenfor kroppen og dermed er for langt unna andre, eller er er radius for liten for blast? eller annet?
 - [x] Står på Thermal shock at Iskland makt kreves, men vi bruker/skal bruke permafrost her. 

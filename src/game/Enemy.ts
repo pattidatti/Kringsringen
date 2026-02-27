@@ -27,6 +27,8 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     private enemyType: string = 'orc';
     private config: EnemyConfig;
     private slowTimer: Phaser.Time.TimerEvent | null = null;
+    private poisonTimer: Phaser.Time.TimerEvent | null = null;
+    private isPoisoned: boolean = false;
     protected originalSpeed: number = 100;
     private shadow: Phaser.GameObjects.Sprite | null = null;
     public id: string = "";
@@ -99,6 +101,8 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         }
         this.clearTint();
         this.postFX.clear();
+        if (this.poisonTimer) { this.poisonTimer.remove(false); this.poisonTimer = null; }
+        this.isPoisoned = false;
         this.setRotation(0);
         this.removeAllListeners('dead');
 
@@ -284,11 +288,9 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
             }
             if (!this.body) return;
 
-            const nearestTarget = this.getNearestTarget();
-            const distance = Phaser.Math.Distance.Between(this.x, this.y, nearestTarget.x, nearestTarget.y);
             const hasAttackAnim = this.config.spriteInfo.type === 'spritesheet' && this.config.spriteInfo.anims?.attack;
 
-            if (hasAttackAnim && distance < this.attackRange && time > this.lastAttackTime + this.attackCooldown) {
+            const triggerAttackAnim = () => {
                 this.isAttacking = true;
                 this.lastAttackTime = time;
                 this.setVelocity(0, 0);
@@ -310,6 +312,23 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
                     this.once(`animationstart-${this.config.spriteInfo.anims.attack}`, () => {
                         this.hasHit = false;
                     });
+                }
+            };
+
+            if (this.enemyType === 'healer_wizard') {
+                // Healer only animates when a damaged ally is actually within heal range
+                const damagedAlly = this.getNearestDamagedAlly();
+                const allyDist = damagedAlly
+                    ? Phaser.Math.Distance.Between(this.x, this.y, damagedAlly.x, damagedAlly.y)
+                    : Infinity;
+                if (hasAttackAnim && allyDist < this.attackRange && time > this.lastAttackTime + this.attackCooldown) {
+                    triggerAttackAnim();
+                }
+            } else {
+                const nearestTarget = this.getNearestTarget();
+                const distance = Phaser.Math.Distance.Between(this.x, this.y, nearestTarget.x, nearestTarget.y);
+                if (hasAttackAnim && distance < this.attackRange && time > this.lastAttackTime + this.attackCooldown) {
+                    triggerAttackAnim();
                 }
             }
 
@@ -420,7 +439,10 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         const dangers = Enemy.DANGER_BUFFER;
 
         // --- Target Selection ---
-        let nearestTarget = this.enemyType === 'healer_wizard' ? this.getNearestDamagedAlly() : this.getNearestTarget();
+        let nearestTarget: { x: number; y: number } | null = null;
+        if (this.enemyType === 'healer_wizard') {
+            nearestTarget = this.getNearestDamagedAlly() ?? this.getNearestAlly();
+        }
         if (!nearestTarget) nearestTarget = this.getNearestTarget();
 
         const targetAngle = Phaser.Math.Angle.Between(this.x, this.y, nearestTarget.x, nearestTarget.y);
@@ -1002,6 +1024,36 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
             // Assuming grid stores Enemy bodies or objects with hp
             const enemy = neighbor as Enemy;
             if (enemy && enemy.active && !enemy.getIsDead() && enemy.hp < enemy.maxHP) {
+                const dist = Phaser.Math.Distance.Between(this.x, this.y, enemy.x, enemy.y);
+                if (dist < minDist) {
+                    minDist = dist;
+                    nearestAlly = enemy;
+                }
+            }
+        }
+
+        return nearestAlly;
+    }
+
+    private getNearestAlly(): Enemy | null {
+        const grid = (this.scene as any).spatialGrid;
+        if (!grid) return null;
+
+        const searchRadius = 600;
+        const neighbors = grid.findNearby({
+            x: this.x,
+            y: this.y,
+            width: this.body!.width,
+            height: this.body!.height
+        }, searchRadius);
+
+        let nearestAlly: Enemy | null = null;
+        let minDist = searchRadius;
+
+        for (const neighbor of neighbors) {
+            if (neighbor === this) continue;
+            const enemy = neighbor as Enemy;
+            if (enemy && enemy.active && !enemy.getIsDead()) {
                 const dist = Phaser.Math.Distance.Between(this.x, this.y, enemy.x, enemy.y);
                 if (dist < minDist) {
                     minDist = dist;

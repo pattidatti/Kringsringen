@@ -34,6 +34,7 @@ export class AudioManager {
     };
 
     private lastContextResumeAttempt: number = 0;
+    private volumeChangeListeners: Array<() => void> = [];
 
     private constructor() {
         // Load initial settings
@@ -48,6 +49,18 @@ export class AudioManager {
             AudioManager._instance = new AudioManager();
         }
         return AudioManager._instance;
+    }
+
+    public addVolumeChangeListener(cb: () => void): () => void {
+        this.volumeChangeListeners.push(cb);
+        return () => {
+            this.volumeChangeListeners = this.volumeChangeListeners.filter(l => l !== cb);
+        };
+    }
+
+    public getEffectiveBGSVolume(baseVolume: number): number {
+        if (this.settings.isMuted) return 0;
+        return baseVolume * this.settings.bgsVolume * this.settings.masterVolume;
     }
 
     public setScene(scene: Phaser.Scene) {
@@ -330,12 +343,14 @@ export class AudioManager {
         (this.settings as any)[category] = Phaser.Math.Clamp(value, 0, 1);
         this.applySettings();
         this.saveSettings();
+        this.volumeChangeListeners.forEach(l => l());
     }
 
     public toggleMute() {
         this.settings.isMuted = !this.settings.isMuted;
         this.applySettings();
         this.saveSettings();
+        this.volumeChangeListeners.forEach(l => l());
     }
 
     private applySettings() {

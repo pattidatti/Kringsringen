@@ -6,6 +6,7 @@ import { SettingsModal } from './ui/SettingsModal';
 import { OnboardingTutorial } from './ui/OnboardingTutorial';
 import { MultiplayerLobby } from './ui/MultiplayerLobby';
 import { SaveManager } from '../game/SaveManager';
+import { AudioManager } from '../game/AudioManager';
 import { AdSenseAd } from './ui/AdSenseAd';
 import Peer from 'peerjs';
 import '../styles/pixel-ui.css';
@@ -35,6 +36,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart, onStartMP }) => {
         if (!audio) return;
 
         const tryPlay = () => {
+            audio.volume = AudioManager.instance.getEffectiveBGSVolume(0.5);
             audio.play().catch(() => {/* autoplay blocked, ignore */ });
             document.removeEventListener('mousedown', tryPlay);
             document.removeEventListener('keydown', tryPlay);
@@ -47,6 +49,15 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart, onStartMP }) => {
             document.removeEventListener('mousedown', tryPlay);
             document.removeEventListener('keydown', tryPlay);
         };
+    }, []);
+
+    useEffect(() => {
+        return AudioManager.instance.addVolumeChangeListener(() => {
+            const audio = audioRef.current;
+            if (audio && !audio.paused) {
+                audio.volume = AudioManager.instance.getEffectiveBGSVolume(0.5);
+            }
+        });
     }, []);
 
     const fadeAudioAndStart = () => {
