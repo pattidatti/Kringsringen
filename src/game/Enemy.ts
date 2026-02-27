@@ -12,6 +12,8 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     protected hpBar: Phaser.GameObjects.Graphics;
     protected isDead: boolean = false;
     private lastDrawnHP: number = -1;
+    private lastDrawnMaxHP: number = -1;
+    private lastDrawnScale: number = -1;
     private attackRange: number = 60;
     private attackCooldown: number = 1500;
     private lastAttackTime: number = 0;
@@ -120,6 +122,9 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         this.isOnDamageFrame = false;
         this.lastAttackTime = 0;
         this.lastAIUpdate = 0;
+        this.lastDrawnHP = -1;
+        this.lastDrawnMaxHP = -1;
+        this.lastDrawnScale = -1;
 
         this.predictedDeadUntil = 0;
         this.predictedHP = this.hp;
@@ -529,25 +534,38 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
             return;
         }
 
-        const mode = quality?.hpBarUpdateMode || 'continuous';
-        if (mode === 'reactive' && this.hp === this.lastDrawnHP) {
-            return;
-        }
-
-        this.lastDrawnHP = this.hp;
-        this.hpBar.clear();
-
+        // 1. Always update position of the container graphics object.
+        // We set the position to the enemy's world position, plus an offset.
         const width = 40;
         const height = 5;
-        const x = this.x - width / 2;
-        const y = this.y - (this.height / 2 * this.scaleX) - 5;
+        const offsetY = -(this.height / 2 * this.scaleX) - 5;
+        this.hpBar.setPosition(this.x, this.y + offsetY);
 
-        this.hpBar.fillStyle(0x000000, 0.5);
-        this.hpBar.fillRect(x, y, width, height);
+        // 2. Decide if we need to redraw the graphics based on health or scale changes.
+        const mode = quality?.hpBarUpdateMode || 'continuous';
+        const needsRedraw = mode === 'continuous' ||
+            this.hp !== this.lastDrawnHP ||
+            this.maxHP !== this.lastDrawnMaxHP ||
+            this.scaleX !== this.lastDrawnScale;
 
-        const healthWidth = (Math.max(0, this.hp) / this.maxHP) * width;
-        this.hpBar.fillStyle(0xff0000, 1);
-        this.hpBar.fillRect(x, y, healthWidth, height);
+        if (needsRedraw) {
+            this.lastDrawnHP = this.hp;
+            this.lastDrawnMaxHP = this.maxHP;
+            this.lastDrawnScale = this.scaleX;
+
+            this.hpBar.clear();
+
+            // Use relative coordinates (0 is the center of the graphics object which we positioned above)
+            const rx = -width / 2;
+            const ry = 0;
+
+            this.hpBar.fillStyle(0x000000, 0.5);
+            this.hpBar.fillRect(rx, ry, width, height);
+
+            const healthWidth = (Math.max(0, this.hp) / this.maxHP) * width;
+            this.hpBar.fillStyle(0xff0000, 1);
+            this.hpBar.fillRect(rx, ry, healthWidth, height);
+        }
     }
 
     takeDamage(amount: number, color: string = '#ffffff') {
