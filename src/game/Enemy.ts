@@ -583,11 +583,13 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 
         if (quality?.hpBarsEnabled === false) {
             this.hpBar.clear();
+            this.lastDrawnHP = -1;
             return;
         }
 
         if (this.isDead || !this.active) {
             this.hpBar.clear();
+            this.lastDrawnHP = -1;
             return;
         }
 
@@ -602,6 +604,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
                 const maxDist = outerLight.radius + 50; // small margin beyond outer light edge
                 if (distSq > maxDist * maxDist) {
                     this.hpBar.clear();
+                    this.lastDrawnHP = -1;
                     return;
                 }
             }
