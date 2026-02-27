@@ -29,6 +29,7 @@ import type { DataConnection } from 'peerjs';
 import { JitterBuffer } from '../network/JitterBuffer';
 import { EnemyProjectile } from './EnemyProjectile';
 import { getQualityConfig, type QualitySettings, type GraphicsQuality } from '../config/QualityConfig';
+import { BinaryPacker } from '../network/BinaryPacker';
 
 
 class MainScene extends Phaser.Scene implements IMainScene {
@@ -57,6 +58,9 @@ class MainScene extends Phaser.Scene implements IMainScene {
     private enemyProjectiles!: Phaser.Physics.Arcade.Group;
     private players!: Phaser.Physics.Arcade.Group;
     public poolManager!: ObjectPoolManager;
+
+    // Networking Buffers (Pre-allocated to reduce GC churn)
+    private localPackedPlayer: PackedPlayer = ['unknown', 0, 0, 'player-idle', 0, 100, '', 'unknown'];
 
     // Managers
     public stats!: PlayerStatsManager;
@@ -300,13 +304,15 @@ class MainScene extends Phaser.Scene implements IMainScene {
         // Arrow Group
         this.arrows = this.physics.add.group({
             classType: Arrow,
-            runChildUpdate: true
+            runChildUpdate: true,
+            maxSize: 50
         });
 
         // Fireball Group
         this.fireballs = this.physics.add.group({
             classType: Fireball,
-            runChildUpdate: true
+            runChildUpdate: true,
+            maxSize: 30
         });
 
         // Frost Bolt Group
@@ -1130,14 +1136,18 @@ class MainScene extends Phaser.Scene implements IMainScene {
         this.events.emit('map-ready', { level });
     }
 
-    update(_time: number, _delta: number) {
-        this.poolManager.update();
+    update(_time: number, delta: number) {
+        // Cap delta time (max 100ms) to prevent physics "tunneling" after stutters
+        const cappedDelta = Math.min(delta, 100);
+        this.poolManager.update(cappedDelta);
         const player = this.data.get('player') as Phaser.Physics.Arcade.Sprite;
         if (this.playerShadow) {
             this.playerShadow.setPosition(player.x, player.y + 28);
         }
 
         // --- Iterating Remote Players for dead reckoning updates ---
+        // Use cappedDelta for render time calculation if necessary, but interpolation usually uses absolute time.
+        // We'll keep renderTime as is, but ensure cappedDelta is "used" by being part of the game loop logic.
         const renderTime = this.networkManager ? this.networkManager.getServerTime() - 100 : Date.now();
 
         this.remotePlayers.forEach((remotePlayer, id) => {
@@ -1667,16 +1677,18 @@ class MainScene extends Phaser.Scene implements IMainScene {
 
         const now = this.networkManager.getServerTime();
         const myId = this.game.registry.get('networkConfig')?.peer.id || 'unknown';
-        const playerPacket: PackedPlayer = [
-            myId,
-            Math.round(player.x),
-            Math.round(player.y),
-            player.anims.currentAnim?.key || 'player-idle',
-            player.flipX ? 1 : 0,
-            this.registry.get('playerHP'),
-            this.registry.get('currentWeapon'),
-            this.registry.get('nickname')
-        ];
+
+        // Reuse localPackedPlayer buffer to eliminate per-tick allocation
+        this.localPackedPlayer[0] = myId;
+        this.localPackedPlayer[1] = Math.round(player.x);
+        this.localPackedPlayer[2] = Math.round(player.y);
+        this.localPackedPlayer[3] = player.anims.currentAnim?.key || 'player-idle';
+        this.localPackedPlayer[4] = player.flipX ? 1 : 0;
+        this.localPackedPlayer[5] = this.registry.get('playerHP');
+        this.localPackedPlayer[6] = this.registry.get('currentWeapon');
+        this.localPackedPlayer[7] = this.registry.get('nickname');
+
+        const playerPacket = this.localPackedPlayer;
 
         if (this.networkManager.role === 'host') {
             this.networkTickCount++;
@@ -1723,20 +1735,12 @@ class MainScene extends Phaser.Scene implements IMainScene {
             this.remotePlayerPackets.forEach(p => processPlayer(p));
 
             if (playersToSync.length > 0) {
-                this.networkManager.broadcast({
-                    t: PacketType.PLAYER_SYNC,
-                    ps: playersToSync,
-                    ts: now
-                });
+                this.networkManager.broadcast(BinaryPacker.packPlayers(playersToSync, now));
             }
 
             const enemies = this.waves.getEnemySyncData();
             if (enemies.length > 0) {
-                this.networkManager.broadcast({
-                    t: PacketType.ENEMY_SYNC,
-                    es: enemies,
-                    ts: now
-                });
+                this.networkManager.broadcast(BinaryPacker.packEnemies(enemies, now));
             }
 
             // Periodic Game State Sync (Throatled to 1 per second to save bandwidth)
@@ -1760,11 +1764,7 @@ class MainScene extends Phaser.Scene implements IMainScene {
 
             if (lastState !== stateStr) {
                 this.lastSentPlayerStates.set(id, stateStr);
-                this.networkManager.broadcast({
-                    t: PacketType.PLAYER_SYNC,
-                    p: playerPacket,
-                    ts: now
-                });
+                this.networkManager.broadcast(BinaryPacker.packPlayer(playerPacket, now));
             }
         }
     }

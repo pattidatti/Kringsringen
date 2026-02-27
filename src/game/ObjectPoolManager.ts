@@ -60,8 +60,9 @@ export class ObjectPoolManager {
         return text;
     }
 
-    public update() {
+    public update(delta: number = 16.6) {
         const now = this.scene.time.now;
+        const deltaFactor = delta / 16.6; // Normalize to 60fps
 
         for (let i = this.activeDamageTexts.length - 1; i >= 0; i--) {
             const entry = this.activeDamageTexts[i];
@@ -75,8 +76,9 @@ export class ObjectPoolManager {
                 // Drift phase
                 const f = (elapsed - 100) / 700;
                 entry.text.setScale(1.4 - 0.4 * f);
-                entry.text.setY(entry.y - 80 * f);
-                entry.text.setX(entry.x + entry.driftX * f);
+                // Use delta for smoother drift during stutters
+                entry.text.y -= (80 / 700 * 16.6) * deltaFactor;
+                entry.text.x += (entry.driftX / 700 * 16.6) * deltaFactor;
                 entry.text.setAlpha(1 - f);
             } else {
                 // Done

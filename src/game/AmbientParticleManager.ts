@@ -93,8 +93,8 @@ export class AmbientParticleManager {
     public clear() {
         for (const emitter of this.emitters) {
             emitter.stop();
-            // Give in-flight particles time to finish before destroying
-            this.scene.time.delayedCall(4000, () => {
+            // Faster cleanup (500ms) for better memory performance
+            this.scene.time.delayedCall(500, () => {
                 if (emitter.scene) emitter.destroy();
             });
         }

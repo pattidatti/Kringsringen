@@ -12,9 +12,21 @@ export class JitterBuffer<T> {
     }
 
     public push(ts: number, state: T) {
-        this.buffer.push({ ts, state });
-        // Keep sorted by timestamp to handle out-of-order UDP/WebRTC packets
-        this.buffer.sort((a, b) => a.ts - b.ts);
+        // Maintain sorted order via binary search insertion (O(log N))
+        // This is significantly faster than sorting every time (O(N log N)) when we have hundreds of entities.
+        let low = 0;
+        let high = this.buffer.length;
+
+        while (low < high) {
+            const mid = (low + high) >>> 1;
+            if (this.buffer[mid].ts < ts) {
+                low = mid + 1;
+            } else {
+                high = mid;
+            }
+        }
+
+        this.buffer.splice(low, 0, { ts, state });
 
         if (this.buffer.length > this.maxCapacity) {
             this.buffer.shift();

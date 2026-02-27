@@ -20,7 +20,7 @@ interface GameContainerProps {
     networkConfig?: NetworkConfig | null;
 }
 
-export const GameContainer: React.FC<GameContainerProps> = ({ networkConfig }) => {
+export const GameContainer: React.FC<GameContainerProps> = React.memo(({ networkConfig }) => {
     const gameContainerRef = useRef<HTMLDivElement>(null);
     const gameInstanceRef = useRef<Phaser.Game | null>(null);
 
@@ -507,4 +507,10 @@ export const GameContainer: React.FC<GameContainerProps> = ({ networkConfig }) =
             <GameOverOverlay />
         </div>
     );
-};
+}, (prev, next) => {
+    // Only re-render if the peer ID or role changes (significant network config changes)
+    return (
+        prev.networkConfig?.peer.id === next.networkConfig?.peer.id &&
+        prev.networkConfig?.role === next.networkConfig?.role
+    );
+});

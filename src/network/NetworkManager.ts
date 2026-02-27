@@ -1,6 +1,7 @@
 import Peer from 'peerjs';
 import type { DataConnection } from 'peerjs';
 import { PacketType, type SyncPacket } from './SyncSchemas';
+import { BinaryPacker } from './BinaryPacker';
 
 export class NetworkManager {
     private peer: Peer;
@@ -66,7 +67,30 @@ export class NetworkManager {
         }
 
         conn.on('data', (data: any) => {
-            const packet = data as SyncPacket;
+            let packet: SyncPacket;
+
+            if (data instanceof Uint8Array || data instanceof ArrayBuffer) {
+                const uint8 = data instanceof Uint8Array ? data : new Uint8Array(data);
+                const type = uint8[0];
+
+                if (type === PacketType.PLAYER_SYNC_BIN) {
+                    const { players, ts } = BinaryPacker.unpackPlayers(uint8);
+                    packet = { t: PacketType.PLAYER_SYNC, ts };
+                    if (this.role === 'host' && players.length === 1) {
+                        packet.p = players[0];
+                    } else {
+                        packet.ps = players;
+                    }
+                } else if (type === PacketType.ENEMY_SYNC_BIN) {
+                    const { enemies, ts } = BinaryPacker.unpackEnemies(uint8);
+                    packet = { t: PacketType.ENEMY_SYNC, es: enemies, ts };
+                } else {
+                    console.warn(`[Network] Unknown binary packet type: ${type}`);
+                    return;
+                }
+            } else {
+                packet = data as SyncPacket;
+            }
 
             // Handle NTP Ping/Pong transparently
             if (packet.t === PacketType.PING && packet.pi) {
@@ -139,8 +163,8 @@ export class NetworkManager {
     /**
      * Broadcasts to all peers. Routes pakets automatically based on PacketType.
      */
-    public broadcast(packet: SyncPacket) {
-        const isReliable = packet.t === PacketType.GAME_EVENT || packet.t === PacketType.GAME_STATE;
+    public broadcast(packet: SyncPacket | Uint8Array) {
+        const isReliable = !(packet instanceof Uint8Array) && (packet.t === PacketType.GAME_EVENT || packet.t === PacketType.GAME_STATE);
         const targetMap = isReliable ? this.reliableConnections : this.unreliableConnections;
 
         targetMap.forEach(conn => {
@@ -157,8 +181,8 @@ export class NetworkManager {
     /**
      * Sends to a specific peer over the correct channel.
      */
-    public sendTo(peerId: string, packet: SyncPacket) {
-        const isReliable = packet.t === PacketType.GAME_EVENT || packet.t === PacketType.GAME_STATE;
+    public sendTo(peerId: string, packet: SyncPacket | Uint8Array) {
+        const isReliable = !(packet instanceof Uint8Array) && (packet.t === PacketType.GAME_EVENT || packet.t === PacketType.GAME_STATE);
         const conn = isReliable ? this.reliableConnections.get(peerId) : this.unreliableConnections.get(peerId);
 
         if (conn && conn.open) {
@@ -170,7 +194,7 @@ export class NetworkManager {
         }
     }
 
-    private safeSend(conn: DataConnection, packet: any) {
+    private safeSend(conn: DataConnection, packet: SyncPacket | Uint8Array) {
         try {
             conn.send(packet);
         } catch (err) {

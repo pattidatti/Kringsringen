@@ -1,16 +1,18 @@
 import React, { useEffect, useState } from 'react';
 import { useGameRegistry } from '../../hooks/useGameRegistry';
+import { useGameRegistryThrottled } from '../../hooks/useGameRegistryThrottled';
 import { FantasyIcon } from './FantasyIcon';
 import { ItemIcon } from './ItemIcon';
 // import { FantasyPanel } from './FantasyPanel'; // We might use a custom ribbon approach
 
 export const TopHUD: React.FC = React.memo(() => {
-    const hp = useGameRegistry('playerHP', 100);
+    // Critical value: bypass throttle when HP is 0 to show Game Over instantly
+    const hp = useGameRegistryThrottled('playerHP', 100, 100, val => val <= 0);
     const maxHp = useGameRegistry('playerMaxHP', 100);
     const level = useGameRegistry('gameLevel', 1);
     const wave = useGameRegistry('currentWave', 1);
     const maxWaves = useGameRegistry('maxWaves', 1);
-    const coins = useGameRegistry('playerCoins', 0);
+    const coins = useGameRegistryThrottled('playerCoins', 0, 200);
 
     const [isMounting, setIsMounting] = useState(true);
 

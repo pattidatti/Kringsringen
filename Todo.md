@@ -15,6 +15,7 @@
 
 # Score 
 - [x] Score ingame oppe ved siden av mynter
+- [ ] Penger og score ser ikke ut til å oppdatere seg oppe til høyre. 
 
 # Boss battles
 - [x] Orkehøvding er altfor lett å drepe. Trenger litt mer hp, bør være raskere, bruke dash? Kom med forslag. 
@@ -22,6 +23,9 @@
 -[x] Orkehøvding har noe feil med hitbox, får ikke til å skade den. Bare lighting med seeking greier å treffe, alt annen bommer totalt, går rett gjennom. 
 -[x] Orkehøvding virker til å bli svært lett stuck, og kan ikke bevege seg; blir dermed ingen stor trussel. 
 -[x] Multiplayer orkehøvding; spiller B får hitbaren over hodet, men den er gigalang, og  den er "tom" i HP baren på toppen. 
+- [ ] Orkeboss blir fremdeles litt for mye stuck. 
+- [ ] Orkehøvdings dash er for kort, og han blir lett stuck etter dash. 
+-[ ] Usikker på om det er coindrops fra bosser, men de bør uansett automatisk plukkes opp, ettersom spillet pauser med en gang den dør, og en ikke får muligheten til å hente dem selv. 
 
 # grafikk
 - [x] Implementert Grafikk-innstillinger i hovedmeny og in-game (Low, Medium, High).
@@ -38,17 +42,20 @@
 - Lighting er fremdeles for overpowered, seeking må reduseres enda mer.  
 - [x] Ser ut som man kan caste fortere enn cooldownen tillater. 
 - [ ] Finne en annen uppgrade enn å kunne caste flere lyn samtidig ut fra spilleren. 
+- [ ] Rebalansere upgrades og skade mellom alle spells og våpen. 
 # musikk
 - [x] Må bytte musikk hvert level. 
 - [x] Er placeholder lyd på dash
 - [ ] Healing trenger egen lyd
 - [x] Når man kjøper en upgrade i boken, skal det være en lydeffekt public/assets/audio/sfx/coins_gather_quick.wav
 - [x] Når man bytter side i boken skal det være en lydeffekt public/assets/audio/sfx/page_turn.wav
+- [ ] Forst ambiance spilles ikke av på landingpage - er det fordi den ikke er lastet inn enda?
 
 # MP
 - [x] Når hele party er døde, skal man kunne starte på nytt uten å lage en helt ny server osv. Bare en retry knapp som dukker opp med readystate x/y spillere.  
 
 # Bugs
+- [ ] Prøv igjen knappen på singleplayer fungerer ikke. Det må også være slik at hvis en har skrevet inn navnet sitt og trykker rett på prøv igjen, så skal det registreres. 
 - [x] Orkehøvding ikke synlig for andre enn host. 
 - [x] HP bar for alle andre enn host, er cracy stor, virker som å justere seg når de tar damage. 
 - [x] Man må kunne gjenopplive folk etter et level er over, via boken og det koster masse gull . Øker i kostnad for hver gang man gjør det. 

@@ -6,7 +6,9 @@ export const PacketType = {
     BOSS_SYNC: 4,
     GAME_STATE: 5,
     PING: 6,
-    PONG: 7
+    PONG: 7,
+    PLAYER_SYNC_BIN: 8,
+    ENEMY_SYNC_BIN: 9
 } as const;
 
 export type PacketType = typeof PacketType[keyof typeof PacketType];
