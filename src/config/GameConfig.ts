@@ -171,6 +171,9 @@ export const GAME_CONFIG = {
         WAVE_DELAY: 2000,
         LEVEL_COMPLETE_DELAY: 1500
     },
+    BOSSES: {
+        COIN_DROP_COUNT: 75
+    },
     DROPS: {
         COIN_LIFETIME: 10000, // Disappear after 10s if not collected (optimization)
         XP_GEM_LIFETIME: 30000

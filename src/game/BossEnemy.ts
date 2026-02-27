@@ -187,7 +187,7 @@ export class BossEnemy extends Enemy {
             );
 
             // Create movement ghosts/trail
-            const trailTimer = this.scene.time.addEvent({
+            this.scene.time.addEvent({
                 delay: 50,
                 repeat: 8,
                 callback: () => {
@@ -372,7 +372,15 @@ export class BossEnemy extends Enemy {
 
         this.scene.registry.set('isBossActive', false);
         this.scene.registry.set('bossHP', 0);
-        this.scene.events.emit('boss-defeated');
+
+        // --- ULTRATHINK BUGFIX: Handle automatic coin collection ---
+        // 1. Emit direct signal for coin spawning and collection
+        this.scene.events.emit('boss-died-collect-all', this.x, this.y);
+
+        // 2. Delay the official victory event to allow collection animation
+        this.scene.time.delayedCall(1600, () => {
+            this.scene.events.emit('boss-defeated');
+        });
 
         super.die();
     }

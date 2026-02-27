@@ -556,6 +556,23 @@ class MainScene extends Phaser.Scene implements IMainScene {
             }
         });
 
+        this.events.on('boss-died-collect-all', (x: number, y: number) => {
+            this.waves.spawnBossCoins(x, y);
+            this.combat.setDashIframe(true);
+            this.time.delayedCall(2000, () => {
+                this.combat.setDashIframe(false);
+            });
+            this.time.delayedCall(400, () => {
+                this.coins.children.iterate((c: any) => {
+                    if (c.active) {
+                        const coin = c as Coin;
+                        coin.forceMagnet = true;
+                    }
+                    return true;
+                });
+            });
+        });
+
         // Enemy Projectile Events
         this.events.on('enemy-fire-projectile', (x: number, y: number, angle: number, damage: number, type: 'arrow' | 'fireball') => {
             if (this.networkManager?.role === 'client') return; // Only host/singleplayer fires

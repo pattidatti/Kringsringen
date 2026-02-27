@@ -8,6 +8,7 @@ export class Coin extends Phaser.Physics.Arcade.Sprite {
     private speed: number = 600;
     public id: string = "";
     private isCollected: boolean = false;
+    public forceMagnet: boolean = false;
 
     constructor(scene: Phaser.Scene, x: number, y: number, target: Phaser.GameObjects.Components.Transform) {
         super(scene, x, y, 'coin');
@@ -31,6 +32,7 @@ export class Coin extends Phaser.Physics.Arcade.Sprite {
         this.setPosition(x, y);
         this.targetStart = target;
         this.isCollected = false;
+        this.forceMagnet = false;
 
 
         // Visual Reset
@@ -72,11 +74,12 @@ export class Coin extends Phaser.Physics.Arcade.Sprite {
         const distSq = dx * dx + dy * dy;
 
         // Optimization: use distance squared to avoid Math.sqrt
-        if (distSq < this.magnetRange * this.magnetRange) {
+        if (this.forceMagnet || distSq < this.magnetRange * this.magnetRange) {
             const angle = Math.atan2(dy, dx);
+            const currentSpeed = this.forceMagnet ? this.speed * 1.5 : this.speed;
             this.setVelocity(
-                Math.cos(angle) * this.speed,
-                Math.sin(angle) * this.speed
+                Math.cos(angle) * currentSpeed,
+                Math.sin(angle) * currentSpeed
             );
             this.setDrag(0);
         }

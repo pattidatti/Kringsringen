@@ -273,6 +273,55 @@ export class WaveManager {
             }
         }
     }
+
+    /** Drops a large burst of coins from a boss */
+    public spawnBossCoins(ex: number, ey: number): void {
+        const isMultiplayer = this.scene.registry.get('isMultiplayer');
+        const isHost = this.scene.networkManager?.role === 'host';
+        if (isMultiplayer && !isHost) return;
+
+        const player = this.scene.data.get('player') as Phaser.Physics.Arcade.Sprite;
+        if (!player) return;
+
+        // Bosses drop significantly more coins
+        const coinCount = (GAME_CONFIG as any).BOSSES?.COIN_DROP_COUNT || 75;
+        const coinData: { x: number, y: number, id: string }[] = [];
+
+        for (let i = 0; i < coinCount; i++) {
+            let coin = this.scene.coins.get(ex, ey) as Coin;
+            if (!coin) continue;
+
+            const coinId = `coin-boss-${Phaser.Math.RND.uuid()}`;
+            coin.spawn(ex, ey, player, coinId);
+
+            // Randomize velocity more for a bigger explosion
+            const angle = Math.random() * Math.PI * 2;
+            const force = Phaser.Math.Between(200, 450);
+            coin.setVelocity(Math.cos(angle) * force, Math.sin(angle) * force);
+
+            coin.removeAllListeners('collected');
+            coin.on('collected', () => {
+                this.scene.stats.addCoins(1);
+                AudioManager.instance.playSFX('coin_collect');
+
+                this.scene.networkManager?.broadcast({
+                    t: PacketType.GAME_EVENT,
+                    ev: { type: 'coin_collect', data: { amount: 1, x: coin.x, y: coin.y, id: coin.id } },
+                    ts: Date.now()
+                });
+            });
+
+            coinData.push({ x: ex, y: ey, id: coinId });
+        }
+
+        // Sync coin spawn to clients
+        this.scene.networkManager?.broadcast({
+            t: PacketType.GAME_EVENT,
+            ev: { type: 'spawn_coins', data: { x: ex, y: ey, count: coinCount, coins: coinData } },
+            ts: Date.now()
+        });
+    }
+
     private lastEnemyStates: Map<string, string> = new Map();
     private updateTick: number = 0;
 

@@ -15,7 +15,7 @@
 
 # Score 
 - [x] Score ingame oppe ved siden av mynter
-- [ ] Penger og score ser ikke ut til å oppdatere seg oppe til høyre. 
+- [x] Penger og score ser ikke ut til å oppdatere seg oppe til høyre. 
 
 # Boss battles
 - [x] Orkehøvding er altfor lett å drepe. Trenger litt mer hp, bør være raskere, bruke dash? Kom med forslag. 
