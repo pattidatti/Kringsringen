@@ -9,6 +9,7 @@ import { PacketType } from '../network/SyncSchemas';
 import type { IMainScene } from './IMainScene';
 import { getBossForLevel } from '../config/bosses';
 import { getWaveComposition, weightedRandom } from '../config/wave_compositions';
+import { LEVEL_CONFIG } from '../config/levels';
 
 /**
  * Manages level/wave lifecycle: spawning enemies, tracking progress,
@@ -27,14 +28,6 @@ export class WaveManager {
     private enemiesAlive: number = 0;
     private isLevelActive: boolean = false;
     private bgmPlaylist: string[] = [];
-
-    private readonly LEVEL_CONFIG = [
-        { waves: 2, enemiesPerWave: 6, multiplier: 1.0 },   // Level 1
-        { waves: 3, enemiesPerWave: 8, multiplier: 1.2 },   // Level 2
-        { waves: 3, enemiesPerWave: 12, multiplier: 1.5 },  // Level 3
-        { waves: 4, enemiesPerWave: 15, multiplier: 2.0 },  // Level 4
-        { waves: 5, enemiesPerWave: 20, multiplier: 3.0 }   // Level 5+
-    ];
 
     constructor(scene: IMainScene) {
         this.scene = scene;
@@ -74,7 +67,7 @@ export class WaveManager {
 
     private startWave(): void {
         const playerCount = this.getPlayerCount();
-        const config = this.LEVEL_CONFIG[Math.min(this.currentLevel - 1, this.LEVEL_CONFIG.length - 1)];
+        const config = LEVEL_CONFIG[Math.min(this.currentLevel - 1, LEVEL_CONFIG.length - 1)];
 
         // Scaling: +25% more enemies per extra player
         this.enemiesToSpawnInWave = Math.round(config.enemiesPerWave * (1 + (playerCount - 1) * 0.25));
@@ -138,7 +131,7 @@ export class WaveManager {
         const y = centerY + Math.sin(angle) * radius;
 
         const player = this.scene.data.get('player') as Phaser.Physics.Arcade.Sprite;
-        const config = this.LEVEL_CONFIG[Math.min(this.currentLevel - 1, this.LEVEL_CONFIG.length - 1)];
+        const config = LEVEL_CONFIG[Math.min(this.currentLevel - 1, LEVEL_CONFIG.length - 1)];
         const playerCount = this.getPlayerCount();
 
         // Scaling: +50% HP per extra player
@@ -242,7 +235,7 @@ export class WaveManager {
     }
 
     private checkWaveProgress(): void {
-        const config = this.LEVEL_CONFIG[Math.min(this.currentLevel - 1, this.LEVEL_CONFIG.length - 1)];
+        const config = LEVEL_CONFIG[Math.min(this.currentLevel - 1, LEVEL_CONFIG.length - 1)];
 
         if (this.enemiesAlive === 0 && this.enemiesToSpawnInWave === 0) {
             if (this.currentWave < config.waves) {
@@ -397,7 +390,7 @@ export class WaveManager {
 
                     // Dynamically calculate the same hpMultiplier the Host used for this wave
                     const currentLevel = this.scene.registry.get('gameLevel') || 1;
-                    const config = this.LEVEL_CONFIG[Math.min(currentLevel - 1, this.LEVEL_CONFIG.length - 1)];
+                    const config = LEVEL_CONFIG[Math.min(currentLevel - 1, LEVEL_CONFIG.length - 1)];
                     const playerCount = this.getPlayerCount();
                     const hpMultiplier = config.multiplier * (1 + (playerCount - 1) * 0.5);
 

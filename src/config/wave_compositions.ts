@@ -120,7 +120,7 @@ const COMPOSITIONS: Record<string, WaveComposition> = {
         rangedPool: [['frost_wizard', 2], ['wizard', 2], ['skeleton_archer', 1], ['healer_wizard', 1]]
     },
 
-    // ─── LEVEL 5+ ── Full chaos, 35% ranged ceiling maintained ───────────
+    // ─── LEVEL 5 ── Full chaos, 35% ranged ceiling maintained ────────────
     '5-1': {
         maxRangedFraction: 0.30,
         meleePool: [['elite_orc', 3], ['greatsword_skeleton', 2], ['armored_orc', 1]],
@@ -134,17 +134,92 @@ const COMPOSITIONS: Record<string, WaveComposition> = {
     '5-3': {
         maxRangedFraction: 0.35,
         meleePool: [['elite_orc', 3], ['greatsword_skeleton', 2], ['armored_orc', 1]],
-        rangedPool: [['frost_wizard', 2], ['wizard', 2], ['skeleton_archer', 2]]
-    },
-    '5-4': {
-        maxRangedFraction: 0.35,
-        meleePool: [['elite_orc', 3], ['greatsword_skeleton', 2], ['armored_orc', 1]],
-        rangedPool: [['frost_wizard', 2], ['wizard', 2], ['skeleton_archer', 2]]
-    },
-    '5-5': {
-        maxRangedFraction: 0.35,
-        meleePool: [['elite_orc', 3], ['greatsword_skeleton', 2], ['armored_orc', 1]],
         rangedPool: [['frost_wizard', 3], ['wizard', 3], ['skeleton_archer', 2], ['healer_wizard', 2]]
+    },
+
+    // ─── LEVEL 6 ── Mørk akt — heavier elites, healers more common ────────
+    '6-1': {
+        maxRangedFraction: 0.33,
+        meleePool: [['elite_orc', 3], ['greatsword_skeleton', 3], ['armored_orc', 2]],
+        rangedPool: [['frost_wizard', 2], ['wizard', 2], ['healer_wizard', 1]]
+    },
+    '6-2': {
+        maxRangedFraction: 0.35,
+        meleePool: [['elite_orc', 3], ['greatsword_skeleton', 3], ['armored_orc', 2]],
+        rangedPool: [['frost_wizard', 3], ['wizard', 2], ['skeleton_archer', 1], ['healer_wizard', 2]]
+    },
+    '6-3': {
+        maxRangedFraction: 0.35,
+        meleePool: [['elite_orc', 4], ['greatsword_skeleton', 3], ['armored_orc', 2]],
+        rangedPool: [['frost_wizard', 3], ['wizard', 3], ['skeleton_archer', 2], ['healer_wizard', 2]]
+    },
+
+    // ─── LEVEL 7 ── Katakomber — skeleton dominance, frost spam ──────────
+    '7-1': {
+        maxRangedFraction: 0.33,
+        meleePool: [['greatsword_skeleton', 4], ['armored_skeleton', 3], ['elite_orc', 2]],
+        rangedPool: [['frost_wizard', 3], ['skeleton_archer', 2], ['healer_wizard', 1]]
+    },
+    '7-2': {
+        maxRangedFraction: 0.35,
+        meleePool: [['greatsword_skeleton', 4], ['armored_skeleton', 3], ['elite_orc', 2]],
+        rangedPool: [['frost_wizard', 3], ['wizard', 2], ['skeleton_archer', 2], ['healer_wizard', 2]]
+    },
+    '7-3': {
+        maxRangedFraction: 0.35,
+        meleePool: [['greatsword_skeleton', 5], ['armored_skeleton', 3], ['elite_orc', 2]],
+        rangedPool: [['frost_wizard', 4], ['wizard', 2], ['skeleton_archer', 2], ['healer_wizard', 2]]
+    },
+
+    // ─── LEVEL 8 ── Trolldal — heavy orcs + full elite mix ───────────────
+    '8-1': {
+        maxRangedFraction: 0.33,
+        meleePool: [['elite_orc', 4], ['armored_orc', 3], ['greatsword_skeleton', 2], ['werewolf', 2]],
+        rangedPool: [['frost_wizard', 3], ['wizard', 2], ['healer_wizard', 2]]
+    },
+    '8-2': {
+        maxRangedFraction: 0.35,
+        meleePool: [['elite_orc', 4], ['armored_orc', 3], ['greatsword_skeleton', 2], ['werewolf', 2]],
+        rangedPool: [['frost_wizard', 3], ['wizard', 3], ['skeleton_archer', 2], ['healer_wizard', 2]]
+    },
+    '8-3': {
+        maxRangedFraction: 0.35,
+        meleePool: [['elite_orc', 5], ['armored_orc', 3], ['greatsword_skeleton', 3], ['werewolf', 2]],
+        rangedPool: [['frost_wizard', 4], ['wizard', 3], ['skeleton_archer', 2], ['healer_wizard', 3]]
+    },
+
+    // ─── LEVEL 9 ── Sluttpush — all elites, all ranged slots full ─────────
+    '9-1': {
+        maxRangedFraction: 0.35,
+        meleePool: [['elite_orc', 4], ['greatsword_skeleton', 4], ['armored_orc', 3], ['werewolf', 3]],
+        rangedPool: [['frost_wizard', 4], ['wizard', 3], ['skeleton_archer', 2], ['healer_wizard', 2]]
+    },
+    '9-2': {
+        maxRangedFraction: 0.35,
+        meleePool: [['elite_orc', 5], ['greatsword_skeleton', 4], ['armored_orc', 3], ['werewolf', 3]],
+        rangedPool: [['frost_wizard', 4], ['wizard', 4], ['skeleton_archer', 3], ['healer_wizard', 3]]
+    },
+    '9-3': {
+        maxRangedFraction: 0.35,
+        meleePool: [['elite_orc', 5], ['greatsword_skeleton', 5], ['armored_orc', 3], ['werewolf', 3]],
+        rangedPool: [['frost_wizard', 5], ['wizard', 4], ['skeleton_archer', 3], ['healer_wizard', 3]]
+    },
+
+    // ─── LEVEL 10 ── Sluttboss-akt — maksimalt press ─────────────────────
+    '10-1': {
+        maxRangedFraction: 0.35,
+        meleePool: [['elite_orc', 5], ['greatsword_skeleton', 5], ['armored_orc', 4], ['werewolf', 4]],
+        rangedPool: [['frost_wizard', 5], ['wizard', 4], ['skeleton_archer', 3], ['healer_wizard', 4]]
+    },
+    '10-2': {
+        maxRangedFraction: 0.35,
+        meleePool: [['elite_orc', 6], ['greatsword_skeleton', 5], ['armored_orc', 4], ['werewolf', 4]],
+        rangedPool: [['frost_wizard', 5], ['wizard', 5], ['skeleton_archer', 4], ['healer_wizard', 4]]
+    },
+    '10-3': {
+        maxRangedFraction: 0.35,
+        meleePool: [['elite_orc', 6], ['greatsword_skeleton', 6], ['armored_orc', 4], ['werewolf', 4]],
+        rangedPool: [['frost_wizard', 6], ['wizard', 5], ['skeleton_archer', 4], ['healer_wizard', 5]]
     },
 };
 
@@ -154,7 +229,7 @@ const COMPOSITIONS: Record<string, WaveComposition> = {
  * entry if the exact wave is not defined for that level.
  */
 export function getWaveComposition(level: number, wave: number): WaveComposition {
-    const clampedLevel = Math.min(level, 5);
+    const clampedLevel = Math.min(level, 10);
 
     // Try exact match first, then walk back waves, then use wave 1
     for (let w = wave; w >= 1; w--) {

@@ -90,6 +90,24 @@ export class BossEnemy extends Enemy {
                     this.scene.time.addEvent({ delay: p2 ? 2500 : 4000, callback: this.performPredatorDash, callbackScope: this, loop: true })
                 );
                 break;
+
+            case 'elite_orc':
+                this.abilityTimers.push(
+                    this.scene.time.addEvent({ delay: p2 ? 3500 : 6000, callback: this.performGroundSlam, callbackScope: this, loop: true })
+                );
+                this.abilityTimers.push(
+                    this.scene.time.addEvent({ delay: p2 ? 5000 : 9000, callback: this.performBerserkerRush, callbackScope: this, loop: true })
+                );
+                break;
+
+            case 'armored_skeleton':
+                this.abilityTimers.push(
+                    this.scene.time.addEvent({ delay: p2 ? 3000 : 5500, callback: this.performDeathWhirl, callbackScope: this, loop: true })
+                );
+                this.abilityTimers.push(
+                    this.scene.time.addEvent({ delay: p2 ? 4000 : 7000, callback: this.performRaiseDead, callbackScope: this, loop: true })
+                );
+                break;
         }
     }
 
@@ -340,6 +358,77 @@ export class BossEnemy extends Enemy {
         });
     }
 
+    // ── Boss 4: Trollhersker Grak (elite_orc) ────────────────────────────────
+
+    private performGroundSlam(): void {
+        if (!this.active || this.isDead) return;
+
+        this.setVelocity(0, 0);
+        this.setTint(0xff6600);
+
+        const bossX = this.x;
+        const bossY = this.y;
+        const radius = this.phase === 2 ? 320 : 240;
+
+        // Expanding shockwave ring
+        const graphics = this.scene.add.graphics();
+        const state = { r: 0, alpha: 1.0 };
+
+        this.scene.tweens.add({
+            targets: state,
+            r: radius,
+            alpha: 0,
+            duration: 500,
+            onUpdate: () => {
+                graphics.clear();
+                graphics.lineStyle(8, 0xff6600, state.alpha);
+                graphics.strokeCircle(bossX, bossY, state.r);
+                // Inner fill flash
+                graphics.fillStyle(0xff6600, state.alpha * 0.15);
+                graphics.fillCircle(bossX, bossY, state.r);
+            },
+            onComplete: () => graphics.destroy(),
+        });
+
+        this.scene.cameras.main.shake(350, 0.02);
+
+        this.scene.time.delayedCall(220, () => {
+            if (this.active) this.clearTint();
+            const player = (this.scene as any).data?.get('player') as any;
+            if (!player || !player.active) return;
+            const dist = Phaser.Math.Distance.Between(bossX, bossY, player.x, player.y);
+            if (dist <= radius) {
+                const dmg = Math.floor(this.bossConfig.damage * 0.7);
+                this.scene.events.emit('enemy-hit-player', dmg, 'ground_slam', bossX, bossY);
+                if (player.setSpeedModifier) player.setSpeedModifier(0.5, 1200);
+            }
+        });
+    }
+
+    private performBerserkerRush(): void {
+        if (!this.active || this.isDead || this.isCharging) return;
+
+        const dashCount = this.phase === 2 ? 2 : 1;
+        this.executeDashSequence(dashCount);
+    }
+
+    // ── Boss 5: Skjelettkongen (armored_skeleton) ────────────────────────────
+
+    private performDeathWhirl(): void {
+        if (!this.active || this.isDead) return;
+
+        const player = (this.scene as any).data?.get('player') as any;
+        if (!player || !player.active) return;
+
+        const count = this.phase === 2 ? 8 : 6;
+        const baseAngle = Phaser.Math.Angle.Between(this.x, this.y, player.x, player.y);
+
+        for (let i = 0; i < count; i++) {
+            const angle = baseAngle + (i / count) * Math.PI * 2;
+            this.fireBoneProjectile(angle);
+        }
+    }
+
     // ── Overrides ─────────────────────────────────────────────────────────────
 
     protected updateHPBar(): void {
@@ -423,14 +512,36 @@ export class BossEnemy extends Enemy {
             this.movementSpeed = this.bossConfig.speed * 1.5;
             this.originalSpeed = this.movementSpeed;
 
-            // Spawn Armored Orc minions
             for (let i = 0; i < 2; i++) {
                 const angle = Math.random() * Math.PI * 2;
-                const dist = 150;
-                const sx = this.x + Math.cos(angle) * dist;
-                const sy = this.y + Math.sin(angle) * dist;
+                const sx = this.x + Math.cos(angle) * 150;
+                const sy = this.y + Math.sin(angle) * 150;
                 this.scene.events.emit('boss-spawn-minion', sx, sy, 'armored_orc');
             }
+        }
+
+        // Trollhersker enrage: +40% speed + spawns elite orc minions
+        if (this.bossConfig.enemyType === 'elite_orc') {
+            this.movementSpeed = this.bossConfig.speed * 1.4;
+            this.originalSpeed = this.movementSpeed;
+
+            for (let i = 0; i < 3; i++) {
+                const angle = (i / 3) * Math.PI * 2;
+                const sx = this.x + Math.cos(angle) * 180;
+                const sy = this.y + Math.sin(angle) * 180;
+                this.scene.events.emit('boss-spawn-minion', sx, sy, 'elite_orc');
+            }
+        }
+
+        // Skjelettkongen enrage: spawns armored skeleton guards + screen darkness
+        if (this.bossConfig.enemyType === 'armored_skeleton') {
+            for (let i = 0; i < 4; i++) {
+                const angle = (i / 4) * Math.PI * 2;
+                const sx = this.x + Math.cos(angle) * 200;
+                const sy = this.y + Math.sin(angle) * 200;
+                this.scene.events.emit('boss-spawn-minion', sx, sy, 'armored_skeleton');
+            }
+            this.scene.cameras.main.flash(400, 50, 0, 50);
         }
 
         // Restart ability timers with phase-2 cooldowns
