@@ -16,6 +16,7 @@ export interface IMainScene extends Phaser.Scene {
     coins: Phaser.Physics.Arcade.Group;
     obstacles: Phaser.Physics.Arcade.StaticGroup;
     spatialGrid: SpatialHashGrid;
+    staticObstacleGrid: SpatialHashGrid;
     poolManager: ObjectPoolManager;
     stats: PlayerStatsManager;
     combat: PlayerCombatManager;

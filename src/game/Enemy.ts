@@ -45,8 +45,8 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     public positionHistory: [number, number, number][] = [];
 
     private stuckTimer: number = 0;
-    private avoidanceTimer: number = 0;
-    private avoidanceDirection: number = 1; // 1 for right, -1 for left
+    private recoveryTimer: number = 0;
+    private recoveryAngle: number = 0;
 
     /** Jitter buffer for smooth interpolation (Client only). */
     private jitterBuffer: JitterBuffer<PackedEnemy> | null = null;
@@ -140,8 +140,8 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         this.predictedHP = this.hp;
 
         this.stuckTimer = 0;
-        this.avoidanceTimer = 0;
-        this.avoidanceDirection = 1;
+        this.recoveryTimer = 0;
+        this.recoveryAngle = 0;
 
         // Clear Soul Link
         this.linkedEnemy = null;
@@ -431,8 +431,9 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         if (!this.active) return;
         const speed = this.movementSpeed;
         const numRays = Enemy.NUM_RAYS;
+        const delta = this.scene.game.loop.delta;
 
-        // Zero out the static buffers instead of allocating `new Array()`
+        // Zero buffers
         for (let i = 0; i < numRays; i++) {
             Enemy.INTEREST_BUFFER[i] = 0;
             Enemy.DANGER_BUFFER[i] = 0;
@@ -441,14 +442,9 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         const interests = Enemy.INTEREST_BUFFER;
         const dangers = Enemy.DANGER_BUFFER;
 
-        // --- Multi-Targeting Logic (Host Only) ---
-        // Find nearest player among local player and all remote players
+        // --- Target Selection ---
         let nearestTarget = this.enemyType === 'healer_wizard' ? this.getNearestDamagedAlly() : this.getNearestTarget();
-
-        // If healer but no damaged allies, stick with player follow but maybe keep distance
-        if (!nearestTarget) {
-            nearestTarget = this.getNearestTarget();
-        }
+        if (!nearestTarget) nearestTarget = this.getNearestTarget();
 
         const targetAngle = Phaser.Math.Angle.Between(this.x, this.y, nearestTarget.x, nearestTarget.y);
 
@@ -459,71 +455,61 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
             interests[i] = Math.max(0, dot);
         }
 
-        // Dangers (Obstacles)
-        const obstacles = (this.scene as any).obstacles as Phaser.Physics.Arcade.StaticGroup;
-        if (obstacles) {
-            const myRadius = Math.max(this.body!.width, this.body!.height) * 0.5;
+        const myRadius = Math.max(this.body!.width, this.body!.height) * 0.5;
 
-            obstacles.getChildren().forEach((obs: any) => {
-                if (!obs.active) return;
+        // --- Dangers: Static Obstacles (Spatial Grid Lookup) ---
+        const staticGrid = (this.scene as any).staticObstacleGrid;
+        if (staticGrid) {
+            const searchRadius = myRadius + 60;
+            const obstacles = staticGrid.findNearby({ x: this.x, y: this.y, width: this.body!.width, height: this.body!.height }, searchRadius);
 
-                const obsBody = obs.body as Phaser.Physics.Arcade.Body;
-                const obsRadius = obsBody ? Math.max(obsBody.width, obsBody.height) * 0.5 : 20;
-                const minClearance = myRadius + obsRadius + 40; // 40px extra clearance padding
-
+            for (const obs of obstacles) {
+                const obsRadius = obs.width ? Math.max(obs.width, obs.height) * 0.5 : 20;
+                const minClearance = myRadius + obsRadius + 20;
                 const dist = Phaser.Math.Distance.Between(this.x, this.y, obs.x, obs.y);
+
                 if (dist < minClearance) {
                     const ang = Phaser.Math.Angle.Between(this.x, this.y, obs.x, obs.y);
                     for (let i = 0; i < numRays; i++) {
                         const rayAngle = (i / numRays) * Math.PI * 2;
-                        let dot = Math.cos(rayAngle - ang);
-                        if (dot > 0.7) {
-                            dangers[i] = Math.max(dangers[i], dot * (1 - dist / minClearance));
-                        }
-                    }
-                }
-            });
-        }
-
-        // Separation using Spatial Grid
-        const grid = (this.scene as any).spatialGrid; // Access grid from scene
-        if (grid) {
-            const myRadius = Math.max(this.body!.width, this.body!.height) * 0.5;
-            const searchRadius = myRadius + 50; // Increased radius to check
-
-            const neighbors = grid.findNearby({
-                x: this.x,
-                y: this.y,
-                width: this.body!.width,
-                height: this.body!.height
-            }, searchRadius);
-
-            for (const neighbor of neighbors) {
-                // Approximate distance check since grid returns candidates
-
-                // Skip self check is hard without ID, but valid coordinates check works
-                if (Math.abs(neighbor.x - this.x) < 1 && Math.abs(neighbor.y - this.y) < 1) continue;
-
-                // Neighbor radius approximation
-                const neighborRadius = neighbor.width ? Math.max(neighbor.width, neighbor.height) * 0.5 : 20;
-                const minSeparation = myRadius + neighborRadius + 10;
-
-                const dist = Phaser.Math.Distance.Between(this.x, this.y, neighbor.x, neighbor.y);
-                if (dist < minSeparation) {
-                    const ang = Phaser.Math.Angle.Between(this.x, this.y, neighbor.x, neighbor.y);
-                    for (let i = 0; i < numRays; i++) {
-                        const rayAngle = (i / numRays) * Math.PI * 2;
-                        let dot = Math.cos(rayAngle - ang);
-                        // Increase sensitivity for separation
-                        if (dot > 0.5) {
-                            dangers[i] = Math.max(dangers[i], dot * (1 - dist / minSeparation));
+                        const dot = Math.cos(rayAngle - ang);
+                        if (dot > 0.4) {
+                            // Scale danger by proximity and intensity of the heading
+                            const weight = Math.pow(dot, 2); // Sharper falloff for rays not directly at obstacle
+                            const proximity = 1 - (dist / minClearance);
+                            dangers[i] = Math.max(dangers[i], weight * proximity);
                         }
                     }
                 }
             }
         }
 
-        // Direction
+        // --- Separation: Dynamic Entities (Spatial Grid Lookup) ---
+        const dynamicGrid = (this.scene as any).spatialGrid;
+        if (dynamicGrid) {
+            const searchRadius = myRadius + 40;
+            const neighbors = dynamicGrid.findNearby({ x: this.x, y: this.y, width: this.body!.width, height: this.body!.height }, searchRadius);
+
+            for (const neighbor of neighbors) {
+                if (neighbor.ref === this) continue;
+                const neighborRadius = neighbor.width ? Math.max(neighbor.width, neighbor.height) * 0.5 : 20;
+                const minSeparation = myRadius + neighborRadius + 10;
+                const dist = Phaser.Math.Distance.Between(this.x, this.y, neighbor.x, neighbor.y);
+
+                if (dist < minSeparation) {
+                    const ang = Phaser.Math.Angle.Between(this.x, this.y, neighbor.x, neighbor.y);
+                    for (let i = 0; i < numRays; i++) {
+                        const rayAngle = (i / numRays) * Math.PI * 2;
+                        const dot = Math.cos(rayAngle - ang);
+                        if (dot > 0.6) {
+                            dangers[i] = Math.max(dangers[i], dot * (1 - dist / minSeparation) * 0.8);
+                        }
+                    }
+                }
+            }
+        }
+
+        // --- Direction Selection ---
         let bestDir = -1;
         let maxScore = -1;
 
@@ -535,48 +521,55 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
             }
         }
 
-        if (bestDir !== -1) {
-            let moveAngle = (bestDir / numRays) * Math.PI * 2;
+        // --- Stuck Detection & Recovery ---
+        const currentSpeed = (this.body as Phaser.Physics.Arcade.Body).speed;
+        const stuckThreshold = this.id.includes('boss') ? speed * 0.4 : speed * 0.2;
 
-            // --- Stuck Detection & Lateral Avoidance (U-trap Eradication) ---
-            const delta = this.scene.game.loop.delta;
-            const currentSpeed = (this.body as Phaser.Physics.Arcade.Body).speed;
-
-            // If we have strong intent to move (maxScore > 0.3) but aren't moving much
-            // ULTRATHINK BUGFIX: Bosses (id === 'boss') get stuck easier due to size, 
-            // so we make their stuck detection more aggressive.
-            const stuckThreshold = this.id === 'boss' ? speed * 0.4 : speed * 0.2;
-            if (maxScore > 0.3 && currentSpeed < stuckThreshold) {
-                this.stuckTimer += delta;
-            } else {
-                this.stuckTimer = Math.max(0, this.stuckTimer - delta * 2);
-            }
-
-            // If stuck for > 200ms (boss) or 300ms (regular), start avoidance
-            const stuckDurationLimit = this.id === 'boss' ? 200 : 300;
-            if (this.stuckTimer > stuckDurationLimit && this.avoidanceTimer <= 0) {
-                this.avoidanceTimer = 1000; // 1 second of avoidance
-                // Choose direction based on which side of the danger buffer is clearer
-                let leftDanger = 0;
-                let rightDanger = 0;
-                for (let i = 1; i <= 4; i++) {
-                    leftDanger += dangers[(bestDir - i + numRays) % numRays];
-                    rightDanger += dangers[(bestDir + i) % numRays];
-                }
-                this.avoidanceDirection = leftDanger <= rightDanger ? -1 : 1;
-            }
-
-            if (this.avoidanceTimer > 0) {
-                this.avoidanceTimer -= delta;
-                // Shift move angle by ~90 degrees laterally
-                moveAngle += (Math.PI / 2) * this.avoidanceDirection;
-            }
-
-            this.setVelocity(
-                Math.cos(moveAngle) * speed,
-                Math.sin(moveAngle) * speed
-            );
+        // If we want to move but are slow
+        if (maxScore > 0.3 && currentSpeed < stuckThreshold) {
+            this.stuckTimer += delta;
+        } else {
+            this.stuckTimer = Math.max(0, this.stuckTimer - delta * 2);
         }
+
+        const stuckDurationLimit = this.id.includes('boss') ? 150 : 250;
+        if (this.stuckTimer > stuckDurationLimit && this.recoveryTimer <= 0) {
+            // TRAP ERADICATION: Scan for the clearest path that still has some forward interest
+            let bestRecoveryIdx = -1;
+            let bestRecoveryScore = -100;
+
+            for (let i = 0; i < numRays; i++) {
+                // Recovery score: High interest (forward-ish), LOW danger
+                // We weight danger heavily to find a way OUT of the trap.
+                const recoveryScore = interests[i] * 0.5 - (dangers[i] * 2.0);
+                if (recoveryScore > bestRecoveryScore) {
+                    bestRecoveryScore = recoveryScore;
+                    bestRecoveryIdx = i;
+                }
+            }
+
+            if (bestRecoveryIdx !== -1) {
+                this.recoveryAngle = (bestRecoveryIdx / numRays) * Math.PI * 2;
+                this.recoveryTimer = 800 + Math.random() * 400; // 0.8s - 1.2s of recovery
+                this.stuckTimer = 0;
+            }
+        }
+
+        let finalMoveAngle = 0;
+        if (this.recoveryTimer > 0) {
+            this.recoveryTimer -= delta;
+            finalMoveAngle = this.recoveryAngle;
+        } else if (bestDir !== -1) {
+            finalMoveAngle = (bestDir / numRays) * Math.PI * 2;
+        } else {
+            this.setVelocity(0, 0);
+            return;
+        }
+
+        this.setVelocity(
+            Math.cos(finalMoveAngle) * speed,
+            Math.sin(finalMoveAngle) * speed
+        );
     }
 
     protected updateHPBar() {

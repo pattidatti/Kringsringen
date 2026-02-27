@@ -37,6 +37,7 @@ import { BinaryPacker } from '../network/BinaryPacker';
 class MainScene extends Phaser.Scene implements IMainScene {
     public enemies!: Phaser.Physics.Arcade.Group;
     public spatialGrid!: SpatialHashGrid;
+    public staticObstacleGrid!: SpatialHashGrid;
     public coins!: Phaser.Physics.Arcade.Group;
     public obstacles!: Phaser.Physics.Arcade.StaticGroup;
     private attackHitbox!: Phaser.Types.Physics.Arcade.ImageWithDynamicBody;
@@ -258,8 +259,9 @@ class MainScene extends Phaser.Scene implements IMainScene {
         this.physics.world.setBounds(0, 0, this.mapWidth, this.mapHeight);
         this.cameras.main.setBounds(0, 0, this.mapWidth, this.mapHeight);
 
-        // Initialize Spatial Grid (Cell Size 150px)
+        // Initialize Spatial Grids (Cell Size 150px)
         this.spatialGrid = new SpatialHashGrid(150);
+        this.staticObstacleGrid = new SpatialHashGrid(150);
 
         // Initialize Obstacles
         this.obstacles = this.physics.add.staticGroup();
@@ -1169,6 +1171,20 @@ class MainScene extends Phaser.Scene implements IMainScene {
         // Load static map – no procedural generation, instant
         this.currentMap = new StaticMapLoader(this, this.obstacles, this.mapWidth, this.mapHeight);
         this.currentMap.load(mapDef);
+
+        // Populate static grid for efficient pathfinding lookups
+        this.staticObstacleGrid.clear();
+        this.obstacles.getChildren().forEach((obs: any) => {
+            const body = obs.body as Phaser.Physics.Arcade.StaticBody;
+            if (body) {
+                this.staticObstacleGrid.insert({
+                    x: obs.x,
+                    y: obs.y,
+                    width: body.width,
+                    height: body.height
+                });
+            }
+        });
 
         // Swap ambient particle theme to match the new level
         this.ambient.setTheme(level);
