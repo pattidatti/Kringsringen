@@ -143,7 +143,7 @@ export class PlayerStatsManager {
         const dashDistLvl = levels['dash_distance'] || 0;
         const dashCooldownMs = GAME_CONFIG.PLAYER.DASH_COOLDOWN_MS - dashCdLvl * 2000;
         const dashDistance = GAME_CONFIG.PLAYER.DASH_DISTANCE + dashDistLvl * 50;
-        this.scene.registry.set('dashCooldown', Math.max(8000, dashCooldownMs));
+        this.scene.registry.set('dashCooldown', Math.max(2000, dashCooldownMs));
         this.scene.registry.set('dashDistance', dashDistance);
     }
 

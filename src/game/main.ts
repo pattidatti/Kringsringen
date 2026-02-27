@@ -1283,24 +1283,31 @@ class MainScene extends Phaser.Scene implements IMainScene {
             return true;
         });
 
-        if (isAttacking || this.combat.isKnockedBack || this.data.get('isDashing')) {
-            if (isAttacking || this.data.get('isDashing')) {
-                // Keep movement during dash handled by tween, but block WASD
-                if (isAttacking) player.setVelocity(0, 0);
-            }
-            return;
-        }
-
         // --- Handle Dash (Shift) ---
         const dashState = this.registry.get('dashState') || { isActive: false, readyAt: 0 };
         let hp = this.registry.get('playerHP') || 0;
         if (this.wasd?.SHIFT?.isDown && hp > 0 && Date.now() >= dashState.readyAt && !this.data.get('isDashing')) {
-            const dashCooldown = this.registry.get('dashCooldown') || 20000;
+            const dashCooldown = this.registry.get('dashCooldown') || 7000;
             const dashDistance = this.registry.get('dashDistance') || 220;
             const dashDuration = GAME_CONFIG.PLAYER.DASH_DURATION_MS;
 
             this.data.set('isDashing', true);
             this.registry.set('dashState', { isActive: true, readyAt: Date.now() + dashCooldown });
+
+            // INTERRUPT CURRENT ACTIONS
+            if (isAttacking) {
+                this.data.set('isAttacking', false);
+                player.anims.stop(); // Stop the attack animation immediately
+                // Remove all once-listeners for animationcomplete to avoid stale state resets
+                player.off('animationcomplete-player-attack');
+                player.off('animationcomplete-player-attack-2');
+                player.off('animationcomplete-player-bow');
+                player.off('animationcomplete-player-cast');
+            }
+            if (this.data.get('isBlocking')) {
+                this.data.set('isBlocking', false);
+                player.clearTint();
+            }
 
             // Invincibility
             this.combat.setDashIframe(true);
@@ -1335,8 +1342,6 @@ class MainScene extends Phaser.Scene implements IMainScene {
             dashFx.setDepth(player.depth + 1);
             dashFx.setScale(2);
             dashFx.play('player-dash-effect', true);
-            // Remove automatic destruction on animation complete,
-            // the tween will handle life cycle to ensure it stays during movement.
 
             // Movement via Tween for precision
             this.tweens.add({
@@ -1372,6 +1377,15 @@ class MainScene extends Phaser.Scene implements IMainScene {
 
             return;
         }
+
+        if (isAttacking || this.combat.isKnockedBack || this.data.get('isDashing')) {
+            if (isAttacking || this.data.get('isDashing')) {
+                // Keep movement during dash handled by tween, but block WASD
+                if (isAttacking) player.setVelocity(0, 0);
+            }
+            return;
+        }
+
 
         // Handle Weapon Switching
         const unlocked = this.registry.get('unlockedWeapons') || ['sword'];

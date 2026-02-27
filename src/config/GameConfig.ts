@@ -24,7 +24,7 @@ export const GAME_CONFIG = {
         PICKUP_RANGE: 60, // Default collection range
         MAGNET_RANGE: 250, // Default magnet range
         // --- DASH ---
-        DASH_COOLDOWN_MS: 20000, // 20 seconds default
+        DASH_COOLDOWN_MS: 7000, // 7 seconds default
         DASH_DISTANCE: 220,      // pixels
         DASH_DURATION_MS: 160    // ms — short, punchy burst
     },

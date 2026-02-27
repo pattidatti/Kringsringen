@@ -25,7 +25,7 @@
 -[x] Multiplayer orkehøvding; spiller B får hitbaren over hodet, men den er gigalang, og  den er "tom" i HP baren på toppen. 
 - [ ] Orkeboss blir fremdeles litt for mye stuck. 
 - [ ] Orkehøvdings dash er for kort, og han blir lett stuck etter dash. 
--[ ] Usikker på om det er coindrops fra bosser, men de bør uansett automatisk plukkes opp, ettersom spillet pauser med en gang den dør, og en ikke får muligheten til å hente dem selv. 
+-[x] Usikker på om det er coindrops fra bosser, men de bør uansett automatisk plukkes opp, ettersom spillet pauser med en gang den dør, og en ikke får muligheten til å hente dem selv. 
 
 # grafikk
 - [x] Implementert Grafikk-innstillinger i hovedmeny og in-game (Low, Medium, High).
