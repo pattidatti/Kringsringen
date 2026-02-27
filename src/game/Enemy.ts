@@ -591,6 +591,22 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
             return;
         }
 
+        // Hide health bar if enemy is outside the player's outer light radius
+        if (quality?.lightingEnabled) {
+            const outerLight = (this.scene as any).outerPlayerLight as Phaser.GameObjects.Light | undefined;
+            const player = this.scene.data?.get('player') as Phaser.Physics.Arcade.Sprite | undefined;
+            if (outerLight && player) {
+                const dx = this.x - player.x;
+                const dy = this.y - player.y;
+                const distSq = dx * dx + dy * dy;
+                const maxDist = outerLight.radius + 50; // small margin beyond outer light edge
+                if (distSq > maxDist * maxDist) {
+                    this.hpBar.clear();
+                    return;
+                }
+            }
+        }
+
         // 1. Always update position of the container graphics object.
         // We set the position to the enemy's world position, plus an offset.
         const width = 40;
