@@ -282,6 +282,281 @@ function buildLevel4(): StaticMapDef {
 }
 
 // ---------------------------------------------------------------------------
+// LEVEL 5 – Skumringen
+// Darker clearing: many rocks, dense forest, dead bushes mixed in.
+// ---------------------------------------------------------------------------
+
+function buildLevel5(): StaticMapDef {
+    const objects: MapObject[] = [];
+
+    objects.push(...ring(CX, CY, CLEARING + 36, 62, 0.20, TREES, true, 30));
+    objects.push(...ring(CX, CY, CLEARING + 78, 62, 0.24, BUSHES, true, 20));
+    objects.push(...ring(CX, CY, CLEARING + 170, 50, 0.29, TREES, false, 70));
+    objects.push(...ring(CX, CY, CLEARING + 170, 50, 0.33, BUSHES, false, 50));
+    objects.push(...ring(CX, CY, CLEARING + 340, 42, 0.38, TREES, false, 90));
+    objects.push(...ring(CX, CY, CLEARING + 510, 34, 0.44, TREES, false, 110));
+    objects.push(...ring(CX, CY, CLEARING + 680, 28, 0.51, TREES, false, 135));
+    objects.push(...ring(CX, CY, CLEARING + 880, 22, 0.58, TREES, false, 155));
+
+    // Clearing rocks (30)
+    const rockPts = pts(12001, 30, CX, CY, 150, CLEARING - 80);
+    for (let i = 0; i < rockPts.length; i++) {
+        objects.push({ assetId: ROCKS[i % ROCKS.length], x: rockPts[i].x, y: rockPts[i].y, physics: true });
+    }
+
+    // Forest rocks (90)
+    const forestRockPts = pts(12501, 90, CX, CY, CLEARING + 50, CLEARING + 720);
+    for (let i = 0; i < forestRockPts.length; i++) {
+        const p = forestRockPts[i];
+        if (p.x < 50 || p.x > 2950 || p.y < 50 || p.y > 2950) continue;
+        objects.push({ assetId: ROCKS[i % ROCKS.length], x: p.x, y: p.y, physics: false });
+    }
+
+    // Clearing bushes (28)
+    const clearingBushPts = pts(13001, 28, CX, CY, 150, CLEARING - 100);
+    for (let i = 0; i < clearingBushPts.length; i++) {
+        objects.push({ assetId: BUSHES[i % BUSHES.length], x: clearingBushPts[i].x, y: clearingBushPts[i].y, physics: false });
+    }
+
+    const detailTiles: DetailTile[] = [];
+    const dPts = pts(13501, 80, CX, CY, 0, CLEARING - 50);
+    const detailFrames = [114, 144, 145, 156, 157];
+    for (let i = 0; i < dPts.length; i++) {
+        detailTiles.push({ x: dPts[i].x, y: dPts[i].y, frame: detailFrames[i % detailFrames.length] });
+    }
+
+    return { level: 5, groundFrame: 20, objects, detailTiles };
+}
+
+// ---------------------------------------------------------------------------
+// LEVEL 6 – Ravinen
+// Cramped clearing with many large rock formations.
+// ---------------------------------------------------------------------------
+
+function buildLevel6(): StaticMapDef {
+    const objects: MapObject[] = [];
+
+    objects.push(...ring(CX, CY, CLEARING + 34, 64, 0.26, TREES, true, 28));
+    objects.push(...ring(CX, CY, CLEARING + 74, 64, 0.31, BUSHES, true, 18));
+    objects.push(...ring(CX, CY, CLEARING + 160, 52, 0.36, TREES, false, 65));
+    objects.push(...ring(CX, CY, CLEARING + 160, 52, 0.40, BUSHES, false, 48));
+    objects.push(...ring(CX, CY, CLEARING + 320, 44, 0.45, TREES, false, 85));
+    objects.push(...ring(CX, CY, CLEARING + 490, 36, 0.51, TREES, false, 105));
+    objects.push(...ring(CX, CY, CLEARING + 660, 30, 0.57, TREES, false, 130));
+    objects.push(...ring(CX, CY, CLEARING + 860, 24, 0.63, TREES, false, 150));
+
+    // More rocks in clearing (35)
+    const rockPts = pts(14001, 35, CX, CY, 140, CLEARING - 80);
+    for (let i = 0; i < rockPts.length; i++) {
+        objects.push({ assetId: ROCKS[i % ROCKS.length], x: rockPts[i].x, y: rockPts[i].y, physics: true });
+    }
+
+    const forestRockPts = pts(14501, 100, CX, CY, CLEARING + 50, CLEARING + 740);
+    for (let i = 0; i < forestRockPts.length; i++) {
+        const p = forestRockPts[i];
+        if (p.x < 50 || p.x > 2950 || p.y < 50 || p.y > 2950) continue;
+        objects.push({ assetId: ROCKS[i % ROCKS.length], x: p.x, y: p.y, physics: false });
+    }
+
+    const clearingBushPts = pts(15001, 30, CX, CY, 140, CLEARING - 100);
+    for (let i = 0; i < clearingBushPts.length; i++) {
+        objects.push({ assetId: BUSHES[i % BUSHES.length], x: clearingBushPts[i].x, y: clearingBushPts[i].y, physics: false });
+    }
+
+    const detailTiles: DetailTile[] = [];
+    const dPts = pts(15501, 80, CX, CY, 0, CLEARING - 50);
+    const detailFrames = [144, 145, 156, 157];
+    for (let i = 0; i < dPts.length; i++) {
+        detailTiles.push({ x: dPts[i].x, y: dPts[i].y, frame: detailFrames[i % detailFrames.length] });
+    }
+
+    return { level: 6, groundFrame: 20, objects, detailTiles };
+}
+
+// ---------------------------------------------------------------------------
+// LEVEL 7 – Katakombene
+// Very dense rock placement — narrow corridors between obstacles.
+// ---------------------------------------------------------------------------
+
+function buildLevel7(): StaticMapDef {
+    const objects: MapObject[] = [];
+
+    objects.push(...ring(CX, CY, CLEARING + 32, 66, 0.32, TREES, true, 26));
+    objects.push(...ring(CX, CY, CLEARING + 70, 66, 0.37, BUSHES, true, 16));
+    objects.push(...ring(CX, CY, CLEARING + 150, 54, 0.42, TREES, false, 60));
+    objects.push(...ring(CX, CY, CLEARING + 150, 54, 0.46, BUSHES, false, 44));
+    objects.push(...ring(CX, CY, CLEARING + 300, 46, 0.51, TREES, false, 80));
+    objects.push(...ring(CX, CY, CLEARING + 470, 38, 0.57, TREES, false, 100));
+    objects.push(...ring(CX, CY, CLEARING + 640, 32, 0.63, TREES, false, 125));
+    objects.push(...ring(CX, CY, CLEARING + 840, 26, 0.69, TREES, false, 145));
+
+    const rockPts = pts(16001, 40, CX, CY, 130, CLEARING - 80);
+    for (let i = 0; i < rockPts.length; i++) {
+        objects.push({ assetId: ROCKS[i % ROCKS.length], x: rockPts[i].x, y: rockPts[i].y, physics: true });
+    }
+
+    const forestRockPts = pts(16501, 110, CX, CY, CLEARING + 50, CLEARING + 760);
+    for (let i = 0; i < forestRockPts.length; i++) {
+        const p = forestRockPts[i];
+        if (p.x < 50 || p.x > 2950 || p.y < 50 || p.y > 2950) continue;
+        objects.push({ assetId: ROCKS[i % ROCKS.length], x: p.x, y: p.y, physics: false });
+    }
+
+    const clearingBushPts = pts(17001, 32, CX, CY, 130, CLEARING - 100);
+    for (let i = 0; i < clearingBushPts.length; i++) {
+        objects.push({ assetId: BUSHES[i % BUSHES.length], x: clearingBushPts[i].x, y: clearingBushPts[i].y, physics: false });
+    }
+
+    const detailTiles: DetailTile[] = [];
+    const dPts = pts(17501, 80, CX, CY, 0, CLEARING - 50);
+    const detailFrames = [144, 156, 157];
+    for (let i = 0; i < dPts.length; i++) {
+        detailTiles.push({ x: dPts[i].x, y: dPts[i].y, frame: detailFrames[i % detailFrames.length] });
+    }
+
+    return { level: 7, groundFrame: 20, objects, detailTiles };
+}
+
+// ---------------------------------------------------------------------------
+// LEVEL 8 – Trolldalen
+// Maximum rock density, labyrinthine clearing.
+// ---------------------------------------------------------------------------
+
+function buildLevel8(): StaticMapDef {
+    const objects: MapObject[] = [];
+
+    objects.push(...ring(CX, CY, CLEARING + 30, 68, 0.38, TREES, true, 24));
+    objects.push(...ring(CX, CY, CLEARING + 66, 68, 0.43, BUSHES, true, 14));
+    objects.push(...ring(CX, CY, CLEARING + 140, 56, 0.48, TREES, false, 55));
+    objects.push(...ring(CX, CY, CLEARING + 140, 56, 0.52, BUSHES, false, 40));
+    objects.push(...ring(CX, CY, CLEARING + 280, 48, 0.57, TREES, false, 75));
+    objects.push(...ring(CX, CY, CLEARING + 450, 40, 0.63, TREES, false, 95));
+    objects.push(...ring(CX, CY, CLEARING + 620, 34, 0.69, TREES, false, 120));
+    objects.push(...ring(CX, CY, CLEARING + 820, 28, 0.75, TREES, false, 140));
+
+    const rockPts = pts(18001, 45, CX, CY, 120, CLEARING - 80);
+    for (let i = 0; i < rockPts.length; i++) {
+        objects.push({ assetId: ROCKS[i % ROCKS.length], x: rockPts[i].x, y: rockPts[i].y, physics: true });
+    }
+
+    const forestRockPts = pts(18501, 120, CX, CY, CLEARING + 50, CLEARING + 780);
+    for (let i = 0; i < forestRockPts.length; i++) {
+        const p = forestRockPts[i];
+        if (p.x < 50 || p.x > 2950 || p.y < 50 || p.y > 2950) continue;
+        objects.push({ assetId: ROCKS[i % ROCKS.length], x: p.x, y: p.y, physics: false });
+    }
+
+    const clearingBushPts = pts(19001, 35, CX, CY, 120, CLEARING - 100);
+    for (let i = 0; i < clearingBushPts.length; i++) {
+        objects.push({ assetId: BUSHES[i % BUSHES.length], x: clearingBushPts[i].x, y: clearingBushPts[i].y, physics: false });
+    }
+
+    const detailTiles: DetailTile[] = [];
+    const dPts = pts(19501, 80, CX, CY, 0, CLEARING - 50);
+    const detailFrames = [144, 156, 157];
+    for (let i = 0; i < dPts.length; i++) {
+        detailTiles.push({ x: dPts[i].x, y: dPts[i].y, frame: detailFrames[i % detailFrames.length] });
+    }
+
+    return { level: 8, groundFrame: 20, objects, detailTiles };
+}
+
+// ---------------------------------------------------------------------------
+// LEVEL 9 – Den Mørke Borg
+// Heaviest forest, rocks packed tight — pre-final push.
+// ---------------------------------------------------------------------------
+
+function buildLevel9(): StaticMapDef {
+    const objects: MapObject[] = [];
+
+    objects.push(...ring(CX, CY, CLEARING + 28, 70, 0.44, TREES, true, 22));
+    objects.push(...ring(CX, CY, CLEARING + 62, 70, 0.49, BUSHES, true, 12));
+    objects.push(...ring(CX, CY, CLEARING + 130, 58, 0.54, TREES, false, 50));
+    objects.push(...ring(CX, CY, CLEARING + 130, 58, 0.58, BUSHES, false, 36));
+    objects.push(...ring(CX, CY, CLEARING + 260, 50, 0.63, TREES, false, 70));
+    objects.push(...ring(CX, CY, CLEARING + 430, 42, 0.69, TREES, false, 90));
+    objects.push(...ring(CX, CY, CLEARING + 600, 36, 0.75, TREES, false, 115));
+    objects.push(...ring(CX, CY, CLEARING + 800, 30, 0.81, TREES, false, 135));
+
+    const rockPts = pts(20001, 50, CX, CY, 110, CLEARING - 80);
+    for (let i = 0; i < rockPts.length; i++) {
+        objects.push({ assetId: ROCKS[i % ROCKS.length], x: rockPts[i].x, y: rockPts[i].y, physics: true });
+    }
+
+    const forestRockPts = pts(20501, 130, CX, CY, CLEARING + 50, CLEARING + 800);
+    for (let i = 0; i < forestRockPts.length; i++) {
+        const p = forestRockPts[i];
+        if (p.x < 50 || p.x > 2950 || p.y < 50 || p.y > 2950) continue;
+        objects.push({ assetId: ROCKS[i % ROCKS.length], x: p.x, y: p.y, physics: false });
+    }
+
+    const clearingBushPts = pts(21001, 38, CX, CY, 110, CLEARING - 100);
+    for (let i = 0; i < clearingBushPts.length; i++) {
+        objects.push({ assetId: BUSHES[i % BUSHES.length], x: clearingBushPts[i].x, y: clearingBushPts[i].y, physics: false });
+    }
+
+    const detailTiles: DetailTile[] = [];
+    const dPts = pts(21501, 80, CX, CY, 0, CLEARING - 50);
+    const detailFrames = [144, 156, 157];
+    for (let i = 0; i < dPts.length; i++) {
+        detailTiles.push({ x: dPts[i].x, y: dPts[i].y, frame: detailFrames[i % detailFrames.length] });
+    }
+
+    return { level: 9, groundFrame: 20, objects, detailTiles };
+}
+
+// ---------------------------------------------------------------------------
+// LEVEL 10 – Sluttboss-arenaen
+// Open centre (fewer rocks near middle) but impenetrable forest walls.
+// Boss arena feel: lots of space to move but oppressive surroundings.
+// ---------------------------------------------------------------------------
+
+function buildLevel10(): StaticMapDef {
+    const objects: MapObject[] = [];
+
+    objects.push(...ring(CX, CY, CLEARING + 26, 72, 0.50, TREES, true, 20));
+    objects.push(...ring(CX, CY, CLEARING + 58, 72, 0.55, BUSHES, true, 10));
+    objects.push(...ring(CX, CY, CLEARING + 120, 60, 0.60, TREES, false, 45));
+    objects.push(...ring(CX, CY, CLEARING + 120, 60, 0.64, BUSHES, false, 32));
+    objects.push(...ring(CX, CY, CLEARING + 250, 52, 0.69, TREES, false, 65));
+    objects.push(...ring(CX, CY, CLEARING + 420, 44, 0.75, TREES, false, 85));
+    objects.push(...ring(CX, CY, CLEARING + 590, 38, 0.81, TREES, false, 110));
+    objects.push(...ring(CX, CY, CLEARING + 790, 32, 0.87, TREES, false, 130));
+
+    // Fewer rocks in centre (arena feel) but ring of rocks near forest edge
+    const innerRockPts = pts(22001, 15, CX, CY, 450, CLEARING - 80);
+    for (let i = 0; i < innerRockPts.length; i++) {
+        objects.push({ assetId: ROCKS[i % ROCKS.length], x: innerRockPts[i].x, y: innerRockPts[i].y, physics: true });
+    }
+
+    const outerRockPts = pts(22201, 20, CX, CY, 200, 420);
+    for (let i = 0; i < outerRockPts.length; i++) {
+        objects.push({ assetId: ROCKS[i % ROCKS.length], x: outerRockPts[i].x, y: outerRockPts[i].y, physics: true });
+    }
+
+    const forestRockPts = pts(22501, 140, CX, CY, CLEARING + 50, CLEARING + 820);
+    for (let i = 0; i < forestRockPts.length; i++) {
+        const p = forestRockPts[i];
+        if (p.x < 50 || p.x > 2950 || p.y < 50 || p.y > 2950) continue;
+        objects.push({ assetId: ROCKS[i % ROCKS.length], x: p.x, y: p.y, physics: false });
+    }
+
+    const clearingBushPts = pts(23001, 30, CX, CY, 300, CLEARING - 100);
+    for (let i = 0; i < clearingBushPts.length; i++) {
+        objects.push({ assetId: BUSHES[i % BUSHES.length], x: clearingBushPts[i].x, y: clearingBushPts[i].y, physics: false });
+    }
+
+    const detailTiles: DetailTile[] = [];
+    const dPts = pts(23501, 80, CX, CY, 0, CLEARING - 50);
+    const detailFrames = [144, 156, 157];
+    for (let i = 0; i < dPts.length; i++) {
+        detailTiles.push({ x: dPts[i].x, y: dPts[i].y, frame: detailFrames[i % detailFrames.length] });
+    }
+
+    return { level: 10, groundFrame: 20, objects, detailTiles };
+}
+
+// ---------------------------------------------------------------------------
 // Export
 // ---------------------------------------------------------------------------
 
@@ -290,4 +565,10 @@ export const STATIC_MAPS: StaticMapDef[] = [
     buildLevel2(),
     buildLevel3(),
     buildLevel4(),
+    buildLevel5(),
+    buildLevel6(),
+    buildLevel7(),
+    buildLevel8(),
+    buildLevel9(),
+    buildLevel10(),
 ];
