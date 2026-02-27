@@ -228,6 +228,12 @@ export const GameContainer: React.FC<GameContainerProps> = React.memo(({ network
                         gameInstanceRef.current?.registry.set('syncState', data);
                     });
 
+                    mainScene.events.on('player_ready', (data: any) => {
+                        if (networkConfig?.role === 'host') {
+                            setReadyPlayers(prev => new Set(prev).add(data.playerId));
+                        }
+                    });
+
                     mainScene.events.on('start_level', (data: any) => {
                         if (networkConfig?.role === 'client') {
                             setIsLoadingLevel(false);

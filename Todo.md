@@ -13,6 +13,7 @@
 # Dash
 - [x] Dash må implementeres, med en cooldown, 20 sec default. Hotkey Shift (må også ligges inn i onboarding. ) Spilleren forflytter seg et stykke i den retningen man peker, og kan ikke skade fiender mens man dasher, man tar heller ikke skade i dash. Vi må se om vi enkelt kan få til en liten dash animation, eller effekt som indikerer det for spiller, samt en liten swoosh-lyd (bruk placeholder, skal finne riktig senere). Vi må også se om det er mulig å få til en liten dash-cooldown bar, eller noe som indikerer hvor lenge til man kan dash igjen. Denne kan gjerne ligge rett over actionbar. Vi må ha upgrades til dash i boken, som reduserer cooldown, øker distanse, og kanskje gir en liten bonus på noe annet. 
 -[x] Vindstøt upgrade, teksten gjenspeiler ikke hva nye dasj er. Default er 7 sec nå. -1 pr upgrade. 
+-[ ] Dash upgrade (egen type) gjør skade og har pushback hvis man treffer en fiende eller går igjennom. 
 
 # Score 
 - [x] Score ingame oppe ved siden av mynter
@@ -58,6 +59,8 @@
 - [x] Når hele party er døde, skal man kunne starte på nytt uten å lage en helt ny server osv. Bare en retry knapp som dukker opp med readystate x/y spillere.  
 
 # Bugs
+- [ ] MP: Når man trykker klar, så står det bare 0/2, selv om begge spillerne har trykket klar, lukkes ikke spillet og man gå kan videre.  
+- [ ] MP: Man må kunne se andres lys, slik at man kan se deres fog of war (bare ytterste lyset, ikke det innerste)
 - [x] Boss battle kan bli hengede på spilleren (splash screen), selv om kampen er startet. 
 - [ ] Man kommer ikke lengre en lvl 5 
 - [x] Level blir av og til completet selv om det er fiender igjen. 
