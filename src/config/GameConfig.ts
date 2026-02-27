@@ -180,6 +180,37 @@ export const GAME_CONFIG = {
     },
     QUALITY: {
         DEFAULT: DEFAULT_QUALITY
+    },
+    WEAPONS: {
+        SWORD: {
+            damageMult: 1.0,
+            knockback: 400,
+            cooldown: 500
+        },
+        BOW: {
+            damageMult: 1.0,
+            speed: 700,
+            cooldown: 500
+        },
+        FIREBALL: {
+            damageMult: 1.3,
+            splashRadius: 80,
+            cooldown: 600,
+            speed: 450
+        },
+        FROST: {
+            damageMult: 1.2,
+            radius: 100,
+            slowFactor: 0.5,
+            cooldown: 1000
+        },
+        LIGHTNING: {
+            damageMult: 0.9,
+            bounces: 1,
+            searchRadius: 400,
+            turnRate: 0.8,
+            cooldown: 800
+        }
     }
 };
 

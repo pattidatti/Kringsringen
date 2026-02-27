@@ -285,14 +285,24 @@ export const UPGRADES: UpgradeConfig[] = [
         description: (lvl) => `+1 ekstra mål (Nå: ${1 + lvl} ekstra mål)`
     },
     {
-        id: 'lightning_multicast',
-        title: 'Stormskudd',
+        id: 'lightning_stun',
+        title: 'Statisk utladning',
+        icon: 'item_lightning_staff',
+        category: 'Magi',
+        maxLevel: 5,
+        basePrice: 150,
+        priceScale: 1.8,
+        description: (lvl) => `${lvl * 10}% sjanse til å stunne fiender (Nå: ${lvl * 10}%)`
+    },
+    {
+        id: 'lightning_voltage',
+        title: 'Høyspenning',
         icon: 'item_lightning_staff',
         category: 'Magi',
         maxLevel: 3,
-        basePrice: 300,
-        priceScale: 2.5,
-        description: (lvl) => `+1 lyn samtidig (Nå: ${1 + lvl} lyn)`
+        basePrice: 200,
+        priceScale: 2.2,
+        description: (lvl) => `+${lvl * 15}% skade per bounce (Nå: +${lvl * 15}%)`
     }
 ];
 

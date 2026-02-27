@@ -14,7 +14,6 @@ export class PlayerStatsManager {
     private baseDamage: number = GAME_CONFIG.PLAYER.BASE_DAMAGE;
     private baseSpeed: number = GAME_CONFIG.PLAYER.BASE_SPEED;
     private baseMaxHP: number = GAME_CONFIG.PLAYER.BASE_MAX_HP;
-    private baseCooldown: number = GAME_CONFIG.PLAYER.BASE_COOLDOWN;
     private baseKnockback: number = GAME_CONFIG.PLAYER.BASE_KNOCKBACK;
     private baseRegen: number = 0;
     private baseArmor: number = 0;
@@ -25,7 +24,7 @@ export class PlayerStatsManager {
     private playerDamage!: number;
     private playerSpeed!: number;
     private playerMaxHP!: number;
-    private playerCooldown!: number;
+    public playerCooldown!: number;
     private playerKnockback!: number;
 
     // Batched Economy (GC Hardening & React Bridge)
@@ -72,9 +71,10 @@ export class PlayerStatsManager {
         this.playerMaxHP = newMaxHP;
         this.scene.registry.set('playerMaxHP', this.playerMaxHP);
 
-        // Cooldown
+        // Cooldown Multiplicative Formula: base / (1 + (lvl * factor))
         const cdLvl = levels['bow_cooldown'] || 0;
-        this.playerCooldown = this.baseCooldown * (1 - (cdLvl * 0.1));
+        const bowCdBase = GAME_CONFIG.WEAPONS.BOW.cooldown;
+        this.playerCooldown = bowCdBase / (1 + (cdLvl * 0.15));
 
         // Attack Speed (Sword)
         const atkSpdLvl = levels['attack_speed'] || 0;
@@ -83,7 +83,7 @@ export class PlayerStatsManager {
 
         // Knockback
         const kbLvl = levels['knockback'] || 0;
-        this.playerKnockback = this.baseKnockback * (1 + (kbLvl * 0.15));
+        this.playerKnockback = this.baseKnockback * (1 + (kbLvl * 0.15)) * 1.15; // Buffed by 15%
 
         // Armor
         const armorLvl = levels['armor'] || 0;
@@ -107,7 +107,7 @@ export class PlayerStatsManager {
         const explosiveLvl = levels['explosive_arrow'] || 0;
         this.scene.registry.set('playerPierceCount', pierceLvl);
         this.scene.registry.set('playerArrowDamageMultiplier', 1 + arrowDmgLvl * 0.15);
-        this.scene.registry.set('playerArrowSpeed', 700 * (1 + arrowSpdLvl * 0.20));
+        this.scene.registry.set('playerArrowSpeed', GAME_CONFIG.WEAPONS.BOW.speed * (1 + arrowSpdLvl * 0.20));
         this.scene.registry.set('playerExplosiveLevel', explosiveLvl);
 
         // Fireball stats
@@ -115,35 +115,37 @@ export class PlayerStatsManager {
         const fireRadLvl = levels['fire_radius'] || 0;
         const fireSpdLvl = levels['fire_speed'] || 0;
         this.scene.registry.set('fireballDamageMulti', 1 + fireDmgLvl * 0.15);
-        this.scene.registry.set('fireballRadius', 80 + fireRadLvl * 20);
-        this.scene.registry.set('fireballSpeed', 450 * (1 + fireSpdLvl * 0.15));
+        this.scene.registry.set('fireballRadius', GAME_CONFIG.WEAPONS.FIREBALL.splashRadius + fireRadLvl * 20);
+        this.scene.registry.set('fireballSpeed', GAME_CONFIG.WEAPONS.FIREBALL.speed * (1 + fireSpdLvl * 0.15));
 
         // FrostBolt stats
         const frostDmgLvl = levels['frost_damage'] || 0;
         const frostRadLvl = levels['frost_radius'] || 0;
         const frostSlowLvl = levels['frost_slow'] || 0;
         this.scene.registry.set('frostDamageMulti', 1 + frostDmgLvl * 0.15);
-        this.scene.registry.set('frostRadius', 100 + frostRadLvl * 20);
-        this.scene.registry.set('frostSlowDuration', 1000 + frostSlowLvl * 500); // ms
+        this.scene.registry.set('frostRadius', GAME_CONFIG.WEAPONS.FROST.radius + frostRadLvl * 20);
+        this.scene.registry.set('frostSlowDuration', 1000 + frostSlowLvl * 800); // Ms - Buffed from 500ms
 
         // Lightning stats
         const ltgDmgLvl = levels['lightning_damage'] || 0;
         const ltgBounceLvl = levels['lightning_bounces'] || 0;
-        const ltgMulticastLvl = levels['lightning_multicast'] || 0;
+        const ltgStunLvl = levels['lightning_stun'] || 0;
+        const ltgVoltageLvl = levels['lightning_voltage'] || 0;
         this.scene.registry.set('lightningDamageMulti', 1 + ltgDmgLvl * 0.15);
-        this.scene.registry.set('lightningBounces', 1 + ltgBounceLvl);
-        this.scene.registry.set('lightningMulticast', 1 + ltgMulticastLvl);
+        this.scene.registry.set('lightningBounces', GAME_CONFIG.WEAPONS.LIGHTNING.bounces + ltgBounceLvl);
+        this.scene.registry.set('lightningStunChance', ltgStunLvl * 0.1); // 10% per level
+        this.scene.registry.set('lightningBounceBonus', 1 + ltgVoltageLvl * 0.15); // +15% per bounce per level? No, let's keep it simple: 15% per level total bounce bonus
 
         // Misc
         this.scene.registry.set('playerLuck', 1.0);
         this.scene.registry.set('playerCritChance', this.baseCritChance);
 
-        // Dash stats
+        // Dash stats (Previously fixed, using current values but verifying formula)
         const dashCdLvl = levels['dash_cooldown'] || 0;
         const dashDistLvl = levels['dash_distance'] || 0;
-        const dashCooldownMs = GAME_CONFIG.PLAYER.DASH_COOLDOWN_MS - dashCdLvl * 2000;
+        const dashCooldownMs = GAME_CONFIG.PLAYER.DASH_COOLDOWN_MS / (1 + dashCdLvl * 0.2); // Multiplicative
         const dashDistance = GAME_CONFIG.PLAYER.DASH_DISTANCE + dashDistLvl * 50;
-        this.scene.registry.set('dashCooldown', Math.max(2000, dashCooldownMs));
+        this.scene.registry.set('dashCooldown', Math.max(3000, dashCooldownMs));
         this.scene.registry.set('dashDistance', dashDistance);
     }
 

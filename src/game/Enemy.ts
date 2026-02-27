@@ -30,6 +30,8 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     private shadow: Phaser.GameObjects.Sprite | null = null;
     public id: string = "";
     private attackLight: Phaser.GameObjects.Light | null = null;
+    public isStunned: boolean = false;
+    private stunTimer: Phaser.Time.TimerEvent | null = null;
 
     // Predictive Death (Client-side)
     private predictedDeadUntil: number = 0;
@@ -140,10 +142,11 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         this.avoidanceDirection = 1;
 
         // Clear slow state
-        if (this.slowTimer) {
-            this.slowTimer.remove();
-            this.slowTimer = null;
+        if (this.stunTimer) {
+            this.stunTimer.remove();
+            this.stunTimer = null;
         }
+        this.isStunned = false;
         this.originalSpeed = this.movementSpeed;
         this.positionHistory = [];
 
@@ -290,7 +293,12 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
             return;
         }
 
-        if (this.isDead || this.isPushingBack) return;
+        if (this.isDead || this.isPushingBack || this.isStunned) {
+            if (this.isStunned && this.body) {
+                this.setVelocity(0, 0);
+            }
+            return;
+        }
         if (!this.body) return;
 
         const nearestTarget = this.getNearestTarget();
@@ -787,12 +795,28 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         this.jitterBuffer.push(ts, packet);
     }
 
+    public stun(duration: number): void {
+        if (this.isDead || !this.active) return;
+        this.isStunned = true;
+        if (this.body) this.setVelocity(0, 0);
+        this.setTint(0x8888ff);
+
+        if (this.stunTimer) this.stunTimer.remove();
+        this.stunTimer = this.scene.time.delayedCall(duration, () => {
+            if (this.active && !this.isDead) {
+                this.isStunned = false;
+                this.clearTint();
+                if (this.enemyType === 'healer_wizard') this.setTint(0xaaffaa);
+                else if (this.enemyType === 'wizard') this.setTint(0xffaaaa);
+            }
+        });
+    }
+
     public pushback(sourceX: number, sourceY: number, force: number = 400) {
         if (!this.active || this.isDead) return;
 
         const balanceStats = GAME_CONFIG.ENEMIES[this.enemyType.toUpperCase() as EnemyType];
         const resistance = balanceStats ? balanceStats.knockbackResistance : 0;
-
         const netForce = Math.max(0, force * (1 - resistance));
 
         if (netForce < 10) return;
@@ -818,7 +842,14 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
                 this.setTint(0x444444);
             } else {
                 this.clearTint();
-                if (this.config.spriteInfo.anims?.walk) {
+                if (this.isStunned) {
+                    this.setTint(0x8888ff);
+                } else {
+                    if (this.enemyType === 'healer_wizard') this.setTint(0xaaffaa);
+                    else if (this.enemyType === 'wizard') this.setTint(0xffaaaa);
+                }
+
+                if (this.config.spriteInfo.anims?.walk && !this.isStunned) {
                     this.play(this.config.spriteInfo.anims.walk);
                 }
             }

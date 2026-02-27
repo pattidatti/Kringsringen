@@ -1457,7 +1457,7 @@ class MainScene extends Phaser.Scene implements IMainScene {
 
             if (currentWeapon === 'sword') {
                 const attackSpeedMult = this.registry.get('playerAttackSpeed') || 1;
-                const swordCooldown = 500 / attackSpeedMult;
+                const swordCooldown = GAME_CONFIG.WEAPONS.SWORD.cooldown / attackSpeedMult;
 
                 const ATTACK_ANIMS = ['player-attack', 'player-attack-2'];
                 const idx = this.data.get('attackAnimIndex') as number;
@@ -1497,18 +1497,19 @@ class MainScene extends Phaser.Scene implements IMainScene {
                     player.play('player-idle');
                 });
             } else if (currentWeapon === 'bow') {
-                this.registry.set('weaponCooldown', { duration: this.stats.cooldown, timestamp: Date.now() });
+                const bowCooldown = this.stats.playerCooldown;
+                this.registry.set('weaponCooldown', { duration: bowCooldown, timestamp: Date.now() });
                 player.play('player-bow');
 
                 // Spawn arrow during animation
-                this.time.delayedCall(this.stats.cooldown * 0.5, () => {
+                this.time.delayedCall(bowCooldown * 0.5, () => {
                     // Read arrow upgrade stats
                     const arrowDamageMultiplier = this.registry.get('playerArrowDamageMultiplier') || 1;
-                    const arrowSpeed = this.registry.get('playerArrowSpeed') || 700;
+                    const arrowSpeed = this.registry.get('playerArrowSpeed') || GAME_CONFIG.WEAPONS.BOW.speed;
                     const pierceCount = this.registry.get('playerPierceCount') || 0;
                     const explosiveLevel = this.registry.get('playerExplosiveLevel') || 0;
 
-                    const baseDamage = this.stats.damage * 0.8 * arrowDamageMultiplier;
+                    const baseDamage = this.stats.damage * GAME_CONFIG.WEAPONS.BOW.damageMult * arrowDamageMultiplier;
 
                     const arrow = this.arrows.get(player.x, player.y) as Arrow;
                     if (arrow) {
@@ -1550,14 +1551,16 @@ class MainScene extends Phaser.Scene implements IMainScene {
                     player.play('player-idle');
                 });
             } else if (currentWeapon === 'fireball') {
-                this.registry.set('weaponCooldown', { duration: 600, timestamp: Date.now() });
-                player.play('player-bow');
+                const fireCd = GAME_CONFIG.WEAPONS.FIREBALL.cooldown;
+                this.registry.set('weaponCooldown', { duration: fireCd, timestamp: Date.now() });
+                player.play('player-bow'); // Uses bow animation for casting too
                 this.events.emit('fireball-cast');
 
                 this.time.delayedCall(100, () => {
                     const fireball = this.fireballs.get(player.x, player.y) as Fireball;
                     if (fireball) {
-                        fireball.fire(player.x, player.y, angle, this.stats.damage * 1.5);
+                        const fireDmgMult = this.registry.get('fireballDamageMulti') || 1;
+                        fireball.fire(player.x, player.y, angle, this.stats.damage * GAME_CONFIG.WEAPONS.FIREBALL.damageMult * fireDmgMult);
                         this.events.emit('fireball-cast');
 
                         // SYNC FIRE ATTACK
@@ -1582,7 +1585,8 @@ class MainScene extends Phaser.Scene implements IMainScene {
                     player.play('player-idle');
                 });
             } else if (currentWeapon === 'frost') {
-                this.registry.set('weaponCooldown', { duration: 1000, timestamp: Date.now() });
+                const frostCd = GAME_CONFIG.WEAPONS.FROST.cooldown;
+                this.registry.set('weaponCooldown', { duration: frostCd, timestamp: Date.now() });
                 player.play('player-cast');
 
                 // Capture mouse world position at cast time
@@ -1591,7 +1595,8 @@ class MainScene extends Phaser.Scene implements IMainScene {
                 this.time.delayedCall(100, () => {
                     const frostBolt = this.frostBolts.get(player.x, player.y) as FrostBolt;
                     if (frostBolt) {
-                        frostBolt.fire(player.x, player.y, frostTarget.x, frostTarget.y, this.stats.damage * 1.2);
+                        const frostDmgMult = this.registry.get('frostDamageMulti') || 1;
+                        frostBolt.fire(player.x, player.y, frostTarget.x, frostTarget.y, this.stats.damage * GAME_CONFIG.WEAPONS.FROST.damageMult * frostDmgMult);
                         this.events.emit('frost-cast');
 
                         // SYNC FROST ATTACK
@@ -1616,7 +1621,8 @@ class MainScene extends Phaser.Scene implements IMainScene {
                     player.play('player-idle');
                 });
             } else if (currentWeapon === 'lightning') {
-                this.registry.set('weaponCooldown', { duration: 800, timestamp: Date.now() });
+                const ltgCd = GAME_CONFIG.WEAPONS.LIGHTNING.cooldown;
+                this.registry.set('weaponCooldown', { duration: ltgCd, timestamp: Date.now() });
                 player.play('player-cast');
                 this.events.emit('lightning-cast');
 
@@ -1625,19 +1631,13 @@ class MainScene extends Phaser.Scene implements IMainScene {
 
                 this.time.delayedCall(100, () => {
                     const dmgMult = this.registry.get('lightningDamageMulti') || 1;
-                    const bounces = this.registry.get('lightningBounces') || 1;
-                    const multicast = this.registry.get('lightningMulticast') || 1;
-                    const baseDamage = this.stats.damage * 0.85 * dmgMult;
+                    const bounces = this.registry.get('lightningBounces') || GAME_CONFIG.WEAPONS.LIGHTNING.bounces;
+                    const baseDamage = this.stats.damage * GAME_CONFIG.WEAPONS.LIGHTNING.damageMult * dmgMult;
                     const baseAngle = Phaser.Math.Angle.Between(player.x, player.y, ltTarget.x, ltTarget.y);
-                    const spreadAngle = 15 * (Math.PI / 180);
 
-                    for (let i = 0; i < multicast; i++) {
-                        const bolt = this.lightningBolts.get(player.x, player.y) as LightningBolt;
-                        if (bolt) {
-                            const offset = Math.ceil(i / 2) * spreadAngle * (i % 2 === 0 ? -1 : 1);
-                            const finalAngle = baseAngle + offset;
-                            bolt.fire(player.x, player.y, ltTarget.x, ltTarget.y, baseDamage, bounces, new Set(), finalAngle);
-                        }
+                    const bolt = this.lightningBolts.get(player.x, player.y) as LightningBolt;
+                    if (bolt) {
+                        bolt.fire(player.x, player.y, ltTarget.x, ltTarget.y, baseDamage, bounces, new Set(), baseAngle);
                     }
 
                     // SYNC LIGHTNING ATTACK
@@ -1649,7 +1649,7 @@ class MainScene extends Phaser.Scene implements IMainScene {
                                 id: this.game.registry.get('networkConfig')?.peer.id,
                                 weapon: 'lightning',
                                 anim: 'player-cast',
-                                angle: baseAngle
+                                angle: angle
                             }
                         },
                         ts: Date.now()

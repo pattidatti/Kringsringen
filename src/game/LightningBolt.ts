@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { Enemy } from './Enemy';
 import { AudioManager } from './AudioManager';
 import { PacketType } from '../network/SyncSchemas';
+import { GAME_CONFIG } from '../config/GameConfig';
 
 export class LightningBolt extends Phaser.Physics.Arcade.Sprite {
     private damage: number = 0;
@@ -11,7 +12,7 @@ export class LightningBolt extends Phaser.Physics.Arcade.Sprite {
     private speed: number = 400;
     private light: Phaser.GameObjects.Light | null = null;
     private impactSprite: Phaser.GameObjects.Sprite | null = null;
-    private turnRate: number = 1.2;
+    private turnRate: number = GAME_CONFIG.WEAPONS.LIGHTNING.turnRate;
     private targetSearchTimer: number = 0;
     private glowEffect: any = null;
     private currentAngle: number = 0;
@@ -110,36 +111,36 @@ export class LightningBolt extends Phaser.Physics.Arcade.Sprite {
     private findNearestEnemy(searchX: number, searchY: number): Enemy | null {
         const mainScene = this.scene as any;
         const grid = mainScene.spatialGrid;
+        const searchRadius = GAME_CONFIG.WEAPONS.LIGHTNING.searchRadius;
 
         let nearest: Enemy | null = null;
         let minDist = Infinity;
 
         // Use spatial grid to find nearby candidates
-        const candidates = grid ? grid.findNearby({ x: searchX, y: searchY, width: 32, height: 32 }, 600) : [];
+        const candidates = grid ? grid.findNearby({ x: searchX, y: searchY, width: 32, height: 32 }, searchRadius) : [];
 
         if (candidates.length > 0) {
             for (const c of candidates) {
-                // BUGFIX: Use c.ref to get the actual Enemy instance
                 const e = c.ref as Enemy;
                 if (!e || !e.active || e.getIsDead()) continue;
                 if (this.hitEnemies.has(e)) continue;
 
                 const dist = Phaser.Math.Distance.Between(searchX, searchY, e.x, e.y);
-                if (dist < minDist) {
+                if (dist < minDist && dist <= searchRadius) { // Strict radius check
                     minDist = dist;
                     nearest = e;
                 }
             }
         }
 
-        // Fallback to boss
-        if (mainScene.bossGroup) {
+        // Fallback to boss if within radius
+        if (!nearest && mainScene.bossGroup) {
             mainScene.bossGroup.children.iterate((e: any) => {
                 if (!e.active || e.getIsDead()) return true;
                 if (this.hitEnemies.has(e)) return true;
 
                 const dist = Phaser.Math.Distance.Between(searchX, searchY, e.x, e.y);
-                if (dist < minDist) {
+                if (dist < minDist && dist <= searchRadius) {
                     minDist = dist;
                     nearest = e as Enemy;
                 }
@@ -147,22 +148,8 @@ export class LightningBolt extends Phaser.Physics.Arcade.Sprite {
             });
         }
 
-        // CRITICAL BUGFIX: If no target found yet, ALWAYS do a wide fallback search.
-        // The previous condition "candidates.length === 0" was too restrictive.
-        if (!nearest) {
-            mainScene.enemies.children.iterate((e: any) => {
-                const enemy = e as Enemy;
-                if (!enemy.active || enemy.getIsDead()) return true;
-                if (this.hitEnemies.has(enemy)) return true;
-
-                const dist = Phaser.Math.Distance.Between(searchX, searchY, enemy.x, enemy.y);
-                if (dist < minDist) {
-                    minDist = dist;
-                    nearest = enemy;
-                }
-                return true;
-            });
-        }
+        // REMOVED: Wide fallback search that scans all enemies. 
+        // Lightning now ONLY targets what is within its defined search radius.
 
         return nearest;
     }
@@ -260,6 +247,12 @@ export class LightningBolt extends Phaser.Physics.Arcade.Sprite {
             // Deal damage
             hitEnemy.takeDamage(this.damage, this.colorStr);
             hitEnemy.pushback(this.x, this.y, 150);
+
+            // STUN: Static Charge upgrade
+            const stunChance = mainScene.registry.get('lightningStunChance') || 0;
+            if (Math.random() < stunChance) {
+                hitEnemy.stun(800); // 0.8s stun
+            }
         }
 
         // Add to hit set
@@ -316,8 +309,8 @@ export class LightningBolt extends Phaser.Physics.Arcade.Sprite {
                     const mainScene = this.scene as any;
                     const bolt = mainScene.lightningBolts.get(hitX, hitY) as LightningBolt;
                     if (bolt) {
-                        const dmgMult = mainScene.registry.get('lightningDamageMulti') || 1;
-                        const damage = this.damage * dmgMult;
+                        const bounceBonus = mainScene.registry.get('lightningBounceBonus') || 1;
+                        const damage = this.damage * bounceBonus; // Apply bounce damage bonus
                         bolt.fire(hitX, hitY, nextTarget.x, nextTarget.y, damage, this.bouncesLeft - 1, this.hitEnemies, undefined, this.colorVariant);
                     }
                 }
