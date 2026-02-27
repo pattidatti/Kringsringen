@@ -41,6 +41,7 @@ class MainScene extends Phaser.Scene implements IMainScene {
     public coins!: Phaser.Physics.Arcade.Group;
     public obstacles!: Phaser.Physics.Arcade.StaticGroup;
     private attackHitbox!: Phaser.Types.Physics.Arcade.ImageWithDynamicBody;
+    private currentSwingHitIds: Set<string> = new Set();
     private wasd!: {
         W: Phaser.Input.Keyboard.Key;
         A: Phaser.Input.Keyboard.Key;
@@ -383,6 +384,9 @@ class MainScene extends Phaser.Scene implements IMainScene {
 
         this.physics.add.overlap(this.attackHitbox, this.enemies, (_hitbox, enemy) => {
             const e = enemy as Enemy;
+            if (this.currentSwingHitIds.has(e.id)) return;
+            this.currentSwingHitIds.add(e.id);
+
             if (this.networkManager?.role === 'client') {
                 const now = Date.now();
                 const lastReq = e.getData('lastHitRequest') || 0;
@@ -417,6 +421,9 @@ class MainScene extends Phaser.Scene implements IMainScene {
 
         this.physics.add.overlap(this.attackHitbox, this.bossGroup, (_hitbox, boss) => {
             const b = boss as BossEnemy;
+            if (this.currentSwingHitIds.has(b.id)) return;
+            this.currentSwingHitIds.add(b.id);
+
             if (this.networkManager?.role === 'client') {
                 const now = Date.now();
                 const lastReq = b.getData('lastHitRequest') || 0;
@@ -1515,6 +1522,7 @@ class MainScene extends Phaser.Scene implements IMainScene {
 
                 this.registry.set('weaponCooldown', { duration: swordCooldown, timestamp: Date.now() });
 
+                this.currentSwingHitIds.clear();
                 player.play(attackAnimKey);
                 this.events.emit('player-swing');
 

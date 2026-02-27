@@ -67,6 +67,13 @@ export class NetworkManager {
         }
 
         conn.on('data', (data: any) => {
+            // Defensive check: Ensure connection is registered even if 'open' event hasn't fired yet
+            if (conn.label === 'reliable' && !this.reliableConnections.has(conn.peer)) {
+                this.reliableConnections.set(conn.peer, conn);
+            } else if (conn.label === 'unreliable' && !this.unreliableConnections.has(conn.peer)) {
+                this.unreliableConnections.set(conn.peer, conn);
+            }
+
             let packet: SyncPacket;
 
             if (data instanceof Uint8Array || data instanceof ArrayBuffer) {

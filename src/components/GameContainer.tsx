@@ -288,7 +288,7 @@ export const GameContainer: React.FC<GameContainerProps> = React.memo(({ network
 
     useEffect(() => {
         if (!networkConfig) return;
-        if (!isWaitingReady && !isLoadingLevel) return;
+        // removed: if (!isWaitingReady && !isLoadingLevel) return;
 
         const interval = setInterval(() => {
             const nm = (gameInstanceRef.current?.scene.getScene('MainScene') as any)?.networkManager;
@@ -315,10 +315,13 @@ export const GameContainer: React.FC<GameContainerProps> = React.memo(({ network
             const total = nm.getConnectedPeerCount() + 1;
             const currentState = { loaded: loadedPlayers.size, ready: readyPlayers.size, expected: total };
 
+            // Always broadcast state heartbeat to all clients
+            nm.broadcast({ t: PacketType.GAME_EVENT, ev: { type: 'sync_players_state', data: currentState }, ts: Date.now() });
+            setSyncState(currentState);
+            gameInstanceRef.current?.registry.set('syncState', currentState);
+
             if ((isLoadingLevel || isWaitingReady) && total !== syncState.expected) {
-                nm.broadcast({ t: PacketType.GAME_EVENT, ev: { type: 'sync_players_state', data: currentState }, ts: Date.now() });
-                setSyncState(currentState);
-                gameInstanceRef.current?.registry.set('syncState', currentState);
+                // ... broadcast above ...
             }
 
             if (isLoadingLevel && loadedPlayers.size >= total) {
