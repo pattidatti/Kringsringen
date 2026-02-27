@@ -40,9 +40,10 @@
 - [ ] Finne en annen uppgrade enn å kunne caste flere lyn samtidig ut fra spilleren. 
 # musikk
 - [x] Må bytte musikk hvert level. 
-- [ ] Er placeholder lyd på dash og healing spell?
-- [ ] Når man kjøper en upgrade i boken, skal det være en lydeffekt public/assets/audio/sfx/coins_gather_quick.wav
-- [] Når man bytter side i boken skal det være en lydeffekt public/assets/audio/sfx/page_turn.wav
+- [x] Er placeholder lyd på dash
+- [ ] Healing trenger egen lyd
+- [x] Når man kjøper en upgrade i boken, skal det være en lydeffekt public/assets/audio/sfx/coins_gather_quick.wav
+- [x] Når man bytter side i boken skal det være en lydeffekt public/assets/audio/sfx/page_turn.wav
 
 # MP
 - [ ] Når hele party er døde, skal man kunne starte på nytt uten å lage en helt ny server osv. Bare en retry knapp som dukker opp med readystate x/y spillere.  

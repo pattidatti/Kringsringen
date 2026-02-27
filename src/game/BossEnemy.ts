@@ -121,24 +121,29 @@ export class BossEnemy extends Enemy {
 
         this.scene.tweens.add({
             targets: state,
-            r: 200,
+            r: 250, // Slightly larger radius
             alpha: 0,
-            duration: 500,
+            duration: 600,
             onUpdate: () => {
                 graphics.clear();
-                graphics.lineStyle(4, 0xff6600, state.alpha);
+                graphics.lineStyle(6, 0xff3300, state.alpha); // Thicker, redder line
                 graphics.strokeCircle(bossX, bossY, state.r);
             },
             onComplete: () => graphics.destroy(),
         });
+
+        // Screen shake on impact
+        this.scene.cameras.main.shake(200, 0.015);
 
         // Damage check at midpoint of animation
         this.scene.time.delayedCall(250, () => {
             const player = (this.scene as any).data?.get('player') as any;
             if (!player || !player.active) return;
             const dist = Phaser.Math.Distance.Between(bossX, bossY, player.x, player.y);
-            if (dist <= 200) {
-                this.scene.events.emit('enemy-hit-player', 20, 'boss_shockwave', bossX, bossY);
+            if (dist <= 250) {
+                this.scene.events.emit('enemy-hit-player', 30, 'boss_shockwave', bossX, bossY);
+                // Slow the player momentarily
+                if (player.setSpeedModifier) player.setSpeedModifier(0.4, 1500);
             }
         });
     }
@@ -149,23 +154,67 @@ export class BossEnemy extends Enemy {
         const player = (this.scene as any).data?.get('player') as any;
         if (!player || !player.active) return;
 
+        // Triple Dash if in phase 2
+        const dashCount = this.phase === 2 ? 3 : 1;
+        this.executeDashSequence(dashCount);
+    }
+
+    private executeDashSequence(remaining: number): void {
+        if (remaining <= 0 || !this.active || this.isDead) {
+            this.isCharging = false;
+            return;
+        }
+
+        const player = (this.scene as any).data?.get('player') as any;
+        if (!player || !player.active) {
+            this.isCharging = false;
+            return;
+        }
+
         this.isCharging = true;
-        const chargeSpeed = this.bossConfig.speed * 3;
-        const angle = Phaser.Math.Angle.Between(this.x, this.y, player.x, player.y);
+        this.setTint(0xffaa00); // Orange tint for telegraph
 
-        // Yellow flash telegraphs the charge
-        this.setTint(0xffff00);
-
-        this.scene.time.delayedCall(250, () => {
-            if (!this.active || this.isDead) { this.isCharging = false; return; }
+        this.scene.time.delayedCall(300, () => {
+            if (!this.active || this.isDead) return;
             this.clearTint();
+
+            const angle = Phaser.Math.Angle.Between(this.x, this.y, player.x, player.y);
+            const chargeSpeed = this.bossConfig.speed * 4.5; // Faster dash
+
             this.setVelocity(
                 Math.cos(angle) * chargeSpeed,
                 Math.sin(angle) * chargeSpeed
             );
 
-            this.scene.time.delayedCall(1200, () => {
-                if (this.active) this.isCharging = false;
+            // Create movement ghosts/trail
+            const trailTimer = this.scene.time.addEvent({
+                delay: 50,
+                repeat: 8,
+                callback: () => {
+                    if (!this.active) return;
+                    const ghost = this.scene.add.sprite(this.x, this.y, this.texture.key, this.frame.name);
+                    ghost.setScale(this.scale);
+                    ghost.setAlpha(0.4);
+                    ghost.setTint(0xffaa00);
+                    ghost.setDepth(this.depth - 1);
+                    this.scene.tweens.add({
+                        targets: ghost,
+                        alpha: 0,
+                        duration: 300,
+                        onComplete: () => ghost.destroy()
+                    });
+                }
+            });
+
+            this.scene.time.delayedCall(500, () => {
+                if (!this.active || this.isDead) return;
+                this.setVelocity(0, 0);
+
+                // Pause briefly between triple dashes
+                const delay = remaining > 1 ? 400 : 0;
+                this.scene.time.delayedCall(delay, () => {
+                    this.executeDashSequence(remaining - 1);
+                });
             });
         });
     }
@@ -352,10 +401,19 @@ export class BossEnemy extends Enemy {
             yoyo: true,
         });
 
-        // Orc Warchief enrage: permanent +50% speed
+        // Orc Warchief enrage: permanent +50% speed + minions
         if (this.bossConfig.enemyType === 'armored_orc') {
             this.movementSpeed = this.bossConfig.speed * 1.5;
             this.originalSpeed = this.movementSpeed;
+
+            // Spawn Armored Orc minions
+            for (let i = 0; i < 2; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const dist = 150;
+                const sx = this.x + Math.cos(angle) * dist;
+                const sy = this.y + Math.sin(angle) * dist;
+                this.scene.events.emit('boss-spawn-minion', sx, sy, 'armored_orc');
+            }
         }
 
         // Restart ability timers with phase-2 cooldowns
