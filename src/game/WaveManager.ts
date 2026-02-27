@@ -44,6 +44,7 @@ export class WaveManager {
     startLevel(level: number): void {
         this.currentLevel = level;
         this.currentWave = 1;
+        this.enemiesAlive = 0;
         this.isLevelActive = true;
         this.scene.registry.set('gameLevel', this.currentLevel);
 
@@ -150,9 +151,8 @@ export class WaveManager {
         this.enemiesAlive++;
         this.enemiesToSpawnInWave--;
 
-        enemy.removeAllListeners('dead');
         enemy.on('dead', (ex: number, ey: number) => {
-            this.enemiesAlive--;
+            this.enemiesAlive = Math.max(0, this.enemiesAlive - 1);
             this.checkWaveProgress();
 
             // Sync enemy death reliably to prevent ghosting
@@ -235,7 +235,12 @@ export class WaveManager {
     }
 
     private checkWaveProgress(): void {
+        if (!this.isLevelActive) return;
+
         const config = LEVEL_CONFIG[Math.min(this.currentLevel - 1, LEVEL_CONFIG.length - 1)];
+
+        // Safety: ensure enemiesAlive is at least 0
+        if (this.enemiesAlive < 0) this.enemiesAlive = 0;
 
         if (this.enemiesAlive === 0 && this.enemiesToSpawnInWave === 0) {
             if (this.currentWave < config.waves) {

@@ -100,6 +100,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         this.clearTint();
         this.postFX.clear();
         this.setRotation(0);
+        this.removeAllListeners('dead');
 
         this.targetStart = target;
         this.enemyType = type;

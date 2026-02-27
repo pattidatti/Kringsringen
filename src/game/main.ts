@@ -718,8 +718,10 @@ class MainScene extends Phaser.Scene implements IMainScene {
         this.events.on('level-complete', () => {
             const nextLevel = this.registry.get('gameLevel') + 1;
 
-            // Clear coins on level complete
+            // Clear world on level complete
             this.coins.clear(true, true);
+            this.enemies.clear(true, true);
+            this.bossGroup.clear(true, true);
 
             // Schedule map regeneration after level complete delay
             this.time.delayedCall(1000, () => {
