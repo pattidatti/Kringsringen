@@ -32,10 +32,10 @@ const GameOverContent: React.FC<{ hp: number; partyDead: boolean }> = ({ hp: hpP
         let isMounted = true;
         const fetchRank = async () => {
             try {
-                const scores = await HighscoreManager.fetchHighscores(25);
+                const scores = await HighscoreManager.fetchHighscores(10);
                 if (!isMounted) return;
 
-                let rank = 26;
+                let rank = 11;
                 for (let i = 0; i < scores.length; i++) {
                     if (score > scores[i].score) {
                         rank = i + 1;
@@ -43,11 +43,11 @@ const GameOverContent: React.FC<{ hp: number; partyDead: boolean }> = ({ hp: hpP
                     }
                 }
 
-                if (rank === 26 && scores.length < 25) {
+                if (rank === 11 && scores.length < 10) {
                     rank = scores.length + 1;
                 }
 
-                if (rank <= 25) {
+                if (rank <= 10) {
                     setCalculatedRank(rank);
                 }
             } catch (err) {

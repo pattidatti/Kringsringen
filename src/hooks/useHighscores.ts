@@ -21,7 +21,7 @@ export function useHighscores(): UseHighscoresReturn {
     try {
       setLoading(true);
       setError(null);
-      const scores = await HighscoreManager.fetchHighscores(25);
+      const scores = await HighscoreManager.fetchHighscores(10);
       setHighscores(scores);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Ukjent feil';
@@ -35,9 +35,9 @@ export function useHighscores(): UseHighscoresReturn {
   useEffect(() => {
     // Set up real-time listener
     const unsubscribe = HighscoreManager.subscribeToHighscores((scores) => {
-      // Limit to top 25 scores
-      const top25 = scores.slice(0, 25);
-      setHighscores(top25);
+      // Limit to top 10 scores
+      const top10 = scores.slice(0, 10);
+      setHighscores(top10);
       setLoading(false);
       setError(null);
     });

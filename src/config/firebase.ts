@@ -88,9 +88,9 @@ export class HighscoreManager {
   }
 
   /**
-   * Fetch top 25 highscores
+   * Fetch top 10 highscores
    */
-  static async fetchHighscores(limit: number = 25): Promise<Highscore[]> {
+  static async fetchHighscores(limit: number = 10): Promise<Highscore[]> {
     try {
       const db = initializeFirebase();
       const highscoresRef = ref(db, 'highscores');
@@ -151,7 +151,7 @@ export class HighscoreManager {
       const q = query(
         highscoresRef,
         orderByChild('score'),
-        limitToLast(25)
+        limitToLast(10)
       );
 
       const unsubscribe = onValue(

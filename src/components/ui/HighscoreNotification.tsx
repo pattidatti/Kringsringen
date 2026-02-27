@@ -43,13 +43,13 @@ export const HighscoreNotification: React.FC = () => {
         };
     }, []);
 
-    // Fetch top 25 scores ONCE when component mounts
+    // Fetch top 10 scores ONCE when component mounts
     useEffect(() => {
         let isMounted = true;
 
         const fetchThresholds = async () => {
             try {
-                const scores = await HighscoreManager.fetchHighscores(25);
+                const scores = await HighscoreManager.fetchHighscores(10);
                 if (!isMounted) return;
 
                 const newThresholds: Threshold[] = scores.map((s, index) => ({
@@ -57,10 +57,10 @@ export const HighscoreNotification: React.FC = () => {
                     score: s.score
                 }));
 
-                // If less than 25 players on leaderboard, pad it out with 0 score
-                // so rank 25 is achievable at 0 score
-                if (newThresholds.length < 25) {
-                    for (let i = newThresholds.length; i < 25; i++) {
+                // If less than 10 players on leaderboard, pad it out with 0 score
+                // so rank 10 is achievable at 0 score
+                if (newThresholds.length < 10) {
+                    for (let i = newThresholds.length; i < 10; i++) {
                         newThresholds.push({ rank: i + 1, score: 0 });
                     }
                 }
@@ -88,7 +88,7 @@ export const HighscoreNotification: React.FC = () => {
         for (let i = 0; i < thresholds.length; i++) {
             if (currentScore > thresholds[i].score) {
                 bestRankFound = thresholds[i].rank;
-                break; // Because array is sorted from highest score (rank 1) to lowest (rank 25)
+                break; // Because array is sorted from highest score (rank 1) to lowest (rank 10)
             }
         }
 
