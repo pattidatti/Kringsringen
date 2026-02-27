@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { getGameInstance } from './useGameRegistry';
+import { getGameInstance, onGameReady } from './useGameRegistry';
 
 /**
  * Throttled version of useGameRegistry.
@@ -24,15 +24,30 @@ export function useGameRegistryThrottled<T>(
         return initialValue;
     });
 
+    // Force re-run of subscription effect when game instance appears
+    const [ready, setReady] = useState(!!getGameInstance());
+
     const lastRenderTimeRef = useRef<number>(0);
     const pendingValueRef = useRef<T | undefined>(undefined);
     const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+    // Wait for game instance if not available yet
+    useEffect(() => {
+        return onGameReady(() => setReady(true));
+    }, []);
+
     useEffect(() => {
         const game = getGameInstance();
-        if (!game) return;
+        if (!ready || !game) return;
 
-        const events = game.registry.events;
+        const registry = game.registry;
+        const events = registry.events;
+
+        // Sync current value immediately
+        const current = registry.get(key);
+        if (current !== undefined) {
+            setValue(current);
+        }
 
         const updateState = (val: T) => {
             const now = Date.now();
@@ -77,7 +92,7 @@ export function useGameRegistryThrottled<T>(
             events.off('setdata', onSetData);
             if (timeoutRef.current) clearTimeout(timeoutRef.current);
         };
-    }, [key, throttleMs, priorityCondition]);
+    }, [key, throttleMs, priorityCondition, ready]);
 
     return value;
 }

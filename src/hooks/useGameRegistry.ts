@@ -11,6 +11,15 @@ export const setGameInstance = (game: Phaser.Game) => {
     instanceListeners.clear();
 };
 
+export const onGameReady = (fn: () => void) => {
+    if (gameInstance) {
+        fn();
+    } else {
+        instanceListeners.add(fn);
+    }
+    return () => { instanceListeners.delete(fn); };
+};
+
 export const getGameInstance = () => gameInstance;
 
 /**
@@ -37,13 +46,7 @@ export function useGameRegistry<T>(key: string, initialValue: T): T {
 
     // Wait for game instance if not available yet
     useEffect(() => {
-        if (gameInstance) {
-            setReady(true);
-            return;
-        }
-        const onReady = () => setReady(true);
-        instanceListeners.add(onReady);
-        return () => { instanceListeners.delete(onReady); };
+        return onGameReady(() => setReady(true));
     }, []);
 
     // Subscribe to registry events
