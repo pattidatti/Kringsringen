@@ -115,7 +115,7 @@ export class PlayerStatsManager {
         const fireRadLvl = levels['fire_radius'] || 0;
         const fireSpdLvl = levels['fire_speed'] || 0;
         this.scene.registry.set('fireballDamageMulti', 1 + fireDmgLvl * 0.15);
-        this.scene.registry.set('fireballRadius', GAME_CONFIG.WEAPONS.FIREBALL.splashRadius + fireRadLvl * 20);
+        this.scene.registry.set('fireballRadius', GAME_CONFIG.WEAPONS.FIREBALL.splashRadius + fireRadLvl * 30);
         this.scene.registry.set('fireballSpeed', GAME_CONFIG.WEAPONS.FIREBALL.speed * (1 + fireSpdLvl * 0.15));
 
         // FrostBolt stats

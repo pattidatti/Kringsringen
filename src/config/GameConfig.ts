@@ -194,7 +194,7 @@ export const GAME_CONFIG = {
         },
         FIREBALL: {
             damageMult: 1.3,
-            splashRadius: 80,
+            splashRadius: 150,
             cooldown: 600,
             speed: 450
         },

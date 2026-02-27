@@ -189,9 +189,9 @@ export class Fireball extends Phaser.Physics.Arcade.Sprite {
             }
         };
 
-        mainScene.enemies.children.iterate((e: any) => { applySplash(e); return true; });
+        mainScene.enemies.getChildren().forEach((e: any) => { applySplash(e); });
         if (mainScene.bossGroup) {
-            mainScene.bossGroup.children.iterate((e: any) => { applySplash(e); return true; });
+            mainScene.bossGroup.getChildren().forEach((e: any) => { applySplash(e); });
         }
 
         mainScene.poolManager.spawnFireballExplosion(hitX, hitY);
@@ -207,18 +207,18 @@ export class Fireball extends Phaser.Physics.Arcade.Sprite {
         // Chain reaction: secondary explosion after 300ms
         if (fireChainLvl > 0) {
             mainScene.time.delayedCall(300, () => {
-                mainScene.enemies.children.iterate((e: any) => {
-                    if (!e.active) return true;
-                    const dist = Phaser.Math.Distance.Between(hitX, hitY, e.x, e.y);
-                    if (dist <= fireballRadius && e !== directHit && !hitEnemies.includes(e)) {
+                mainScene.enemies.getChildren().forEach((e: any) => {
+                    const enemy = e as Enemy;
+                    if (!enemy.active) return;
+                    const dist = Phaser.Math.Distance.Between(hitX, hitY, enemy.x, enemy.y);
+                    if (dist <= fireballRadius && enemy !== directHit && !hitEnemies.includes(enemy)) {
                         if (mainScene.networkManager?.role === 'client') {
-                            (e as Enemy).predictDamage(scaledDamage * 0.3);
+                            enemy.predictDamage(scaledDamage * 0.3);
                         } else {
-                            (e as Enemy).takeDamage(scaledDamage * 0.3, '#ff6e24');
+                            enemy.takeDamage(scaledDamage * 0.3, '#ff6e24');
                         }
-                        (e as Enemy).pushback(hitX, hitY, 80);
+                        enemy.pushback(hitX, hitY, 80);
                     }
-                    return true;
                 });
                 mainScene.poolManager.spawnFireballExplosion(hitX, hitY);
             });
