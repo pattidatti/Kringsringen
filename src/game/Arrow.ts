@@ -163,7 +163,15 @@ export class Arrow extends Phaser.Physics.Arcade.Sprite {
             this.trail.stop();
         }
         if (this.light) {
-            this.scene.lights.removeLight(this.light);
+            const light = this.light;
+            light.setPosition(this.x, this.y).setRadius(200).setIntensity(1.5);
+            this.scene.tweens.add({
+                targets: light,
+                intensity: 0,
+                radius: 280,
+                duration: 300,
+                onComplete: () => { this.scene.lights.removeLight(light); }
+            });
             this.light = null;
         }
     }
