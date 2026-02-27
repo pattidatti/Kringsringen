@@ -182,18 +182,19 @@ export class Arrow extends Phaser.Physics.Arcade.Sprite {
         const explosionDamage = this.damage * 0.5;
 
         // Spawn explosion effect
-        const explosion = mainScene.poolManager?.getExplosion();
-        if (explosion) {
-            explosion.explode(x, y);
+        if (mainScene.poolManager) {
+            mainScene.poolManager.spawnFireballExplosion(x, y);
         }
 
         // Damage all enemies in radius
-        const enemies = mainScene.spatialGrid?.getNearby(x, y, radius) || [];
+        const nearby = mainScene.spatialGrid?.findNearby({ x, y, width: 0, height: 0 }, radius) || [];
         const hitExplosionEnemies = new WeakSet<any>();
-        for (const enemy of enemies) {
-            const e = enemy as Enemy;
-            if (!hitExplosionEnemies.has(e)) {
+
+        for (const entry of nearby) {
+            const e = entry.ref as Enemy;
+            if (e && e.active && !e.getIsDead() && !hitExplosionEnemies.has(e)) {
                 hitExplosionEnemies.add(e);
+
                 if (mainScene.networkManager?.role === 'client') {
                     e.predictDamage(explosionDamage);
                     if (mainScene.poolManager) {
