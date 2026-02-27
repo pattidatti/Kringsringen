@@ -115,11 +115,20 @@ export class Fireball extends Phaser.Physics.Arcade.Sprite {
         const fireballRadius = mainScene.registry.get('fireballRadius') || 80;
         const fireballDamageMulti = mainScene.registry.get('fireballDamageMulti') || 1;
         const fireChainLvl = (mainScene.registry.get('upgradeLevels') || {})['fire_chain'] || 0;
+        const synergyThermalShock = mainScene.registry.get('synergyThermalShock');
 
         const scaledDamage = this.damage * fireballDamageMulti;
 
+        let thermalShockTriggered = false;
+
         // Direct hit
         if (directHit) {
+            let hitDmg = scaledDamage;
+            if (synergyThermalShock && directHit.consumeSlow()) {
+                hitDmg *= 3;
+                thermalShockTriggered = true;
+            }
+
             if (mainScene.networkManager?.role === 'client') {
                 mainScene.networkManager.broadcast({
                     t: PacketType.GAME_EVENT,
@@ -130,7 +139,7 @@ export class Fireball extends Phaser.Physics.Arcade.Sprite {
                             targetId: directHit.id || 'boss',
                             hitX: hitX,
                             hitY: hitY,
-                            damage: scaledDamage,
+                            damage: hitDmg,
                             timestamp: mainScene.networkManager.getServerTime()
                         }
                     },
@@ -138,30 +147,45 @@ export class Fireball extends Phaser.Physics.Arcade.Sprite {
                 });
 
                 if (mainScene.poolManager) {
-                    mainScene.poolManager.getDamageText(directHit.x, directHit.y - 30, scaledDamage, '#ff6e24');
+                    mainScene.poolManager.getDamageText(directHit.x, directHit.y - 30, hitDmg, thermalShockTriggered ? '#ffaa00' : '#ff6e24');
                     mainScene.events.emit('enemy-hit');
                 }
-                directHit.predictDamage(scaledDamage);
+                directHit.predictDamage(hitDmg);
             } else {
-                directHit.takeDamage(scaledDamage, '#ff6e24'); // Bright orange/fire
+                directHit.takeDamage(hitDmg, thermalShockTriggered ? '#ffaa00' : '#ff6e24'); // Bright orange/fire
                 directHit.pushback(this.startX, this.startY, 200);
             }
         }
 
         // Splash damage to nearby enemies
         const hitEnemies: Enemy[] = [];
+        const finalRadius = thermalShockTriggered ? fireballRadius * 1.5 : fireballRadius;
 
         const applySplash = (e: any) => {
             if (!e.active || e === directHit) return;
             const dist = Phaser.Math.Distance.Between(hitX, hitY, e.x, e.y);
-            if (dist <= fireballRadius) {
-                if (mainScene.networkManager?.role === 'client') {
-                    (e as Enemy).predictDamage(scaledDamage * 0.5);
-                } else {
-                    (e as Enemy).takeDamage(scaledDamage * 0.5, '#ff6e24');
+
+            if (dist <= finalRadius) {
+                const enemy = e as Enemy;
+                let splashDmg = scaledDamage * 0.5;
+
+                // Chain thermal shock if other enemies in radius are also frozen
+                if (synergyThermalShock && enemy.consumeSlow()) {
+                    splashDmg = scaledDamage * 1.5; // 3x splash
+                    thermalShockTriggered = true;
                 }
-                (e as Enemy).pushback(hitX, hitY, 100);
-                hitEnemies.push(e as Enemy);
+
+                if (thermalShockTriggered) {
+                    splashDmg = Math.max(splashDmg, scaledDamage); // Increase baseline splash
+                }
+
+                if (mainScene.networkManager?.role === 'client') {
+                    enemy.predictDamage(splashDmg);
+                } else {
+                    enemy.takeDamage(splashDmg, thermalShockTriggered ? '#ffaa00' : '#ff6e24');
+                }
+                enemy.pushback(hitX, hitY, thermalShockTriggered ? 200 : 100);
+                hitEnemies.push(enemy);
             }
         };
 
@@ -171,6 +195,13 @@ export class Fireball extends Phaser.Physics.Arcade.Sprite {
         }
 
         mainScene.poolManager.spawnFireballExplosion(hitX, hitY);
+        if (thermalShockTriggered) {
+            mainScene.poolManager.spawnFrostExplosion(hitX, hitY); // Dual explosion effect
+            AudioManager.instance.playSFX('ice_freeze');
+
+            // Screen shake for massive impact
+            this.scene.cameras.main.shake(150, 0.015);
+        }
         AudioManager.instance.playSFX('fireball_hit');
 
         // Chain reaction: secondary explosion after 300ms

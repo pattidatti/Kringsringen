@@ -108,7 +108,7 @@ export class LightningBolt extends Phaser.Physics.Arcade.Sprite {
         }
     }
 
-    private findNearestEnemy(searchX: number, searchY: number): Enemy | null {
+    private findNearestEnemy(searchX: number, searchY: number, excludeSet?: Set<string>): Enemy | null {
         const mainScene = this.scene as any;
         const grid = mainScene.spatialGrid;
         const searchRadius = GAME_CONFIG.WEAPONS.LIGHTNING.searchRadius;
@@ -124,6 +124,7 @@ export class LightningBolt extends Phaser.Physics.Arcade.Sprite {
                 const e = c.ref as Enemy;
                 if (!e || !e.active || e.getIsDead()) continue;
                 if (this.hitEnemies.has(e)) continue;
+                if (excludeSet && excludeSet.has(e.id)) continue;
 
                 const dist = Phaser.Math.Distance.Between(searchX, searchY, e.x, e.y);
                 if (dist < minDist && dist <= searchRadius) { // Strict radius check
@@ -252,6 +253,17 @@ export class LightningBolt extends Phaser.Physics.Arcade.Sprite {
             const stunChance = mainScene.registry.get('lightningStunChance') || 0;
             if (Math.random() < stunChance) {
                 hitEnemy.stun(800); // 0.8s stun
+            }
+
+            // SOUL LINK: Magi upgrade
+            const soulLinkActive = mainScene.registry.get('magicSoulLinkLevel') > 0;
+            if (soulLinkActive && !hitEnemy.linkedEnemy) {
+                const nearest = this.findNearestEnemy(hitEnemy.x, hitEnemy.y, new Set([hitEnemy.id]));
+                if (nearest && !nearest.linkedEnemy) {
+                    hitEnemy.linkedEnemy = nearest;
+                    nearest.linkedEnemy = hitEnemy;
+                    // Visual link (could add a line/effect here later)
+                }
             }
         }
 

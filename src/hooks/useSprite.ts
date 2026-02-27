@@ -10,6 +10,14 @@ interface UseSpriteOptions {
 export function useSprite({ sprite, scale = 1 }: UseSpriteOptions) {
     return useMemo(() => {
         const frame = UI_ATLAS.frames[sprite];
+
+        if (!frame) {
+            console.warn(`[useSprite] Sprite frame "${sprite}" not found in atlas. Using fallback.`);
+            return {
+                style: { display: 'none' },
+                frame: { x: 0, y: 0, w: 32, h: 32 }
+            };
+        }
         // Heuristic matching removed as unused
 
         // Better logic: map keys to sources explicitly if needed.
@@ -22,11 +30,11 @@ export function useSprite({ sprite, scale = 1 }: UseSpriteOptions) {
         // Since we split files, we need to know which file a frame belongs to.
 
         let backgroundImage = '';
-        if (sprite.startsWith('button'))      backgroundImage = `url(${UI_ATLAS.sources.buttons})`;
-        else if (sprite.startsWith('panel'))  backgroundImage = `url(${UI_ATLAS.sources.panels})`;
-        else if (sprite.startsWith('item'))   backgroundImage = `url(${UI_ATLAS.sources.items})`;
-        else if (sprite.startsWith('icon'))   backgroundImage = `url(${UI_ATLAS.sources.icons})`;
-        else if (sprite.startsWith('bar'))    backgroundImage = `url(${UI_ATLAS.sources.bars})`;
+        if (sprite.startsWith('button')) backgroundImage = `url(${UI_ATLAS.sources.buttons})`;
+        else if (sprite.startsWith('panel')) backgroundImage = `url(${UI_ATLAS.sources.panels})`;
+        else if (sprite.startsWith('item')) backgroundImage = `url(${UI_ATLAS.sources.items})`;
+        else if (sprite.startsWith('icon')) backgroundImage = `url(${UI_ATLAS.sources.icons})`;
+        else if (sprite.startsWith('bar')) backgroundImage = `url(${UI_ATLAS.sources.bars})`;
 
         const style: CSSProperties = {
             backgroundImage,

@@ -10,6 +10,8 @@ import { Arrow } from './Arrow';
 import { Fireball } from './Fireball';
 import { FrostBolt } from './FrostBolt';
 import { LightningBolt } from './LightningBolt';
+import { Singularity } from './Singularity';
+import { EclipseWake } from './EclipseWake';
 import { Coin } from './Coin';
 import { SaveManager } from './SaveManager';
 import { ObjectPoolManager } from './ObjectPoolManager';
@@ -54,6 +56,8 @@ class MainScene extends Phaser.Scene implements IMainScene {
     private fireballs!: Phaser.Physics.Arcade.Group;
     private frostBolts!: Phaser.Physics.Arcade.Group;
     private lightningBolts!: Phaser.Physics.Arcade.Group;
+    public singularities!: Phaser.Physics.Arcade.Group;
+    private eclipseWakes!: Phaser.Physics.Arcade.Group;
     public bossGroup!: Phaser.Physics.Arcade.Group;
     private enemyProjectiles!: Phaser.Physics.Arcade.Group;
     private players!: Phaser.Physics.Arcade.Group;
@@ -327,6 +331,18 @@ class MainScene extends Phaser.Scene implements IMainScene {
             classType: LightningBolt,
             runChildUpdate: true,
             maxSize: 30
+        });
+
+        this.singularities = this.physics.add.group({
+            classType: Singularity,
+            runChildUpdate: true,
+            maxSize: 10
+        });
+
+        this.eclipseWakes = this.physics.add.group({
+            classType: EclipseWake,
+            runChildUpdate: true,
+            maxSize: 20
         });
 
         // Coin Group
@@ -1157,6 +1173,16 @@ class MainScene extends Phaser.Scene implements IMainScene {
         // Cap delta time (max 100ms) to prevent physics "tunneling" after stutters
         const cappedDelta = Math.min(delta, 100);
         this.poolManager.update(cappedDelta);
+
+        // Update Effect Groups
+        this.singularities.children.iterate((s: any) => {
+            if (s.active) s.update(_time, delta);
+            return true;
+        });
+        this.eclipseWakes.children.iterate((w: any) => {
+            if (w.active) w.update(_time, delta);
+            return true;
+        });
         const player = this.data.get('player') as Phaser.Physics.Arcade.Sprite;
         if (this.playerShadow) {
             this.playerShadow.setPosition(player.x, player.y + 28);
@@ -1496,6 +1522,16 @@ class MainScene extends Phaser.Scene implements IMainScene {
                     this.data.set('isAttacking', false);
                     player.play('player-idle');
                 });
+
+                // ECLIPSE STRIKE
+                const eclipseLevel = this.registry.get('playerEclipseLevel') || 0;
+                if (eclipseLevel > 0) {
+                    const wake = this.eclipseWakes.get(player.x, player.y) as EclipseWake;
+                    if (wake) {
+                        const wakeDamage = this.stats.damage * 0.3 * eclipseLevel;
+                        wake.spawn(player.x, player.y, angle, wakeDamage);
+                    }
+                }
             } else if (currentWeapon === 'bow') {
                 const bowCooldown = this.stats.playerCooldown;
                 this.registry.set('weaponCooldown', { duration: bowCooldown, timestamp: Date.now() });
@@ -1510,10 +1546,11 @@ class MainScene extends Phaser.Scene implements IMainScene {
                     const explosiveLevel = this.registry.get('playerExplosiveLevel') || 0;
 
                     const baseDamage = this.stats.damage * GAME_CONFIG.WEAPONS.BOW.damageMult * arrowDamageMultiplier;
+                    const singularityLevel = this.registry.get('playerSingularityLevel') || 0;
 
                     const arrow = this.arrows.get(player.x, player.y) as Arrow;
                     if (arrow) {
-                        arrow.fire(player.x, player.y, angle, baseDamage, arrowSpeed, pierceCount, explosiveLevel);
+                        arrow.fire(player.x, player.y, angle, baseDamage, arrowSpeed, pierceCount, explosiveLevel, singularityLevel);
                         this.events.emit('bow-shot');
 
                         // SYNC BOW ATTACK

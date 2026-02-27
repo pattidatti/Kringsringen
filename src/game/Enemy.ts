@@ -21,7 +21,8 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     public hasHit: boolean = false;
     private readonly DEFAULT_DAMAGE_FRAME: number = 3; // Fallback frame where damage occurs
     public isOnDamageFrame: boolean = false;
-    private isPushingBack: boolean = false;
+    public isPushingBack: boolean = false;
+    public linkedEnemy: Enemy | null = null;
     protected movementSpeed: number = 100;
     private enemyType: string = 'orc';
     private config: EnemyConfig;
@@ -140,6 +141,9 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         this.stuckTimer = 0;
         this.avoidanceTimer = 0;
         this.avoidanceDirection = 1;
+
+        // Clear Soul Link
+        this.linkedEnemy = null;
 
         // Clear slow state
         if (this.stunTimer) {
@@ -621,7 +625,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         }
     }
 
-    takeDamage(amount: number, color: string = '#ffffff') {
+    takeDamage(amount: number, color: string = '#ffffff', isShared: boolean = false) {
         if (this.isDead || !this.active) return;
 
         this.hp -= amount;
@@ -631,22 +635,24 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         this.setTint(0xff0000);
         this.scene.time.delayedCall(100, () => {
             if (this.active && !this.isDead && !this.predictedDeadUntil) {
-                if (this.enemyType === 'healer_wizard') {
-                    this.setTint(0xaaffaa);
-                } else if (this.enemyType === 'wizard') {
-                    this.setTint(0xffaaaa);
-                } else {
-                    this.clearTint();
-                }
+                if (this.isStunned) this.setTint(0x8888ff);
+                else if (this.enemyType === 'healer_wizard') this.setTint(0xaaffaa);
+                else if (this.enemyType === 'wizard') this.setTint(0xffaaaa);
+                else this.clearTint();
             }
         });
 
         if ((this.scene as any).poolManager) {
-            (this.scene as any).poolManager.getDamageText(this.x, this.y - 30, amount, color);
+            (this.scene as any).poolManager.getDamageText(this.x, this.y - 30, amount, isShared ? '#00ffff' : color);
+        }
+
+        // SOUL LINK: Share damage
+        if (!isShared && this.linkedEnemy && this.linkedEnemy.active && !this.linkedEnemy.getIsDead()) {
+            const sharedAmount = amount * 0.4;
+            this.linkedEnemy.takeDamage(sharedAmount, '#00ffff', true);
         }
 
         if (this.hp <= 0) {
-            console.log(`Enemy ${this.enemyType} reached 0 HP, calling die()`);
             this.die();
         }
     }
@@ -707,6 +713,14 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         this.isDead = true;
         this.setDrag(1000);
         this.hpBar.clear();
+
+        // Clear Soul Link
+        if (this.linkedEnemy) {
+            if (this.linkedEnemy.linkedEnemy === this) {
+                this.linkedEnemy.linkedEnemy = null;
+            }
+            this.linkedEnemy = null;
+        }
 
         if ((this.scene as any).poolManager) {
             (this.scene as any).poolManager.spawnBloodEffect(this.x, this.y);
@@ -884,6 +898,21 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
             }
             this.slowTimer = null;
         });
+    }
+
+    /** Consumes the slow effect, returning true if the enemy was slowed. */
+    public consumeSlow(): boolean {
+        if (!this.active || this.isDead || this.slowTimer === null) return false;
+
+        this.slowTimer.remove();
+        this.slowTimer = null;
+        this.movementSpeed = this.originalSpeed;
+        this.clearTint();
+        this.postFX.clear(); // Remove glow
+        if (this.config.spriteInfo.anims?.walk) {
+            this.play(this.config.spriteInfo.anims.walk);
+        }
+        return true;
     }
 
     /**

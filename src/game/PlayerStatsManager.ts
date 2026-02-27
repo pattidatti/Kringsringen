@@ -136,6 +136,18 @@ export class PlayerStatsManager {
         this.scene.registry.set('lightningStunChance', ltgStunLvl * 0.1); // 10% per level
         this.scene.registry.set('lightningBounceBonus', 1 + ltgVoltageLvl * 0.15); // +15% per bounce per level? No, let's keep it simple: 15% per level total bounce bonus
 
+        // Advanced Upgrades
+        const singularityLvl = levels['bow_singularity'] || 0;
+        const soulLinkLvl = levels['magic_soul_link'] || 0;
+        const eclipseLvl = levels['sword_eclipse'] || 0;
+        this.scene.registry.set('playerSingularityLevel', singularityLvl);
+        this.scene.registry.set('magicSoulLinkLevel', soulLinkLvl);
+        this.scene.registry.set('playerEclipseLevel', eclipseLvl);
+
+        // Synergi Upgrades
+        const thermalShockLvl = levels['thermal_shock'] || 0;
+        this.scene.registry.set('synergyThermalShock', thermalShockLvl > 0);
+
         // Misc
         this.scene.registry.set('playerLuck', 1.0);
         this.scene.registry.set('playerCritChance', this.baseCritChance);

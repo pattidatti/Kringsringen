@@ -1,4 +1,4 @@
-export type UpgradeCategory = 'Karakter' | 'Sverd' | 'Bue' | 'Magi';
+export type UpgradeCategory = 'Karakter' | 'Sverd' | 'Bue' | 'Magi' | 'Synergi';
 
 export interface UpgradeConfig {
     id: string;
@@ -9,6 +9,8 @@ export interface UpgradeConfig {
     basePrice: number;
     priceScale: number; // Cost = basePrice * (currentLevel ^ priceScale)
     description: (level: number) => string;
+    iconTint?: string; // Optional CSS filter or color for the icon
+    requires?: Record<string, number>; // Record<upgradeId, requiredLevel>
 }
 
 export const UPGRADES: UpgradeConfig[] = [
@@ -303,6 +305,54 @@ export const UPGRADES: UpgradeConfig[] = [
         basePrice: 200,
         priceScale: 2.2,
         description: (lvl) => `+${lvl * 15}% skade per bounce (Nå: +${lvl * 15}%)`
+    },
+    {
+        id: 'bow_singularity',
+        title: 'Singularitetspil',
+        icon: 'item_bow',
+        category: 'Bue',
+        maxLevel: 3,
+        basePrice: 1000,
+        priceScale: 2.5,
+        description: (lvl) => `Piler skaper et gravitasjonsfelt (Nå: ${150 + lvl * 30}px radius)`
+    },
+    {
+        id: 'magic_soul_link',
+        title: 'Sjelelenke',
+        icon: 'item_lightning_staff',
+        category: 'Magi',
+        maxLevel: 1,
+        basePrice: 1500,
+        priceScale: 1,
+        description: () => 'Koble fiender sammen! Delte fiender deler 40% skade.',
+        iconTint: 'hue-rotate(140deg) brightness(1.2) drop-shadow(0 0 2px #ff00ff)'
+    },
+    {
+        id: 'sword_eclipse',
+        title: 'Solsnu',
+        icon: 'item_sword',
+        category: 'Sverd',
+        maxLevel: 3,
+        basePrice: 1200,
+        priceScale: 2.2,
+        description: (lvl) => `Sverd-svinger etterlater en mørk sti (Nå: ${30 * lvl}% skade)`
+    },
+
+    // --- SYNERGIER ---
+    {
+        id: 'thermal_shock',
+        title: 'Thermal Shock',
+        icon: 'item_synergy_rune',
+        category: 'Synergi',
+        maxLevel: 1,
+        basePrice: 500, // Expensive
+        priceScale: 1,
+        description: () => 'Konsumerer frys-effekt for å utløse et 3x skade eksplosivt sjokk!',
+        iconTint: 'drop-shadow(0 0 4px #ff5500) hue-rotate(45deg)', // Oransje glød
+        requires: {
+            'fire_damage': 3,
+            'frost_damage': 3
+        }
     }
 ];
 

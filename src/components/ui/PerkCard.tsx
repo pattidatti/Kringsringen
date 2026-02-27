@@ -64,8 +64,15 @@ export const PerkCard: React.FC<PerkCardProps> = ({ perk, level, onClick, index 
             {/* Icon Container */}
             <div className={`p-3 rounded-md shrink-0 border border-black/10 shadow-inner ${styles.iconBg}`}>
                 {isItemSpriteIcon(perk.icon)
-                    ? <ItemIcon icon={perk.icon as ItemIconKey} size="md" />
-                    : <div className={`${perk.icon} ${styles.iconColor} text-2xl`} />
+                    ? <ItemIcon
+                        icon={perk.icon as ItemIconKey}
+                        size="md"
+                        style={perk.iconTint ? { filter: perk.iconTint } : {}}
+                    />
+                    : <div
+                        className={`${perk.icon} ${styles.iconColor} text-2xl`}
+                        style={perk.iconTint ? { filter: perk.iconTint } : {}}
+                    />
                 }
             </div>
 

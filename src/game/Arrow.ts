@@ -14,6 +14,7 @@ export class Arrow extends Phaser.Physics.Arcade.Sprite {
     private hitEnemies: WeakSet<any> = new WeakSet();
     private hitCount: number = 0;
     private explosiveLevel: number = 0;
+    private singularityLevel: number = 0;
 
     constructor(scene: Phaser.Scene, x: number, y: number) {
         super(scene, x, y, 'arrow');
@@ -99,13 +100,14 @@ export class Arrow extends Phaser.Physics.Arcade.Sprite {
         }
     }
 
-    fire(x: number, y: number, angle: number, damage: number, speed: number = 700, pierceCount: number = 0, explosiveLevel: number = 0) {
+    fire(x: number, y: number, angle: number, damage: number, speed: number = 700, pierceCount: number = 0, explosiveLevel: number = 0, singularityLevel: number = 0) {
         this.startX = x;
         this.startY = y;
         this.damage = damage;
         this.speed = speed;
         this.pierceCount = pierceCount;
         this.explosiveLevel = explosiveLevel;
+        this.singularityLevel = singularityLevel;
         this.hitEnemies = new WeakSet();
         this.hitCount = 0;
 
@@ -128,6 +130,16 @@ export class Arrow extends Phaser.Physics.Arcade.Sprite {
 
     private hit() {
         AudioManager.instance.playSFX('bow_impact');
+
+        // Trigger singularity if unlocked
+        if (this.singularityLevel > 0) {
+            const mainScene = this.scene as any;
+            const singularity = mainScene.singularities?.get(this.x, this.y) as any;
+            if (singularity) {
+                singularity.spawn(this.x, this.y, 150 + (this.singularityLevel - 1) * 30);
+            }
+        }
+
         this.setActive(false);
         this.setVisible(false);
         if (this.body) this.body.enable = false;

@@ -72,6 +72,8 @@ export const UI_ATLAS = {
 
         item_lightning_staff: { x: 352, y: 192, w: 32, h: 32 }, // col=11 row=6 ✓
 
+        item_synergy_rune: { x: 448, y: 160, w: 32, h: 32 }, // col=14 row=5
+
         item_gold_coin: { x: 224, y: 384, w: 32, h: 32 }, // col=7 row=12 ✓ (Large Gold Coin)
     }
 } as const;

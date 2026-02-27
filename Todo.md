@@ -12,6 +12,7 @@
 
 # Dash
 - [x] Dash må implementeres, med en cooldown, 20 sec default. Hotkey Shift (må også ligges inn i onboarding. ) Spilleren forflytter seg et stykke i den retningen man peker, og kan ikke skade fiender mens man dasher, man tar heller ikke skade i dash. Vi må se om vi enkelt kan få til en liten dash animation, eller effekt som indikerer det for spiller, samt en liten swoosh-lyd (bruk placeholder, skal finne riktig senere). Vi må også se om det er mulig å få til en liten dash-cooldown bar, eller noe som indikerer hvor lenge til man kan dash igjen. Denne kan gjerne ligge rett over actionbar. Vi må ha upgrades til dash i boken, som reduserer cooldown, øker distanse, og kanskje gir en liten bonus på noe annet. 
+-[ ] Vindstøt upgrade, teksten gjenspeiler ikke hva nye dasj er. Default er 7 sec nå. -1 pr upgrade. 
 
 # Score 
 - [x] Score ingame oppe ved siden av mynter

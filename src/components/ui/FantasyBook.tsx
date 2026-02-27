@@ -50,6 +50,7 @@ const CATEGORY_THEMES: Record<string, { primary: string; secondary: string; bord
     'Sverd': { primary: '#f87171', secondary: '#ef4444', border: 'border-red-500/30', bg: 'bg-red-950/40', text: 'text-red-100' },
     'Bue': { primary: '#34d399', secondary: '#10b981', border: 'border-emerald-500/30', bg: 'bg-emerald-950/40', text: 'text-emerald-100' },
     'Magi': { primary: '#818cf8', secondary: '#6366f1', border: 'border-indigo-500/30', bg: 'bg-indigo-950/40', text: 'text-indigo-100' },
+    'Synergi': { primary: '#f97316', secondary: '#ea580c', border: 'border-orange-500/30', bg: 'bg-orange-950/40', text: 'text-orange-100' },
 };
 
 const StatRow = ({ label, value, icon }: { label: string, value: string | number, icon: string }) => (
@@ -182,6 +183,7 @@ export const FantasyBook: React.FC<FantasyBookProps> = React.memo(({
             { key: 'Bue', label: 'Bue', icon: 'item_bow' },
             { key: 'Karakter', label: 'Karakter', icon: 'item_heart_status' },
             { key: 'Magi', label: 'Magi', icon: 'item_magic_staff' },
+            { key: 'Synergi', label: 'Synergier', icon: 'item_synergy_rune' }, // Fallback icon
         ];
 
         return (
@@ -253,18 +255,18 @@ export const FantasyBook: React.FC<FantasyBookProps> = React.memo(({
                             <button
                                 key={cat.key}
                                 onClick={() => setActiveShopCategory(cat.key)}
+                                style={isActive ? { backgroundColor: theme.primary + '33', borderColor: theme.primary } : {}}
                                 className={`w-full flex items-center gap-4 p-3 rounded border transition-all duration-200 group relative overflow-hidden
                                     ${isActive
-                                        ? `${theme.bg} border-${theme.primary} shadow-inner`
+                                        ? `shadow-inner`
                                         : 'bg-transparent border-transparent hover:bg-slate-100/50 hover:translate-x-1'
                                     }
                                 `}
                             >
-                                <div className={`w-10 h-10 flex items-center justify-center rounded border transition-colors
-                                    ${isActive
-                                        ? `bg-${theme.primary}/20 border-${theme.primary} text-${theme.primary}`
-                                        : `bg-slate-100 border-slate-300 text-slate-400 group-hover:border-slate-400 group-hover:text-slate-600`
-                                    }
+                                <div
+                                    style={isActive ? { backgroundColor: theme.primary + '33', borderColor: theme.primary, color: theme.primary } : {}}
+                                    className={`w-10 h-10 flex items-center justify-center rounded border transition-colors
+                                    ${!isActive ? `bg-slate-100 border-slate-300 text-slate-400 group-hover:border-slate-400 group-hover:text-slate-600` : ''}
                                 `}>
                                     <ItemIcon icon={cat.icon} size="md" />
                                 </div>
@@ -274,7 +276,8 @@ export const FantasyBook: React.FC<FantasyBookProps> = React.memo(({
                                 {isActive && (
                                     <motion.div
                                         layoutId="active-indicator"
-                                        className={`ml-auto w-2 h-2 rounded-full bg-${theme.primary}`}
+                                        style={{ backgroundColor: theme.primary }}
+                                        className={`ml-auto w-2 h-2 rounded-full`}
                                     />
                                 )}
                             </button>
@@ -364,28 +367,61 @@ export const FantasyBook: React.FC<FantasyBookProps> = React.memo(({
                                     const canAfford = coins >= cost;
                                     const isMaxed = lvl >= item.maxLevel;
 
+                                    // Check requirements
+                                    let reqMet = true;
+                                    let reqText = '';
+                                    if (item.requires) {
+                                        for (const [rId, rLvl] of Object.entries(item.requires)) {
+                                            if ((upgradeLevels[rId] || 0) < rLvl) {
+                                                reqMet = false;
+                                                const rName = UPGRADES.find(u => u.id === rId)?.title || rId;
+                                                reqText += `${rName} nivå ${rLvl} kreves. `;
+                                            }
+                                        }
+                                    }
+
                                     return (
                                         <motion.div
                                             key={item.id}
                                             initial={{ opacity: 0, x: 10 }}
                                             animate={{ opacity: 1, x: 0 }}
-                                            className={`flex p-4 ${theme.bg} border ${theme.border} rounded-lg hover:brightness-105 transition-all group relative overflow-hidden gap-4`}
+                                            className={`flex p-4 border rounded-lg transition-all group relative overflow-hidden gap-4
+                                                ${!reqMet
+                                                    ? 'bg-slate-800/90 border-slate-600'
+                                                    : `${theme.bg} ${theme.border} hover:brightness-105 shadow-md`
+                                                }`}
                                         >
                                             {/* Left Side: Info */}
                                             <div className="flex-1 flex flex-col">
                                                 <div className="flex items-center gap-3 mb-2">
-                                                    <div className={`w-10 h-10 flex items-center justify-center bg-white/50 rounded-lg border ${theme.border}`}>
+                                                    <div className={`w-10 h-10 flex items-center justify-center rounded-lg border 
+                                                        ${!reqMet ? 'bg-slate-700/50 border-slate-500 grayscale' : `bg-white/50 ${theme.border}`}`}>
                                                         {isItemSpriteIcon(item.icon)
-                                                            ? <ItemIcon icon={item.icon as ItemIconKey} size="md" />
-                                                            : <div className={`${item.icon} ${theme.text} text-xl`} />
+                                                            ? <ItemIcon
+                                                                icon={item.icon as ItemIconKey}
+                                                                size="md"
+                                                                style={item.iconTint ? { filter: item.iconTint } : {}}
+                                                            />
+                                                            : <div
+                                                                className={`${item.icon} ${theme.text} text-xl`}
+                                                                style={item.iconTint ? { filter: item.iconTint } : {}}
+                                                            />
                                                         }
                                                     </div>
-                                                    <span className={`font-bold text-xl ${theme.text}`}>{item.title}</span>
+                                                    <span className={`font-bold text-xl ${!reqMet ? 'text-slate-200' : theme.text}`}>{item.title}</span>
                                                 </div>
 
-                                                <div className={`text-lg ${theme.text} opacity-80 pl-1 leading-snug font-crimson mt-2`}>
+                                                <div className={`text-lg pl-1 leading-snug font-crimson mt-2
+                                                    ${!reqMet ? 'text-slate-300' : `${theme.text} opacity-90`}
+                                                `}>
                                                     {item.description(lvl + 1)}
                                                 </div>
+                                                {!reqMet && (
+                                                    <div className="text-sm text-red-400 font-bold mt-3 p-2 bg-red-950/40 rounded border border-red-900/30 flex items-center gap-2">
+                                                        <span>🔒</span>
+                                                        <span>{reqText}</span>
+                                                    </div>
+                                                )}
                                             </div>
 
                                             {/* Right Side: Action & Level */}
@@ -400,11 +436,11 @@ export const FantasyBook: React.FC<FantasyBookProps> = React.memo(({
                                                     ) : (
                                                         <button
                                                             onClick={() => actions.onBuyUpgrade(item.id, cost)}
-                                                            disabled={!canAfford}
+                                                            disabled={!canAfford || !reqMet}
                                                             className={`w-full py-2 text-base font-bold border rounded-lg transition-all flex items-center justify-center gap-1.5 shadow-md
-                                                                ${canAfford
+                                                                ${canAfford && reqMet
                                                                     ? 'bg-amber-400 border-amber-600 text-amber-900 hover:bg-amber-300 hover:-translate-y-0.5 active:translate-y-0 active:shadow-inner'
-                                                                    : 'bg-slate-200 border-slate-300 text-slate-400 cursor-not-allowed grayscale'}
+                                                                    : 'bg-slate-800/80 border-slate-600/50 text-slate-400 cursor-not-allowed opacity-80'}
                                                             `}
                                                         >
                                                             <span>{cost}</span>
