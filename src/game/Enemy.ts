@@ -262,6 +262,10 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
                     const activeState = f > 0.5 ? pNext : pPrev;
                     const anim = activeState[4];
                     const flipX = activeState[5];
+                    this.hp = activeState[3]; // Sync HP from network sample
+
+                    // Force maxHP update if we receive a value higher than current (e.g. joined mid-game)
+                    if (this.hp > this.maxHP) this.maxHP = this.hp;
 
                     if (anim && this.anims.currentAnim?.key !== anim) {
                         this.play(anim);
@@ -426,16 +430,18 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
                 this.shadow.setPosition(this.x, this.y + (this.height * this.scaleY * 0.3));
             }
 
-            this.updateHPBar();
+        }
 
-            if (!this.isClientMode && this.active) {
-                const now = (this.scene as any).networkManager ? (this.scene as any).networkManager.getServerTime() : Date.now();
-                this.positionHistory.push([now, this.x, this.y]);
+        // --- GLOBAL UPDATES (Host & Client) ---
+        this.updateHPBar();
 
-                // Retain up to 1000ms of history for lag compensation
-                while (this.positionHistory.length > 0 && now - this.positionHistory[0][0] > 1000) {
-                    this.positionHistory.shift();
-                }
+        if (!this.isClientMode && this.active) {
+            const now = (this.scene as any).networkManager ? (this.scene as any).networkManager.getServerTime() : Date.now();
+            this.positionHistory.push([now, this.x, this.y]);
+
+            // Retain up to 1000ms of history for lag compensation
+            while (this.positionHistory.length > 0 && now - this.positionHistory[0][0] > 1000) {
+                this.positionHistory.shift();
             }
         }
     }
