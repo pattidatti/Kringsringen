@@ -26,11 +26,12 @@
 | `bow_attack` | `bow_attack_1-2.wav` | 2 | 0.4 | ±0.1 | `main.ts` → `bow-shot` event |
 | `bow_impact` | `bow_impact_1-3.wav` | 3 | 0.45 | — | `Arrow.ts` → `hit()` |
 | `footstep` | `dirt_run_1-5.wav` | 5 | 0.25 | ±0.15 | `main.ts` → player walk |
-| `coin_collect` | `pop_1-3.wav, glass_ping` | 4 | 0.25 | ±0.08 | `WaveManager.ts` → coin pickup |
+| `coin_collect` | `coin_collect_1-2.wav, pop_1-3.wav` | 5 | 0.25 | ±0.08 | `WaveManager.ts` → coin pickup |
 | `ui_click` | `ui_click.wav` | 1 | 0.3 | — | `FantasyButton.tsx` → click |
 | `weapon_pick_up` | `weapon_pick_up.wav`| 1 | 0.4 | — | `main.ts` → weapon switch |
 | `fireball_cast` | `fireball_cast.wav` | 1 | 0.5 | — | `main.ts` → `fireball-cast` |
 | `ice_throw` | `ice_throw.wav` | 1 | 0.5 | — | `main.ts` → `frost-cast` |
+| `frost_impact` | `frost_impact.wav` | 1 | 0.5 | — | `FrostBolt.ts` → impact |
 | `dash` | `whoosh_1.wav` | 1 | 1.0 | ±0.1 | `main.ts` → `player-dash` |
 | `upgrade_buy` | `coins_gather_quick.wav`| 1 | 0.5 | — | `Merchant` → purchase |
 | `page_turn` | `page_turn.wav` | 1 | 0.5 | — | `Merchant` → navigation |
@@ -41,7 +42,8 @@ All SFX files are in `public/assets/audio/sfx/`.
 
 | ID | File | Volume | Loop |
 |:---|:---|:---|:---|
-| `forest_ambience` | `assets/audio/bgs/forest_day.wav` | 0.3 | ✅ |
+| `forest_ambience` | `assets/audio/bgs/forest_day.ogg` | 0.3 | ✅ |
+| `rain_ambience` | `assets/audio/bgs/rain.ogg` | 0.4 | ✅ |
 
 BGS plays independently of BGM via `AudioManager.playBGS()`.
 
