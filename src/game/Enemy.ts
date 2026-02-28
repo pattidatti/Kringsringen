@@ -61,6 +61,11 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 
     protected isSpecialMovementActive: boolean = false;
 
+    // Special attack state
+    private lastMultiShotTime: number = 0;
+    private lastBurstTime: number = 0;
+    private isWindingUp: boolean = false;
+
     public get damage(): number {
         return this.config.baseDamage; // Will be updated in reset
     }
@@ -148,6 +153,9 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         this.stuckTimer = 0;
         this.recoveryTimer = 0;
         this.recoveryAngle = 0;
+        this.lastMultiShotTime = 0;
+        this.lastBurstTime = 0;
+        this.isWindingUp = false;
 
         // Clear Soul Link
         this.linkedEnemy = null;
@@ -196,6 +204,42 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
             return Phaser.Math.Between(stats.abilityCooldownMin, stats.abilityCooldownMax);
         }
         return this.attackCooldown;
+    }
+
+    private getScaledCooldown(l1: number, l10: number): number {
+        const level = (this.scene.registry.get('gameLevel') as number) || 1;
+        const t = Math.min(1, Math.max(0, (level - 1) / 9));
+        return Math.round(l1 - (l1 - l10) * t);
+    }
+
+    private fireMultiShot(target: { x: number; y: number }): void {
+        const configKey = this.enemyType.toUpperCase() as EnemyType;
+        const stats = GAME_CONFIG.ENEMIES[configKey] as unknown as EnemyStats;
+        const count = stats.multiShotCount ?? 3;
+        const spread = stats.multiShotSpread ?? 0.5;
+        const projectileType = (this.config as any).rangedProjectile as 'arrow' | 'fireball' | 'frostball';
+        const baseAngle = Phaser.Math.Angle.Between(this.x, this.y, target.x, target.y);
+
+        for (let i = 0; i < count; i++) {
+            const offset = (i / (count - 1) - 0.5) * spread;
+            const angle = baseAngle + offset;
+            this.scene.events.emit('enemy-fire-projectile', this.x, this.y, angle, this.damage, projectileType);
+        }
+        this.lastMultiShotTime = this.scene.time.now;
+    }
+
+    private fireRadialBurst(): void {
+        const configKey = this.enemyType.toUpperCase() as EnemyType;
+        const stats = GAME_CONFIG.ENEMIES[configKey] as unknown as EnemyStats;
+        const count = stats.burstCount ?? 8;
+        const projectileType = (this.config as any).rangedProjectile as 'arrow' | 'fireball' | 'frostball';
+        const burstDamage = this.damage * 0.75;
+
+        for (let i = 0; i < count; i++) {
+            const angle = (i / count) * Math.PI * 2;
+            this.scene.events.emit('enemy-fire-projectile', this.x, this.y, angle, burstDamage, projectileType);
+        }
+        this.lastBurstTime = this.scene.time.now;
     }
 
     private lastAIUpdate: number = 0;
@@ -353,24 +397,26 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
                 }
             }
 
-            if (this.isAttacking) {
+            if (this.isAttacking || this.isWindingUp) {
                 this.setVelocity(0, 0);
 
-                // Special Visuals for Healer Wizard during cast
-                // Refined: We maintain the tint, and the Light2D provides the "glow"
-                if (this.config.tint !== undefined) {
-                    this.setTint(this.config.tint);
-                }
-
-                // ULTRATHINK BUGFIX: Use native Light2D for guaranteed visibility
-                if (this.config.attackGlowColor !== undefined) {
-                    if (!this.attackLight) {
-                        // ADJUST HERE: (x, y, radius, color, intensity)
-                        // Lower radius and intensity to make the glow subtle.
-                        this.attackLight = this.scene.lights.addLight(this.x, this.y, 60, this.config.attackGlowColor, 0.5);
+                if (this.isAttacking) {
+                    // Special Visuals for Healer Wizard during cast
+                    // Refined: We maintain the tint, and the Light2D provides the "glow"
+                    if (this.config.tint !== undefined) {
+                        this.setTint(this.config.tint);
                     }
-                    this.attackLight.setPosition(this.x, this.y);
-                    this.attackLight.setVisible(true);
+
+                    // ULTRATHINK BUGFIX: Use native Light2D for guaranteed visibility
+                    if (this.config.attackGlowColor !== undefined) {
+                        if (!this.attackLight) {
+                            // ADJUST HERE: (x, y, radius, color, intensity)
+                            // Lower radius and intensity to make the glow subtle.
+                            this.attackLight = this.scene.lights.addLight(this.x, this.y, 60, this.config.attackGlowColor, 0.5);
+                        }
+                        this.attackLight.setPosition(this.x, this.y);
+                        this.attackLight.setVisible(true);
+                    }
                 }
             } else {
                 // Restore Light2D for ambient consistency
@@ -421,6 +467,62 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
                                 // Emit to scene - mainScene identifies which player was hit
                                 this.scene.events.emit('enemy-hit-player', this.damage, this.enemyType, this.x, this.y, target);
                             }
+                        }
+                    }
+                }
+            }
+
+            // Special attack dispatch (ranged enemies only, not during attack/windup/death)
+            if (!this.isAttacking && !this.isWindingUp && !this.isDead && this.config.rangedProjectile) {
+                const now = this.scene.time.now;
+                const configKey = this.enemyType.toUpperCase() as EnemyType;
+                const stats = GAME_CONFIG.ENEMIES[configKey] as unknown as EnemyStats;
+                const nearestTarget = this.getNearestTarget();
+
+                if (nearestTarget) {
+                    // Tier-3: Radial burst (frost_wizard only) — checked first, lower frequency
+                    if (stats.burstCount !== undefined && stats.burstCooldownL1 !== undefined && stats.burstCooldownL10 !== undefined) {
+                        const burstCooldown = this.getScaledCooldown(stats.burstCooldownL1, stats.burstCooldownL10);
+                        if (now > this.lastBurstTime + burstCooldown) {
+                            this.isWindingUp = true;
+                            this.setTint(0x00ffff);
+                            const burstScale = this.scale;
+                            this.scene.tweens.add({
+                                targets: this,
+                                scaleX: burstScale * 1.15,
+                                scaleY: burstScale * 1.15,
+                                duration: 250,
+                                yoyo: true,
+                                ease: 'Sine.easeInOut',
+                                onComplete: () => {
+                                    if (!this.active || this.isDead) { this.isWindingUp = false; return; }
+                                    if (this.config.tint !== undefined) {
+                                        this.setTint(this.config.tint);
+                                    } else {
+                                        this.clearTint();
+                                    }
+                                    this.fireRadialBurst();
+                                    this.isWindingUp = false;
+                                }
+                            });
+                        }
+                    // Tier-2: Multi-shot spread
+                    } else if (stats.multiShotCount !== undefined && stats.multiShotCooldownL1 !== undefined && stats.multiShotCooldownL10 !== undefined) {
+                        const multiCooldown = this.getScaledCooldown(stats.multiShotCooldownL1, stats.multiShotCooldownL10);
+                        if (now > this.lastMultiShotTime + multiCooldown) {
+                            this.isWindingUp = true;
+                            this.setTint(0xffcc00);
+                            const capturedTarget = nearestTarget;
+                            this.scene.time.delayedCall(350, () => {
+                                if (!this.active || this.isDead) { this.isWindingUp = false; return; }
+                                if (this.config.tint !== undefined) {
+                                    this.setTint(this.config.tint);
+                                } else {
+                                    this.clearTint();
+                                }
+                                this.fireMultiShot(capturedTarget);
+                                this.isWindingUp = false;
+                            });
                         }
                     }
                 }

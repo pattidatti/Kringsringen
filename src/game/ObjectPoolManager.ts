@@ -14,7 +14,7 @@ export class ObjectPoolManager {
     private readonly MAX_TEXT_POOL = 100;
     private readonly MAX_BLOOD_POOL = 50;
     private readonly MAX_EXPLOSION_POOL = 30;
-    private readonly MAX_PROJECTILE_POOL = 50;
+    private readonly MAX_PROJECTILE_POOL = 80;
 
     constructor(scene: Phaser.Scene) {
         this.scene = scene;

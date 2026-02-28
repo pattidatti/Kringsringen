@@ -33,13 +33,15 @@ export class PreloadScene extends Phaser.Scene {
             console.warn(`[PreloadScene] Asset failed to load: ${file.key} (${file.url})`);
         });
 
-        // Timeout fallback — if loader hangs for > 15 seconds, force scene start
-        const loadTimeout = this.time.delayedCall(15000, () => {
-            console.error('[PreloadScene] Load timed out. Forcing MainScene start.');
+        // Timeout fallback — if loader hangs for > 8 seconds, force scene start
+        // (Reducing from 15s to 8s for better UX, assuming most assets are cached)
+        const loadTimeout = this.time.delayedCall(8000, () => {
+            console.error('[PreloadScene] LOAD TIMEOUT! Assets took >8s. Forcing MainScene transition to avoid hang.');
             this.scene.start('MainScene');
         });
 
         this.load.on('complete', () => {
+            console.log('[PreloadScene] All assets loaded successfully.');
             loadTimeout.remove();
         });
 
@@ -55,7 +57,7 @@ export class PreloadScene extends Phaser.Scene {
     }
 
     create() {
-        console.log('[PreloadScene] Preload complete. Starting MainScene...');
+        console.log('[PreloadScene] Create reached. Transitioning to MainScene.');
         this.scene.start('MainScene');
     }
 }

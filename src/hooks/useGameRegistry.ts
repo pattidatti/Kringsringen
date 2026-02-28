@@ -5,10 +5,12 @@ import Phaser from 'phaser';
 let gameInstance: Phaser.Game | null = null;
 const instanceListeners = new Set<() => void>();
 
-export const setGameInstance = (game: Phaser.Game) => {
+export const setGameInstance = (game: Phaser.Game | null) => {
     gameInstance = game;
     instanceListeners.forEach(fn => fn());
-    instanceListeners.clear();
+    if (game) {
+        instanceListeners.clear();
+    }
 };
 
 export const onGameReady = (fn: () => void) => {

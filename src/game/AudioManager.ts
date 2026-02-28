@@ -68,6 +68,14 @@ export class AudioManager {
         this.applySettings();
     }
 
+    public clearScene() {
+        this.scene = null;
+        this.currentBGM = null;
+        this.currentBGS = null;
+        this.currentBGMId = null;
+        this.currentBGSId = null;
+    }
+
     public preload(scene: Phaser.Scene) {
         // Load all non-lazy assets upfront
         AUDIO_MANIFEST.forEach(config => {

@@ -50,14 +50,14 @@ export const GameContainer: React.FC<GameContainerProps> = React.memo(({ network
     const isLoadingLevelRef = useRef(isLoadingLevel);
     const readyReasonRef = useRef(readyReason);
 
+    const [rebootKey, setRebootKey] = useState(0);
+    const rebootKeyRef = useRef(rebootKey);
+
     useEffect(() => {
         isBookOpenRef.current = isBookOpen;
     }, [isBookOpen]);
 
-    useEffect(() => {
-        bookModeRef.current = bookMode;
-    }, [bookMode]);
-
+    useEffect(() => { rebootKeyRef.current = rebootKey; }, [rebootKey]);
     useEffect(() => { readyPlayersRef.current = readyPlayers; }, [readyPlayers]);
     useEffect(() => { loadedPlayersRef.current = loadedPlayers; }, [loadedPlayers]);
     useEffect(() => { syncStateRef.current = syncState; }, [syncState]);
@@ -122,6 +122,9 @@ export const GameContainer: React.FC<GameContainerProps> = React.memo(({ network
 
             if (continueRun) {
                 game.registry.set('continueRun', true);
+                setIsLoadingLevel(true); // HARDENING: Force overlay if continuing
+            } else {
+                setIsLoadingLevel(true); // For safety, start in loading state
             }
 
             setGameInstance(game);
@@ -196,13 +199,22 @@ export const GameContainer: React.FC<GameContainerProps> = React.memo(({ network
                         setIsWaitingReady(false);
                     });
 
-                    mainScene.events.on('restart_game', () => {
+                    mainScene.events.on('restart-game', () => {
+                        console.log('[GameContainer] restart-game received. Triggering full instance reboot...');
                         setIsBookOpen(false);
                         setIsWaitingReady(false);
                         setReadyReason(null);
                         setReadyPlayers(new Set());
                         setLoadedPlayers(new Set());
                         setSyncState({ loaded: 0, ready: 0, expected: networkConfig ? syncStateRef.current.expected : 1 });
+
+                        // Force full Phaser restart by incrementing the reboot key
+                        setRebootKey(prev => prev + 1);
+                    });
+
+                    mainScene.events.on('create-complete', () => {
+                        console.log('[GameContainer] Scene creation complete. Clearing loading state.');
+                        setIsLoadingLevel(false);
                     });
 
                     mainScene.events.on('player_loaded', (data: any) => {
@@ -332,13 +344,15 @@ export const GameContainer: React.FC<GameContainerProps> = React.memo(({ network
             setupSceneListeners();
 
             return () => {
+                console.log('[GameContainer] Unmounting/Rebooting. Destroying game instance.');
                 if (gameInstanceRef.current) {
                     gameInstanceRef.current.destroy(true);
                     gameInstanceRef.current = null;
+                    setGameInstance(null);
                 }
             };
         }
-    }, [networkConfig]);
+    }, [networkConfig, rebootKey]); // Added rebootKey dependency
 
     useEffect(() => {
         if (!networkConfig) return;
@@ -572,15 +586,15 @@ export const GameContainer: React.FC<GameContainerProps> = React.memo(({ network
         if (!networkConfig) {
             const reg = game.registry;
             SaveManager.saveRunProgress({
-                gameLevel:       reg.get('gameLevel') || 1,
-                currentWave:     reg.get('currentWave') || 1,
-                playerCoins:     reg.get('playerCoins') || 0,
-                upgradeLevels:   reg.get('upgradeLevels') || {},
-                currentWeapon:   reg.get('currentWeapon') || 'sword',
+                gameLevel: reg.get('gameLevel') || 1,
+                currentWave: reg.get('currentWave') || 1,
+                playerCoins: reg.get('playerCoins') || 0,
+                upgradeLevels: reg.get('upgradeLevels') || {},
+                currentWeapon: reg.get('currentWeapon') || 'sword',
                 unlockedWeapons: reg.get('unlockedWeapons') || ['sword'],
-                playerHP:        reg.get('playerHP') || 0,
-                playerMaxHP:     reg.get('playerMaxHP') || 100,
-                savedAt:         Date.now()
+                playerHP: reg.get('playerHP') || 0,
+                playerMaxHP: reg.get('playerMaxHP') || 100,
+                savedAt: Date.now()
             });
         }
 

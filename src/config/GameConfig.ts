@@ -12,6 +12,15 @@ export interface EnemyStats {
     scale: number;
     bodySize: { width: number, height: number };
     knockbackResistance: number;
+    // Tier-2: Multi-shot spread
+    multiShotCount?: number;
+    multiShotSpread?: number;
+    multiShotCooldownL1?: number;
+    multiShotCooldownL10?: number;
+    // Tier-3: Radial burst (frost_wizard only)
+    burstCount?: number;
+    burstCooldownL1?: number;
+    burstCooldownL10?: number;
 }
 
 export const GAME_CONFIG = {
@@ -130,7 +139,14 @@ export const GAME_CONFIG = {
             abilityCooldownMax: 3200,
             scale: 1.8,
             bodySize: { width: 30, height: 50 },
-            knockbackResistance: 0.3
+            knockbackResistance: 0.3,
+            multiShotCount: 3,
+            multiShotSpread: 0.55,
+            multiShotCooldownL1: 12000,
+            multiShotCooldownL10: 4000,
+            burstCount: 8,
+            burstCooldownL1: 22000,
+            burstCooldownL10: 8000
         },
         WIZARD: {
             baseHP: 100,
@@ -143,7 +159,11 @@ export const GAME_CONFIG = {
             abilityCooldownMax: 2800,
             scale: 1.8,
             bodySize: { width: 30, height: 50 },
-            knockbackResistance: 0.3
+            knockbackResistance: 0.3,
+            multiShotCount: 3,
+            multiShotSpread: 0.50,
+            multiShotCooldownL1: 10000,
+            multiShotCooldownL10: 3500
         },
         SKELETON_ARCHER: {
             baseHP: 60,
@@ -159,7 +179,11 @@ export const GAME_CONFIG = {
             knockbackResistance: 0.2,
             attackDamageFrame: 6,
             rangedProjectile: 'arrow',
-            attackGlowColor: 0xfff9e0
+            attackGlowColor: 0xfff9e0,
+            multiShotCount: 3,
+            multiShotSpread: 0.45,
+            multiShotCooldownL1: 9000,
+            multiShotCooldownL10: 3000
         },
         HEALER_WIZARD: {
             baseHP: 150,
