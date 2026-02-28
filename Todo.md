@@ -58,13 +58,15 @@
 
 # MP
 - [x] Når hele party er døde, skal man kunne starte på nytt uten å lage en helt ny server osv. Bare en retry knapp som dukker opp med readystate x/y spillere.  
-- [ ] Klient kan ikke se HP bars til enemies, bare host kan se det. 
+- [x] Klient kan ikke se HP bars til enemies, bare host kan se det. 
 - [ ] Når man dør i MP får man "Falnet" skjermen, det skal man ikke, man skal leve videre som ghost slik vi har utviklet. 
-- [ ] Når man restarter i MP, så henger de gamle HP barene til enemies igjen på kartet, selv om man har startet på nytt. 
+- [x] Når man restarter i MP, så henger de gamle HP barene til enemies igjen på kartet, selv om man har startet på nytt. 
+- [ ] MP: spillerne får ikke opp animation når andre spillere blir truffet/skadet.
+- [ ] MP:  
+- [ ] MP: Man må kunne se andres lys, slik at man kan se deres fog of war (bare ytterste lyset, ikke det innerste)
 # Bugs
 - [ ] Restart knappen på singleplayer fungerer ikke etter man er død, spillet starter faktisk ikke på nytt, man får rød skjerm lvl 1 fase 1, men spiller er fryst. 
 - [x] MP: Når man trykker klar, så står det bare 0/2, selv om begge spillerne har trykket klar, lukkes ikke spillet og man gå kan videre.  
-- [ ] MP: Man må kunne se andres lys, slik at man kan se deres fog of war (bare ytterste lyset, ikke det innerste)
 - [x] Boss battle kan bli hengede på spilleren (splash screen), selv om kampen er startet. 
 - [x] Man kommer ikke lengre en lvl 5 
 - [x] Level blir av og til completet selv om det er fiender igjen. 

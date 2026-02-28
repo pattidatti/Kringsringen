@@ -470,6 +470,11 @@ export class BossEnemy extends Enemy {
         }
     }
 
+    public destroy(fromScene?: boolean): void {
+        this.clearAbilityTimers();
+        super.destroy(fromScene);
+    }
+
     protected die(): void {
         this.clearAbilityTimers();
 

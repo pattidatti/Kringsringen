@@ -179,4 +179,13 @@ export class EnemyProjectile extends Phaser.Physics.Arcade.Sprite {
             this.hit();
         }
     }
+
+    public destroy(fromScene?: boolean) {
+        if (this.trail) this.trail.destroy();
+        if (this.light) {
+            this.scene.lights.removeLight(this.light);
+            this.light = null;
+        }
+        super.destroy(fromScene);
+    }
 }

@@ -374,4 +374,9 @@ export class LightningBolt extends Phaser.Physics.Arcade.Sprite {
             this.glowEffect.color = this.colorHex;
         }
     }
+
+    public destroy(fromScene?: boolean) {
+        this.deactivate();
+        super.destroy(fromScene);
+    }
 }

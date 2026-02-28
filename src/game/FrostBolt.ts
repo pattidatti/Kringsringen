@@ -156,4 +156,12 @@ export class FrostBolt extends Phaser.Physics.Arcade.Sprite {
     update() {
         // No movement — teleport spell
     }
+
+    public destroy(fromScene?: boolean) {
+        if (this.light) {
+            this.scene.lights.removeLight(this.light);
+            this.light = null;
+        }
+        super.destroy(fromScene);
+    }
 }

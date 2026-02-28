@@ -824,6 +824,28 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         // Do NOT call destroy() — keep in pool for reuse
     }
 
+    public destroy(fromScene?: boolean) {
+        if (this.hpBar) {
+            this.hpBar.destroy();
+        }
+        if (this.shadow) {
+            this.shadow.destroy();
+        }
+        if (this.attackLight) {
+            this.scene.lights.removeLight(this.attackLight);
+        }
+        if (this.slowTimer) {
+            this.slowTimer.remove();
+        }
+        if (this.poisonTimer) {
+            this.poisonTimer.remove();
+        }
+        if (this.stunTimer) {
+            this.stunTimer.remove();
+        }
+        super.destroy(fromScene);
+    }
+
     /**
      * Call with `true` on clients to make this a position-only puppet.
      * The physics body remains active to register overlaps (hit_requests),
