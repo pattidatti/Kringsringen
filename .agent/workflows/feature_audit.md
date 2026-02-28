@@ -33,4 +33,5 @@ Triggeres når en ny funksjon (feature) fra Todo.md skal bygges. Utviklet basert
 ## Fase 6: Synthesis & Execution (The Output)
 - Generer en kompromissløs og ekstremt velstrukturell arkitekturplan.
 - Presenter hvilke filer som opprettes (`[NEW]`) og modifiseres (`[MODIFY]`).
+- **Dokumentasjonsplan:** Spesifiser hvilke filer i `docs/` som må oppdateres for å reflektere den nye funksjonen.
 - Avvent brukerens 'GO' (sammen med evt. justeringer) for å iverksette.

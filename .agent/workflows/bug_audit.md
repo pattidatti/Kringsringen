@@ -20,6 +20,7 @@ Triggeres når brukeren vil fikse en bug. Målet er ikke å lappe symptomet, men
 
 ## Fase 3: Phase 4 (Code Quality) - The "Boy Scout" Mandate
 - Når du først må inn og reparere logikken: Hvilken annen teknisk gjeld finnes i umiddelbar nærhet? Utvid fiks-planen lett til å inkludere fjerning av `any`-typer, død kode, eller manglende dokumentasjon i funksjonen som endres.
+- **Dokumentasjonssjekk:** Sjekk om bug-fixen endrer eksisterende logikk som er dokumentert i `docs/`. Oppdater dokumentasjonen om nødvendig.
 
 ## Fase 4: The "Pre-Mortem" Simulation (Risk Analysis)
 - Snu problemet på hodet: "Hvis denne fiksen sendes ut i produksjon nå, og kræsjer i morgen – hvorfor skjedde det?" (Eks: Vi fikset at `player` var undefined, men kræsjer nå fordi arrayet er tomt. Fiks det før det skjer).

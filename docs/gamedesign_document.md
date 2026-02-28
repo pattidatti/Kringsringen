@@ -69,7 +69,20 @@ Hvert Map Level består av flere bølger. Vanskelighetsgraden øker gjennom mult
 ### 🔥 Boss Level 3: Alfa-Varulven ✅
 > Utløses etter Level 6. Se seksjon 4 for detaljer.
 
-> **⚠️ Musikk:** Level 4+ mangler manuell musikktildeling i `WaveManager.startLevel()`. Bare level 2 og 3 bytter musikk. Levels 1, 4, 5 spiller det som var fra før.
+### Map Level 7: De Glemte Katakombene 🚧
+- **Musikk:** `glitch_in_the_catacombs.mp3`
+- Introduserer: Healer Wizard og Skeleton Archer.
+
+### 🔥 Boss Level 4: Trollhersker Grak ✅ 💎
+> Utløses etter Level 8. Se seksjon 4 for detaljer.
+
+### Map Level 9: Himmelfallet 🚧
+- **Musikk:** `glitch_in_the_heavens.mp3`
+
+### 🔥 Boss Level 5: Skjelettkongen ✅ 💎
+> Utløses etter Level 10. Se seksjon 4 for detaljer.
+
+> **⚠️ Musikk:** Level 4+ har nå musikk-IDer tildelt i systemet, men mangler unike spor i WaveManager-hardkodingen for noen nivåer.
 
 ---
 
@@ -89,6 +102,10 @@ Alle fiendetyper er konfigurert i `src/config/enemies.ts` med sprite, animasjone
 | **Armored Orc** | 250 | 45 | 80 | 0.9 | ✅ |
 | **Greatsword Skeleton** | 200 | 40 | 90 | 0.8 | ✅ |
 | **Elite Orc** | 300 | 50 | 110 | 0.7 | ✅ |
+| **Frost Wizard** | 80 | 25 | 70 | 0.3 | ✅ |
+| **Wizard** | 100 | 35 | 75 | 0.3 | ✅ |
+| **Skeleton Archer** | 60 | 20 | 90 | 0.2 | ✅ |
+| **Healer Wizard** | 150 | 50* | 95 | 0.3 | ✅ |
 
 > *Alle stats er base-verdier og skaleres med niveau-multiplikatoren.*
 
@@ -121,6 +138,16 @@ Splashscreen, dedikert boss-musikk og HP-bar er implementert (`BossHUD`, `BossSp
 - **Abilities fase 1:** Feral Howl – 3 werewolf-minions (8s), Predator Dash – teleport + AoE (4s)
 - **Abilities fase 2:** Feral Howl – 4 minions (5s), Predator Dash (2.5s)
 - **Fase 2 trigger:** 50% HP
+
+### Trollhersker Grak – *The Troll Warlord* ✅ 💎
+- **Etter:** Level 8 | **Musikk:** `Glitch in the Dungeon.mp3`
+- HP: 3500 | Skade: 90 | Fart: 95 | Skala: 3.2x | Tint: Grønn (0x55ff55)
+- **Spesial:** Høy knockback-resistans (0.95). Bruker Wizard-animasjoner.
+
+### Skjelettkongen – *The Undying King* ✅ 💎
+- **Etter:** Level 10 | **Musikk:** `Glitch King.mp3`
+- HP: 5000 | Skade: 110 | Fart: 80 | Skala: 3.5x
+- **Fase 2 trigger:** 40% HP
 
 ### Åpne feil / Mangler – Bosser
 - 🚧 Bone Volley bruker `scene.add.circle()` (primitiv grafikk) i stedet for et sprite-prosjektil – trenger asset
@@ -158,8 +185,11 @@ Prisformel: `kostnad = basePrice × (currentLevel ^ priceScale)` (eksponentiell 
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | `health` | Vitalitet | +20 Maks HP | 20 | 40 | ✅ |
 | `speed` | Lynrask | +10 Bevegelseshastighet | 10 | 50 | ✅ |
-| `regen` | Trollblod | +1 HP/sek regen | 10 | 100 | ⚠️ Registret settes, men regen-tick i game loop mangler |
+| `regen` | Trollblod | +1 HP/sek regen | 10 | 100 | ✅ (Nå med tick i loop) |
 | `armor` | Jernhud | +1 Skade-reduksjon | 10 | 75 | ✅ |
+| `dash_cooldown`| Vindstøt | -20% dash-cooldown | 6 | 80 | ✅ |
+| `dash_distance`| Lynskritt | +50px dash-distanse | 5 | 100 | ✅ |
+| `dash_lifesteal`| Blodsug | +5 HP healing ved dash| 3 | 180 | ✅ |
 
 ### Sverd
 | ID | Navn | Effekt per Lvl | Maks Lvl | BasePris | Status |
@@ -200,8 +230,23 @@ Prisformel: `kostnad = basePrice × (currentLevel ^ priceScale)` (eksponentiell 
 | `lightning_damage` | Tordenstyrke | +15% Lynstav-skade | 10 | 70 | ✅ |
 | `lightning_bounces` | Kjedeblunk | +1 ekstra mål å hoppe til | 5 | 200 | ✅ |
 | `lightning_multicast` | Stormskudd | +1 lyn avgitt samtidig | 3 | 300 | ⚠️ Bolter overlapper – sprer seg ikke |
+| `lightning_stun` | Statisk utladning | +10% sjanse til stun | 5 | 150 | ✅ 💎 |
+| `lightning_voltage`| Høyspenning | +15% skade per bounce | 3 | 200 | ✅ 💎 |
 
 > **❌ Fjernet siden v1.2:** `Bueskytter`-oppgraderingen (alle våpen er nå fra start). `Magnet`-oppgraderingen (hardkodet radius 150px, skalering ikke implementert, tatt ut av butikken).
+
+### Spesial-oppgraderinger 💎
+| ID | Navn | Effekt | BasePris | Status |
+| :--- | :--- | :--- | :--- | :--- |
+| `bow_singularity`| Singularitetspil | Piler skaper gravitasjonsfelt | 1000 | ✅ |
+| `poison_arrow` | Giftpil | Piler forgifter fiender | 500 | ✅ |
+| `magic_soul_link`| Sjelelenke | Fiender deler 40% skade | 1500 | ✅ |
+| `sword_eclipse` | Solsnu | Sverdsving etterlater mørk sti | 1200 | ✅ |
+
+### Synergier 💎
+| ID | Navn | Krav | Effekt | Status |
+| :--- | :--- | :--- | :--- | :--- |
+| `thermal_shock` | Thermal Shock | Fire Dmg 3 + Frost Slow 3 | Konsumerer frys for 3x eksplosjon | ✅ |
 
 ---
 

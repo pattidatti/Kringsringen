@@ -53,7 +53,7 @@ Code is easy; State is hard. Define the data before the UI.
 -   **Type Safety**: `any` is forbidden. Explicit types only.
 -   **Complexity Budget**: Analyze the "Cost of Ownership". If a feature adds 500 lines of complexity for 1% value, reject it.
 -   **Refactoring Mandate**: **The Boy Scout Rule**: The plan MUST include a step to clean up adjacent code touched by this feature.
--   **Documentation**: Require TSDoc for every public function.
+-   **Documentation**: Require TSDoc for every public function AND an update/check of external documentation in `docs/*.md` if the change affects architecture or design.
 
 ### 5. Phase 5: The "Pre-Mortem" Simulation (Risk Analysis)
 Assume the feature failed in production. Why did it fail?

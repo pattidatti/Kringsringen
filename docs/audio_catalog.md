@@ -9,6 +9,13 @@
 | `meadow_theme` | `assets/audio/music/meadow_theme.mp3` | 0.5 | ✅ |
 | `exploration_theme` | `assets/audio/music/exploration_theme.mp3` | 0.5 | ✅ |
 | `dragons_fury` | `assets/audio/music/dragons_fury.mp3` | 0.6 | ✅ |
+| `pixel_rush_overture` | `assets/audio/music/Pixel Rush Overture.mp3` | 0.5 | ✅ 💎 |
+| `glitch_in_the_forest` | `assets/audio/music/Glitch in the forest.mp3` | 0.5 | ✅ 💎 |
+| `glitch_in_the_dungeon` | `assets/audio/music/Glitch in the Dungeon.mp3` | 0.5 | ✅ 💎 |
+| `glitch_in_the_catacombs`| `assets/audio/music/Glitch in the Catacombs.mp3`| 0.5 | ✅ 💎 |
+| `glitch_in_the_heavens` | `assets/audio/music/Glitch in the heavens.mp3` | 0.5 | ✅ 💎 |
+| `final_dungeon_loop` | `assets/audio/music/Final Dungeon Loop.mp3` | 0.6 | ✅ 💎 |
+| `glitch_king` | `assets/audio/music/Glitch King.mp3` | 0.6 | ✅ 💎 |
 
 ### SFX (Sound Effects)
 
@@ -18,9 +25,15 @@
 | `hit` | `sword_impact_1-3.wav` | 3 | 0.5 | — | `main.ts` → `enemy-hit` event |
 | `bow_attack` | `bow_attack_1-2.wav` | 2 | 0.4 | ±0.1 | `main.ts` → `bow-shot` event |
 | `bow_impact` | `bow_impact_1-3.wav` | 3 | 0.45 | — | `Arrow.ts` → `hit()` |
-| `footstep` | `dirt_run_1-5.wav` | 5 | 0.25 | ±0.15 | `main.ts` → player walk (250ms throttle) |
-| `coin_collect` | `coin_collect_1-2.wav` | 2 | 0.35 | ±0.05 | `WaveManager.ts` → coin pickup |
-| `ui_click` | `ui_click.wav` | 1 | 0.3 | — | `FantasyButton.tsx` → button click |
+| `footstep` | `dirt_run_1-5.wav` | 5 | 0.25 | ±0.15 | `main.ts` → player walk |
+| `coin_collect` | `pop_1-3.wav, glass_ping` | 4 | 0.25 | ±0.08 | `WaveManager.ts` → coin pickup |
+| `ui_click` | `ui_click.wav` | 1 | 0.3 | — | `FantasyButton.tsx` → click |
+| `weapon_pick_up` | `weapon_pick_up.wav`| 1 | 0.4 | — | `main.ts` → weapon switch |
+| `fireball_cast` | `fireball_cast.wav` | 1 | 0.5 | — | `main.ts` → `fireball-cast` |
+| `ice_throw` | `ice_throw.wav` | 1 | 0.5 | — | `main.ts` → `frost-cast` |
+| `dash` | `whoosh_1.wav` | 1 | 1.0 | ±0.1 | `main.ts` → `player-dash` |
+| `upgrade_buy` | `coins_gather_quick.wav`| 1 | 0.5 | — | `Merchant` → purchase |
+| `page_turn` | `page_turn.wav` | 1 | 0.5 | — | `Merchant` → navigation |
 
 All SFX files are in `public/assets/audio/sfx/`.
 

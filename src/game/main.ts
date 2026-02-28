@@ -187,7 +187,7 @@ class MainScene extends Phaser.Scene implements IMainScene {
         this.registry.set('playerHP', this.stats.maxHP);
 
         // Initialize Object Pool
-        this.poolManager = new ObjectPoolManager(this);
+        // this.poolManager = new ObjectPoolManager(this); // Redundant - initialized above
 
         // Create Gem Texture (Small Diamond)
         const graphics = this.add.graphics();
@@ -1879,6 +1879,20 @@ class MainScene extends Phaser.Scene implements IMainScene {
     public restartGame() {
         console.log("[Game] Restarting run...");
 
+        /**
+         * CRITICAL: We must notify the Network and React UI FIRST.
+         * This ensures that the state is cleared before regenerateMap triggers 
+         * synchronous 'map-ready' events which populate the 'loaded' status in GameContainer.
+         */
+        if (this.networkManager?.role === 'host') {
+            this.networkManager.broadcast({
+                t: PacketType.GAME_EVENT,
+                ev: { type: 'restart_game', data: {} },
+                ts: Date.now()
+            });
+        }
+        this.events.emit('restart_game');
+
         // Reset Local Registry State
         this.registry.set('playerMaxHP', GAME_CONFIG.PLAYER.BASE_MAX_HP);
         this.registry.set('playerHP', GAME_CONFIG.PLAYER.BASE_MAX_HP);
@@ -1928,18 +1942,6 @@ class MainScene extends Phaser.Scene implements IMainScene {
         if (this.networkManager?.role !== 'client') {
             this.waves.startLevel(1);
         }
-
-        // Host notifies clients
-        if (this.networkManager?.role === 'host') {
-            this.networkManager.broadcast({
-                t: PacketType.GAME_EVENT,
-                ev: { type: 'restart_game', data: {} },
-                ts: Date.now()
-            });
-        }
-
-        // Notify React UI
-        this.events.emit('restart_game');
     }
 }
 

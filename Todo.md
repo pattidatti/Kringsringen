@@ -31,7 +31,7 @@
 -[x] Usikker på om det er coindrops fra bosser, men de bør uansett automatisk plukkes opp, ettersom spillet pauser med en gang den dør, og en ikke får muligheten til å hente dem selv. 
 - [ ] Alle bosser må droppe mye mer gull. 
 - [ ] Trollmester Grak må ha en nockback resist, slik at han ikke blir stoppet av alt mulig. 
-
+- [ ] Skjelettkongen på lvl 10 angriper/slår aldri spilleren. Den er altfor enkel, må gjøre betrakteliger vanskeligere. 
 # grafikk
 - [x] Implementert Grafikk-innstillinger i hovedmeny og in-game (Low, Medium, High).
 - [x] Lav settings: Uten lys ser man omtrent ingenting. Løst ved resette shader pipeline.
@@ -43,8 +43,6 @@
 - [x] Ny wizard: Healer. Caster en healing spell på andre monstere, som gjør at de får en grønn glow mens de blir healed. Spelleffekt: @622.png i grønn (rad 3, 14 frames). Attack animation: public/assets/sprites/wizard.png rad 3, 8 frames. Trenger egen spelleffekt lyd (bruk placeholder for nå). Spelleffekt må ha glow/lys slik som de andre spelleffektene vi har. Den skal spawne oppå dem som blir healed, og forsvinne etter en stund. Vi må introdusere antall healere sakte i waves. Kan vi gi dem en grønn tint, på samme måte som vi har på block på spilleren? Dette er vel enkleste måte å få dem til å se annerledes ut. Mens healingen pågår, kan de ikke bevege seg, og er dermed sårbare, de lyser også opp svakt grønt. 
 
 # Spell
-- Lighting ser fremdeles ikke helt bra ut. 
-- Lighting er fremdeles for overpowered, seeking må reduseres enda mer.  
 - [x] Ser ut som man kan caste fortere enn cooldownen tillater. 
 - [x] Finne en annen uppgrade enn å kunne caste flere lyn samtidig ut fra spilleren. 
 - [x] Rebalansere upgrades og skade mellom alle spells og våpen. 
@@ -60,7 +58,9 @@
 
 # MP
 - [x] Når hele party er døde, skal man kunne starte på nytt uten å lage en helt ny server osv. Bare en retry knapp som dukker opp med readystate x/y spillere.  
-
+- [ ] Klient kan ikke se HP bars til enemies, bare host kan se det. 
+- [ ] Når man dør i MP får man "Falnet" skjermen, det skal man ikke, man skal leve videre som ghost slik vi har utviklet. 
+- [ ] Når man restarter i MP, så henger de gamle HP barene til enemies igjen på kartet for. 
 # Bugs
 - [ ] Restart knappen på singleplayer fungerer ikke etter man er død, spillet starter faktisk ikke på nytt, man får rød skjerm lvl 1 fase 1, men spiller er fryst. 
 - [x] MP: Når man trykker klar, så står det bare 0/2, selv om begge spillerne har trykket klar, lukkes ikke spillet og man gå kan videre.  
