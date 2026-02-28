@@ -15,12 +15,15 @@ import { PacketType } from '../network/SyncSchemas';
 import { setGameInstance } from '../hooks/useGameRegistry';
 import type { NetworkConfig } from '../App';
 import type { IMainScene } from '../game/IMainScene';
+import { SaveManager } from '../game/SaveManager';
 
 interface GameContainerProps {
     networkConfig?: NetworkConfig | null;
+    continueRun?: boolean;
+    onExitToMenu?: () => void;
 }
 
-export const GameContainer: React.FC<GameContainerProps> = React.memo(({ networkConfig }) => {
+export const GameContainer: React.FC<GameContainerProps> = React.memo(({ networkConfig, continueRun, onExitToMenu }) => {
     const gameContainerRef = useRef<HTMLDivElement>(null);
     const gameInstanceRef = useRef<Phaser.Game | null>(null);
 
@@ -116,6 +119,10 @@ export const GameContainer: React.FC<GameContainerProps> = React.memo(({ network
         if (gameContainerRef.current && !gameInstanceRef.current) {
             const game = createGame(gameContainerRef.current.id, networkConfig);
             gameInstanceRef.current = game;
+
+            if (continueRun) {
+                game.registry.set('continueRun', true);
+            }
 
             setGameInstance(game);
 
@@ -558,6 +565,30 @@ export const GameContainer: React.FC<GameContainerProps> = React.memo(({ network
         }
     }, [isBookOpen, handleBookClose, networkConfig]);
 
+    const handleExitToMenu = useCallback(() => {
+        const game = gameInstanceRef.current;
+        if (!game) return;
+
+        if (!networkConfig) {
+            const reg = game.registry;
+            SaveManager.saveRunProgress({
+                gameLevel:       reg.get('gameLevel') || 1,
+                currentWave:     reg.get('currentWave') || 1,
+                playerCoins:     reg.get('playerCoins') || 0,
+                upgradeLevels:   reg.get('upgradeLevels') || {},
+                currentWeapon:   reg.get('currentWeapon') || 'sword',
+                unlockedWeapons: reg.get('unlockedWeapons') || ['sword'],
+                playerHP:        reg.get('playerHP') || 0,
+                playerMaxHP:     reg.get('playerMaxHP') || 100,
+                savedAt:         Date.now()
+            });
+        }
+
+        game.destroy(true);
+        gameInstanceRef.current = null;
+        onExitToMenu?.();
+    }, [networkConfig, onExitToMenu]);
+
     const bookActions = useMemo(() => ({
         onSelectPerk: () => { },
         onBuyUpgrade: applyShopUpgrade,
@@ -593,6 +624,7 @@ export const GameContainer: React.FC<GameContainerProps> = React.memo(({ network
                         readyPlayersCount={syncState.ready}
                         expectedPlayersCount={syncState.expected}
                         readyReason={readyReason}
+                        onExitGame={handleExitToMenu}
                     />
                 </div>
             </div>
@@ -620,6 +652,8 @@ export const GameContainer: React.FC<GameContainerProps> = React.memo(({ network
     // Only re-render if the peer ID or role changes (significant network config changes)
     return (
         prev.networkConfig?.peer.id === next.networkConfig?.peer.id &&
-        prev.networkConfig?.role === next.networkConfig?.role
+        prev.networkConfig?.role === next.networkConfig?.role &&
+        prev.continueRun === next.continueRun &&
+        prev.onExitToMenu === next.onExitToMenu
     );
 });

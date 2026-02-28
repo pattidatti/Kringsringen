@@ -81,6 +81,21 @@ export class WaveManager {
         this.scene.registry.set('currentWave', this.currentWave);
         this.scene.registry.set('maxWaves', config.waves);
 
+        // Autosave run progress at wave start (singleplayer only)
+        if (!this.scene.registry.get('isMultiplayer')) {
+            SaveManager.saveRunProgress({
+                gameLevel:       this.currentLevel,
+                currentWave:     this.currentWave,
+                playerCoins:     this.scene.registry.get('playerCoins') || 0,
+                upgradeLevels:   this.scene.registry.get('upgradeLevels') || {},
+                currentWeapon:   this.scene.registry.get('currentWeapon') || 'sword',
+                unlockedWeapons: this.scene.registry.get('unlockedWeapons') || ['sword'],
+                playerHP:        this.scene.registry.get('playerHP') || 0,
+                playerMaxHP:     this.scene.registry.get('playerMaxHP') || 100,
+                savedAt:         Date.now()
+            });
+        }
+
         // Visual Announcement
         const topText = this.scene.add.text(
             this.scene.cameras.main.width / 2,

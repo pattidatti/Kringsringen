@@ -5,6 +5,7 @@ import LandingPage from './components/LandingPage'
 import FantasyDemo from './components/ui/FantasyDemo'
 import { FantasyButton } from './components/ui/FantasyButton'
 import { FantasyDebug } from './components/dev/FantasyDebug'
+import { SaveManager } from './game/SaveManager'
 import './index.css'
 import './styles/pixel-ui.css'
 
@@ -22,19 +23,36 @@ function App() {
   const [showLanding, setShowLanding] = useState(true);
   const [showDemo, setShowDemo] = useState(false);
   const [networkConfig, setNetworkConfig] = useState<NetworkConfig | null>(null);
+  const [continueRun, setContinueRun] = useState(false);
 
   const handleStartMP = (role: 'host' | 'client', roomCode: string, peer: Peer, nickname: string, hostPeerId?: string) => {
     setNetworkConfig({ role, roomCode, peer, nickname, hostPeerId });
     setShowLanding(false);
   };
 
+  const handleStartNew = () => {
+    SaveManager.clearRunProgress();
+    setContinueRun(false);
+    setNetworkConfig(null);
+    setShowLanding(false);
+  };
+
+  const handleContinue = () => {
+    setContinueRun(true);
+    setNetworkConfig(null);
+    setShowLanding(false);
+  };
+
+  const handleExitToMenu = () => {
+    setContinueRun(false);
+    setShowLanding(true);
+  };
+
   if (showLanding) {
     return (
       <LandingPage
-        onStart={() => {
-          setNetworkConfig(null);
-          setShowLanding(false);
-        }}
+        onStart={handleStartNew}
+        onContinue={handleContinue}
         onStartMP={handleStartMP}
       />
     );
@@ -53,7 +71,7 @@ function App() {
 
       {showDemo ? (
         window.location.hash === '#debug' ? <FantasyDebug /> : <FantasyDemo />
-      ) : <GameContainer networkConfig={networkConfig} />}
+      ) : <GameContainer networkConfig={networkConfig} continueRun={continueRun} onExitToMenu={handleExitToMenu} />}
     </div>
   )
 }

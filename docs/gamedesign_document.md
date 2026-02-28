@@ -2,8 +2,8 @@
 
 Dette dokumentet beskriver spillmekanikken, fremgangen og det planlagte innholdet for **Kringsringen**.
 
-> **Dokumentversjon:** 2.0
-> **Sist oppdatert:** 2026-02-24
+> **Dokumentversjon:** 2.1
+> **Sist oppdatert:** 2026-02-28
 > **Status-notasjon:** ✅ Implementert | ⚠️ Delvis/Bug | 🚧 Planlagt | ❌ Fjernet/Avlyst
 
 ---
@@ -253,17 +253,45 @@ Prisformel: `kostnad = basePrice × (currentLevel ^ priceScale)` (eksponentiell 
 ## 7. Spill-flyt (The Loop)
 
 ```
-Start → Overlevelse (bølger) → Loot gull → Shop → [Vanlig level fullført]
-      ↓
-  Boss-splash → Boss-fight → Boss beseiret → Neste vanlige level
+Start/Fortsett → Overlevelse (bølger) → Loot gull → Shop → [Vanlig level fullført]
+              ↓
+          Boss-splash → Boss-fight → Boss beseiret → Neste vanlige level
+              ↓
+         [Avslutt spill] → Forsiden (run lagret, kan fortsettes)
 ```
 
-1. **Start:** Spilleren starter med 0 gull og alle 5 våpen tilgjengelig.
+1. **Start / Fortsett:** Landing Page viser «Fortsett Spill» hvis det finnes en lagret run, og «Nytt Spill» som sekundærvalg. Uten lagret run vises kun «Start Spill». ✅
 2. **Overlevelse:** Bekjemp bølger av fiender – antall og styrke skalerer med niveau.
 3. **Loot:** Samle gullmynter fra falne fiender (5–15 base, +3 per ekstra level).
 4. **Shopping:** Bruk gull i butikken mellom bølger/levels for å bli sterkere.
 5. **Victory:** Fullfør alle bølgene på et kart → full HP → neste miljø/boss.
 6. **Bossfight:** Eget musikksporet, splash screen, og dedikert HP-bar.
+7. **Avslutt midt i spillet:** «Avslutt spill»-knappen i boken (nederst til venstre, under venstre side av boken) lagrer run og tar spilleren til forsiden. ✅
+
+### 7.1 Run-progresjon (Autosave) ✅
+
+Run-tilstand lagres automatisk til `localStorage` (`kringsringen_run_v1`) på tre tidspunkter:
+- **Wave-start** – etter at wave-teller er satt, før fiender spawner (tryggeste sjekkpunkt)
+- **Level fullført** – etter at alle fiender er ryddet, med `gameLevel = neste level`
+- **Nettleserlukking** – via `window.beforeunload`
+
+**Hva lagres:**
+
+| Felt | Beskrivelse |
+| :--- | :--- |
+| `gameLevel` | Nivå man er på |
+| `currentWave` | Bølge man er på |
+| `playerCoins` | Gull samlet denne runnen |
+| `upgradeLevels` | Alle oppgraderinger kjøpt denne runnen |
+| `currentWeapon` | Aktivt våpen |
+| `unlockedWeapons` | Våpen tilgjengelig |
+| `playerHP` / `playerMaxHP` | HP på lagringstidspunkt |
+
+**Sletting av lagret run:**
+- Spilleren dør og trykker «Prøv Igjen» → run slettes; ny run starter fra level 1
+- Spilleren velger «Nytt Spill» fra forsiden → run slettes eksplisitt
+
+> **Merk:** Restore skjer alltid til starten av den lagrede bølgen (ikke midt i en bølge). Fiender gjenopplives ikke – spilleren begynner wave på nytt med korrekte stats, gull og oppgraderinger.
 
 ---
 
@@ -388,7 +416,9 @@ Hvert Map Level laster et statisk kart via `StaticMapLoader` + `StaticMapData`. 
 - **Daglige utfordringer** (Daily Challenges) via Firebase – et seed-basert modifikatorsett som endres daglig (f.eks. «Kun Frost tillatt», «Alle fiender er 2x raskere»)
 - **Ulåsbare startbonuser** – etter en fullført run låser man opp ett av tre startvalg (f.eks. +50 gull start, eller 1 gratis Skarpt Stål nivå) for neste run
 
+> ✅ **Implementert (2026-02-28):** Run-progresjon lagres automatisk i cache – se seksjon 7.1.
+
 ---
 
-**Dokumentversjon:** 2.0
+**Dokumentversjon:** 2.1
 **Ansvarlig AI Architect:** Antigravity

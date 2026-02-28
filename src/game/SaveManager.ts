@@ -1,3 +1,15 @@
+export interface RunProgress {
+    gameLevel: number;
+    currentWave: number;
+    playerCoins: number;
+    upgradeLevels: Record<string, number>;
+    currentWeapon: string;
+    unlockedWeapons: string[];
+    playerHP: number;
+    playerMaxHP: number;
+    savedAt: number;
+}
+
 export interface SaveData {
     coins: number;
     upgradeLevels: Record<string, number>;
@@ -10,6 +22,39 @@ export interface SaveData {
 
 export class SaveManager {
     private static readonly SAVE_KEY = 'kringsringen_save_v1';
+    private static readonly RUN_KEY = 'kringsringen_run_v1';
+
+    static saveRunProgress(progress: RunProgress): void {
+        try {
+            localStorage.setItem(this.RUN_KEY, JSON.stringify({ ...progress, savedAt: Date.now() }));
+        } catch (e) {
+            console.error('Failed to save run progress:', e);
+        }
+    }
+
+    static loadRunProgress(): RunProgress | null {
+        try {
+            const data = localStorage.getItem(this.RUN_KEY);
+            if (!data) return null;
+            const parsed = JSON.parse(data);
+            if (typeof parsed.gameLevel !== 'number' || typeof parsed.currentWave !== 'number') {
+                this.clearRunProgress();
+                return null;
+            }
+            return parsed as RunProgress;
+        } catch (e) {
+            console.error('Failed to load run progress:', e);
+            return null;
+        }
+    }
+
+    static clearRunProgress(): void {
+        localStorage.removeItem(this.RUN_KEY);
+    }
+
+    static hasSavedRun(): boolean {
+        return localStorage.getItem(this.RUN_KEY) !== null;
+    }
 
     static load(): SaveData {
         try {

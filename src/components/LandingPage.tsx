@@ -21,14 +21,16 @@ const ADSENSE_SLOT = '6930156530';
 
 interface LandingPageProps {
     onStart: () => void;
+    onContinue: () => void;
     onStartMP: (role: 'host' | 'client', roomCode: string, peer: Peer, nickname: string, hostPeerId?: string) => void;
 }
 
-const LandingPage: React.FC<LandingPageProps> = ({ onStart, onStartMP }) => {
+const LandingPage: React.FC<LandingPageProps> = ({ onStart, onContinue, onStartMP }) => {
     const [showHighscores, setShowHighscores] = useState(false);
     const [showSettings, setShowSettings] = useState(false);
     const [showTutorial, setShowTutorial] = useState(false);
     const [showMPLobby, setShowMPLobby] = useState(false);
+    const [hasSave] = useState(() => SaveManager.hasSavedRun());
     const audioRef = useRef<HTMLAudioElement | null>(null);
 
     useEffect(() => {
@@ -60,7 +62,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart, onStartMP }) => {
         });
     }, []);
 
-    const fadeAudioAndStart = () => {
+    const fadeAudio = (callback: () => void) => {
         const audio = audioRef.current;
         if (audio) {
             const fadeOut = setInterval(() => {
@@ -73,8 +75,10 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart, onStartMP }) => {
                 }
             }, 50);
         }
-        onStart();
+        callback();
     };
+
+    const fadeAudioAndStart = () => fadeAudio(onStart);
 
     const handleStart = () => {
         if (SaveManager.load().tutorialSeen) {
@@ -83,6 +87,8 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart, onStartMP }) => {
             setShowTutorial(true);
         }
     };
+
+    const handleContinue = () => fadeAudio(onContinue);
 
     return (
         <div className="relative w-full h-screen overflow-hidden bg-slate-950">
@@ -142,12 +148,29 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart, onStartMP }) => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, ease: 'easeOut', delay: 0.2 }}
             >
-                <FantasyButton
-                    label="Start Spill"
-                    variant="primary"
-                    onClick={handleStart}
-                    className="w-64 text-xl !text-black [text-shadow:none]"
-                />
+                {hasSave ? (
+                    <>
+                        <FantasyButton
+                            label="Fortsett Spill"
+                            variant="primary"
+                            onClick={handleContinue}
+                            className="w-64 text-xl !text-black [text-shadow:none]"
+                        />
+                        <FantasyButton
+                            label="Nytt Spill"
+                            variant="secondary"
+                            onClick={handleStart}
+                            className="w-64 text-base !text-black [text-shadow:none]"
+                        />
+                    </>
+                ) : (
+                    <FantasyButton
+                        label="Start Spill"
+                        variant="primary"
+                        onClick={handleStart}
+                        className="w-64 text-xl !text-black [text-shadow:none]"
+                    />
+                )}
                 <FantasyButton
                     label="Høyeste Poengsum"
                     variant="secondary"

@@ -35,6 +35,9 @@ interface FantasyBookProps {
     readyPlayersCount?: number;
     expectedPlayersCount?: number;
     readyReason?: 'unpause' | 'next_level' | 'retry' | null;
+
+    // Exit to main menu (singleplayer only)
+    onExitGame?: () => void;
 }
 
 type TabKey = 'character' | 'upgrades' | 'settings';
@@ -73,7 +76,8 @@ export const FantasyBook: React.FC<FantasyBookProps> = React.memo(({
     isWaitingReady,
     readyPlayersCount = 0,
     expectedPlayersCount = 1,
-    readyReason
+    readyReason,
+    onExitGame
 }) => {
     const [activeTab, setActiveTab] = useState<TabKey>('character');
     const [activeShopCategory, setActiveShopCategory] = useState<UpgradeConfig['category']>('Sverd');
@@ -562,7 +566,23 @@ export const FantasyBook: React.FC<FantasyBookProps> = React.memo(({
                         </div>
 
                         {/* Buttons below book */}
-                        <div className="flex gap-3">
+                        <div
+                            className="flex items-center justify-between"
+                            style={{ width: 'var(--book-width, 1000px)' }}
+                        >
+                            {/* LEFT: Exit to menu (singleplayer only) */}
+                            {!isMultiplayer && onExitGame ? (
+                                <FantasyButton
+                                    variant="secondary"
+                                    onClick={onExitGame}
+                                    label="Avslutt spill"
+                                    className="scale-90 origin-bottom-left opacity-70 hover:opacity-100"
+                                />
+                            ) : (
+                                <div />
+                            )}
+
+                            {/* RIGHT: Primary action */}
                             {mode === 'shop' ? (
                                 <FantasyButton
                                     variant={bossComingUp >= 0 && !isMultiplayer ? 'danger' : 'success'}

@@ -143,6 +143,22 @@ class MainScene extends Phaser.Scene implements IMainScene {
             this.registry.set('isMultiplayer', false);
         }
 
+        // Restore saved run progress (singleplayer continue only)
+        const continueRun = this.game.registry.get('continueRun') as boolean | undefined;
+        if (continueRun && !netConfig) {
+            const run = SaveManager.loadRunProgress();
+            if (run) {
+                this.registry.set('gameLevel', run.gameLevel);
+                this.registry.set('currentWave', run.currentWave);
+                this.registry.set('playerCoins', run.playerCoins);
+                this.registry.set('upgradeLevels', run.upgradeLevels);
+                this.registry.set('currentWeapon', run.currentWeapon);
+                this.registry.set('unlockedWeapons', run.unlockedWeapons);
+                // Store temporarily; applied after recalculateStats()
+                this.game.registry.set('_restoredHP', run.playerHP);
+            }
+        }
+
         // Initialize Audio Manager
         AudioManager.instance.setScene(this);
 
@@ -190,6 +206,13 @@ class MainScene extends Phaser.Scene implements IMainScene {
 
         // HP starts at full max (after stats are calculated)
         this.registry.set('playerHP', this.stats.maxHP);
+
+        // Apply restored HP if continuing a saved run (clamped to recalculated max)
+        const restoredHP = this.game.registry.get('_restoredHP') as number | undefined;
+        if (restoredHP !== undefined) {
+            this.registry.set('playerHP', Math.min(restoredHP, this.stats.maxHP));
+            this.game.registry.remove('_restoredHP');
+        }
 
         // Initialize Object Pool
         // this.poolManager = new ObjectPoolManager(this); // Redundant - initialized above
@@ -743,7 +766,10 @@ class MainScene extends Phaser.Scene implements IMainScene {
 
         // Initial Start (Only if Host or Single Player - Clients wait for Host signal)
         if (!netConfig || netConfig.role === 'host') {
-            this.waves.startLevel(1);
+            const startLevel = (continueRun && !netConfig)
+                ? (this.registry.get('gameLevel') as number ?? 1)
+                : 1;
+            this.waves.startLevel(startLevel);
         }
 
         // Resume audio context and play music
@@ -772,10 +798,46 @@ class MainScene extends Phaser.Scene implements IMainScene {
             this.enemies.clear(true, true);
             this.bossGroup.clear(true, true);
 
+            // Save run progress at level boundary (singleplayer only)
+            if (!this.registry.get('isMultiplayer')) {
+                SaveManager.saveRunProgress({
+                    gameLevel:       nextLevel,
+                    currentWave:     1,
+                    playerCoins:     this.registry.get('playerCoins') || 0,
+                    upgradeLevels:   this.registry.get('upgradeLevels') || {},
+                    currentWeapon:   this.registry.get('currentWeapon') || 'sword',
+                    unlockedWeapons: this.registry.get('unlockedWeapons') || ['sword'],
+                    playerHP:        this.registry.get('playerHP') || 0,
+                    playerMaxHP:     this.registry.get('playerMaxHP') || 100,
+                    savedAt:         Date.now()
+                });
+            }
+
             // Schedule map regeneration after level complete delay
             this.time.delayedCall(1000, () => {
                 this.regenerateMap(nextLevel);
             });
+        });
+
+        // Save run on browser close (singleplayer only)
+        const handleUnload = () => {
+            if (!this.registry.get('isMultiplayer')) {
+                SaveManager.saveRunProgress({
+                    gameLevel:       this.registry.get('gameLevel') || 1,
+                    currentWave:     this.registry.get('currentWave') || 1,
+                    playerCoins:     this.registry.get('playerCoins') || 0,
+                    upgradeLevels:   this.registry.get('upgradeLevels') || {},
+                    currentWeapon:   this.registry.get('currentWeapon') || 'sword',
+                    unlockedWeapons: this.registry.get('unlockedWeapons') || ['sword'],
+                    playerHP:        this.registry.get('playerHP') || 0,
+                    playerMaxHP:     this.registry.get('playerMaxHP') || 100,
+                    savedAt:         Date.now()
+                });
+            }
+        };
+        window.addEventListener('beforeunload', handleUnload);
+        this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+            window.removeEventListener('beforeunload', handleUnload);
         });
 
         // Start Weather Effects
@@ -1957,6 +2019,9 @@ class MainScene extends Phaser.Scene implements IMainScene {
 
     public restartGame() {
         console.log("[Game] Restarting run...");
+
+        // Clear saved run so a retry always starts fresh
+        SaveManager.clearRunProgress();
 
         /**
          * CRITICAL: We must notify the Network and React UI FIRST.
