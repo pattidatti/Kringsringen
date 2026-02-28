@@ -153,7 +153,23 @@ export const GameContainer: React.FC<GameContainerProps> = React.memo(({ network
                                     const next = new Set(prev).add(networkConfig.peer.id);
                                     // Update sync state immediately for UI
                                     const total = nm ? nm.getConnectedPeerCount() + 1 : 1;
-                                    setSyncState(s => ({ ...s, loaded: next.size, expected: total }));
+                                    const nextState = { loaded: next.size, ready: readyPlayersRef.current.size, expected: total };
+
+                                    setSyncState(nextState);
+
+                                    // CRITICAL FIX: Check if we are now fully loaded and should proceed
+                                    if (isLoadingLevelRef.current && next.size >= total) {
+                                        console.log(`[Host] Host loaded and all peers accounted for (${next.size}/${total}). Proceeding.`);
+                                        const bossIdx = gameInstanceRef.current?.registry.get('bossComingUp') ?? -1;
+                                        nm?.broadcast({
+                                            t: PacketType.GAME_EVENT,
+                                            ev: { type: 'start_level', data: { level: data.level, bossIndex: bossIdx } },
+                                            ts: Date.now()
+                                        });
+                                        setIsLoadingLevel(false);
+                                        setIsWaitingReady(false);
+                                    }
+
                                     return next;
                                 });
                             }
@@ -390,6 +406,18 @@ export const GameContainer: React.FC<GameContainerProps> = React.memo(({ network
                 nm.broadcast({ t: PacketType.GAME_EVENT, ev: { type: 'sync_players_state', data: nextState }, ts: Date.now() });
                 setSyncState(nextState);
                 gameInstanceRef.current?.registry.set('syncState', nextState);
+            } else if (isLoadingLevel && loadedPlayersSize >= total) {
+                // FALLBACK PROGRESSION: If we are stuck in loading but everyone is here
+                console.log(`[Host] Heartbeat detect all players loaded (${loadedPlayersSize}/${total}). Forcing start signal.`);
+                const level = gameInstanceRef.current?.registry.get('gameLevel') || 1;
+                const bossIdx = gameInstanceRef.current?.registry.get('bossComingUp') ?? -1;
+                nm.broadcast({
+                    t: PacketType.GAME_EVENT,
+                    ev: { type: 'start_level', data: { level, bossIndex: bossIdx } },
+                    ts: Date.now()
+                });
+                setIsLoadingLevel(false);
+                setIsWaitingReady(false);
             }
         }, 1500);
 

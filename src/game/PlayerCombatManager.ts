@@ -58,7 +58,7 @@ export class PlayerCombatManager {
             cam.height,
             0xff0000,
             0.35
-        ).setDepth(9999).setScrollFactor(0);
+        ).setDepth(10000).setScrollFactor(0);
         (this.scene as unknown as Phaser.Scene).tweens.add({
             targets: flash,
             alpha: 0,

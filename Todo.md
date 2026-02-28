@@ -28,6 +28,7 @@
 -[x] Multiplayer orkehøvding; spiller B får hitbaren over hodet, men den er gigalang, og  den er "tom" i HP baren på toppen. 
 - [ ] Orkeboss blir fremdeles litt for mye stuck. 
 - [ ] Orkehøvdings dash er for kort, og han blir lett stuck etter dash. 
+- [ ] Bossene blir veldig lett stuck, kanskje de bør ha mye mindre footprint eller noe, som som gjør at de ikke kolliderer med alt mulig konstant og sitter seg fast. 
 -[x] Usikker på om det er coindrops fra bosser, men de bør uansett automatisk plukkes opp, ettersom spillet pauser med en gang den dør, og en ikke får muligheten til å hente dem selv. 
 - [ ] Alle bosser må droppe mye mer gull. 
 - [ ] Trollmester Grak må ha en nockback resist, slik at han ikke blir stoppet av alt mulig. 

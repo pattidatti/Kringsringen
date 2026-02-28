@@ -459,23 +459,36 @@ class MainScene extends Phaser.Scene implements IMainScene {
         // Player Hit Logic (Event-Driven)
         this.events.on('enemy-hit-player', (damage: number, _type: string, x?: number, y?: number, target?: any) => {
             const player = this.data.get('player');
+            const role = this.networkManager?.role as string | undefined;
+
             if (target === player) {
                 // Local player takes damage
                 this.combat.takePlayerDamage(damage, x, y);
-            } else if (this.networkManager?.role === 'host') {
-                // Remote player was hit. Host notifies the client.
-                // Find Peer ID for the target sprite
+
+                // Host must notify CLIENTS that the Host was hit
+                if (role === 'host' && this.networkManager) {
+                    this.networkManager.broadcast({
+                        t: PacketType.GAME_EVENT,
+                        ev: { type: 'damage_player', data: { id: this.networkManager.peerId, damage, x, y } },
+                        ts: Date.now()
+                    });
+                }
+            } else if (role === 'host' && this.networkManager) {
+                // Host validates that a remote player was hit and notifies EVERYONE
                 let targetPeerId: string | null = null;
                 this.remotePlayers.forEach((sprite, peerId) => {
                     if (sprite === target) targetPeerId = peerId;
                 });
 
                 if (targetPeerId) {
-                    this.networkManager.sendTo(targetPeerId, {
+                    // 1. Broadcast to all clients
+                    this.networkManager.broadcast({
                         t: PacketType.GAME_EVENT,
-                        ev: { type: 'damage_player', data: { damage, x, y } },
+                        ev: { type: 'damage_player', data: { id: targetPeerId, damage, x, y } },
                         ts: Date.now()
                     });
+                    // 2. Trigger visual feedback LOCALLY on the Host's screen for the client sprite
+                    this.handleGameEvent({ type: 'damage_player', data: { id: targetPeerId, damage, x, y } } as any);
                 }
             }
         });
@@ -667,21 +680,31 @@ class MainScene extends Phaser.Scene implements IMainScene {
 
         this.events.on('enemy-projectile-hit-player', (damage: number, _type: string, x: number, y: number, target: any) => {
             const player = this.data.get('player');
+            const role = this.networkManager?.role as string | undefined;
+
             if (target === player) {
                 this.combat.takePlayerDamage(damage, x, y);
-            } else if (this.networkManager?.role === 'host') {
-                // Host validates and notifies client
+
+                if (role === 'host' && this.networkManager) {
+                    this.networkManager.broadcast({
+                        t: PacketType.GAME_EVENT,
+                        ev: { type: 'damage_player', data: { id: this.networkManager.peerId, damage, x, y } },
+                        ts: Date.now()
+                    });
+                }
+            } else if (role === 'host' && this.networkManager) {
                 let targetPeerId: string | null = null;
                 this.remotePlayers.forEach((sprite, peerId) => {
                     if (sprite === target) targetPeerId = peerId;
                 });
 
                 if (targetPeerId) {
-                    this.networkManager.sendTo(targetPeerId, {
+                    this.networkManager.broadcast({
                         t: PacketType.GAME_EVENT,
-                        ev: { type: 'damage_player', data: { damage, x, y } },
+                        ev: { type: 'damage_player', data: { id: targetPeerId, damage, x, y } },
                         ts: Date.now()
                     });
+                    this.handleGameEvent({ type: 'damage_player', data: { id: targetPeerId, damage, x, y } } as any);
                 }
             }
         });
@@ -1088,9 +1111,28 @@ class MainScene extends Phaser.Scene implements IMainScene {
                 this.pendingDeaths.add(id);
             }
         } else if (event.type === 'damage_player') {
-            // Client receives damage from Host authority
-            const { damage, x, y } = event.data;
-            this.combat.takePlayerDamage(damage, x, y);
+            // Received damage signal (either for local player or remote player)
+            const { id, damage, x, y } = event.data;
+            const myId = this.networkManager?.peerId;
+
+            if (!id || id === myId) {
+                // It's for us (local player)
+                this.combat.takePlayerDamage(damage, x, y);
+            } else {
+                // It's for a remote player. Show visual feedback on their sprite.
+                const remoteSprite = this.remotePlayers.get(id);
+                if (remoteSprite) {
+                    // Blood splatter
+                    this.poolManager.spawnBloodEffect(remoteSprite.x, remoteSprite.y);
+                    // Damage number
+                    this.poolManager.getDamageText(remoteSprite.x, remoteSprite.y - 40, damage);
+                    // Brief red tint
+                    remoteSprite.setTint(0xff0000);
+                    this.time.delayedCall(150, () => {
+                        if (remoteSprite.active) remoteSprite.clearTint();
+                    });
+                }
+            }
         } else if (event.type === 'level_complete') {
             const { nextLevel } = event.data;
             if (this.networkManager?.role === 'client') {

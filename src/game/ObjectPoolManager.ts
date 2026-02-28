@@ -42,7 +42,7 @@ export class ObjectPoolManager {
                 strokeThickness: 5, // Thicker stroke
                 fontFamily: '"Cinzel", serif'
             }).setOrigin(0.5);
-            text.setDepth(2000);
+            text.setDepth(5000);
             text.setScale(0.4);
         }
 
@@ -113,6 +113,7 @@ export class ObjectPoolManager {
         } else {
             blood = this.scene.add.sprite(x, y, bloodKey);
             blood.setScale(1.5);
+            blood.setDepth(1000);
         }
 
         blood.play(bloodKey);
@@ -248,6 +249,7 @@ export class ObjectPoolManager {
         }
 
         projectile.fire(x, y, angle, damage, type);
+        if (group) group.add(projectile);
         return projectile;
     }
 
