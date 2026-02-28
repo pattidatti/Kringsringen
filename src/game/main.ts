@@ -132,6 +132,7 @@ class MainScene extends Phaser.Scene implements IMainScene {
         this.registry.set('bossPhase', 1);
 
         // Network state
+        this.registry.set('gameLevel', 1); // Always initialize to 1 for UI
         const netConfig = this.game.registry.get('networkConfig') as NetworkConfig | null;
         if (netConfig) {
             this.registry.set('isMultiplayer', true);
@@ -558,8 +559,12 @@ class MainScene extends Phaser.Scene implements IMainScene {
         });
 
         // Listen for Next Level
-        this.events.on('start-next-level', () => {
-            this.waves.startLevel(this.registry.get('gameLevel') + 1);
+        this.events.on('start-next-level', (targetLevel?: number) => {
+            if (targetLevel !== undefined) {
+                this.waves.startLevel(targetLevel);
+            } else {
+                this.waves.startLevel(this.registry.get('gameLevel') + 1);
+            }
         });
 
         // Boss fight start
@@ -708,8 +713,10 @@ class MainScene extends Phaser.Scene implements IMainScene {
             loop: true
         });
 
-        // Initial Start
-        this.waves.startLevel(1);
+        // Initial Start (Only if Host or Single Player - Clients wait for Host signal)
+        if (!netConfig || netConfig.role === 'host') {
+            this.waves.startLevel(1);
+        }
 
         // Resume audio context and play music
         this.input.on('pointerdown', () => AudioManager.instance.resumeContext());

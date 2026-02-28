@@ -195,7 +195,7 @@ export const GameContainer: React.FC<GameContainerProps> = React.memo(({ network
 
                                 // If host is NO LONGER loading, but a client just reported as loaded,
                                 // we MUST re-send the start signal to catch them up.
-                                if (!isLoadingLevel) {
+                                if (!isLoadingLevelRef.current) {
                                     console.log(`[Host] Late player ${data.playerId} loaded. Re-sending start signal.`);
                                     const bossIdx = gameInstanceRef.current?.registry.get('bossComingUp') ?? -1;
                                     nm?.sendTo(data.playerId, {
@@ -214,7 +214,7 @@ export const GameContainer: React.FC<GameContainerProps> = React.memo(({ network
                                 setSyncState({ loaded: next.size, ready: readyPlayersRef.current.size, expected: total });
                                 gameInstanceRef.current?.registry.set('syncState', { loaded: next.size, ready: readyPlayersRef.current.size, expected: total });
 
-                                if (isLoadingLevel && next.size >= total) {
+                                if (isLoadingLevelRef.current && next.size >= total) {
                                     const bossIdx = gameInstanceRef.current?.registry.get('bossComingUp') ?? -1;
                                     nm?.broadcast({
                                         t: PacketType.GAME_EVENT,
@@ -270,7 +270,7 @@ export const GameContainer: React.FC<GameContainerProps> = React.memo(({ network
                             if (bossIndex >= 0) {
                                 mainScene.events.emit('start-boss', bossIndex);
                             } else {
-                                mainScene.events.emit('start-next-level');
+                                mainScene.events.emit('start-next-level', data?.level);
                             }
                         }
                     });
