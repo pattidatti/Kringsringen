@@ -340,9 +340,11 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
                 }
             } else {
                 const nearestTarget = this.getNearestTarget();
-                const distance = Phaser.Math.Distance.Between(this.x, this.y, nearestTarget.x, nearestTarget.y);
+                const distance = nearestTarget
+                    ? Phaser.Math.Distance.Between(this.x, this.y, nearestTarget.x, nearestTarget.y)
+                    : Infinity;
                 const cooldown = this.config.rangedProjectile ? this.currentAbilityCooldown : this.attackCooldown;
-                if (hasAttackAnim && distance < this.attackRange && time > this.lastAttackTime + cooldown) {
+                if (hasAttackAnim && nearestTarget && distance < this.attackRange && time > this.lastAttackTime + cooldown) {
                     triggerAttackAnim();
                 }
             }
@@ -401,7 +403,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
                             this.scene.events.emit('enemy-heal-ally', this, target, this.damage);
                         }
                     } else {
-                        const target = this.getNearestTarget();
+                        const target = this.getNearestTarget() as any;
                         if (target && target.active) {
                             const distance = Phaser.Math.Distance.Between(this.x, this.y, target.x, target.y);
 
@@ -459,6 +461,12 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
             nearestTarget = this.getNearestDamagedAlly() ?? this.getNearestAlly();
         }
         if (!nearestTarget) nearestTarget = this.getNearestTarget();
+
+        // If no target exists in the entire game, we stop or wander (here we just stop AI)
+        if (!nearestTarget) {
+            this.setVelocity(0, 0);
+            return;
+        }
 
         const targetAngle = Phaser.Math.Angle.Between(this.x, this.y, nearestTarget.x, nearestTarget.y);
 
@@ -1017,7 +1025,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         return null;
     }
 
-    private getNearestTarget(): any {
+    private getNearestTarget(): Phaser.GameObjects.Components.Transform | null {
         const mainScene = this.scene as any;
         const partyState: { id: string, isDead: boolean }[] = mainScene.registry.get('partyState') || [];
 

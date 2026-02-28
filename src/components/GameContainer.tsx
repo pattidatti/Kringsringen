@@ -41,7 +41,11 @@ export const GameContainer: React.FC<GameContainerProps> = React.memo(({ network
     const isBookOpenRef = useRef(isBookOpen);
     const bookModeRef = useRef(bookMode);
     const readyPlayersRef = useRef<Set<string>>(new Set());
+    const loadedPlayersRef = useRef<Set<string>>(new Set());
     const syncStateRef = useRef(syncState);
+    const isWaitingReadyRef = useRef(isWaitingReady);
+    const isLoadingLevelRef = useRef(isLoadingLevel);
+    const readyReasonRef = useRef(readyReason);
 
     useEffect(() => {
         isBookOpenRef.current = isBookOpen;
@@ -52,7 +56,11 @@ export const GameContainer: React.FC<GameContainerProps> = React.memo(({ network
     }, [bookMode]);
 
     useEffect(() => { readyPlayersRef.current = readyPlayers; }, [readyPlayers]);
+    useEffect(() => { loadedPlayersRef.current = loadedPlayers; }, [loadedPlayers]);
     useEffect(() => { syncStateRef.current = syncState; }, [syncState]);
+    useEffect(() => { isWaitingReadyRef.current = isWaitingReady; }, [isWaitingReady]);
+    useEffect(() => { isLoadingLevelRef.current = isLoadingLevel; }, [isLoadingLevel]);
+    useEffect(() => { readyReasonRef.current = readyReason; }, [readyReason]);
 
     // Robust Hotkey Listener for 'B' and 'Escape'
     useEffect(() => {
@@ -230,7 +238,24 @@ export const GameContainer: React.FC<GameContainerProps> = React.memo(({ network
 
                     mainScene.events.on('player_ready', (data: any) => {
                         if (networkConfig?.role === 'host') {
-                            setReadyPlayers(prev => new Set(prev).add(data.playerId));
+                            setReadyPlayers(prev => {
+                                const next = new Set(prev).add(data.playerId);
+                                const nm = (mainScene as any).networkManager;
+                                const total = nm ? nm.getConnectedPeerCount() + 1 : 1;
+
+                                const nextState = { loaded: syncStateRef.current.loaded, ready: next.size, expected: total };
+
+                                // Broadcast immediately to avoid heartbeat delay
+                                nm?.broadcast({
+                                    t: PacketType.GAME_EVENT,
+                                    ev: { type: 'sync_players_state', data: nextState },
+                                    ts: Date.now()
+                                });
+
+                                setSyncState(nextState);
+                                gameInstanceRef.current?.registry.set('syncState', nextState);
+                                return next;
+                            });
                         }
                     });
 
@@ -294,11 +319,16 @@ export const GameContainer: React.FC<GameContainerProps> = React.memo(({ network
 
     useEffect(() => {
         if (!networkConfig) return;
-        // removed: if (!isWaitingReady && !isLoadingLevel) return;
 
         const interval = setInterval(() => {
             const nm = (gameInstanceRef.current?.scene.getScene('MainScene') as any)?.networkManager;
             if (!nm) return;
+
+            const isWaitingReady = isWaitingReadyRef.current;
+            const isLoadingLevel = isLoadingLevelRef.current;
+            const readyReason = readyReasonRef.current;
+            const readyPlayersSize = readyPlayersRef.current.size;
+            const loadedPlayersSize = loadedPlayersRef.current.size;
 
             if (networkConfig.role === 'client') {
                 if (isLoadingLevel) {
@@ -319,51 +349,44 @@ export const GameContainer: React.FC<GameContainerProps> = React.memo(({ network
             }
 
             const total = nm.getConnectedPeerCount() + 1;
-            const currentState = { loaded: loadedPlayers.size, ready: readyPlayers.size, expected: total };
+            const currentState = { loaded: loadedPlayersSize, ready: readyPlayersSize, expected: total };
 
             // Always broadcast state heartbeat to all clients
             nm.broadcast({ t: PacketType.GAME_EVENT, ev: { type: 'sync_players_state', data: currentState }, ts: Date.now() });
-            setSyncState(currentState);
-            gameInstanceRef.current?.registry.set('syncState', currentState);
 
-            if ((isLoadingLevel || isWaitingReady) && total !== syncState.expected) {
-                // ... broadcast above ...
+            // Only update local state if it changed to avoid ripple re-renders
+            if (currentState.loaded !== syncStateRef.current.loaded || currentState.ready !== syncStateRef.current.ready || currentState.expected !== syncStateRef.current.expected) {
+                setSyncState(currentState);
+                gameInstanceRef.current?.registry.set('syncState', currentState);
             }
 
-            if (isLoadingLevel && loadedPlayers.size >= total) {
-                const bossIdx = gameInstanceRef.current?.registry.get('bossComingUp') ?? -1;
-                nm.broadcast({ t: PacketType.GAME_EVENT, ev: { type: 'start_level', data: { bossIndex: bossIdx } }, ts: Date.now() });
-                setIsLoadingLevel(false);
+            if (isWaitingReady && readyPlayersSize >= total) {
+                // Determine signal based on reason
+                let eventType: string = 'resume_game';
+                if (readyReason === 'next_level') eventType = 'start_level';
+                else if (readyReason === 'retry') eventType = 'restart_game';
 
-                const nextState = { loaded: loadedPlayers.size, ready: readyPlayers.size, expected: total };
-                nm.broadcast({ t: PacketType.GAME_EVENT, ev: { type: 'sync_players_state', data: nextState }, ts: Date.now() });
-                setSyncState(nextState);
-                gameInstanceRef.current?.registry.set('syncState', nextState);
-            }
+                console.log(`[Host] All players ready (${readyPlayersSize}/${total}). Sending ${eventType}.`);
 
-            if (isWaitingReady && readyPlayers.size >= total) {
+                nm.broadcast({ t: PacketType.GAME_EVENT, ev: { type: eventType, data: {} }, ts: Date.now() });
+
+                // Local execution for host
                 if (readyReason === 'unpause') {
-                    nm.broadcast({ t: PacketType.GAME_EVENT, ev: { type: 'resume_game', data: {} }, ts: Date.now() });
                     setIsBookOpen(false);
-                    setReadyPlayers(new Set());
-                    setIsWaitingReady(false);
-                    setReadyReason(null);
                 } else if (readyReason === 'next_level') {
-                    nm.broadcast({ t: PacketType.GAME_EVENT, ev: { type: 'start_level', data: {} }, ts: Date.now() });
                     gameInstanceRef.current?.scene.getScene('MainScene')?.events.emit('start-next-level');
                     setIsBookOpen(false);
-                    setReadyPlayers(new Set());
-                    setIsWaitingReady(false);
-                    setReadyReason(null);
                 } else if (readyReason === 'retry') {
                     (gameInstanceRef.current?.scene.getScene('MainScene') as any)?.restartGame();
                     setIsBookOpen(false);
-                    setReadyPlayers(new Set());
-                    setIsWaitingReady(false);
-                    setReadyReason(null);
                 }
 
-                const nextState = { loaded: loadedPlayers.size, ready: 0, expected: total };
+                // Reset state
+                setReadyPlayers(new Set());
+                setIsWaitingReady(false);
+                setReadyReason(null);
+
+                const nextState = { loaded: loadedPlayersSize, ready: 0, expected: total };
                 nm.broadcast({ t: PacketType.GAME_EVENT, ev: { type: 'sync_players_state', data: nextState }, ts: Date.now() });
                 setSyncState(nextState);
                 gameInstanceRef.current?.registry.set('syncState', nextState);
@@ -371,7 +394,7 @@ export const GameContainer: React.FC<GameContainerProps> = React.memo(({ network
         }, 1500);
 
         return () => clearInterval(interval);
-    }, [networkConfig, isWaitingReady, isLoadingLevel, loadedPlayers.size, readyPlayers.size, readyReason, syncState.expected]);
+    }, [networkConfig]);
 
     useEffect(() => {
         if (!gameInstanceRef.current) return;
@@ -423,6 +446,10 @@ export const GameContainer: React.FC<GameContainerProps> = React.memo(({ network
         if (networkConfig) {
             setReadyReason('next_level');
             setIsWaitingReady(true);
+
+            // Optimistic UI: Increment ready count locally if we weren't ready yet
+            setSyncState(s => ({ ...s, ready: Math.min(s.expected, s.ready + 1) }));
+
             const nm = (mainScene as any).networkManager;
             nm?.broadcast({
                 t: PacketType.GAME_EVENT,
@@ -430,7 +457,15 @@ export const GameContainer: React.FC<GameContainerProps> = React.memo(({ network
                 ts: Date.now()
             });
             if (networkConfig.role === 'host') {
-                setReadyPlayers(prev => new Set(prev).add(networkConfig.peer.id));
+                setReadyPlayers(prev => {
+                    const next = new Set(prev).add(networkConfig.peer.id);
+                    // Force a broadcast of the new count
+                    const total = nm ? nm.getConnectedPeerCount() + 1 : 1;
+                    const nextState = { loaded: syncStateRef.current.loaded, ready: next.size, expected: total };
+                    nm?.broadcast({ t: PacketType.GAME_EVENT, ev: { type: 'sync_players_state', data: nextState }, ts: Date.now() });
+                    setSyncState(nextState);
+                    return next;
+                });
             }
             return;
         }
@@ -452,6 +487,10 @@ export const GameContainer: React.FC<GameContainerProps> = React.memo(({ network
             if (networkConfig) {
                 setReadyReason('unpause');
                 setIsWaitingReady(true);
+
+                // Optimistic UI
+                setSyncState(s => ({ ...s, ready: Math.min(s.expected, s.ready + 1) }));
+
                 const nm = (gameInstanceRef.current?.scene.getScene('MainScene') as IMainScene)?.networkManager;
                 nm?.broadcast({
                     t: PacketType.GAME_EVENT,
@@ -459,7 +498,14 @@ export const GameContainer: React.FC<GameContainerProps> = React.memo(({ network
                     ts: Date.now()
                 });
                 if (networkConfig.role === 'host') {
-                    setReadyPlayers(prev => new Set(prev).add(networkConfig.peer.id));
+                    setReadyPlayers(prev => {
+                        const next = new Set(prev).add(networkConfig.peer.id);
+                        const total = nm ? nm.getConnectedPeerCount() + 1 : 1;
+                        const nextState = { loaded: syncStateRef.current.loaded, ready: next.size, expected: total };
+                        nm?.broadcast({ t: PacketType.GAME_EVENT, ev: { type: 'sync_players_state', data: nextState }, ts: Date.now() });
+                        setSyncState(nextState);
+                        return next;
+                    });
                 }
             } else {
                 setIsBookOpen(false);
