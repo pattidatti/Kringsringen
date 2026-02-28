@@ -290,10 +290,16 @@ const GameOverContent: React.FC<{ hp: number; partyDead: boolean }> = ({ hp: hpP
  */
 export const GameOverOverlay: React.FC = () => {
     const hp = useGameRegistry('playerHP', 100);
+    const isMultiplayer = useGameRegistry('isMultiplayer', false);
     const partyDead = useGameRegistry('partyDead', false);
 
-    // Show overlay only when dead or party is dead
-    if (hp > 0 && !partyDead) return null;
+    // In multiplayer, only show if the whole party is dead.
+    // In singleplayer, show if local player is dead (hp <= 0).
+    if (isMultiplayer) {
+        if (!partyDead) return null;
+    } else {
+        if (hp > 0) return null;
+    }
 
     return <GameOverContent hp={hp} partyDead={partyDead} />;
 };

@@ -82,8 +82,8 @@ export const GameContainer: React.FC<GameContainerProps> = React.memo(({ network
                     }
                 } else {
                     if (isMultiplayer) {
-                        const hp = gameInstanceRef.current?.registry.get('playerHP') || 0;
-                        if (hp <= 0) return; // Can't open book if dead
+                        const partyDead = gameInstanceRef.current?.registry.get('partyDead') || false;
+                        if (partyDead) return; // Can't open book if everyone is dead
 
                         const nm = (gameInstanceRef.current?.scene.getScene('MainScene') as any)?.networkManager;
                         nm?.broadcast({
