@@ -16,6 +16,7 @@ export class NetworkManager {
     private tickWorker: Worker | null = null;
     private onTick: (() => void) | null = null;
     public latencyMs: number = 0; // For debug simulation
+    public onDisconnect?: (peerId: string) => void;
 
     constructor(
         peer: Peer,
@@ -133,6 +134,7 @@ export class NetworkManager {
         conn.on('close', () => {
             if (conn.label === 'reliable') {
                 this.reliableConnections.delete(conn.peer);
+                if (this.onDisconnect) this.onDisconnect(conn.peer);
             } else {
                 this.unreliableConnections.delete(conn.peer);
             }
@@ -142,7 +144,9 @@ export class NetworkManager {
         conn.on('error', (err) => {
             console.error(`Connection error (${conn.label}) with:`, conn.peer, err);
             if (conn.label === 'reliable') {
+                const wasConnected = this.reliableConnections.has(conn.peer);
                 this.reliableConnections.delete(conn.peer);
+                if (wasConnected && this.onDisconnect) this.onDisconnect(conn.peer);
             } else {
                 this.unreliableConnections.delete(conn.peer);
             }

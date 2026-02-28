@@ -100,8 +100,8 @@ class MainScene extends Phaser.Scene implements IMainScene {
     private remotePlayers: Map<string, Phaser.Physics.Arcade.Sprite> = new Map();
     private playerNicknames: Map<string, Phaser.GameObjects.Text> = new Map();
     private playerBuffers: Map<string, JitterBuffer<PackedPlayer>> = new Map();
-    /** Cache of last-received packet per remote peer — used by Host to relay all positions */
     private remotePlayerPackets: Map<string, PackedPlayer> = new Map();
+    private remotePlayerLights: Map<string, Phaser.GameObjects.Light> = new Map();
     public pendingDeaths: Set<string> = new Set();
     private lastSyncTime: number = 0;
     private lastSentPlayerStates: Map<string, string> = new Map();
@@ -178,6 +178,11 @@ class MainScene extends Phaser.Scene implements IMainScene {
                 console.log('Client connecting to host:', netConfig.hostPeerId);
                 this.networkManager.connectToHost(netConfig.hostPeerId);
             }
+
+            this.networkManager.onDisconnect = (peerId) => {
+                console.log(`[MainScene] Peer disconnected: ${peerId}`);
+                this.removeRemotePlayer(peerId);
+            };
         }
 
         // Calculate Initial Stats
@@ -960,8 +965,37 @@ class MainScene extends Phaser.Scene implements IMainScene {
         }
         buffer.push(ts, p);
 
+        // CREATE LIGHT FOR REMOTE PLAYER IF NEEDED
+        if (this.quality.lightingEnabled && !this.remotePlayerLights.has(id)) {
+            const light = this.lights.addLight(px, py, 500, 0xfffaf0, 0.4);
+            this.remotePlayerLights.set(id, light);
+        }
+
         // Cache latest packet so host can relay it to other clients
         this.remotePlayerPackets.set(id, p);
+    }
+
+    private removeRemotePlayer(id: string) {
+        const sprite = this.remotePlayers.get(id);
+        if (sprite) {
+            sprite.destroy();
+            this.remotePlayers.delete(id);
+        }
+
+        const label = this.playerNicknames.get(id);
+        if (label) {
+            label.destroy();
+            this.playerNicknames.delete(id);
+        }
+
+        const light = this.remotePlayerLights.get(id);
+        if (light) {
+            this.lights.removeLight(light);
+            this.remotePlayerLights.delete(id);
+        }
+
+        this.playerBuffers.delete(id);
+        this.remotePlayerPackets.delete(id);
     }
 
     private handleGameEvent(event: any) {
@@ -1317,6 +1351,9 @@ class MainScene extends Phaser.Scene implements IMainScene {
 
             const label = this.playerNicknames.get(id);
             if (label) label.setPosition(remotePlayer.x, remotePlayer.y - 40);
+
+            const light = this.remotePlayerLights.get(id);
+            if (light) light.setPosition(remotePlayer.x, remotePlayer.y);
         });
 
         // Update Light Positions based on player
