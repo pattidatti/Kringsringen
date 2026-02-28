@@ -46,4 +46,5 @@ Tenk ut et scenario hvor funksjonen går i prod og feiler. F.eks: Layout knekker
 
 - Generer en kompromissløs og velstrukturert arkitekturplan.
 - Presenter hvilke filer som opprettes (`[NEW]`) og modifiseres (`[MODIFY]`).
+- **Dokumentasjonsplan:** Spesifiser hvilke filer i `docs/` som må oppdateres for å reflektere den nye funksjonen.
 - Avvent brukerens *GO* (sammen med evt. justeringer) for å iverksette.

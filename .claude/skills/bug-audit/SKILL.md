@@ -31,6 +31,8 @@ Verifiser problemet: Hva er den *faktiske* feilen vs. det brukeren opplever som 
 
 Når du er inne og reparerer logikken: Hvilken annen teknisk gjeld finnes i umiddelbar nærhet? Utvid fiks-planen lett til å inkludere fjerning av `any`-typer, død kode, eller manglende dokumentasjon i funksjonen som endres.
 
+**Dokumentasjonssjekk:** Sjekk om bug-fixen endrer eksisterende logikk som er dokumentert i `docs/`. Oppdater dokumentasjonen om nødvendig.
+
 ## Fase 4: The "Pre-Mortem" Simulation (Risk Analysis)
 
 Snu problemet på hodet: "Hvis denne fiksen sendes ut i produksjon nå, og kræsjer i morgen – hvorfor skjedde det?"
