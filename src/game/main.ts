@@ -131,24 +131,30 @@ class MainScene extends Phaser.Scene implements IMainScene {
         this.registry.set('bossName', '');
         this.registry.set('bossPhase', 1);
 
-        // Network state
-        this.registry.set('gameLevel', 1); // Always initialize to 1 for UI
+        console.log('[MainScene] Create starting...');
         const netConfig = this.game.registry.get('networkConfig') as NetworkConfig | null;
-        if (netConfig) {
-            this.registry.set('isMultiplayer', true);
-            this.registry.set('roomCode', netConfig.roomCode);
-            this.registry.set('networkRole', netConfig.role);
-            this.registry.set('nickname', netConfig.nickname);
-        } else {
-            this.registry.set('isMultiplayer', false);
-        }
+        console.log('[MainScene] netConfig:', netConfig ? 'present' : 'null');
+        this.registry.set('isMultiplayer', !!netConfig);
+
+        // Core State
+        this.registry.set('gameLevel', 1); // Always initialize to 1 for UI
+        this.registry.set('highStage', saveData.highStage);
+        this.registry.set('unlockedWeapons', ['sword', 'bow', 'fireball', 'frost', 'lightning']);
+        this.registry.set('playerCoins', 0);
+        this.registry.set('currentWave', 1);
+        this.registry.set('bossComingUp', -1);
+        this.registry.set('upgradeLevels', {});
 
         // Restore saved run progress (singleplayer continue only)
         const continueRun = this.game.registry.get('continueRun') as boolean | undefined;
+        let startLevelOverride = 1;
         if (continueRun && !netConfig) {
+            console.log('[MainScene] Continuing run...');
             const run = SaveManager.loadRunProgress();
             if (run) {
+                console.log('[MainScene] Restored run:', run);
                 this.registry.set('gameLevel', run.gameLevel);
+                startLevelOverride = run.gameLevel;
                 this.registry.set('currentWave', run.currentWave);
                 this.registry.set('playerCoins', run.playerCoins);
                 this.registry.set('upgradeLevels', run.upgradeLevels);
@@ -156,21 +162,20 @@ class MainScene extends Phaser.Scene implements IMainScene {
                 this.registry.set('unlockedWeapons', run.unlockedWeapons);
                 // Store temporarily; applied after recalculateStats()
                 this.game.registry.set('_restoredHP', run.playerHP);
+            } else {
+                console.log('[MainScene] No run progress found despite continue flag.');
             }
         }
 
-        // Initialize Audio Manager
-        AudioManager.instance.setScene(this);
-
         // Initialize Managers
+        console.log('[MainScene] Initializing managers...');
         this.stats = new PlayerStatsManager(this);
         this.combat = new PlayerCombatManager(this);
         this.waves = new WaveManager(this);
         this.poolManager = new ObjectPoolManager(this);
         this.weather = new WeatherManager(this);
         this.ambient = new AmbientParticleManager(this);
-
-        // Quality Initialization
+        AudioManager.instance.setScene(this);
         const qualityLevel = (this.game.registry.get('graphicsQuality') as GraphicsQuality) || GAME_CONFIG.QUALITY.DEFAULT;
         this.quality = getQualityConfig(qualityLevel);
 
@@ -296,8 +301,9 @@ class MainScene extends Phaser.Scene implements IMainScene {
         // Initialize Obstacles
         this.obstacles = this.physics.add.staticGroup();
 
-        // Generate initial map (Level 1)
-        this.regenerateMap(1);
+        // Generate initial map (Corrected: Use startLevelOverride to avoid overwrite)
+        console.log('[MainScene] Generating initial map for level:', startLevelOverride);
+        this.regenerateMap(startLevelOverride);
 
         createAnimations(this);
 
@@ -766,11 +772,11 @@ class MainScene extends Phaser.Scene implements IMainScene {
 
         // Initial Start (Only if Host or Single Player - Clients wait for Host signal)
         if (!netConfig || netConfig.role === 'host') {
-            const startLevel = (continueRun && !netConfig)
-                ? (this.registry.get('gameLevel') as number ?? 1)
-                : 1;
-            this.waves.startLevel(startLevel);
+            const finalStartLevel = startLevelOverride;
+            console.log('[MainScene] Starting wave system at level:', finalStartLevel);
+            this.waves.startLevel(finalStartLevel);
         }
+        console.log('[MainScene] Create complete.');
 
         // Resume audio context and play music
         this.input.on('pointerdown', () => AudioManager.instance.resumeContext());
@@ -801,15 +807,15 @@ class MainScene extends Phaser.Scene implements IMainScene {
             // Save run progress at level boundary (singleplayer only)
             if (!this.registry.get('isMultiplayer')) {
                 SaveManager.saveRunProgress({
-                    gameLevel:       nextLevel,
-                    currentWave:     1,
-                    playerCoins:     this.registry.get('playerCoins') || 0,
-                    upgradeLevels:   this.registry.get('upgradeLevels') || {},
-                    currentWeapon:   this.registry.get('currentWeapon') || 'sword',
+                    gameLevel: nextLevel,
+                    currentWave: 1,
+                    playerCoins: this.registry.get('playerCoins') || 0,
+                    upgradeLevels: this.registry.get('upgradeLevels') || {},
+                    currentWeapon: this.registry.get('currentWeapon') || 'sword',
                     unlockedWeapons: this.registry.get('unlockedWeapons') || ['sword'],
-                    playerHP:        this.registry.get('playerHP') || 0,
-                    playerMaxHP:     this.registry.get('playerMaxHP') || 100,
-                    savedAt:         Date.now()
+                    playerHP: this.registry.get('playerHP') || 0,
+                    playerMaxHP: this.registry.get('playerMaxHP') || 100,
+                    savedAt: Date.now()
                 });
             }
 
@@ -823,15 +829,15 @@ class MainScene extends Phaser.Scene implements IMainScene {
         const handleUnload = () => {
             if (!this.registry.get('isMultiplayer')) {
                 SaveManager.saveRunProgress({
-                    gameLevel:       this.registry.get('gameLevel') || 1,
-                    currentWave:     this.registry.get('currentWave') || 1,
-                    playerCoins:     this.registry.get('playerCoins') || 0,
-                    upgradeLevels:   this.registry.get('upgradeLevels') || {},
-                    currentWeapon:   this.registry.get('currentWeapon') || 'sword',
+                    gameLevel: this.registry.get('gameLevel') || 1,
+                    currentWave: this.registry.get('currentWave') || 1,
+                    playerCoins: this.registry.get('playerCoins') || 0,
+                    upgradeLevels: this.registry.get('upgradeLevels') || {},
+                    currentWeapon: this.registry.get('currentWeapon') || 'sword',
                     unlockedWeapons: this.registry.get('unlockedWeapons') || ['sword'],
-                    playerHP:        this.registry.get('playerHP') || 0,
-                    playerMaxHP:     this.registry.get('playerMaxHP') || 100,
-                    savedAt:         Date.now()
+                    playerHP: this.registry.get('playerHP') || 0,
+                    playerMaxHP: this.registry.get('playerMaxHP') || 100,
+                    savedAt: Date.now()
                 });
             }
         };

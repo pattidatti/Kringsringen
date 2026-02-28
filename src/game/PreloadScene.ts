@@ -50,10 +50,12 @@ export class PreloadScene extends Phaser.Scene {
             fontFamily: '"Cinzel", Georgia, serif'
         }).setOrigin(0.5);
 
+        console.log('[PreloadScene] Preload starting...');
         loadAssets(this);
     }
 
     create() {
+        console.log('[PreloadScene] Preload complete. Starting MainScene...');
         this.scene.start('MainScene');
     }
 }

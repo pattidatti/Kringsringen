@@ -100,7 +100,7 @@ const GameOverContent: React.FC<{ hp: number; partyDead: boolean }> = ({ hp: hpP
         }
 
         if (!isMultiplayer) {
-            SaveManager.clearRun();
+            SaveManager.clearRunProgress();
         }
 
         const game = getGameInstance();
