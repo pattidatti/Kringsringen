@@ -1578,10 +1578,11 @@ class MainScene extends Phaser.Scene implements IMainScene {
 
                     const baseDamage = this.stats.damage * GAME_CONFIG.WEAPONS.BOW.damageMult * arrowDamageMultiplier;
                     const singularityLevel = this.registry.get('playerSingularityLevel') || 0;
+                    const poisonLevel = this.registry.get('playerPoisonLevel') || 0;
 
                     const arrow = this.arrows.get(player.x, player.y) as Arrow;
                     if (arrow) {
-                        arrow.fire(player.x, player.y, angle, baseDamage, arrowSpeed, pierceCount, explosiveLevel, singularityLevel);
+                        arrow.fire(player.x, player.y, angle, baseDamage, arrowSpeed, pierceCount, explosiveLevel, singularityLevel, poisonLevel);
                         this.events.emit('bow-shot');
 
                         // SYNC BOW ATTACK
@@ -1607,7 +1608,7 @@ class MainScene extends Phaser.Scene implements IMainScene {
                                 const offset = Math.ceil(i / 2) * 10 * (Math.PI / 180) * (i % 2 === 0 ? -1 : 1);
                                 const subArrow = this.arrows.get(player.x, player.y) as Arrow;
                                 if (subArrow) {
-                                    subArrow.fire(player.x, player.y, angle + offset, baseDamage, arrowSpeed, pierceCount, explosiveLevel);
+                                    subArrow.fire(player.x, player.y, angle + offset, baseDamage, arrowSpeed, pierceCount, explosiveLevel, 0, poisonLevel);
                                 }
                             }
                         }

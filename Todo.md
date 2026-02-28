@@ -18,6 +18,7 @@
 # Score 
 - [x] Score ingame oppe ved siden av mynter
 - [x] Penger og score ser ikke ut til å oppdatere seg oppe til høyre. 
+- [ ] Hvis en overlever hele spillet og dreper sisteboss, må en få highscore og kan skrive inn navnet sitt. 
 
 # Boss battles
 - [x] Orkehøvding er altfor lett å drepe. Trenger litt mer hp, bør være raskere, bruke dash? Kom med forslag. 
@@ -28,6 +29,8 @@
 - [ ] Orkeboss blir fremdeles litt for mye stuck. 
 - [ ] Orkehøvdings dash er for kort, og han blir lett stuck etter dash. 
 -[x] Usikker på om det er coindrops fra bosser, men de bør uansett automatisk plukkes opp, ettersom spillet pauser med en gang den dør, og en ikke får muligheten til å hente dem selv. 
+- [ ] Alle bosser må droppe mye mer gull. 
+- [ ] Trollmester Grak må ha en nockback resist, slik at han ikke blir stoppet av alt mulig. 
 
 # grafikk
 - [x] Implementert Grafikk-innstillinger i hovedmeny og in-game (Low, Medium, High).
@@ -59,6 +62,7 @@
 - [x] Når hele party er døde, skal man kunne starte på nytt uten å lage en helt ny server osv. Bare en retry knapp som dukker opp med readystate x/y spillere.  
 
 # Bugs
+- [ ] Restart knappen på singleplayer fungerer ikke etter man er død, spillet starter faktisk ikke på nytt, man får rød skjerm lvl 1 fase 1, men spiller er fryst. 
 - [x] MP: Når man trykker klar, så står det bare 0/2, selv om begge spillerne har trykket klar, lukkes ikke spillet og man gå kan videre.  
 - [ ] MP: Man må kunne se andres lys, slik at man kan se deres fog of war (bare ytterste lyset, ikke det innerste)
 - [x] Boss battle kan bli hengede på spilleren (splash screen), selv om kampen er startet. 

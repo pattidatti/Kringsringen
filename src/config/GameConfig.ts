@@ -7,6 +7,8 @@ export interface EnemyStats {
     baseXP: number;
     attackRange: number;
     attackCooldown: number;
+    abilityCooldownMin?: number;
+    abilityCooldownMax?: number;
     scale: number;
     bodySize: { width: number, height: number };
     knockbackResistance: number;
@@ -124,6 +126,8 @@ export const GAME_CONFIG = {
             baseXP: 40,
             attackRange: 350,
             attackCooldown: 2500,
+            abilityCooldownMin: 1800,
+            abilityCooldownMax: 3200,
             scale: 1.8,
             bodySize: { width: 30, height: 50 },
             knockbackResistance: 0.3
@@ -135,6 +139,8 @@ export const GAME_CONFIG = {
             baseXP: 50,
             attackRange: 400,
             attackCooldown: 2200,
+            abilityCooldownMin: 1600,
+            abilityCooldownMax: 2800,
             scale: 1.8,
             bodySize: { width: 30, height: 50 },
             knockbackResistance: 0.3
@@ -146,6 +152,8 @@ export const GAME_CONFIG = {
             baseXP: 25,
             attackRange: 400,
             attackCooldown: 2000,
+            abilityCooldownMin: 1400,
+            abilityCooldownMax: 2600,
             scale: 1.8,
             bodySize: { width: 30, height: 50 },
             knockbackResistance: 0.2,

@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { ENEMY_TYPES, type EnemyConfig } from '../config/enemies';
-import { GAME_CONFIG, type EnemyType } from '../config/GameConfig';
+import { GAME_CONFIG, type EnemyType, type EnemyStats } from '../config/GameConfig';
 import type { IMainScene } from './IMainScene';
 import { JitterBuffer } from '../network/JitterBuffer';
 import type { PackedEnemy } from '../network/SyncSchemas';
@@ -16,6 +16,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     private lastDrawnScale: number = -1;
     private attackRange: number = 60;
     private attackCooldown: number = 1500;
+    private currentAbilityCooldown: number = 1500;
     private lastAttackTime: number = 0;
     protected isAttacking: boolean = false;
     public hasHit: boolean = false;
@@ -120,6 +121,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         this.movementSpeed = balanceStats.baseSpeed * (1 + (multiplier - 1) * 0.1); // Slightly less scaling on speed
         this.attackRange = balanceStats.attackRange;
         this.attackCooldown = balanceStats.attackCooldown;
+        this.currentAbilityCooldown = this.rollAbilityCooldown();
 
         // Physics & Scale
         this.setScale(balanceStats.scale);
@@ -185,6 +187,15 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 
     public getIsDead(): boolean {
         return this.isDead;
+    }
+
+    private rollAbilityCooldown(): number {
+        const configKey = this.enemyType.toUpperCase() as EnemyType;
+        const stats = GAME_CONFIG.ENEMIES[configKey] as unknown as EnemyStats;
+        if (stats?.abilityCooldownMin !== undefined && stats?.abilityCooldownMax !== undefined) {
+            return Phaser.Math.Between(stats.abilityCooldownMin, stats.abilityCooldownMax);
+        }
+        return this.attackCooldown;
     }
 
     private lastAIUpdate: number = 0;
@@ -293,6 +304,9 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
             const triggerAttackAnim = () => {
                 this.isAttacking = true;
                 this.lastAttackTime = time;
+                if (this.config.rangedProjectile) {
+                    this.currentAbilityCooldown = this.rollAbilityCooldown();
+                }
                 this.setVelocity(0, 0);
                 if (this.config.spriteInfo.anims?.attack) {
                     this.hasHit = false;
@@ -327,7 +341,8 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
             } else {
                 const nearestTarget = this.getNearestTarget();
                 const distance = Phaser.Math.Distance.Between(this.x, this.y, nearestTarget.x, nearestTarget.y);
-                if (hasAttackAnim && distance < this.attackRange && time > this.lastAttackTime + this.attackCooldown) {
+                const cooldown = this.config.rangedProjectile ? this.currentAbilityCooldown : this.attackCooldown;
+                if (hasAttackAnim && distance < this.attackRange && time > this.lastAttackTime + cooldown) {
                     triggerAttackAnim();
                 }
             }
@@ -911,6 +926,48 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
             }
             this.slowTimer = null;
         });
+    }
+
+    public applyPoison(level: number, damage: number): void {
+        if (!this.active || this.isDead) return;
+
+        const ticks = [4, 6, 8][level - 1] ?? 4;
+        const tickDamage = damage * 0.08;
+        const tickInterval = 1000;
+
+        if (this.poisonTimer) {
+            this.poisonTimer.remove(false);
+            this.poisonTimer = null;
+        }
+
+        if (!this.isPoisoned) {
+            this.isPoisoned = true;
+            this.setTint(0x44ff44);
+            this.postFX.addGlow(0x00cc44, 4, 0, false, 0.1, 10);
+        }
+
+        let ticksLeft = ticks;
+        const doTick = () => {
+            if (!this.active || this.isDead) return;
+            this.takeDamage(tickDamage, '#00cc44');
+            ticksLeft--;
+            if (ticksLeft > 0) {
+                this.poisonTimer = this.scene.time.delayedCall(tickInterval, doTick);
+            } else {
+                this.isPoisoned = false;
+                this.poisonTimer = null;
+                if (this.isStunned) {
+                    this.setTint(0x8888ff);
+                } else if (this.config.tint !== undefined) {
+                    this.setTint(this.config.tint);
+                } else {
+                    this.clearTint();
+                }
+                this.postFX.clear();
+            }
+        };
+
+        this.poisonTimer = this.scene.time.delayedCall(tickInterval, doTick);
     }
 
     /** Consumes the slow effect, returning true if the enemy was slowed. */
