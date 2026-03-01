@@ -117,11 +117,10 @@ export const GameContainer: React.FC<GameContainerProps> = React.memo(({ network
 
     useEffect(() => {
         if (phaserContainerRef.current && !gameInstanceRef.current) {
-            const game = createGame(phaserContainerRef.current.id, networkConfig);
+            const game = createGame(phaserContainerRef.current, networkConfig, continueRun); // Pass element directly
             gameInstanceRef.current = game;
 
             if (continueRun) {
-                game.registry.set('continueRun', true);
                 setIsLoadingLevel(true); // HARDENING: Force overlay if continuing
             } else {
                 setIsLoadingLevel(true); // For safety, start in loading state
@@ -143,6 +142,17 @@ export const GameContainer: React.FC<GameContainerProps> = React.memo(({ network
                 }
 
                 const mainScene = game.scene.getScene('MainScene') as IMainScene;
+
+                // CRITICAL FIX: If the scene is already complete, clear loading even if listeners aren't bound yet.
+                // This prevents the hang when cached assets make initialization near-instant.
+                if (game.registry.get('create-complete')) {
+                    console.log('[GameContainer] Scene ALREADY complete. Clearing loading state with delay.');
+                    clearInterval(scenePoller);
+                    setTimeout(() => {
+                        setIsLoadingLevel(false);
+                    }, 200);
+                    return;
+                }
 
                 if (!listenersRegistered && mainScene) {
                     listenersRegistered = true;
@@ -229,10 +239,18 @@ export const GameContainer: React.FC<GameContainerProps> = React.memo(({ network
                     });
 
                     mainScene.events.on('create-complete', () => {
-                        console.log('[GameContainer] Scene creation complete. Clearing loading state.');
+                        console.log('[GameContainer] create-complete RECEIVED. Clearing loading state.');
                         clearInterval(scenePoller);
                         setIsLoadingLevel(false);
                     });
+
+                    // BELT AND SUSPENDERS: If scene is already complete before we even bound the event,
+                    // catch it here to prevent stuck loading screen.
+                    if (game.registry.get('create-complete')) {
+                        console.log('[GameContainer] Scene ALREADY complete upon registration. Clearing loading state.');
+                        clearInterval(scenePoller);
+                        setIsLoadingLevel(false);
+                    }
 
                     mainScene.events.on('player_loaded', (data: any) => {
                         if (networkConfig?.role === 'host') {
@@ -275,8 +293,6 @@ export const GameContainer: React.FC<GameContainerProps> = React.memo(({ network
                                     });
                                     setIsLoadingLevel(false);
                                     setIsWaitingReady(false);
-                                    // Note: we DO NOT clear loadedPlayers here anymore,
-                                    // so we can detect late joiners or retries correctly.
                                 }
                                 return next;
                             });
@@ -355,24 +371,25 @@ export const GameContainer: React.FC<GameContainerProps> = React.memo(({ network
                 }
 
                 // Check registry every tick as belt-and-suspenders
-                if (listenersRegistered && game.registry.get('create-complete')) {
-                    console.log('[GameContainer] Scene create-complete detected via registry. Clearing loading state.');
+                if (game.registry.get('create-complete')) {
+                    console.log('[GameContainer] Poller detected create-complete via registry. Clearing loading state with delay.');
                     clearInterval(scenePoller);
-                    setIsLoadingLevel(false);
+                    setTimeout(() => {
+                        setIsLoadingLevel(false);
+                    }, 200);
                 }
             }, 100);
 
             return () => {
-                console.log('[GameContainer] Unmounting/Rebooting. Destroying game instance and clearing scene poller.');
+                console.log('[GameContainer] Unmounting/Rebooting');
                 clearInterval(scenePoller);
                 if (gameInstanceRef.current) {
                     gameInstanceRef.current.destroy(true);
                     gameInstanceRef.current = null;
-                    setGameInstance(null);
                 }
             };
         }
-    }, [networkConfig, rebootKey]); // Added rebootKey dependency
+    }, [networkConfig, rebootKey, continueRun]); // Added rebootKey and continueRun dependency
 
     useEffect(() => {
         if (!networkConfig) return;
@@ -601,27 +618,30 @@ export const GameContainer: React.FC<GameContainerProps> = React.memo(({ network
 
     const handleExitToMenu = useCallback(() => {
         const game = gameInstanceRef.current;
-        if (!game) return;
-
-        if (!networkConfig) {
-            const reg = game.registry;
-            SaveManager.saveRunProgress({
-                gameLevel: reg.get('gameLevel') || 1,
-                currentWave: reg.get('currentWave') || 1,
-                playerCoins: reg.get('playerCoins') || 0,
-                upgradeLevels: reg.get('upgradeLevels') || {},
-                currentWeapon: reg.get('currentWeapon') || 'sword',
-                unlockedWeapons: reg.get('unlockedWeapons') || ['sword'],
-                playerHP: reg.get('playerHP') || 0,
-                playerMaxHP: reg.get('playerMaxHP') || 100,
-                savedAt: Date.now()
-            });
+        if (game && !networkConfig) {
+            try {
+                const reg = game.registry;
+                SaveManager.saveRunProgress({
+                    gameLevel: reg.get('gameLevel') || 1,
+                    currentWave: reg.get('currentWave') || 1,
+                    playerCoins: reg.get('playerCoins') || 0,
+                    upgradeLevels: reg.get('upgradeLevels') || {},
+                    currentWeapon: reg.get('currentWeapon') || 'sword',
+                    unlockedWeapons: reg.get('unlockedWeapons') || ['sword'],
+                    playerHP: reg.get('playerHP') || 0,
+                    playerMaxHP: reg.get('playerMaxHP') || 100,
+                    savedAt: Date.now()
+                });
+                console.log('[GameContainer] Manual save before exit.');
+            } catch (e) {
+                console.error('[GameContainer] Manual save failed:', e);
+            }
         }
 
-        game.destroy(true);
-        gameInstanceRef.current = null;
+        // Changing showLanding in App.tsx will unmount GameContainer, 
+        // triggering the useEffect cleanup which handles destruction safely.
         onExitToMenu?.();
-    }, [networkConfig, onExitToMenu]);
+    }, [onExitToMenu, networkConfig]);
 
     const bookActions = useMemo(() => ({
         onSelectPerk: () => { },

@@ -36,28 +36,35 @@ export class PreloadScene extends Phaser.Scene {
         // Timeout fallback — if loader hangs for > 8 seconds, force scene start
         // (Reducing from 15s to 8s for better UX, assuming most assets are cached)
         const loadTimeout = this.time.delayedCall(8000, () => {
-            console.error('[PreloadScene] LOAD TIMEOUT! Assets took >8s. Forcing MainScene transition to avoid hang.');
+            console.error('[PreloadScene] LOAD TIMEOUT! Assets took >8s. Forcing MainScene transition to avoid permanent hang.');
             this.scene.start('MainScene');
         });
 
         this.load.on('complete', () => {
-            console.log('[PreloadScene] All assets loaded successfully.');
+            console.log('[PreloadScene] All assets loaded successfully. Transitioning shortly...');
             loadTimeout.remove();
         });
 
         // Label
-        this.add.text(width / 2, by - 28, 'Laster...', {
+        this.add.text(width / 2, by - 28, 'Laster nivå...', {
             fontSize: '16px',
             color: '#8899cc',
             fontFamily: '"Cinzel", Georgia, serif'
         }).setOrigin(0.5);
 
-        console.log('[PreloadScene] Preload starting...');
+        console.log('[PreloadScene] Preload starting for assets...');
         loadAssets(this);
     }
 
     create() {
-        console.log('[PreloadScene] Create reached. Transitioning to MainScene.');
+        console.log('[PreloadScene] Create reached. Starting MainScene transition...');
         this.scene.start('MainScene');
+    }
+
+    shutdown() {
+        // Ensure any pending timers or events are cleared
+        this.load.off('progress');
+        this.load.off('complete');
+        this.load.off('loaderror');
     }
 }

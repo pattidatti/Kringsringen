@@ -69,11 +69,16 @@ export class AudioManager {
     }
 
     public clearScene() {
+        console.log('[AudioManager] Cleaning up scene context and clearing pending loader events.');
+        if (this.scene) {
+            this.scene.load.off('complete'); // Remove all pending 'complete' listeners from this manager's scope
+        }
         this.scene = null;
         this.currentBGM = null;
         this.currentBGS = null;
         this.currentBGMId = null;
         this.currentBGSId = null;
+        this.reverbNode = null;
     }
 
     public preload(scene: Phaser.Scene) {
@@ -124,12 +129,23 @@ export class AudioManager {
             return;
         }
 
-        // Otherwise, lazy-load then play
+        // Otherwise, lazy-load then play safely
+        console.log(`[AudioManager] Lazy-loading BGM: ${id}`);
         this.scene.load.audio(id, config.path);
-        this.scene.load.once('complete', () => {
-            this.playBGM(id, fadeDuration);
+
+        // Use a one-time event that checks if the scene is still valid before firing
+        const currentScene = this.scene;
+        currentScene.load.once('complete', () => {
+            if (this.scene === currentScene && this.scene.cache.audio.exists(id)) {
+                this.playBGM(id, fadeDuration);
+            }
         });
-        this.scene.load.start();
+
+        // IMPORTANT: Only start the loader if it's not already loading, 
+        // to avoid corrupting the queue during a scene transition.
+        if (!currentScene.load.isLoading()) {
+            currentScene.load.start();
+        }
     }
 
     /**
@@ -148,12 +164,20 @@ export class AudioManager {
             return;
         }
 
-        // Otherwise, lazy-load then play
+        // Otherwise, lazy-load then play safely
+        console.log(`[AudioManager] Lazy-loading BGS: ${id}`);
         this.scene.load.audio(id, config.path);
-        this.scene.load.once('complete', () => {
-            this.playBGS(id, fadeDuration);
+
+        const currentScene = this.scene;
+        currentScene.load.once('complete', () => {
+            if (this.scene === currentScene && this.scene.cache.audio.exists(id)) {
+                this.playBGS(id, fadeDuration);
+            }
         });
-        this.scene.load.start();
+
+        if (!currentScene.load.isLoading()) {
+            currentScene.load.start();
+        }
     }
 
     /**
@@ -217,6 +241,12 @@ export class AudioManager {
             const soundManager = this.scene.sound as Phaser.Sound.WebAudioSoundManager;
             const ctx = soundManager?.context;
             if (ctx) {
+                // If we have a reverb node but it's from a different context, reset it
+                if (this.reverbNode && (this.reverbNode as any).context !== ctx) {
+                    console.warn('[AudioManager] Detected stale reverb node from previous context. Resetting.');
+                    this.reverbNode = null;
+                }
+
                 if (!this.reverbNode) {
                     this.reverbNode = this.buildReverbNode();
                 }

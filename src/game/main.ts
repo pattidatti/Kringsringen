@@ -34,7 +34,8 @@ import { getQualityConfig, type QualitySettings, type GraphicsQuality } from '..
 import { BinaryPacker } from '../network/BinaryPacker';
 
 
-class MainScene extends Phaser.Scene implements IMainScene {
+export class MainScene extends Phaser.Scene implements IMainScene {
+    public player!: Phaser.Physics.Arcade.Sprite;
     public enemies!: Phaser.Physics.Arcade.Group;
     public spatialGrid!: SpatialHashGrid;
     public staticObstacleGrid!: SpatialHashGrid;
@@ -113,787 +114,805 @@ class MainScene extends Phaser.Scene implements IMainScene {
     }
 
     create() {
-        // Load Saved Data
-        const saveData = SaveManager.load();
-
-        // Initialize Registry State — run resources always start fresh
-        this.registry.set('playerCoins', 0);
-        this.registry.set('currentWeapon', 'sword');
-        this.registry.set('upgradeLevels', {});
-        this.registry.set('highStage', saveData.highStage);
-        this.registry.set('unlockedWeapons', ['sword', 'bow', 'fireball', 'frost', 'lightning']);
-        // Boss state
-        this.registry.set('bossComingUp', -1);
-        this.registry.set('isBossActive', false);
-        this.registry.set('bossSplashVisible', false);
-        this.registry.set('bossHP', 0);
-        this.registry.set('bossMaxHP', 0);
-        this.registry.set('bossName', '');
-        this.registry.set('bossPhase', 1);
-
-        console.log('[MainScene] Create starting...');
-        const netConfig = this.game.registry.get('networkConfig') as NetworkConfig | null;
-        console.log('[MainScene] netConfig:', netConfig ? 'present' : 'null');
-        this.registry.set('isMultiplayer', !!netConfig);
-
-        // Core State
-        this.registry.set('gameLevel', 1); // Always initialize to 1 for UI
-        this.registry.set('highStage', saveData.highStage);
-        this.registry.set('unlockedWeapons', ['sword', 'bow', 'fireball', 'frost', 'lightning']);
-        this.registry.set('playerCoins', 0);
-        this.registry.set('currentWave', 1);
-        this.registry.set('bossComingUp', -1);
-        this.registry.set('upgradeLevels', {});
-        console.log('[MainScene] Registry initialized.');
-
-        // Restore saved run progress (singleplayer continue only)
-        const continueRun = this.game.registry.get('continueRun') as boolean | undefined;
-        let startLevelOverride = 1;
-        if (continueRun && !netConfig) {
-            try {
-                console.log('[MainScene] Continuing run...');
-                const run = SaveManager.loadRunProgress();
-                if (run) {
-                    console.log('[MainScene] Restored run:', run);
-                    // CRITICAL: Clamp level to minimum 1 to prevent STATIC_MAPS[-1] crash
-                    const restoredLevel = Math.max(1, run.gameLevel || 1);
-                    this.registry.set('gameLevel', restoredLevel);
-                    startLevelOverride = restoredLevel;
-                    this.registry.set('currentWave', run.currentWave ?? 1);
-                    this.registry.set('playerCoins', run.playerCoins ?? 0);
-                    this.registry.set('upgradeLevels', run.upgradeLevels ?? {});
-                    this.registry.set('currentWeapon', run.currentWeapon ?? 'sword');
-                    this.registry.set('unlockedWeapons', run.unlockedWeapons ?? ['sword']);
-                    // Store temporarily; applied after recalculateStats()
-                    // If HP is 0, give them 1 HP to avoid immediate pause before world can render,
-                    // or ensure the scene starts before the death check.
-                    this.game.registry.set('_restoredHP', Math.max(0, run.playerHP));
-                    console.log('[MainScene] Restore successful. HP to restore:', run.playerHP);
-                    this.game.registry.set('_restoredHP', Math.max(0, run.playerHP));
-                } else {
-                    console.warn('[MainScene] No run progress found despite continue flag.');
-                }
-            } catch (e) {
-                console.error('[MainScene] Failed to restore continue run, starting fresh:', e);
-                SaveManager.clearRunProgress();
-                // startLevelOverride stays 1, registry defaults remain
-            }
-        }
-
         try {
-            // Initialize Managers
-            console.log('[MainScene] Initializing managers...');
-        this.stats = new PlayerStatsManager(this);
-        this.combat = new PlayerCombatManager(this);
-        this.waves = new WaveManager(this);
-        this.poolManager = new ObjectPoolManager(this);
-        this.weather = new WeatherManager(this);
-        this.ambient = new AmbientParticleManager(this);
-        AudioManager.instance.setScene(this);
+            // Load Saved Data
+            const saveData = SaveManager.load();
 
-        this.events.once('shutdown', () => {
-            console.log('[MainScene] Shutdown. Clearing AudioManager scene reference.');
-            AudioManager.instance.clearScene();
-        });
-        const qualityLevel = (this.game.registry.get('graphicsQuality') as GraphicsQuality) || GAME_CONFIG.QUALITY.DEFAULT;
-        this.quality = getQualityConfig(qualityLevel);
-        console.log('[MainScene] Managers initialized. Quality:', qualityLevel);
+            // Initialize Registry State — run resources always start fresh
+            this.registry.set('playerCoins', 0);
+            this.registry.set('currentWeapon', 'sword');
+            this.registry.set('upgradeLevels', {});
+            this.registry.set('highStage', saveData.highStage);
+            this.registry.set('unlockedWeapons', ['sword', 'bow', 'fireball', 'frost', 'lightning']);
+            // Boss state
+            this.registry.set('bossComingUp', -1);
+            this.registry.set('isBossActive', false);
+            this.registry.set('bossSplashVisible', false);
+            this.registry.set('bossHP', 0);
+            this.registry.set('bossMaxHP', 0);
+            this.registry.set('bossName', '');
+            this.registry.set('bossPhase', 1);
 
-        this.game.registry.events.on('changedata-graphicsQuality', (_parent: any, val: GraphicsQuality) => {
-            this.quality = getQualityConfig(val);
+            console.log('[MainScene] Create starting...');
+            const netConfig = this.game.registry.get('networkConfig') as NetworkConfig | null;
+            console.log('[MainScene] netConfig:', netConfig ? 'present' : 'null');
+            this.registry.set('isMultiplayer', !!netConfig);
+
+            // Core State
+            this.registry.set('gameLevel', 1); // Always initialize to 1 for UI
+            this.registry.set('highStage', saveData.highStage);
+            this.registry.set('unlockedWeapons', ['sword', 'bow', 'fireball', 'frost', 'lightning']);
+            this.registry.set('playerCoins', 0);
+            this.registry.set('currentWave', 1);
+            this.registry.set('bossComingUp', -1);
+            this.registry.set('upgradeLevels', {});
+            console.log('[MainScene] Registry initialized.');
+
+            // Restore saved run progress (singleplayer continue only)
+            const continueRun = this.game.registry.get('continueRun') as boolean | undefined;
+            let startLevelOverride = 1;
+            if (continueRun && !netConfig) {
+                try {
+                    console.log('[MainScene] Continuing run...');
+                    const run = SaveManager.loadRunProgress();
+                    if (run) {
+                        console.log('[MainScene] Restored run:', run);
+                        // CRITICAL: Clamp level to minimum 1 to prevent STATIC_MAPS[-1] crash
+                        const restoredLevel = Math.max(1, run.gameLevel || 1);
+                        this.registry.set('gameLevel', restoredLevel);
+                        startLevelOverride = restoredLevel;
+                        this.registry.set('currentWave', run.currentWave ?? 1);
+                        this.registry.set('playerCoins', run.playerCoins ?? 0);
+                        this.registry.set('upgradeLevels', run.upgradeLevels ?? {});
+                        this.registry.set('currentWeapon', run.currentWeapon ?? 'sword');
+
+                        // REHABILITATION: If a corrupted save has only sword but we are at high level,
+                        // unlock the basic arsenal to keep the game playable.
+                        let restoredWeapons = run.unlockedWeapons || ['sword'];
+                        if (restoredWeapons.length <= 1 && restoredLevel > 1) {
+                            console.log('[MainScene] Corrupted weapon list detected. Rehabilitating arsenal...');
+                            restoredWeapons = ['sword', 'bow', 'fireball', 'frost', 'lightning'];
+                        }
+                        if (!restoredWeapons.includes('sword')) restoredWeapons.push('sword');
+                        this.registry.set('unlockedWeapons', restoredWeapons);
+
+                        // Store temporarily; applied after recalculateStats()
+                        this.game.registry.set('_restoredHP', Math.max(0, run.playerHP));
+                        console.log('[MainScene] Restore successful. HP to restore:', run.playerHP);
+                    } else {
+                        console.warn('[MainScene] No run progress found despite continue flag.');
+                    }
+                } catch (e) {
+                    console.error('[MainScene] Failed to restore continue run, starting fresh:', e);
+                    SaveManager.clearRunProgress();
+                    // startLevelOverride stays 1, registry defaults remain
+                }
+            }
+
+            try {
+                // Initialize Managers
+                console.log('[MainScene] Initializing managers...');
+                this.stats = new PlayerStatsManager(this);
+                this.combat = new PlayerCombatManager(this);
+                this.waves = new WaveManager(this);
+                this.poolManager = new ObjectPoolManager(this);
+                this.weather = new WeatherManager(this);
+                this.ambient = new AmbientParticleManager(this);
+                AudioManager.instance.setScene(this);
+            } catch (e) {
+                console.error('[MainScene] CRITICAL: Manager initialization failed:', e);
+                // We MUST proceed if possible, but the game might be broken.
+                // At least the map can try to render.
+            }
+
+            this.events.once('shutdown', () => {
+                console.log('[MainScene] Shutdown. Clearing AudioManager scene reference.');
+                AudioManager.instance.clearScene();
+            });
+            const qualityLevel = (this.game.registry.get('graphicsQuality') as GraphicsQuality) || GAME_CONFIG.QUALITY.DEFAULT;
+            this.quality = getQualityConfig(qualityLevel);
+            console.log('[MainScene] Managers initialized. Quality:', qualityLevel);
+
+            this.game.registry.events.on('changedata-graphicsQuality', (_parent: any, val: GraphicsQuality) => {
+                this.quality = getQualityConfig(val);
+                this.applyQualitySettings();
+            });
+
+            // Initialize Network Manager if in multiplayer
+            if (netConfig) {
+                this.networkManager = new NetworkManager(
+                    netConfig.peer,
+                    netConfig.role,
+                    (packet, conn) => this.handleNetworkPacket(packet, conn)
+                );
+
+                // Standalone network tick uncoupled from Phaser update()
+                this.networkManager.setTickFunction(() => this.networkTick(), 33);
+
+                if (netConfig.role === 'client' && netConfig.hostPeerId) {
+                    console.log('Client connecting to host:', netConfig.hostPeerId);
+                    this.networkManager.connectToHost(netConfig.hostPeerId);
+                }
+
+                this.networkManager.onDisconnect = (peerId) => {
+                    console.log(`[MainScene] Peer disconnected: ${peerId}`);
+                    this.removeRemotePlayer(peerId);
+                };
+            }
+
+            // Calculate Initial Stats
+            this.stats.recalculateStats();
+
+            // HP starts at full max (after stats are calculated)
+            this.registry.set('playerHP', this.stats.maxHP);
+
+            // Apply restored HP if continuing a saved run (clamped to recalculated max)
+            const restoredHP = this.game.registry.get('_restoredHP') as number | undefined;
+            if (restoredHP !== undefined) {
+                // HONEST RESTORATION: Don't clamp to 20; let 0 HP handle death naturally.
+                const safeHP = Math.min(restoredHP, this.stats.maxHP);
+                console.log(`[MainScene] Applying restored HP: ${restoredHP} -> ${safeHP} (Max: ${this.stats.maxHP})`);
+                this.registry.set('playerHP', safeHP);
+                this.game.registry.remove('_restoredHP');
+            }
+
+            // Initialize Object Pool
+            // this.poolManager = new ObjectPoolManager(this); // Redundant - initialized above
+
+            // Create Gem Texture (Small Diamond)
+            const graphics = this.add.graphics();
+            graphics.fillStyle(0xffffff);
+            graphics.beginPath();
+            graphics.moveTo(5, 0);
+            graphics.lineTo(10, 5);
+            graphics.lineTo(5, 10);
+            graphics.lineTo(0, 5);
+            graphics.closePath();
+            graphics.fillPath();
+            graphics.generateTexture('xp-gem', 10, 10);
+
+            // Create Coin Texture (Yellow Circle with baked-in glow)
+            graphics.clear();
+
+            // 1. Draw several faint outer circles for a "soft glow" look (no postFX needed)
+            // This is much faster than per-object shaders.
+            for (let r = 10; r > 5; r--) {
+                const alpha = (10 - r) * 0.05;
+                graphics.fillStyle(0xffcc00, alpha);
+                graphics.fillCircle(10, 10, r);
+            }
+
+            // 2. Main coin body
+            graphics.fillStyle(0xffcc00, 1);
+            graphics.fillCircle(10, 10, 5);
+
+            // 3. Subtle inner highlight
+            graphics.fillStyle(0xffffff, 0.4);
+            graphics.fillCircle(10, 8, 2);
+
+            // 4. Subtle rim
+            graphics.lineStyle(1, 0x000000, 0.3);
+            graphics.strokeCircle(10, 10, 5);
+
+            graphics.generateTexture('coin', 20, 20);
+            graphics.destroy();
+
+            // Spark texture — used for enemy death burst particles
+            const sparkGfx = this.add.graphics();
+            sparkGfx.fillStyle(0xffffff);
+            sparkGfx.fillCircle(4, 4, 4);
+            sparkGfx.generateTexture('spark', 8, 8);
+            sparkGfx.destroy();
+
+            // ── DEATH SPARK EMITTER (Centralized) ────────────────────────────────
+            this.deathSparkEmitter = this.add.particles(0, 0, 'spark', {
+                speed: { min: 60, max: 180 },
+                angle: { min: 0, max: 360 },
+                scale: { start: 0.8, end: 0 },
+                alpha: { start: 1, end: 0 },
+                lifespan: 350,
+                quantity: 10,
+                blendMode: 'ADD',
+                emitting: false,
+            });
+            this.deathSparkEmitter.setDepth(600);
+
+            // Initialize Spatial Grids (Cell Size 150px)
+            this.spatialGrid = new SpatialHashGrid(150);
+            this.staticObstacleGrid = new SpatialHashGrid(150);
+
+            // Initialize Obstacles
+            this.obstacles = this.physics.add.staticGroup();
+
+            // Background: Map Generation
+            this.physics.world.setBounds(0, 0, this.mapWidth, this.mapHeight);
+            this.cameras.main.setBounds(0, 0, this.mapWidth, this.mapHeight);
+
+            try {
+                console.log('[MainScene] Generating initial map for level:', startLevelOverride);
+                this.regenerateMap(startLevelOverride);
+                console.log('[MainScene] Initial map generated level:', startLevelOverride);
+            } catch (e) {
+                console.error('[MainScene] CRITICAL: Map generation failed:', e);
+            }
+
             this.applyQualitySettings();
-        });
 
-        // Initialize Network Manager if in multiplayer
-        if (netConfig) {
-            this.networkManager = new NetworkManager(
-                netConfig.peer,
-                netConfig.role,
-                (packet, conn) => this.handleNetworkPacket(packet, conn)
-            );
-
-            // Standalone network tick uncoupled from Phaser update()
-            this.networkManager.setTickFunction(() => this.networkTick(), 33);
-
-            if (netConfig.role === 'client' && netConfig.hostPeerId) {
-                console.log('Client connecting to host:', netConfig.hostPeerId);
-                this.networkManager.connectToHost(netConfig.hostPeerId);
+            // --- POST PROCESSING ---
+            if (this.quality.postFXEnabled) {
+                this.vignetteEffect = this.cameras.main.postFX.addVignette(0.5, 0.5, 0.85, 0.15);
             }
 
-            this.networkManager.onDisconnect = (peerId) => {
-                console.log(`[MainScene] Peer disconnected: ${peerId}`);
-                this.removeRemotePlayer(peerId);
-            };
-        }
+            createAnimations(this);
 
-        // Calculate Initial Stats
-        this.stats.recalculateStats();
+            this.player = this.physics.add.sprite(this.mapWidth / 2, this.mapHeight / 2, 'player-idle');
+            const player = this.player;
+            player.setCollideWorldBounds(true);
+            player.setScale(2);
+            player.setBodySize(20, 15, true);
+            player.setOffset(player.body!.offset.x, 33);
+            player.setMass(2);
+            player.play('player-idle');
+            player.setPipeline('Light2D');
 
-        // HP starts at full max (after stats are calculated)
-        this.registry.set('playerHP', this.stats.maxHP);
+            this.playerShadow = this.add.sprite(player.x, player.y + 28, 'shadows', 0)
+                .setAlpha(0.4)
+                .setDepth(player.depth - 1);
 
-        // Apply restored HP if continuing a saved run (clamped to recalculated max)
-        const restoredHP = this.game.registry.get('_restoredHP') as number | undefined;
-        if (restoredHP !== undefined) {
-            // HARDENING: Ensure restored HP is at least 20 to prevent immediate Game Over loops
-            const safeHP = Math.max(20, Math.min(restoredHP, this.stats.maxHP));
-            console.log(`[MainScene] Applying restored HP: ${restoredHP} -> ${safeHP} (Max: ${this.stats.maxHP})`);
-            this.registry.set('playerHP', safeHP);
-            this.game.registry.remove('_restoredHP');
-        }
+            // Camera follow
+            this.cameras.main.startFollow(player, true, 0.1, 0.1);
 
-        // Initialize Object Pool
-        // this.poolManager = new ObjectPoolManager(this); // Redundant - initialized above
+            // Attack Hitbox (invisible circle)
+            this.attackHitbox = this.add.rectangle(0, 0, 60, 60, 0xff0000, 0) as any;
+            this.physics.add.existing(this.attackHitbox);
+            this.attackHitbox.body!.setCircle(30);
+            this.attackHitbox.body!.setEnable(false);
 
-        // Create Gem Texture (Small Diamond)
-        const graphics = this.add.graphics();
-        graphics.fillStyle(0xffffff);
-        graphics.beginPath();
-        graphics.moveTo(5, 0);
-        graphics.lineTo(10, 5);
-        graphics.lineTo(5, 10);
-        graphics.lineTo(0, 5);
-        graphics.closePath();
-        graphics.fillPath();
-        graphics.generateTexture('xp-gem', 10, 10);
+            // Enemy Group
+            this.enemies = this.physics.add.group({
+                classType: Enemy,
+                runChildUpdate: true,
+                maxSize: 100
+            });
 
-        // Create Coin Texture (Yellow Circle with baked-in glow)
-        graphics.clear();
+            // Boss Group (max 1 boss at a time)
+            this.bossGroup = this.physics.add.group({
+                classType: BossEnemy,
+                runChildUpdate: true,
+                maxSize: 1
+            });
 
-        // 1. Draw several faint outer circles for a "soft glow" look (no postFX needed)
-        // This is much faster than per-object shaders.
-        for (let r = 10; r > 5; r--) {
-            const alpha = (10 - r) * 0.05;
-            graphics.fillStyle(0xffcc00, alpha);
-            graphics.fillCircle(10, 10, r);
-        }
+            // Arrow Group
+            this.arrows = this.physics.add.group({
+                classType: Arrow,
+                runChildUpdate: true,
+                maxSize: 50
+            });
 
-        // 2. Main coin body
-        graphics.fillStyle(0xffcc00, 1);
-        graphics.fillCircle(10, 10, 5);
+            // Fireball Group
+            this.fireballs = this.physics.add.group({
+                classType: Fireball,
+                runChildUpdate: true,
+                maxSize: 30
+            });
 
-        // 3. Subtle inner highlight
-        graphics.fillStyle(0xffffff, 0.4);
-        graphics.fillCircle(10, 8, 2);
+            // Frost Bolt Group
+            this.frostBolts = this.physics.add.group({
+                classType: FrostBolt,
+                runChildUpdate: true,
+                maxSize: 20
+            });
 
-        // 4. Subtle rim
-        graphics.lineStyle(1, 0x000000, 0.3);
-        graphics.strokeCircle(10, 10, 5);
+            // Lightning Bolt Group
+            this.lightningBolts = this.physics.add.group({
+                classType: LightningBolt,
+                runChildUpdate: true,
+                maxSize: 30
+            });
 
-        graphics.generateTexture('coin', 20, 20);
-        graphics.destroy();
+            this.singularities = this.physics.add.group({
+                classType: Singularity,
+                runChildUpdate: true,
+                maxSize: 10
+            });
 
-        // Spark texture — used for enemy death burst particles
-        const sparkGfx = this.add.graphics();
-        sparkGfx.fillStyle(0xffffff);
-        sparkGfx.fillCircle(4, 4, 4);
-        sparkGfx.generateTexture('spark', 8, 8);
-        sparkGfx.destroy();
+            this.eclipseWakes = this.physics.add.group({
+                classType: EclipseWake,
+                runChildUpdate: true,
+                maxSize: 20
+            });
 
-        // ── DEATH SPARK EMITTER (Centralized) ────────────────────────────────
-        this.deathSparkEmitter = this.add.particles(0, 0, 'spark', {
-            speed: { min: 60, max: 180 },
-            angle: { min: 0, max: 360 },
-            scale: { start: 0.8, end: 0 },
-            alpha: { start: 1, end: 0 },
-            lifespan: 350,
-            quantity: 10,
-            blendMode: 'ADD',
-            emitting: false,
-        });
-        this.deathSparkEmitter.setDepth(600);
+            // Coin Group
+            this.coins = this.physics.add.group({
+                classType: Coin,
+                runChildUpdate: true,
+                maxSize: 5000
+            });
 
-        this.applyQualitySettings();
+            // Enemy Projectile Group
+            this.enemyProjectiles = this.physics.add.group({
+                classType: EnemyProjectile,
+                runChildUpdate: true,
+                maxSize: 50
+            });
 
-        // --- POST PROCESSING ---
-        // Vignette — starts invisible; strength is driven by HP in update().
-        // Gives a subtle border darkening at all times and pulses red at low HP.
-        if (this.quality.postFXEnabled) {
-            this.vignetteEffect = this.cameras.main.postFX.addVignette(0.5, 0.5, 0.85, 0.15);
-        }
+            this.players = this.physics.add.group();
+            this.players.add(player);
 
-        // Background: Map Generation with Variety
-        // Set World Bounds
-        this.physics.world.setBounds(0, 0, this.mapWidth, this.mapHeight);
-        this.cameras.main.setBounds(0, 0, this.mapWidth, this.mapHeight);
-
-        // Initialize Spatial Grids (Cell Size 150px)
-        this.spatialGrid = new SpatialHashGrid(150);
-        this.staticObstacleGrid = new SpatialHashGrid(150);
-
-        // Initialize Obstacles
-        this.obstacles = this.physics.add.staticGroup();
-
-        // Generate initial map (Corrected: Use startLevelOverride to avoid overwrite)
-        console.log('[MainScene] Generating initial map for level:', startLevelOverride);
-        this.regenerateMap(startLevelOverride);
-        console.log('[MainScene] Initial map generated level:', startLevelOverride);
-
-        createAnimations(this);
-
-        const player = this.physics.add.sprite(this.mapWidth / 2, this.mapHeight / 2, 'player-idle');
-        player.setCollideWorldBounds(true);
-        player.setScale(2);
-        player.setBodySize(20, 15, true);
-        player.setOffset(player.body!.offset.x, 33);
-        player.setMass(2);
-        player.play('player-idle');
-        player.setPipeline('Light2D');
-
-        this.playerShadow = this.add.sprite(player.x, player.y + 28, 'shadows', 0)
-            .setAlpha(0.4)
-            .setDepth(player.depth - 1);
-
-        // Camera follow
-        this.cameras.main.startFollow(player, true, 0.1, 0.1);
-
-        // Attack Hitbox (invisible circle)
-        this.attackHitbox = this.add.rectangle(0, 0, 60, 60, 0xff0000, 0) as any;
-        this.physics.add.existing(this.attackHitbox);
-        this.attackHitbox.body!.setCircle(30);
-        this.attackHitbox.body!.setEnable(false);
-
-        // Enemy Group
-        this.enemies = this.physics.add.group({
-            classType: Enemy,
-            runChildUpdate: true,
-            maxSize: 100
-        });
-
-        // Boss Group (max 1 boss at a time)
-        this.bossGroup = this.physics.add.group({
-            classType: BossEnemy,
-            runChildUpdate: true,
-            maxSize: 1
-        });
-
-        // Arrow Group
-        this.arrows = this.physics.add.group({
-            classType: Arrow,
-            runChildUpdate: true,
-            maxSize: 50
-        });
-
-        // Fireball Group
-        this.fireballs = this.physics.add.group({
-            classType: Fireball,
-            runChildUpdate: true,
-            maxSize: 30
-        });
-
-        // Frost Bolt Group
-        this.frostBolts = this.physics.add.group({
-            classType: FrostBolt,
-            runChildUpdate: true,
-            maxSize: 20
-        });
-
-        // Lightning Bolt Group
-        this.lightningBolts = this.physics.add.group({
-            classType: LightningBolt,
-            runChildUpdate: true,
-            maxSize: 30
-        });
-
-        this.singularities = this.physics.add.group({
-            classType: Singularity,
-            runChildUpdate: true,
-            maxSize: 10
-        });
-
-        this.eclipseWakes = this.physics.add.group({
-            classType: EclipseWake,
-            runChildUpdate: true,
-            maxSize: 20
-        });
-
-        // Coin Group
-        this.coins = this.physics.add.group({
-            classType: Coin,
-            runChildUpdate: true,
-            maxSize: 5000
-        });
-
-        // Enemy Projectile Group
-        this.enemyProjectiles = this.physics.add.group({
-            classType: EnemyProjectile,
-            runChildUpdate: true,
-            maxSize: 50
-        });
-
-        this.players = this.physics.add.group();
-        this.players.add(player);
-
-        // Collisions
-        this.physics.add.collider(player, this.enemies);
-        this.physics.add.collider(this.enemies, this.enemies);
-        this.physics.add.collider(player, this.obstacles);
-        // Only host handles hard physical separation for enemies to avoid rubberbanding
-        if (this.networkManager?.role !== 'client') {
+            // Collisions
             this.physics.add.collider(player, this.enemies);
-            this.physics.add.collider(this.bossGroup, this.obstacles);
-        }
+            this.physics.add.collider(this.enemies, this.enemies);
+            this.physics.add.collider(player, this.obstacles);
+            // Only host handles hard physical separation for enemies to avoid rubberbanding
+            if (this.networkManager?.role !== 'client') {
+                this.physics.add.collider(player, this.enemies);
+                this.physics.add.collider(this.bossGroup, this.obstacles);
+            }
 
-        this.physics.add.collider(this.enemies, this.obstacles);
-        this.physics.add.collider(player, this.bossGroup);
+            this.physics.add.collider(this.enemies, this.obstacles);
+            this.physics.add.collider(player, this.bossGroup);
 
-        this.physics.add.overlap(this.enemyProjectiles, this.players, (_projectile, _target) => {
-            (_projectile as EnemyProjectile).onHitPlayer(_target);
-        });
+            this.physics.add.overlap(this.enemyProjectiles, this.players, (_projectile, _target) => {
+                (_projectile as EnemyProjectile).onHitPlayer(_target);
+            });
 
-        this.physics.add.overlap(this.attackHitbox, this.enemies, (_hitbox, enemy) => {
-            const e = enemy as Enemy;
-            if (this.currentSwingHitIds.has(e.id)) return;
-            this.currentSwingHitIds.add(e.id);
+            this.physics.add.overlap(this.attackHitbox, this.enemies, (_hitbox, enemy) => {
+                const e = enemy as Enemy;
+                if (this.currentSwingHitIds.has(e.id)) return;
+                this.currentSwingHitIds.add(e.id);
 
-            if (this.networkManager?.role === 'client') {
-                const now = Date.now();
-                const lastReq = e.getData('lastHitRequest') || 0;
-                if (now - lastReq > 250) { // Throttle client hit requests
-                    e.setData('lastHitRequest', now);
-                    this.networkManager.broadcast({
-                        t: PacketType.GAME_EVENT,
-                        ev: {
-                            type: 'hit_request',
-                            data: {
-                                enemyId: e.id,
-                                hitX: this.attackHitbox.x,
-                                hitY: this.attackHitbox.y,
-                                damage: this.stats.damage
-                            }
-                        },
-                        ts: this.networkManager.getServerTime()
+                if (this.networkManager?.role === 'client') {
+                    const now = Date.now();
+                    const lastReq = e.getData('lastHitRequest') || 0;
+                    if (now - lastReq > 250) { // Throttle client hit requests
+                        e.setData('lastHitRequest', now);
+                        this.networkManager.broadcast({
+                            t: PacketType.GAME_EVENT,
+                            ev: {
+                                type: 'hit_request',
+                                data: {
+                                    enemyId: e.id,
+                                    hitX: this.attackHitbox.x,
+                                    hitY: this.attackHitbox.y,
+                                    damage: this.stats.damage
+                                }
+                            },
+                            ts: this.networkManager.getServerTime()
+                        });
+
+                        // Client-side prediction (visual and physical)
+                        e.predictDamage(this.stats.damage);
+                        if (this.poolManager) {
+                            this.poolManager.getDamageText(e.x, e.y - 30, this.stats.damage, '#ffcc00');
+                            this.events.emit('enemy-hit'); // Sound
+                        }
+                    }
+                } else {
+                    e.takeDamage(this.stats.damage, '#ffcc00'); // Gold for physical
+                    e.pushback(player.x, player.y, this.stats.knockback);
+                }
+            });
+
+            this.physics.add.overlap(this.attackHitbox, this.bossGroup, (_hitbox, boss) => {
+                const b = boss as BossEnemy;
+                if (this.currentSwingHitIds.has(b.id)) return;
+                this.currentSwingHitIds.add(b.id);
+
+                if (this.networkManager?.role === 'client') {
+                    const now = Date.now();
+                    const lastReq = b.getData('lastHitRequest') || 0;
+                    if (now - lastReq > 250) {
+                        b.setData('lastHitRequest', now);
+                        this.networkManager.broadcast({
+                            t: PacketType.GAME_EVENT,
+                            ev: {
+                                type: 'hit_request',
+                                data: {
+                                    enemyId: 'boss',
+                                    hitX: this.attackHitbox.x,
+                                    hitY: this.attackHitbox.y,
+                                    damage: this.stats.damage
+                                }
+                            },
+                            ts: this.networkManager.getServerTime()
+                        });
+
+                        // Client-side prediction (visual only)
+                        if (this.poolManager) {
+                            this.poolManager.getDamageText(b.x, b.y - 30, this.stats.damage, '#ffcc00');
+                            this.events.emit('enemy-hit');
+                        }
+                    }
+                } else {
+                    b.takeDamage(this.stats.damage, '#ffcc00');
+                    b.pushback(player.x, player.y, this.stats.knockback);
+                }
+            });
+
+            // Player Hit Logic (Event-Driven)
+            this.events.on('enemy-hit-player', (damage: number, _type: string, x?: number, y?: number, target?: any) => {
+                const player = this.data.get('player');
+                const role = this.networkManager?.role as string | undefined;
+
+                if (target === player) {
+                    // Local player takes damage
+                    this.combat.takePlayerDamage(damage, x, y);
+
+                    // Host must notify CLIENTS that the Host was hit
+                    if (role === 'host' && this.networkManager) {
+                        this.networkManager.broadcast({
+                            t: PacketType.GAME_EVENT,
+                            ev: { type: 'damage_player', data: { id: this.networkManager.peerId, damage, x, y } },
+                            ts: Date.now()
+                        });
+                    }
+                } else if (role === 'host' && this.networkManager) {
+                    // Host validates that a remote player was hit and notifies EVERYONE
+                    let targetPeerId: string | null = null;
+                    this.remotePlayers.forEach((sprite, peerId) => {
+                        if (sprite === target) targetPeerId = peerId;
                     });
 
-                    // Client-side prediction (visual and physical)
-                    e.predictDamage(this.stats.damage);
-                    if (this.poolManager) {
-                        this.poolManager.getDamageText(e.x, e.y - 30, this.stats.damage, '#ffcc00');
-                        this.events.emit('enemy-hit'); // Sound
+                    if (targetPeerId) {
+                        // 1. Broadcast to all clients
+                        this.networkManager.broadcast({
+                            t: PacketType.GAME_EVENT,
+                            ev: { type: 'damage_player', data: { id: targetPeerId, damage, x, y } },
+                            ts: Date.now()
+                        });
+                        // 2. Trigger visual feedback LOCALLY on the Host's screen for the client sprite
+                        this.handleGameEvent({ type: 'damage_player', data: { id: targetPeerId, damage, x, y } } as any);
                     }
                 }
-            } else {
-                e.takeDamage(this.stats.damage, '#ffcc00'); // Gold for physical
-                e.pushback(player.x, player.y, this.stats.knockback);
-            }
-        });
+            });
 
-        this.physics.add.overlap(this.attackHitbox, this.bossGroup, (_hitbox, boss) => {
-            const b = boss as BossEnemy;
-            if (this.currentSwingHitIds.has(b.id)) return;
-            this.currentSwingHitIds.add(b.id);
+            const cursors = this.input.keyboard?.createCursorKeys();
 
-            if (this.networkManager?.role === 'client') {
-                const now = Date.now();
-                const lastReq = b.getData('lastHitRequest') || 0;
-                if (now - lastReq > 250) {
-                    b.setData('lastHitRequest', now);
+            this.wasd = this.input.keyboard?.addKeys({
+                W: Phaser.Input.Keyboard.KeyCodes.W,
+                A: Phaser.Input.Keyboard.KeyCodes.A,
+                S: Phaser.Input.Keyboard.KeyCodes.S,
+                D: Phaser.Input.Keyboard.KeyCodes.D,
+                SPACE: Phaser.Input.Keyboard.KeyCodes.SPACE,
+                SHIFT: Phaser.Input.Keyboard.KeyCodes.SHIFT
+            }) as any;
+
+            this.hotkeys = this.input.keyboard?.addKeys({
+                '1': Phaser.Input.Keyboard.KeyCodes.ONE,
+                '2': Phaser.Input.Keyboard.KeyCodes.TWO,
+                '3': Phaser.Input.Keyboard.KeyCodes.THREE,
+                '4': Phaser.Input.Keyboard.KeyCodes.FOUR,
+                '5': Phaser.Input.Keyboard.KeyCodes.FIVE
+            }) as any;
+
+            this.input.mouse?.disableContextMenu();
+
+            this.data.set('player', player);
+            this.data.set('cursors', cursors);
+            this.data.set('isAttacking', false);
+            this.data.set('isBlocking', false);
+            this.data.set('attackAnimIndex', 0);
+
+
+            // Ghost Mode Events
+            this.events.on('player-died', () => {
+                const p = this.data.get('player') as Phaser.Physics.Arcade.Sprite;
+                p.setTint(0xaaaaff);
+                p.setBlendMode(Phaser.BlendModes.ADD);
+                p.setAlpha(0.6);
+                if (this.playerLight) this.playerLight.setRadius(50);
+                if (this.outerPlayerLight) this.outerPlayerLight.setRadius(100);
+                if (this.poolManager) this.poolManager.getDamageText(p.x, p.y - 50, "GHOST", "#aaaaff");
+            });
+
+            this.events.on('local-player-revived', () => {
+                const p = this.data.get('player') as Phaser.Physics.Arcade.Sprite;
+                p.clearTint();
+                p.setBlendMode(Phaser.BlendModes.NORMAL);
+                p.setAlpha(1.0);
+                if (this.playerLight) this.playerLight.setRadius(200);
+                if (this.outerPlayerLight) this.outerPlayerLight.setRadius(500);
+                this.combat.flushHP();
+                this.registry.set('playerHP', this.registry.get('playerMaxHP'));
+                if (this.poolManager) this.poolManager.getDamageText(p.x, p.y - 50, "REVIVED", "#55ff55");
+            });
+
+            // Listen for Upgrades
+            this.events.off('apply-upgrade');
+            this.events.on('apply-upgrade', (upgradeId: string) => {
+                this.stats.applyUpgrade(upgradeId);
+            });
+
+            // Listen for Revive Purchases
+            this.events.off('buy-revive');
+            this.events.on('buy-revive', (targetId: string) => {
+                if (this.networkManager?.role === 'client') {
+                    // Client requests host to revive them
                     this.networkManager.broadcast({
                         t: PacketType.GAME_EVENT,
-                        ev: {
-                            type: 'hit_request',
-                            data: {
-                                enemyId: 'boss',
-                                hitX: this.attackHitbox.x,
-                                hitY: this.attackHitbox.y,
-                                damage: this.stats.damage
-                            }
-                        },
-                        ts: this.networkManager.getServerTime()
+                        ev: { type: 'revive_request', data: { targetId } },
+                        ts: Date.now()
                     });
-
-                    // Client-side prediction (visual only)
-                    if (this.poolManager) {
-                        this.poolManager.getDamageText(b.x, b.y - 30, this.stats.damage, '#ffcc00');
-                        this.events.emit('enemy-hit');
-                    }
-                }
-            } else {
-                b.takeDamage(this.stats.damage, '#ffcc00');
-                b.pushback(player.x, player.y, this.stats.knockback);
-            }
-        });
-
-        // Player Hit Logic (Event-Driven)
-        this.events.on('enemy-hit-player', (damage: number, _type: string, x?: number, y?: number, target?: any) => {
-            const player = this.data.get('player');
-            const role = this.networkManager?.role as string | undefined;
-
-            if (target === player) {
-                // Local player takes damage
-                this.combat.takePlayerDamage(damage, x, y);
-
-                // Host must notify CLIENTS that the Host was hit
-                if (role === 'host' && this.networkManager) {
-                    this.networkManager.broadcast({
+                } else {
+                    // Host does it instantly and tells everyone
+                    this.handleGameEvent({ type: 'player_revived', data: { targetId } } as any);
+                    this.networkManager?.broadcast({
                         t: PacketType.GAME_EVENT,
-                        ev: { type: 'damage_player', data: { id: this.networkManager.peerId, damage, x, y } },
+                        ev: { type: 'player_revived', data: { targetId } },
                         ts: Date.now()
                     });
                 }
-            } else if (role === 'host' && this.networkManager) {
-                // Host validates that a remote player was hit and notifies EVERYONE
-                let targetPeerId: string | null = null;
-                this.remotePlayers.forEach((sprite, peerId) => {
-                    if (sprite === target) targetPeerId = peerId;
-                });
+            });
 
-                if (targetPeerId) {
-                    // 1. Broadcast to all clients
-                    this.networkManager.broadcast({
-                        t: PacketType.GAME_EVENT,
-                        ev: { type: 'damage_player', data: { id: targetPeerId, damage, x, y } },
-                        ts: Date.now()
-                    });
-                    // 2. Trigger visual feedback LOCALLY on the Host's screen for the client sprite
-                    this.handleGameEvent({ type: 'damage_player', data: { id: targetPeerId, damage, x, y } } as any);
+            // Listen for Next Level
+            this.events.on('start-next-level', (targetLevel?: number) => {
+                if (targetLevel !== undefined) {
+                    this.waves.startLevel(targetLevel);
+                } else {
+                    this.waves.startLevel(this.registry.get('gameLevel') + 1);
                 }
-            }
-        });
+            });
 
-        const cursors = this.input.keyboard?.createCursorKeys();
+            // Boss fight start
+            this.events.on('start-boss', (bossIndex: number) => {
+                // Show splash screen, then spawn boss
+                const config = BOSS_CONFIGS[bossIndex];
+                if (config) {
+                    this.registry.set('bossName', config.name);
+                }
 
-        this.wasd = this.input.keyboard?.addKeys({
-            W: Phaser.Input.Keyboard.KeyCodes.W,
-            A: Phaser.Input.Keyboard.KeyCodes.A,
-            S: Phaser.Input.Keyboard.KeyCodes.S,
-            D: Phaser.Input.Keyboard.KeyCodes.D,
-            SPACE: Phaser.Input.Keyboard.KeyCodes.SPACE,
-            SHIFT: Phaser.Input.Keyboard.KeyCodes.SHIFT
-        }) as any;
-
-        this.hotkeys = this.input.keyboard?.addKeys({
-            '1': Phaser.Input.Keyboard.KeyCodes.ONE,
-            '2': Phaser.Input.Keyboard.KeyCodes.TWO,
-            '3': Phaser.Input.Keyboard.KeyCodes.THREE,
-            '4': Phaser.Input.Keyboard.KeyCodes.FOUR,
-            '5': Phaser.Input.Keyboard.KeyCodes.FIVE
-        }) as any;
-
-        this.input.mouse?.disableContextMenu();
-
-        this.data.set('player', player);
-        this.data.set('cursors', cursors);
-        this.data.set('isAttacking', false);
-        this.data.set('isBlocking', false);
-        this.data.set('attackAnimIndex', 0);
-
-
-        // Ghost Mode Events
-        this.events.on('player-died', () => {
-            const p = this.data.get('player') as Phaser.Physics.Arcade.Sprite;
-            p.setTint(0xaaaaff);
-            p.setBlendMode(Phaser.BlendModes.ADD);
-            p.setAlpha(0.6);
-            if (this.playerLight) this.playerLight.setRadius(50);
-            if (this.outerPlayerLight) this.outerPlayerLight.setRadius(100);
-            if (this.poolManager) this.poolManager.getDamageText(p.x, p.y - 50, "GHOST", "#aaaaff");
-        });
-
-        this.events.on('local-player-revived', () => {
-            const p = this.data.get('player') as Phaser.Physics.Arcade.Sprite;
-            p.clearTint();
-            p.setBlendMode(Phaser.BlendModes.NORMAL);
-            p.setAlpha(1.0);
-            if (this.playerLight) this.playerLight.setRadius(200);
-            if (this.outerPlayerLight) this.outerPlayerLight.setRadius(500);
-            this.combat.flushHP();
-            this.registry.set('playerHP', this.registry.get('playerMaxHP'));
-            if (this.poolManager) this.poolManager.getDamageText(p.x, p.y - 50, "REVIVED", "#55ff55");
-        });
-
-        // Listen for Upgrades
-        this.events.off('apply-upgrade');
-        this.events.on('apply-upgrade', (upgradeId: string) => {
-            this.stats.applyUpgrade(upgradeId);
-        });
-
-        // Listen for Revive Purchases
-        this.events.off('buy-revive');
-        this.events.on('buy-revive', (targetId: string) => {
-            if (this.networkManager?.role === 'client') {
-                // Client requests host to revive them
-                this.networkManager.broadcast({
-                    t: PacketType.GAME_EVENT,
-                    ev: { type: 'revive_request', data: { targetId } },
-                    ts: Date.now()
+                this.registry.set('bossSplashVisible', true);
+                this.time.delayedCall(3200, () => {
+                    this.registry.set('bossSplashVisible', false);
+                    this.spawnBoss(bossIndex);
                 });
-            } else {
-                // Host does it instantly and tells everyone
-                this.handleGameEvent({ type: 'player_revived', data: { targetId } } as any);
+            });
+
+            // Boss minion spawning (from abilities like Raise Dead / Feral Howl)
+            this.events.on('boss-spawn-minion', (x: number, y: number, type: string) => {
+                const p = this.data.get('player');
+                const minion = this.enemies.get(x, y) as Enemy | null;
+                if (minion) {
+                    minion.reset(x, y, p, 1.0, type);
+                }
+            });
+
+            this.events.on('boss-died-collect-all', (x: number, y: number) => {
+                this.waves.spawnBossCoins(x, y);
+                this.combat.setDashIframe(true);
+                this.time.delayedCall(2000, () => {
+                    this.combat.setDashIframe(false);
+                });
+                this.time.delayedCall(400, () => {
+                    this.coins.children.iterate((c: any) => {
+                        if (c.active) {
+                            const coin = c as Coin;
+                            coin.forceMagnet = true;
+                        }
+                        return true;
+                    });
+                });
+            });
+
+            // Enemy Projectile Events
+            this.events.on('enemy-fire-projectile', (x: number, y: number, angle: number, damage: number, type: 'arrow' | 'fireball') => {
+                if (this.networkManager?.role === 'client') return; // Only host/singleplayer fires
+
+                this.poolManager.getEnemyProjectile(x, y, angle, damage, type);
+                // Group addition now handled in poolManager
+
+                // Broadcast to clients
                 this.networkManager?.broadcast({
                     t: PacketType.GAME_EVENT,
-                    ev: { type: 'player_revived', data: { targetId } },
+                    ev: { type: 'spawn_enemy_projectile', data: { x, y, angle, damage, type } },
                     ts: Date.now()
                 });
-            }
-        });
-
-        // Listen for Next Level
-        this.events.on('start-next-level', (targetLevel?: number) => {
-            if (targetLevel !== undefined) {
-                this.waves.startLevel(targetLevel);
-            } else {
-                this.waves.startLevel(this.registry.get('gameLevel') + 1);
-            }
-        });
-
-        // Boss fight start
-        this.events.on('start-boss', (bossIndex: number) => {
-            // Show splash screen, then spawn boss
-            const config = BOSS_CONFIGS[bossIndex];
-            if (config) {
-                this.registry.set('bossName', config.name);
-            }
-
-            this.registry.set('bossSplashVisible', true);
-            this.time.delayedCall(3200, () => {
-                this.registry.set('bossSplashVisible', false);
-                this.spawnBoss(bossIndex);
             });
-        });
 
-        // Boss minion spawning (from abilities like Raise Dead / Feral Howl)
-        this.events.on('boss-spawn-minion', (x: number, y: number, type: string) => {
-            const p = this.data.get('player');
-            const minion = this.enemies.get(x, y) as Enemy | null;
-            if (minion) {
-                minion.reset(x, y, p, 1.0, type);
-            }
-        });
+            // Healer Wizard Events
+            this.events.on('enemy-heal-ally', (healer: Enemy, target: Enemy, amount: number) => {
+                if (this.networkManager?.role === 'client') return;
 
-        this.events.on('boss-died-collect-all', (x: number, y: number) => {
-            this.waves.spawnBossCoins(x, y);
-            this.combat.setDashIframe(true);
-            this.time.delayedCall(2000, () => {
-                this.combat.setDashIframe(false);
-            });
-            this.time.delayedCall(400, () => {
-                this.coins.children.iterate((c: any) => {
-                    if (c.active) {
-                        const coin = c as Coin;
-                        coin.forceMagnet = true;
-                    }
-                    return true;
+                // Apply heal logic (Host/Singleplayer authority)
+                const healedAmount = Math.min(amount, target.maxHP - target.hp);
+                if (healedAmount <= 0) return;
+
+                target.hp += healedAmount;
+
+                // Visual feedback
+                const effect = this.add.sprite(target.x, target.y, 'heal_effect');
+                effect.setDepth(target.depth + 1);
+                effect.setScale(target.scale * 1.5);
+                effect.play('heal-effect-anim');
+                effect.on('animationcomplete', () => effect.destroy());
+
+                this.poolManager.getDamageText(target.x, target.y - 40, `+${Math.round(healedAmount)}`, '#55ff55');
+
+                // Apply slight green glow to target
+                target.setTint(0xccffcc);
+                this.time.delayedCall(500, () => {
+                    if (target.active && !target.getIsDead()) target.clearTint();
+                });
+
+                // Sync heal event to clients
+                this.networkManager?.broadcast({
+                    t: PacketType.GAME_EVENT,
+                    ev: {
+                        type: 'enemy_heal',
+                        data: {
+                            targetId: target.id,
+                            healerId: healer.id,
+                            amount: healedAmount,
+                            tx: target.x,
+                            ty: target.y
+                        }
+                    },
+                    ts: Date.now()
                 });
             });
-        });
 
-        // Enemy Projectile Events
-        this.events.on('enemy-fire-projectile', (x: number, y: number, angle: number, damage: number, type: 'arrow' | 'fireball') => {
-            if (this.networkManager?.role === 'client') return; // Only host/singleplayer fires
+            this.events.on('enemy-projectile-hit-player', (damage: number, _type: string, x: number, y: number, target: any) => {
+                const player = this.data.get('player');
+                const role = this.networkManager?.role as string | undefined;
 
-            this.poolManager.getEnemyProjectile(x, y, angle, damage, type);
-            // Group addition now handled in poolManager
+                if (target === player) {
+                    this.combat.takePlayerDamage(damage, x, y);
 
-            // Broadcast to clients
-            this.networkManager?.broadcast({
-                t: PacketType.GAME_EVENT,
-                ev: { type: 'spawn_enemy_projectile', data: { x, y, angle, damage, type } },
-                ts: Date.now()
-            });
-        });
+                    if (role === 'host' && this.networkManager) {
+                        this.networkManager.broadcast({
+                            t: PacketType.GAME_EVENT,
+                            ev: { type: 'damage_player', data: { id: this.networkManager.peerId, damage, x, y } },
+                            ts: Date.now()
+                        });
+                    }
+                } else if (role === 'host' && this.networkManager) {
+                    let targetPeerId: string | null = null;
+                    this.remotePlayers.forEach((sprite, peerId) => {
+                        if (sprite === target) targetPeerId = peerId;
+                    });
 
-        // Healer Wizard Events
-        this.events.on('enemy-heal-ally', (healer: Enemy, target: Enemy, amount: number) => {
-            if (this.networkManager?.role === 'client') return;
-
-            // Apply heal logic (Host/Singleplayer authority)
-            const healedAmount = Math.min(amount, target.maxHP - target.hp);
-            if (healedAmount <= 0) return;
-
-            target.hp += healedAmount;
-
-            // Visual feedback
-            const effect = this.add.sprite(target.x, target.y, 'heal_effect');
-            effect.setDepth(target.depth + 1);
-            effect.setScale(target.scale * 1.5);
-            effect.play('heal-effect-anim');
-            effect.on('animationcomplete', () => effect.destroy());
-
-            this.poolManager.getDamageText(target.x, target.y - 40, `+${Math.round(healedAmount)}`, '#55ff55');
-
-            // Apply slight green glow to target
-            target.setTint(0xccffcc);
-            this.time.delayedCall(500, () => {
-                if (target.active && !target.getIsDead()) target.clearTint();
+                    if (targetPeerId) {
+                        this.networkManager.broadcast({
+                            t: PacketType.GAME_EVENT,
+                            ev: { type: 'damage_player', data: { id: targetPeerId, damage, x, y } },
+                            ts: Date.now()
+                        });
+                        this.handleGameEvent({ type: 'damage_player', data: { id: targetPeerId, damage, x, y } } as any);
+                    }
+                }
             });
 
-            // Sync heal event to clients
-            this.networkManager?.broadcast({
-                t: PacketType.GAME_EVENT,
-                ev: {
-                    type: 'enemy_heal',
-                    data: {
-                        targetId: target.id,
-                        healerId: healer.id,
-                        amount: healedAmount,
-                        tx: target.x,
-                        ty: target.y
+            this.time.addEvent({
+                delay: 50,
+                callback: () => {
+                    this.stats.flushEconomy();
+                    this.combat.flushHP();
+                },
+                callbackScope: this,
+                loop: true
+            });
+
+            // HP regen tick — applies playerRegen (Trollblod upgrade) every second
+            this.time.addEvent({
+                delay: 1000,
+                callback: () => {
+                    const regen = this.registry.get('playerRegen') as number;
+                    if (regen > 0) {
+                        const hp = this.registry.get('playerHP') as number;
+                        const maxHP = this.registry.get('playerMaxHP') as number;
+                        if (hp < maxHP) {
+                            this.registry.set('playerHP', Math.min(hp + regen, maxHP));
+                        }
                     }
                 },
-                ts: Date.now()
+                callbackScope: this,
+                loop: true
             });
-        });
 
-        this.events.on('enemy-projectile-hit-player', (damage: number, _type: string, x: number, y: number, target: any) => {
-            const player = this.data.get('player');
-            const role = this.networkManager?.role as string | undefined;
+            // Initial Start (Only if Host or Single Player - Clients wait for Host signal)
+            if (!netConfig || netConfig.role === 'host') {
+                const finalStartLevel = startLevelOverride;
+                const savedWave = this.registry.get('currentWave') as number ?? 1;
+                console.log('[MainScene] Starting wave system at level:', finalStartLevel, 'wave:', savedWave);
+                this.waves.startLevel(finalStartLevel, savedWave);
+            }
+            console.log('[MainScene] Create complete.');
 
-            if (target === player) {
-                this.combat.takePlayerDamage(damage, x, y);
+            // Resume audio context and play music
+            this.input.on('pointerdown', () => AudioManager.instance.resumeContext());
+            AudioManager.instance.playBGS('forest_ambience');
+            // Global Sound Listeners
+            this.events.on('enemy-hit', () => AudioManager.instance.playSFX('hit'));
+            this.events.on('player-swing', () => AudioManager.instance.playSFX('swing'));
+            this.events.on('bow-shot', () => AudioManager.instance.playSFX('bow_attack'));
+            this.events.on('fireball-cast', () => AudioManager.instance.playSFX('fireball_cast'));
+            this.events.on('frost-cast', () => AudioManager.instance.playSFX('ice_throw'));
+            this.events.on('lightning-cast', () => AudioManager.instance.playSFX('fireball_cast')); // Using fireball_cast as placeholder
+            this.events.on('player-dash', () => AudioManager.instance.playSFX('dash'));
 
-                if (role === 'host' && this.networkManager) {
-                    this.networkManager.broadcast({
-                        t: PacketType.GAME_EVENT,
-                        ev: { type: 'damage_player', data: { id: this.networkManager.peerId, damage, x, y } },
-                        ts: Date.now()
+            // Listen for weapon changes
+            this.registry.events.on('changedata-currentWeapon', () => {
+                AudioManager.instance.playSFX('weapon_pick_up');
+            }, this);
+
+            // Listen for level completion to regenerate map for next level
+            this.events.on('level-complete', () => {
+                const nextLevel = this.registry.get('gameLevel') + 1;
+
+                // Clear world on level complete
+                this.coins.clear(true, true);
+                this.enemies.clear(true, true);
+                this.bossGroup.clear(true, true);
+
+                // Save run progress at level boundary (singleplayer only)
+                if (!this.registry.get('isMultiplayer')) {
+                    SaveManager.saveRunProgress({
+                        gameLevel: nextLevel,
+                        currentWave: 1,
+                        playerCoins: this.registry.get('playerCoins') || 0,
+                        upgradeLevels: this.registry.get('upgradeLevels') || {},
+                        currentWeapon: this.registry.get('currentWeapon') || 'sword',
+                        unlockedWeapons: this.registry.get('unlockedWeapons') || ['sword'],
+                        playerHP: this.registry.get('playerHP') || 0,
+                        playerMaxHP: this.registry.get('playerMaxHP') || 100,
+                        savedAt: Date.now()
                     });
                 }
-            } else if (role === 'host' && this.networkManager) {
-                let targetPeerId: string | null = null;
-                this.remotePlayers.forEach((sprite, peerId) => {
-                    if (sprite === target) targetPeerId = peerId;
+
+                // Schedule map regeneration after level complete delay
+                this.time.delayedCall(1000, () => {
+                    this.regenerateMap(nextLevel);
                 });
-
-                if (targetPeerId) {
-                    this.networkManager.broadcast({
-                        t: PacketType.GAME_EVENT,
-                        ev: { type: 'damage_player', data: { id: targetPeerId, damage, x, y } },
-                        ts: Date.now()
-                    });
-                    this.handleGameEvent({ type: 'damage_player', data: { id: targetPeerId, damage, x, y } } as any);
-                }
-            }
-        });
-
-        this.time.addEvent({
-            delay: 50,
-            callback: () => {
-                this.stats.flushEconomy();
-                this.combat.flushHP();
-            },
-            callbackScope: this,
-            loop: true
-        });
-
-        // HP regen tick — applies playerRegen (Trollblod upgrade) every second
-        this.time.addEvent({
-            delay: 1000,
-            callback: () => {
-                const regen = this.registry.get('playerRegen') as number;
-                if (regen > 0) {
-                    const hp = this.registry.get('playerHP') as number;
-                    const maxHP = this.registry.get('playerMaxHP') as number;
-                    if (hp < maxHP) {
-                        this.registry.set('playerHP', Math.min(hp + regen, maxHP));
-                    }
-                }
-            },
-            callbackScope: this,
-            loop: true
-        });
-
-        // Initial Start (Only if Host or Single Player - Clients wait for Host signal)
-        if (!netConfig || netConfig.role === 'host') {
-            const finalStartLevel = startLevelOverride;
-            const savedWave = this.registry.get('currentWave') as number ?? 1;
-            console.log('[MainScene] Starting wave system at level:', finalStartLevel, 'wave:', savedWave);
-            this.waves.startLevel(finalStartLevel, savedWave);
-        }
-        console.log('[MainScene] Create complete.');
-
-        // Resume audio context and play music
-        this.input.on('pointerdown', () => AudioManager.instance.resumeContext());
-        AudioManager.instance.playBGS('forest_ambience');
-        // Global Sound Listeners
-        this.events.on('enemy-hit', () => AudioManager.instance.playSFX('hit'));
-        this.events.on('player-swing', () => AudioManager.instance.playSFX('swing'));
-        this.events.on('bow-shot', () => AudioManager.instance.playSFX('bow_attack'));
-        this.events.on('fireball-cast', () => AudioManager.instance.playSFX('fireball_cast'));
-        this.events.on('frost-cast', () => AudioManager.instance.playSFX('ice_throw'));
-        this.events.on('lightning-cast', () => AudioManager.instance.playSFX('fireball_cast')); // Using fireball_cast as placeholder
-        this.events.on('player-dash', () => AudioManager.instance.playSFX('dash'));
-
-        // Listen for weapon changes
-        this.registry.events.on('changedata-currentWeapon', () => {
-            AudioManager.instance.playSFX('weapon_pick_up');
-        }, this);
-
-        // Listen for level completion to regenerate map for next level
-        this.events.on('level-complete', () => {
-            const nextLevel = this.registry.get('gameLevel') + 1;
-
-            // Clear world on level complete
-            this.coins.clear(true, true);
-            this.enemies.clear(true, true);
-            this.bossGroup.clear(true, true);
-
-            // Save run progress at level boundary (singleplayer only)
-            if (!this.registry.get('isMultiplayer')) {
-                SaveManager.saveRunProgress({
-                    gameLevel: nextLevel,
-                    currentWave: 1,
-                    playerCoins: this.registry.get('playerCoins') || 0,
-                    upgradeLevels: this.registry.get('upgradeLevels') || {},
-                    currentWeapon: this.registry.get('currentWeapon') || 'sword',
-                    unlockedWeapons: this.registry.get('unlockedWeapons') || ['sword'],
-                    playerHP: this.registry.get('playerHP') || 0,
-                    playerMaxHP: this.registry.get('playerMaxHP') || 100,
-                    savedAt: Date.now()
-                });
-            }
-
-            // Schedule map regeneration after level complete delay
-            this.time.delayedCall(1000, () => {
-                this.regenerateMap(nextLevel);
             });
-        });
 
-        // Save run on browser close (singleplayer only)
-        const handleUnload = () => {
-            if (!this.registry.get('isMultiplayer')) {
-                SaveManager.saveRunProgress({
-                    gameLevel: this.registry.get('gameLevel') || 1,
-                    currentWave: this.registry.get('currentWave') || 1,
-                    playerCoins: this.registry.get('playerCoins') || 0,
-                    upgradeLevels: this.registry.get('upgradeLevels') || {},
-                    currentWeapon: this.registry.get('currentWeapon') || 'sword',
-                    unlockedWeapons: this.registry.get('unlockedWeapons') || ['sword'],
-                    playerHP: this.registry.get('playerHP') || 0,
-                    playerMaxHP: this.registry.get('playerMaxHP') || 100,
-                    savedAt: Date.now()
-                });
-            }
-        };
-        window.addEventListener('beforeunload', handleUnload);
-        this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
-            window.removeEventListener('beforeunload', handleUnload);
-        });
+            // Save run on browser close (singleplayer only)
+            const handleUnload = () => {
+                if (!this.registry.get('isMultiplayer')) {
+                    SaveManager.saveRunProgress({
+                        gameLevel: this.registry.get('gameLevel') || 1,
+                        currentWave: this.registry.get('currentWave') || 1,
+                        playerCoins: this.registry.get('playerCoins') || 0,
+                        upgradeLevels: this.registry.get('upgradeLevels') || {},
+                        currentWeapon: this.registry.get('currentWeapon') || 'sword',
+                        unlockedWeapons: this.registry.get('unlockedWeapons') || ['sword'],
+                        playerHP: this.registry.get('playerHP') || 0,
+                        playerMaxHP: this.registry.get('playerMaxHP') || 100,
+                        savedAt: Date.now()
+                    });
+                }
+            };
+            window.addEventListener('beforeunload', handleUnload);
+            this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+                window.removeEventListener('beforeunload', handleUnload);
+            });
 
-        // Start Weather Effects
-        this.weather.enableFog();
-        this.weather.startRain();
+            // Start Weather Effects
+            this.weather.enableFog();
+            this.weather.startRain();
 
             // If client, we might need to connect to host (handled in create())
             if (this.networkManager?.role === 'client') {
                 // Handled via netConfig.hostPeerId in create()
             }
-        } catch (e) {
-            console.error('[MainScene] Critical error during create():', e);
-        } finally {
-            // SIGNAL: Guaranteed to fire even if create() throws
+            // SIGNAL: ONLY emit if we reached the end of create() successfully
+            // Ensuring PreloadScene is stopped to clear any ghost text
+            if (this.scene.isActive('PreloadScene')) {
+                this.scene.stop('PreloadScene');
+            }
+
             this.registry.set('create-complete', true);
             this.events.emit('create-complete');
             console.log('[MainScene] create-complete emitted.');
+        } catch (e) {
+            console.error('[MainScene] Critical error during create():', e);
         }
     }
 
     private applyQualitySettings() {
         // --- LIGHT SYSTEM ---
-        const player = this.data ? this.data.get('player') as Phaser.Physics.Arcade.Sprite : null;
+        const player = this.player;
 
-        if (this.quality.lightingEnabled) {
+        if (this.quality && this.quality.lightingEnabled) {
             this.lights.enable();
             this.lights.setAmbientColor(0x0a0a0a); // Near black edges — essential for atmosphere
 
@@ -2139,37 +2158,27 @@ class MainScene extends Phaser.Scene implements IMainScene {
     }
 }
 
-export const createGame = (containerId: string, networkConfig?: NetworkConfig | null) => {
-    // HARDENING: Clear container before starting new instance
-    const container = document.getElementById(containerId);
+export const createGame = (container: HTMLElement, networkConfig?: NetworkConfig | null, continueRun: boolean = false) => {
+    // HARDENING: If there are existing Phaser instances, destroy them all to prevent "ghost" games
+    if ((window as any).phaserGames && Array.isArray((window as any).phaserGames)) {
+        console.log(`[main.ts] Found ${(window as any).phaserGames.length} existing Phaser instances. Destroying all...`);
+        (window as any).phaserGames.forEach((g: Phaser.Game) => {
+            try {
+                g.destroy(true);
+            } catch (e) {
+                console.warn('[main.ts] Error destroying ghost instance:', e);
+            }
+        });
+        (window as any).phaserGames = [];
+    }
+
     if (container) {
         container.innerHTML = '';
     }
 
-    // Assuming AudioManager class exists elsewhere and these methods are intended for it.
-    // Since AudioManager class definition is not in the provided document,
-    // these methods cannot be inserted directly here without causing syntax errors.
-    // If AudioManager was defined in this file, they would be placed inside its class body.
-    // For the purpose of this edit, I will place them as if they were part of a class
-    // that is not explicitly shown in the provided snippet, as the instruction implies
-    // modifying AudioManager.
-
-    // public setScene(scene: Phaser.Scene) {
-    //     this.scene = scene;
-    //     this.applySettings();
-    // }
-
-    // public clearScene() {
-    //     this.scene = null;
-    //     this.currentBGM = null;
-    //     this.currentBGS = null;
-    //     this.currentBGMId = null;
-    //     this.currentBGSId = null;
-    // }
-
     const game = new Phaser.Game({
         type: Phaser.AUTO,
-        parent: containerId,
+        parent: container,
         width: '100%',
         height: '100%',
         physics: {
@@ -2180,7 +2189,9 @@ export const createGame = (containerId: string, networkConfig?: NetworkConfig | 
             }
         },
         render: {
-            powerPreference: 'high-performance'
+            powerPreference: 'high-performance',
+            pixelArt: true,
+            antialias: false,
         },
         fps: {
             target: 60,
@@ -2194,8 +2205,16 @@ export const createGame = (containerId: string, networkConfig?: NetworkConfig | 
         backgroundColor: '#0f172a'
     });
 
+    // Track instance globally for hardening
+    if (!(window as any).phaserGames) (window as any).phaserGames = [];
+    (window as any).phaserGames.push(game);
+
     if (networkConfig) {
         game.registry.set('networkConfig', networkConfig);
+    }
+
+    if (continueRun) {
+        game.registry.set('continueRun', true);
     }
 
     // Initialize registry with saved quality or default

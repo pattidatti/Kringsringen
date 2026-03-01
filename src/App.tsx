@@ -24,10 +24,12 @@ function App() {
   const [showDemo, setShowDemo] = useState(false);
   const [networkConfig, setNetworkConfig] = useState<NetworkConfig | null>(null);
   const [continueRun, setContinueRun] = useState(false);
+  const [sessionKey, setSessionKey] = useState(0);
 
   const handleStartMP = (role: 'host' | 'client', roomCode: string, peer: Peer, nickname: string, hostPeerId?: string) => {
     setNetworkConfig({ role, roomCode, peer, nickname, hostPeerId });
     setShowLanding(false);
+    setSessionKey(prev => prev + 1);
   };
 
   const handleStartNew = () => {
@@ -35,16 +37,19 @@ function App() {
     setContinueRun(false);
     setNetworkConfig(null);
     setShowLanding(false);
+    setSessionKey(prev => prev + 1);
   };
 
   const handleContinue = () => {
     setContinueRun(true);
     setNetworkConfig(null);
     setShowLanding(false);
+    setSessionKey(prev => prev + 1);
   };
 
   const handleExitToMenu = () => {
     setContinueRun(false);
+    setNetworkConfig(null);
     setShowLanding(true);
   };
 
@@ -71,9 +76,9 @@ function App() {
 
       {showDemo ? (
         window.location.hash === '#debug' ? <FantasyDebug /> : <FantasyDemo />
-      ) : <GameContainer networkConfig={networkConfig} continueRun={continueRun} onExitToMenu={handleExitToMenu} />}
+      ) : <GameContainer key={sessionKey} networkConfig={networkConfig} continueRun={continueRun} onExitToMenu={handleExitToMenu} />}
     </div>
-  )
+  );
 }
 
 export default App

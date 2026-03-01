@@ -33,6 +33,7 @@
 - [ ] Alle bosser må droppe mye mer gull. 
 - [ ] Trollmester Grak må ha en nockback resist, slik at han ikke blir stoppet av alt mulig. 
 - [ ] Skjelettkongen på lvl 10 angriper/slår aldri spilleren. Den er altfor enkel, må gjøre betrakteliger vanskeligere. 
+
 # grafikk
 - [x] Implementert Grafikk-innstillinger i hovedmeny og in-game (Low, Medium, High).
 - [x] Lav settings: Uten lys ser man omtrent ingenting. Løst ved resette shader pipeline.
