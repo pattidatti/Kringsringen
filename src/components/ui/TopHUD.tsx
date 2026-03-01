@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { useGameRegistry } from '../../hooks/useGameRegistry';
 import { useGameRegistryThrottled } from '../../hooks/useGameRegistryThrottled';
 import { FantasyIcon } from './FantasyIcon';
@@ -14,12 +14,6 @@ export const TopHUD: React.FC = React.memo(() => {
     const wave = useGameRegistry('currentWave', 1);
     const maxWaves = useGameRegistry('maxWaves', 1);
     const coins = useGameRegistryThrottled('playerCoins', 0, 200);
-
-    const [isMounting, setIsMounting] = useState(true);
-
-    useEffect(() => {
-        setIsMounting(false);
-    }, []);
 
     const hpPercent = Math.min(100, Math.max(0, (hp / maxHp) * 100));
 
