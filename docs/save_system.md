@@ -82,3 +82,37 @@ When the player chooses "Fortsett Spill" (continue), the following steps execute
 ## Multiplayer
 
 Save and restore are singleplayer-only. All save entry points guard with `!isMultiplayer`. In multiplayer, game state is managed by host authority via `NetworkManager` and `BinaryPacker`; there is no localStorage persistence.
+
+---
+
+## Phaser Lifecycle & Destroy
+
+When a player exits to the menu and then chooses "Fortsett Spill" (continue) **without refreshing the browser**, the old Phaser instance must be fully destroyed before a new one can be created. Phaser 3.80's `game.destroy(true)` is **asynchronous** — it does not tear down the canvas immediately. If `createGame()` runs while the old instance is still tearing down, the new game attaches to a stale or partially-disposed canvas, causing a permanent "Laster nivå..." loading overlay.
+
+### Solution: Synchronous loop stop + cleanup-effect destroy
+
+1. **`GameContainer.tsx` cleanup effect** — `game.loop.stop()` is called synchronously before `game.destroy(true)`. This halts the Phaser update loop immediately, preventing race conditions during teardown. The actual `destroy()` call lives in the React `useEffect` cleanup function so the canvas DOM node is still mounted when Phaser disposes it.
+
+2. **`createGame()` ghost cleanup** — Before creating a new `Phaser.Game`, `createGame()` checks if a previous instance is still attached to the target container. If found, it calls `g.loop?.stop()` followed by `g.destroy(true)` to eliminate ghost instances that survived a fast menu→game transition.
+
+3. **`PreloadScene` native timeout fallback** — `PreloadScene` originally used `this.time.delayedCall()` to emit `create-complete` after assets loaded. Because Phaser's internal clock depends on the game loop running, a stopped or re-creating loop could silently swallow the callback. The fix replaces this with a native `setTimeout()` that fires independently of Phaser's loop state, guaranteeing the loading overlay is dismissed.
+
+### Destroy sequence (correct order)
+
+```
+handleExitToMenu()
+  → save run to localStorage
+  → setGameStarted(false)           // unmounts GameContainer
+  → useEffect cleanup fires:
+      game.loop.stop()              // synchronous halt
+      game.destroy(true)            // async teardown begins
+  → React unmounts canvas DOM
+
+createGame() (on next "Fortsett Spill")
+  → check for ghost Phaser instance
+  → if found: g.loop.stop() + g.destroy(true)
+  → new Phaser.Game(config)
+  → PreloadScene loads assets
+  → setTimeout → emit 'create-complete'   // native, not Phaser clock
+  → MainScene.create() restores run
+```

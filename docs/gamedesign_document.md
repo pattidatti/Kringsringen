@@ -2,8 +2,8 @@
 
 Dette dokumentet beskriver spillmekanikken, fremgangen og det planlagte innholdet for **Kringsringen**.
 
-> **Dokumentversjon:** 2.1
-> **Sist oppdatert:** 2026-02-28
+> **Dokumentversjon:** 2.2
+> **Sist oppdatert:** 2026-03-01
 > **Status-notasjon:** ✅ Implementert | ⚠️ Delvis/Bug | 🚧 Planlagt | ❌ Fjernet/Avlyst
 
 ---
@@ -358,6 +358,17 @@ Hvert Map Level laster et statisk kart via `StaticMapLoader` + `StaticMapData`. 
 | B8 | **boss-spawn-minion**-event er ikke koblet i MainScene (minions spawner ikke) | Medium |
 | B9 | **Trollblod** (HP-regen) har ingen game-loop-tick – effekten er kjøpbar men passiv | Medium |
 | B10 | **Kjedereaksjon** (fire_chain) og **Isknusing** (frost_shatter) er kjøpbare men uten effekt | Medium |
+| B11 | **Input-lock etter innlasting** – Spilleren kan ikke angripe/bevege seg etter "Fortsett Spill" (uten F5) i noen tilfeller | Høy |
+
+---
+
+## 10.1 Fikset Bugs
+
+| # | Beskrivelse | Fiks | Dato |
+| :--- | :--- | :--- | :--- |
+| F1 | **Uendelig lasteskjerm** ved "Fortsett Spill" – `create-complete` ble aldri emittet hvis `MainScene.create()` kastet exception | Try-catch-finally rundt hele `create()`, garanterer `create-complete` alltid fyres | 2025-03-01 |
+| F2 | **WaveManager tilbakestilte bølge** – `startLevel()` hardkodet `currentWave = 1`, overskrev lagret bølgenummer | `startLevel(level, startAtWave = 1)` respekterer lagret wave | 2025-03-01 |
+| F3 | **Uendelig lasteskjerm v2** ved "Avslutt spill" → "Fortsett Spill" (uten F5) – Phaser `game.destroy()` er asynkron, ny instans kolliderte med gammel | `game.loop.stop()` synkront før destroy, ghost-cleanup i `createGame()`, `PreloadScene` byttet til native `setTimeout()` | 2026-03-01 |
 
 ---
 
@@ -429,5 +440,5 @@ Hvert Map Level laster et statisk kart via `StaticMapLoader` + `StaticMapData`. 
 
 ---
 
-**Dokumentversjon:** 2.1
+**Dokumentversjon:** 2.2
 **Ansvarlig AI Architect:** Antigravity

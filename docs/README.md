@@ -41,4 +41,4 @@ Se [`docs/save_system.md`](./save_system.md) for full teknisk dokumentasjon av l
 - [ ] Enemy AI & Pathfinding (Context Steering)
 
 ---
-*Sist oppdatert: 28. februar 2026*
+*Sist oppdatert: 1. mars 2026*
