@@ -3,6 +3,7 @@ import { Enemy } from './Enemy';
 import type { PackedEnemy } from '../network/SyncSchemas';
 import { Coin } from './Coin';
 import { SaveManager } from './SaveManager';
+import type { EnemySave } from './SaveManager';
 import { GAME_CONFIG } from '../config/GameConfig';
 import { AudioManager } from './AudioManager';
 import { PacketType } from '../network/SyncSchemas';
@@ -464,6 +465,89 @@ export class WaveManager {
                 if (enemy.pushState) enemy.pushState(timestamp, p);
             }
         });
+    }
+
+    public getEnemiesToSpawnRemaining(): number {
+        return this.enemiesToSpawnInWave;
+    }
+
+    public restoreWaveState(level: number, wave: number, enemies: EnemySave[], remainingToSpawn: number): void {
+        this.currentLevel = level;
+        this.currentWave = wave;
+        this.enemiesAlive = enemies.length;
+        this.enemiesToSpawnInWave = remainingToSpawn;
+        this.isLevelActive = true;
+
+        this.scene.registry.set('gameLevel', this.currentLevel);
+        this.scene.registry.set('currentWave', this.currentWave);
+        const config = LEVEL_CONFIG[Math.min(this.currentLevel - 1, LEVEL_CONFIG.length - 1)];
+        this.scene.registry.set('maxWaves', config.waves);
+
+        // Start music
+        if (this.bgmPlaylist.length === 0) {
+            const bgmTracks = [
+                'meadow_theme', 'exploration_theme', 'dragons_fury',
+                'pixel_rush_overture', 'glitch_in_the_forest', 'glitch_in_the_dungeon',
+                'glitch_in_the_catacombs', 'glitch_in_the_heavens'
+            ];
+            this.bgmPlaylist = Phaser.Utils.Array.Shuffle(bgmTracks);
+        }
+        const nextBGM = this.bgmPlaylist.pop();
+        if (nextBGM) AudioManager.instance.playBGM(nextBGM);
+
+        // Spawn saved enemies at their saved positions with saved HP
+        const player = this.scene.data.get('player') as Phaser.Physics.Arcade.Sprite;
+        const config2 = LEVEL_CONFIG[Math.min(this.currentLevel - 1, LEVEL_CONFIG.length - 1)];
+        const hpMultiplier = config2.multiplier;
+        enemies.forEach(saved => {
+            const enemy = this.scene.enemies.get(saved.x, saved.y) as any;
+            if (!enemy) return;
+            enemy.reset(saved.x, saved.y, player, hpMultiplier, saved.type);
+            // Override HP with saved value (reset sets to full maxHP)
+            enemy.hp = Math.min(saved.hp, enemy.maxHP);
+
+            enemy.on('dead', (ex: number, ey: number) => {
+                this.enemiesAlive = Math.max(0, this.enemiesAlive - 1);
+                this.checkWaveProgress();
+
+                this.scene.networkManager?.broadcast({
+                    t: PacketType.GAME_EVENT,
+                    ev: { type: 'enemy_death', data: { id: enemy.id } },
+                    ts: Date.now()
+                });
+
+                const isMultiplayer = this.scene.registry.get('isMultiplayer');
+                const isHost = this.scene.networkManager?.role === 'host';
+                if (isMultiplayer && !isHost) return;
+
+                const p = this.scene.data.get('player') as Phaser.Physics.Arcade.Sprite;
+                if (!p) return;
+
+                const baseCoins = Phaser.Math.Between(5, 15);
+                const coinCount = baseCoins + (this.currentLevel - 1) * 3;
+                for (let i = 0; i < coinCount; i++) {
+                    let coin = this.scene.coins.get(ex, ey) as Coin;
+                    if (!coin) continue;
+                    const coinId = `coin-${Phaser.Math.RND.uuid()}`;
+                    coin.spawn(ex, ey, p, coinId);
+                    coin.removeAllListeners('collected');
+                    coin.on('collected', () => {
+                        this.scene.stats.addCoins(1);
+                        AudioManager.instance.playSFX('coin_collect');
+                    });
+                }
+            });
+        });
+
+        // If more enemies still to spawn, resume spawn timer
+        if (remainingToSpawn > 0) {
+            this.scene.time.addEvent({
+                delay: GAME_CONFIG.WAVES.SPAWN_DELAY,
+                callback: this.spawnEnemyInWave,
+                callbackScope: this,
+                repeat: remainingToSpawn - 1
+            });
+        }
     }
 
     public findEnemyById(id: string): Enemy | null {

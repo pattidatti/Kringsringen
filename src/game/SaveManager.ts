@@ -1,3 +1,11 @@
+export interface EnemySave {
+    type: string;
+    x: number;
+    y: number;
+    hp: number;
+    maxHP: number;
+}
+
 export interface RunProgress {
     gameLevel: number;
     currentWave: number;
@@ -8,6 +16,10 @@ export interface RunProgress {
     playerHP: number;
     playerMaxHP: number;
     savedAt: number;
+    playerX?: number;
+    playerY?: number;
+    savedEnemies?: EnemySave[];
+    waveEnemiesRemaining?: number;
 }
 
 export interface SaveData {

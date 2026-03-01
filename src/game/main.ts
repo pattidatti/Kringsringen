@@ -151,10 +151,12 @@ export class MainScene extends Phaser.Scene implements IMainScene {
             // Restore saved run progress (singleplayer continue only)
             const continueRun = this.game.registry.get('continueRun') as boolean | undefined;
             let startLevelOverride = 1;
+            let savedRun: import('./SaveManager').RunProgress | null = null;
             if (continueRun && !netConfig) {
                 try {
                     console.log('[MainScene] Continuing run...');
                     const run = SaveManager.loadRunProgress();
+                    savedRun = run;
                     if (run) {
                         console.log('[MainScene] Restored run:', run);
                         // CRITICAL: Clamp level to minimum 1 to prevent STATIC_MAPS[-1] crash
@@ -255,6 +257,8 @@ export class MainScene extends Phaser.Scene implements IMainScene {
                 this.registry.set('playerHP', safeHP);
                 this.game.registry.remove('_restoredHP');
             }
+
+            // Restore player position if continuing (applied after player sprite is created below)
 
             // Initialize Object Pool
             // this.poolManager = new ObjectPoolManager(this); // Redundant - initialized above
@@ -361,6 +365,13 @@ export class MainScene extends Phaser.Scene implements IMainScene {
 
             // Camera follow
             this.cameras.main.startFollow(player, true, 0.1, 0.1);
+
+            // Restore player position from saved run
+            if (savedRun?.playerX !== undefined && savedRun?.playerY !== undefined) {
+                player.setPosition(savedRun.playerX, savedRun.playerY);
+                this.cameras.main.centerOn(savedRun.playerX, savedRun.playerY);
+                console.log(`[MainScene] Restored player position: ${savedRun.playerX}, ${savedRun.playerY}`);
+            }
 
             // Attack Hitbox (invisible circle)
             this.attackHitbox = this.add.rectangle(0, 0, 60, 60, 0xff0000, 0) as any;
@@ -809,12 +820,25 @@ export class MainScene extends Phaser.Scene implements IMainScene {
                 loop: true
             });
 
+            // Listen for save requests from GameContainer (before destroying)
+            this.events.on('request-save', () => {
+                if (!this.registry.get('isMultiplayer')) {
+                    SaveManager.saveRunProgress(this.collectSaveData());
+                    console.log('[MainScene] Saved run state on request-save.');
+                }
+            });
+
             // Initial Start (Only if Host or Single Player - Clients wait for Host signal)
             if (!netConfig || netConfig.role === 'host') {
                 const finalStartLevel = startLevelOverride;
                 const savedWave = this.registry.get('currentWave') as number ?? 1;
-                console.log('[MainScene] Starting wave system at level:', finalStartLevel, 'wave:', savedWave);
-                this.waves.startLevel(finalStartLevel, savedWave);
+                const hasSavedEnemies = continueRun && savedRun?.savedEnemies && savedRun.savedEnemies.length > 0;
+                console.log('[MainScene] Starting wave system at level:', finalStartLevel, 'wave:', savedWave, 'restoreEnemies:', hasSavedEnemies);
+                if (hasSavedEnemies) {
+                    this.waves.restoreWaveState(finalStartLevel, savedWave, savedRun!.savedEnemies!, savedRun!.waveEnemiesRemaining ?? 0);
+                } else {
+                    this.waves.startLevel(finalStartLevel, savedWave);
+                }
             }
             console.log('[MainScene] Create complete.');
 
@@ -1421,9 +1445,11 @@ export class MainScene extends Phaser.Scene implements IMainScene {
                 return true;
             });
             const player = this.data.get('player') as Phaser.Physics.Arcade.Sprite;
-            if (this.playerShadow) {
+            if (player && this.playerShadow) {
                 this.playerShadow.setPosition(player.x, player.y + 28);
             }
+
+            if (!player || !player.body) return;
 
             // --- Iterating Remote Players for dead reckoning updates ---
             // Use cappedDelta for render time calculation if necessary, but interpolation usually uses absolute time.
@@ -1581,10 +1607,10 @@ export class MainScene extends Phaser.Scene implements IMainScene {
                 // Determine direction
                 let dx = 0;
                 let dy = 0;
-                if (this.wasd.W.isDown) dy -= 1;
-                if (this.wasd.S.isDown) dy += 1;
-                if (this.wasd.A.isDown) dx -= 1;
-                if (this.wasd.D.isDown) dx += 1;
+                if (this.wasd?.W?.isDown) dy -= 1;
+                if (this.wasd?.S?.isDown) dy += 1;
+                if (this.wasd?.A?.isDown) dx -= 1;
+                if (this.wasd?.D?.isDown) dx += 1;
 
                 if (dx === 0 && dy === 0) {
                     // Dash towards mouse if stationary
@@ -2080,6 +2106,36 @@ export class MainScene extends Phaser.Scene implements IMainScene {
                 this.networkManager.broadcast(BinaryPacker.packPlayer(playerPacket, now));
             }
         }
+    }
+
+    public collectSaveData(): import('./SaveManager').RunProgress {
+        const enemies: import('./SaveManager').EnemySave[] = [];
+        this.enemies.getChildren().forEach((child: any) => {
+            if (child.active && !child.isDead) {
+                enemies.push({
+                    type: child.enemyType ?? child.name ?? 'orc',
+                    x: child.x,
+                    y: child.y,
+                    hp: child.hp,
+                    maxHP: child.maxHP,
+                });
+            }
+        });
+        return {
+            gameLevel: this.registry.get('gameLevel') || 1,
+            currentWave: this.registry.get('currentWave') || 1,
+            playerCoins: this.registry.get('playerCoins') || 0,
+            upgradeLevels: this.registry.get('upgradeLevels') || {},
+            currentWeapon: this.registry.get('currentWeapon') || 'sword',
+            unlockedWeapons: this.registry.get('unlockedWeapons') || ['sword'],
+            playerHP: this.registry.get('playerHP') || 0,
+            playerMaxHP: this.registry.get('playerMaxHP') || 100,
+            playerX: this.player?.x,
+            playerY: this.player?.y,
+            savedEnemies: enemies,
+            waveEnemiesRemaining: this.waves?.getEnemiesToSpawnRemaining() ?? 0,
+            savedAt: Date.now(),
+        };
     }
 
     public restartGame() {

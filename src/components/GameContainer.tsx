@@ -15,7 +15,6 @@ import { PacketType } from '../network/SyncSchemas';
 import { setGameInstance } from '../hooks/useGameRegistry';
 import type { NetworkConfig } from '../App';
 import type { IMainScene } from '../game/IMainScene';
-import { SaveManager } from '../game/SaveManager';
 
 interface GameContainerProps {
     networkConfig?: NetworkConfig | null;
@@ -128,6 +127,12 @@ export const GameContainer: React.FC<GameContainerProps> = React.memo(({ network
 
             console.log('[GameContainer] Creating Phaser game in container:', phaserContainerRef.current.id);
             setGameInstance(game);
+
+            // If we are continuing a singleplayer run, ensure we don't get stuck in a loading state
+            // especially if the scene completes very rapidly or before we poll.
+            if (continueRun && !networkConfig) {
+                console.log('[GameContainer] Singleplayer continue detected. Priming for rapid load.');
+            }
 
             let listenersRegistered = false;
             const MAX_WAIT_MS = 15_000;
@@ -244,9 +249,8 @@ export const GameContainer: React.FC<GameContainerProps> = React.memo(({ network
                         setIsLoadingLevel(false);
                     });
 
-                    // BELT AND SUSPENDERS: If scene is already complete before we even bound the event,
-                    // catch it here to prevent stuck loading screen.
-                    if (game.registry.get('create-complete')) {
+                    // CRITICAL: Double-check if it's already complete immediately after registering the listener
+                    if (mainScene.registry.get('create-complete')) {
                         console.log('[GameContainer] Scene ALREADY complete upon registration. Clearing loading state.');
                         clearInterval(scenePoller);
                         setIsLoadingLevel(false);
@@ -387,6 +391,7 @@ export const GameContainer: React.FC<GameContainerProps> = React.memo(({ network
                     gameInstanceRef.current.destroy(true);
                     gameInstanceRef.current = null;
                 }
+                setGameInstance(null);
             };
         }
     }, [networkConfig, rebootKey, continueRun]); // Added rebootKey and continueRun dependency
@@ -487,10 +492,20 @@ export const GameContainer: React.FC<GameContainerProps> = React.memo(({ network
         const scene = gameInstanceRef.current.scene.getScene('MainScene');
         if (!scene) return;
 
-        if (isBookOpen || isLoadingLevel) {
-            if (!scene.sys.isPaused()) scene.scene.pause();
+        // In singleplayer, or after multiplayer sync, we must ensure we aren't paused.
+        // We only pause for the Book (Shop/View) or while the initial map is being loaded.
+        const shouldBePaused = isBookOpen || isLoadingLevel;
+
+        if (shouldBePaused) {
+            if (!scene.sys.isPaused()) {
+                console.log('[GameContainer] Pausing scene (isBookOpen:', isBookOpen, 'isLoadingLevel:', isLoadingLevel, ')');
+                scene.scene.pause();
+            }
         } else {
-            if (scene.sys.isPaused()) scene.scene.resume();
+            if (scene.sys.isPaused()) {
+                console.log('[GameContainer] Resuming scene');
+                scene.scene.resume();
+            }
         }
     }, [isBookOpen, isLoadingLevel]);
 
@@ -620,26 +635,18 @@ export const GameContainer: React.FC<GameContainerProps> = React.memo(({ network
         const game = gameInstanceRef.current;
         if (game && !networkConfig) {
             try {
-                const reg = game.registry;
-                SaveManager.saveRunProgress({
-                    gameLevel: reg.get('gameLevel') || 1,
-                    currentWave: reg.get('currentWave') || 1,
-                    playerCoins: reg.get('playerCoins') || 0,
-                    upgradeLevels: reg.get('upgradeLevels') || {},
-                    currentWeapon: reg.get('currentWeapon') || 'sword',
-                    unlockedWeapons: reg.get('unlockedWeapons') || ['sword'],
-                    playerHP: reg.get('playerHP') || 0,
-                    playerMaxHP: reg.get('playerMaxHP') || 100,
-                    savedAt: Date.now()
-                });
-                console.log('[GameContainer] Manual save before exit.');
+                // Ask MainScene to collect and save full game state (has access to player pos + enemies)
+                const mainScene = game.scene.getScene('MainScene') as IMainScene;
+                mainScene?.events.emit('request-save');
+                console.log('[GameContainer] Emitted request-save to MainScene.');
             } catch (e) {
-                console.error('[GameContainer] Manual save failed:', e);
+                console.error('[GameContainer] request-save emit failed:', e);
             }
+            game.destroy(true);
+            gameInstanceRef.current = null;
+            setGameInstance(null);
         }
 
-        // Changing showLanding in App.tsx will unmount GameContainer, 
-        // triggering the useEffect cleanup which handles destruction safely.
         onExitToMenu?.();
     }, [onExitToMenu, networkConfig]);
 

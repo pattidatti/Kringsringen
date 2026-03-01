@@ -4,6 +4,7 @@ import type { PlayerStatsManager } from './PlayerStatsManager';
 import type { PlayerCombatManager } from './PlayerCombatManager';
 import type { WaveManager } from './WaveManager';
 import type { NetworkManager } from '../network/NetworkManager';
+import type { RunProgress } from './SaveManager';
 
 /**
  * Lightweight interface for MainScene.
@@ -25,4 +26,5 @@ export interface IMainScene extends Phaser.Scene {
     networkManager?: NetworkManager;
     pendingDeaths: Set<string>;
     restartGame(): void;
+    collectSaveData(): RunProgress;
 }
