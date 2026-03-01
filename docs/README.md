@@ -15,6 +15,9 @@ Fullstendig spilldesign-dokument: spillmekanikk, fiender, bosser, våpen, oppgra
 ### [Multiplayer Arkitektur](multiplayer/architecture.md)
 En grundig gjennomgang av hvordan spillet håndterer sanntidssynkronisering, autoritetsmodeller og nettverksflyt.
 
+### [Lagringssystem](./save_system.md)
+Teknisk referanse for to-lags lagringsarkitektur: RunProgress-interface, sjekkpunkter, restore-sekvens og multiplayer-unntak.
+
 ### [Lydkatalog](./audio_catalog.md)
 Oversikt over lydeffekter og bakgrunnsmusikk brukt i spillet.
 
@@ -22,8 +25,10 @@ Oversikt over lydeffekter og bakgrunnsmusikk brukt i spillet.
 
 ### Lagring (`src/game/SaveManager.ts`)
 To separate localStorage-nøkler:
-- **`kringsringen_save_v1`** – Meta-progresjon: permanente coins, highStage, audioSettings
-- **`kringsringen_run_v1`** – In-run fremgang: level, wave, gull, oppgraderinger, HP (se GDD seksjon 7.1)
+- **`kringsringen_save_v1`** – Meta-progresjon: permanente coins, highStage, audioSettings, graphicsQuality, tutorialSeen
+- **`kringsringen_run_v1`** – In-run fremgang: level, wave, gull, oppgraderinger, HP, `playerX/Y`, `savedEnemies`, `waveEnemiesRemaining`
+
+Se [`docs/save_system.md`](./save_system.md) for full teknisk dokumentasjon av lagringssystemet.
 
 ### UI-flyt
 - **Landing Page** viser «Fortsett Spill» + «Nytt Spill» hvis det finnes en lagret run

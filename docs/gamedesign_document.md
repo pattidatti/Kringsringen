@@ -270,10 +270,16 @@ Start/Fortsett → Overlevelse (bølger) → Loot gull → Shop → [Vanlig leve
 
 ### 7.1 Run-progresjon (Autosave) ✅
 
-Run-tilstand lagres automatisk til `localStorage` (`kringsringen_run_v1`) på tre tidspunkter:
-- **Wave-start** – etter at wave-teller er satt, før fiender spawner (tryggeste sjekkpunkt)
-- **Level fullført** – etter at alle fiender er ryddet, med `gameLevel = neste level`
-- **Nettleserlukking** – via `window.beforeunload`
+Run-tilstand lagres automatisk til `localStorage` (`kringsringen_run_v1`) på fire tidspunkter:
+
+| Tidspunkt | Utløser | Fiendeposisjon lagret? |
+| :--- | :--- | :--- |
+| Wave-start | `WaveManager.startWave()` | ❌ kun registry |
+| Level fullført | `level-complete`-handler i `MainScene` | ❌ kun registry |
+| Avslutt til meny | «Avslutt spill»-knappen → `collectSaveData()` | ✅ |
+| Nettleserlukking | `window.beforeunload` → `collectSaveData()` | ✅ |
+
+Wave-start og level-complete lagrer kun registry-tilstand (wave-teller, coins). Full-fidelity-lagring – med fiendeposisjon og spillerposisjon – skjer bare ved bevisst avslutting eller nettleserlukking.
 
 **Hva lagres:**
 
@@ -286,12 +292,15 @@ Run-tilstand lagres automatisk til `localStorage` (`kringsringen_run_v1`) på tr
 | `currentWeapon` | Aktivt våpen |
 | `unlockedWeapons` | Våpen tilgjengelig |
 | `playerHP` / `playerMaxHP` | HP på lagringstidspunkt |
+| `playerX` / `playerY` | Spillerens posisjon i verdenskoordinater (valgfri) |
+| `savedEnemies` | Levende fiender med posisjon, type og HP (valgfri) |
+| `waveEnemiesRemaining` | Antall fiender som gjenstår å spawne i bølgen (valgfri) |
 
 **Sletting av lagret run:**
 - Spilleren dør og trykker «Prøv Igjen» → run slettes; ny run starter fra level 1
 - Spilleren velger «Nytt Spill» fra forsiden → run slettes eksplisitt
 
-> **Merk:** Restore skjer alltid til starten av den lagrede bølgen (ikke midt i en bølge). Fiender gjenopplives ikke – spilleren begynner wave på nytt med korrekte stats, gull og oppgraderinger.
+> **Merk:** Når spilleren fortsetter, gjenopprettes fiender til sine lagrede posisjoner og HP-verdier hvis `savedEnemies` er tilgjengelig (skjer ved avslutting eller nettleserlukking). Ved wave-start-lagringer starter bølgen på nytt uten lagrede fiender. Se [`docs/save_system.md`](./save_system.md) for full teknisk dokumentasjon.
 
 ---
 
