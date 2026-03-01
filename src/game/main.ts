@@ -2210,6 +2210,7 @@ export const createGame = (container: HTMLElement, networkConfig?: NetworkConfig
         console.log(`[main.ts] Found ${(window as any).phaserGames.length} existing Phaser instances. Destroying all...`);
         (window as any).phaserGames.forEach((g: Phaser.Game) => {
             try {
+                g.loop?.stop();
                 g.destroy(true);
             } catch (e) {
                 console.warn('[main.ts] Error destroying ghost instance:', e);

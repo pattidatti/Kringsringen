@@ -642,9 +642,16 @@ export const GameContainer: React.FC<GameContainerProps> = React.memo(({ network
             } catch (e) {
                 console.error('[GameContainer] request-save emit failed:', e);
             }
-            game.destroy(true);
-            gameInstanceRef.current = null;
-            setGameInstance(null);
+            // Stop the game loop synchronously to prevent further rendering.
+            // Do NOT call game.destroy() here — let the cleanup effect handle it
+            // while the canvas is still in the DOM (React guarantees cleanup runs
+            // before DOM removal).
+            try { game.loop.stop(); } catch (_) { /* ignore */ }
+        }
+
+        // Clear phaserGames array to prevent createGame from double-destroying
+        if ((window as any).phaserGames) {
+            (window as any).phaserGames = [];
         }
 
         onExitToMenu?.();

@@ -2,6 +2,8 @@ import Phaser from 'phaser';
 import { loadAssets } from './AssetLoader';
 
 export class PreloadScene extends Phaser.Scene {
+    private _fallbackTimeout: ReturnType<typeof setTimeout> | null = null;
+
     constructor() {
         super('PreloadScene');
     }
@@ -33,16 +35,22 @@ export class PreloadScene extends Phaser.Scene {
             console.warn(`[PreloadScene] Asset failed to load: ${file.key} (${file.url})`);
         });
 
-        // Timeout fallback — if loader hangs for > 8 seconds, force scene start
-        // (Reducing from 15s to 8s for better UX, assuming most assets are cached)
-        const loadTimeout = this.time.delayedCall(8000, () => {
-            console.error('[PreloadScene] LOAD TIMEOUT! Assets took >8s. Forcing MainScene transition to avoid permanent hang.');
-            this.scene.start('MainScene');
-        });
+        // Native timeout fallback — independent of Phaser's time system.
+        // If the game loop isn't ticking (e.g. after incomplete destroy of previous
+        // instance), this.time.delayedCall() would never fire. setTimeout always will.
+        this._fallbackTimeout = setTimeout(() => {
+            console.error('[PreloadScene] NATIVE TIMEOUT! Assets took >8s. Forcing MainScene transition.');
+            if (this.scene.isActive()) {
+                this.scene.start('MainScene');
+            }
+        }, 8000);
 
         this.load.on('complete', () => {
             console.log('[PreloadScene] All assets loaded successfully. Transitioning shortly...');
-            loadTimeout.remove();
+            if (this._fallbackTimeout) {
+                clearTimeout(this._fallbackTimeout);
+                this._fallbackTimeout = null;
+            }
         });
 
         // Label
@@ -62,9 +70,12 @@ export class PreloadScene extends Phaser.Scene {
     }
 
     shutdown() {
-        // Ensure any pending timers or events are cleared
         this.load.off('progress');
         this.load.off('complete');
         this.load.off('loaderror');
+        if (this._fallbackTimeout) {
+            clearTimeout(this._fallbackTimeout);
+            this._fallbackTimeout = null;
+        }
     }
 }
