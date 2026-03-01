@@ -666,9 +666,11 @@ export const GameContainer: React.FC<GameContainerProps> = React.memo(({ network
                         <div className="text-amber-100 font-cinzel text-3xl animate-pulse tracking-widest uppercase">
                             Laster Verden...
                         </div>
-                        <div className="text-amber-500/70 font-crimson text-xl">
-                            {'['} {syncState.loaded} / {syncState.expected} {']'} Klare
-                        </div>
+                        {networkConfig && (
+                            <div className="text-amber-500/70 font-crimson text-xl">
+                                {'['} {syncState.loaded} / {syncState.expected} {']'} Klare
+                            </div>
+                        )}
                     </div>
                 </div>
             )}
