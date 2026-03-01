@@ -24,7 +24,7 @@ interface GameContainerProps {
 }
 
 export const GameContainer: React.FC<GameContainerProps> = React.memo(({ networkConfig, continueRun, onExitToMenu }) => {
-    const gameContainerRef = useRef<HTMLDivElement>(null);
+    const phaserContainerRef = useRef<HTMLDivElement>(null);
     const gameInstanceRef = useRef<Phaser.Game | null>(null);
 
     // Book State
@@ -116,8 +116,8 @@ export const GameContainer: React.FC<GameContainerProps> = React.memo(({ network
     }, [networkConfig]);
 
     useEffect(() => {
-        if (gameContainerRef.current && !gameInstanceRef.current) {
-            const game = createGame(gameContainerRef.current.id, networkConfig);
+        if (phaserContainerRef.current && !gameInstanceRef.current) {
+            const game = createGame(phaserContainerRef.current.id, networkConfig);
             gameInstanceRef.current = game;
 
             if (continueRun) {
@@ -127,6 +127,7 @@ export const GameContainer: React.FC<GameContainerProps> = React.memo(({ network
                 setIsLoadingLevel(true); // For safety, start in loading state
             }
 
+            console.log('[GameContainer] Creating Phaser game in container:', phaserContainerRef.current.id);
             setGameInstance(game);
 
             const setupSceneListeners = () => {
@@ -216,6 +217,12 @@ export const GameContainer: React.FC<GameContainerProps> = React.memo(({ network
                         console.log('[GameContainer] Scene creation complete. Clearing loading state.');
                         setIsLoadingLevel(false);
                     });
+
+                    // HARDENING: Check if it already finished before we subscribed
+                    if (game.registry.get('create-complete')) {
+                        console.log('[GameContainer] Scene already complete. Clearing loading state.');
+                        setIsLoadingLevel(false);
+                    }
 
                     mainScene.events.on('player_loaded', (data: any) => {
                         if (networkConfig?.role === 'host') {
@@ -610,7 +617,15 @@ export const GameContainer: React.FC<GameContainerProps> = React.memo(({ network
     }), [applyShopUpgrade, applyRevive]);
 
     return (
-        <div id="game-container" ref={gameContainerRef} className="w-full h-full relative overflow-hidden bg-slate-950 font-sans selection:bg-cyan-500/30">
+        <div id="game-ui-wrapper" className="w-full h-full relative overflow-hidden bg-slate-950 font-sans selection:bg-cyan-500/30">
+            {/* Phaser Game Layer */}
+            <div
+                id="phaser-game-container"
+                ref={phaserContainerRef}
+                className="absolute inset-0 z-0"
+            />
+
+            {/* React UI Layer */}
             <div id="ui-layer" className="absolute inset-0 z-10 pointer-events-none">
                 <div className="pointer-events-auto transition-all duration-500">
                     <TopHUD />

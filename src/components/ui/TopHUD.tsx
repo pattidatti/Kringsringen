@@ -6,6 +6,7 @@ import { ItemIcon } from './ItemIcon';
 // import { FantasyPanel } from './FantasyPanel'; // We might use a custom ribbon approach
 
 export const TopHUD: React.FC = React.memo(() => {
+    console.log('[TopHUD] Rendering...');
     // Critical value: bypass throttle when HP is 0 to show Game Over instantly
     const hp = useGameRegistryThrottled('playerHP', 100, 100, val => val <= 0);
     const maxHp = useGameRegistry('playerMaxHP', 100);
@@ -26,7 +27,8 @@ export const TopHUD: React.FC = React.memo(() => {
 
     return (
         <div
-            className={`absolute top-0 left-0 w-full flex justify-between items-start p-4 pointer-events-none transition-transform duration-700 ease-out ${isMounting ? '-translate-y-full' : 'translate-y-0'}`}
+            className={`absolute top-0 left-0 w-full flex justify-between items-start p-4 pointer-events-none transition-transform duration-700 ease-out translate-y-0`}
+            style={{ zIndex: 9999 }}
         >
             {/* Left Wing: Vitals (HP/XP) */}
             <div className="flex flex-col gap-1 pointer-events-auto">

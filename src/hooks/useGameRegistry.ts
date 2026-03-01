@@ -6,6 +6,7 @@ let gameInstance: Phaser.Game | null = null;
 const instanceListeners = new Set<() => void>();
 
 export const setGameInstance = (game: Phaser.Game | null) => {
+    console.log('[useGameRegistry] setGameInstance:', !!game);
     gameInstance = game;
     instanceListeners.forEach(fn => fn());
     if (game) {

@@ -319,9 +319,11 @@ class MainScene extends Phaser.Scene implements IMainScene {
 
         // Generate initial map (Corrected: Use startLevelOverride to avoid overwrite)
         console.log('[MainScene] Generating initial map for level:', startLevelOverride);
+        this.regenerateMap(startLevelOverride);
         console.log('[MainScene] Initial map generated level:', startLevelOverride);
 
         // SIGNAL: React needs to know we finished create() so it can hide the loading overlay
+        this.registry.set('create-complete', true);
         this.events.emit('create-complete');
         console.log('[MainScene] create-complete emitted.');
 
