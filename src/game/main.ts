@@ -892,17 +892,7 @@ export class MainScene extends Phaser.Scene implements IMainScene {
             // Save run on browser close (singleplayer only)
             const handleUnload = () => {
                 if (!this.registry.get('isMultiplayer')) {
-                    SaveManager.saveRunProgress({
-                        gameLevel: this.registry.get('gameLevel') || 1,
-                        currentWave: this.registry.get('currentWave') || 1,
-                        playerCoins: this.registry.get('playerCoins') || 0,
-                        upgradeLevels: this.registry.get('upgradeLevels') || {},
-                        currentWeapon: this.registry.get('currentWeapon') || 'sword',
-                        unlockedWeapons: this.registry.get('unlockedWeapons') || ['sword'],
-                        playerHP: this.registry.get('playerHP') || 0,
-                        playerMaxHP: this.registry.get('playerMaxHP') || 100,
-                        savedAt: Date.now()
-                    });
+                    SaveManager.saveRunProgress(this.collectSaveData());
                 }
             };
             window.addEventListener('beforeunload', handleUnload);
@@ -918,17 +908,17 @@ export class MainScene extends Phaser.Scene implements IMainScene {
             if (this.networkManager?.role === 'client') {
                 // Handled via netConfig.hostPeerId in create()
             }
-            // SIGNAL: ONLY emit if we reached the end of create() successfully
-            // Ensuring PreloadScene is stopped to clear any ghost text
+
+        } catch (e) {
+            console.error('[MainScene] Critical error during create():', e);
+        } finally {
+            // GUARANTEED: always unblock GameContainer loading overlay regardless of exceptions
             if (this.scene.isActive('PreloadScene')) {
                 this.scene.stop('PreloadScene');
             }
-
             this.registry.set('create-complete', true);
             this.events.emit('create-complete');
             console.log('[MainScene] create-complete emitted.');
-        } catch (e) {
-            console.error('[MainScene] Critical error during create():', e);
         }
     }
 
