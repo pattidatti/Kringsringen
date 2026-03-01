@@ -41,9 +41,9 @@ export class WaveManager {
         return (this.scene as any).remotePlayers?.size + 1 || 1;
     }
 
-    startLevel(level: number): void {
+    startLevel(level: number, startAtWave: number = 1): void {
         this.currentLevel = level;
-        this.currentWave = 1;
+        this.currentWave = startAtWave;
         this.enemiesAlive = 0;
         this.isLevelActive = true;
         this.scene.registry.set('gameLevel', this.currentLevel);

@@ -159,8 +159,8 @@ class MainScene extends Phaser.Scene implements IMainScene {
                     const restoredLevel = Math.max(1, run.gameLevel || 1);
                     this.registry.set('gameLevel', restoredLevel);
                     startLevelOverride = restoredLevel;
-                    this.registry.set('currentWave', run.currentWave);
-                    this.registry.set('playerCoins', run.playerCoins);
+                    this.registry.set('currentWave', run.currentWave ?? 1);
+                    this.registry.set('playerCoins', run.playerCoins ?? 0);
                     this.registry.set('upgradeLevels', run.upgradeLevels ?? {});
                     this.registry.set('currentWeapon', run.currentWeapon ?? 'sword');
                     this.registry.set('unlockedWeapons', run.unlockedWeapons ?? ['sword']);
@@ -180,8 +180,9 @@ class MainScene extends Phaser.Scene implements IMainScene {
             }
         }
 
-        // Initialize Managers
-        console.log('[MainScene] Initializing managers...');
+        try {
+            // Initialize Managers
+            console.log('[MainScene] Initializing managers...');
         this.stats = new PlayerStatsManager(this);
         this.combat = new PlayerCombatManager(this);
         this.waves = new WaveManager(this);
@@ -796,8 +797,9 @@ class MainScene extends Phaser.Scene implements IMainScene {
         // Initial Start (Only if Host or Single Player - Clients wait for Host signal)
         if (!netConfig || netConfig.role === 'host') {
             const finalStartLevel = startLevelOverride;
-            console.log('[MainScene] Starting wave system at level:', finalStartLevel);
-            this.waves.startLevel(finalStartLevel);
+            const savedWave = this.registry.get('currentWave') as number ?? 1;
+            console.log('[MainScene] Starting wave system at level:', finalStartLevel, 'wave:', savedWave);
+            this.waves.startLevel(finalStartLevel, savedWave);
         }
         console.log('[MainScene] Create complete.');
 
@@ -873,15 +875,18 @@ class MainScene extends Phaser.Scene implements IMainScene {
         this.weather.enableFog();
         this.weather.startRain();
 
-        // If client, we might need to connect to host (handled in create())
-        if (this.networkManager?.role === 'client') {
-            // Handled via netConfig.hostPeerId in create()
+            // If client, we might need to connect to host (handled in create())
+            if (this.networkManager?.role === 'client') {
+                // Handled via netConfig.hostPeerId in create()
+            }
+        } catch (e) {
+            console.error('[MainScene] Critical error during create():', e);
+        } finally {
+            // SIGNAL: Guaranteed to fire even if create() throws
+            this.registry.set('create-complete', true);
+            this.events.emit('create-complete');
+            console.log('[MainScene] create-complete emitted.');
         }
-
-        // SIGNAL: React needs to know we finished create() so it can hide the loading overlay
-        this.registry.set('create-complete', true);
-        this.events.emit('create-complete');
-        console.log('[MainScene] create-complete emitted at end of create().');
     }
 
     private applyQualitySettings() {
