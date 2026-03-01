@@ -245,11 +245,10 @@ export class ObjectPoolManager {
             projectile = this.enemyProjectilePool.pop()!;
         } else {
             projectile = new EnemyProjectile(this.scene, x, y);
-            if (group) group.add(projectile);
         }
 
-        projectile.fire(x, y, angle, damage, type);
         if (group) group.add(projectile);
+        projectile.fire(x, y, angle, damage, type);
         return projectile;
     }
 

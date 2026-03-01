@@ -483,7 +483,7 @@ export class BossEnemy extends Enemy {
 
         // --- ULTRATHINK BUGFIX: Handle automatic coin collection ---
         // 1. Emit direct signal for coin spawning and collection
-        this.scene.events.emit('boss-died-collect-all', this.x, this.y);
+        this.scene.events.emit('boss-died-collect-all', this.x, this.y, this.bossConfig.bossIndex);
 
         // 2. Delay the official victory event to allow collection animation
         this.scene.time.delayedCall(1600, () => {

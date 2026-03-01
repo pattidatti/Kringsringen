@@ -688,8 +688,8 @@ export class MainScene extends Phaser.Scene implements IMainScene {
                 }
             });
 
-            this.events.on('boss-died-collect-all', (x: number, y: number) => {
-                this.waves.spawnBossCoins(x, y);
+            this.events.on('boss-died-collect-all', (x: number, y: number, bossIndex: number) => {
+                this.waves.spawnBossCoins(x, y, bossIndex);
                 this.combat.setDashIframe(true);
                 this.time.delayedCall(2000, () => {
                     this.combat.setDashIframe(false);
@@ -1203,8 +1203,7 @@ export class MainScene extends Phaser.Scene implements IMainScene {
         } else if (event.type === 'spawn_enemy_projectile') {
             const { x, y, angle, damage, type } = event.data;
             if (this.networkManager?.role === 'client') {
-                const proj = this.poolManager.getEnemyProjectile(x, y, angle, damage, type);
-                this.enemyProjectiles.add(proj);
+                this.poolManager.getEnemyProjectile(x, y, angle, damage, type);
             }
         } else if (event.type === 'spawn_coins') {
             const { x, y, count, coins } = event.data;

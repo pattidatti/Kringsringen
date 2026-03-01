@@ -85,15 +85,15 @@ export class WaveManager {
         // Autosave run progress at wave start (singleplayer only)
         if (!this.scene.registry.get('isMultiplayer')) {
             SaveManager.saveRunProgress({
-                gameLevel:       this.currentLevel,
-                currentWave:     this.currentWave,
-                playerCoins:     this.scene.registry.get('playerCoins') || 0,
-                upgradeLevels:   this.scene.registry.get('upgradeLevels') || {},
-                currentWeapon:   this.scene.registry.get('currentWeapon') || 'sword',
+                gameLevel: this.currentLevel,
+                currentWave: this.currentWave,
+                playerCoins: this.scene.registry.get('playerCoins') || 0,
+                upgradeLevels: this.scene.registry.get('upgradeLevels') || {},
+                currentWeapon: this.scene.registry.get('currentWeapon') || 'sword',
                 unlockedWeapons: this.scene.registry.get('unlockedWeapons') || ['sword'],
-                playerHP:        this.scene.registry.get('playerHP') || 0,
-                playerMaxHP:     this.scene.registry.get('playerMaxHP') || 100,
-                savedAt:         Date.now()
+                playerHP: this.scene.registry.get('playerHP') || 0,
+                playerMaxHP: this.scene.registry.get('playerMaxHP') || 100,
+                savedAt: Date.now()
             });
         }
 
@@ -289,7 +289,7 @@ export class WaveManager {
     }
 
     /** Drops a large burst of coins from a boss */
-    public spawnBossCoins(ex: number, ey: number): void {
+    public spawnBossCoins(ex: number, ey: number, bossIndex: number = 0): void {
         const isMultiplayer = this.scene.registry.get('isMultiplayer');
         const isHost = this.scene.networkManager?.role === 'host';
         if (isMultiplayer && !isHost) return;
@@ -297,8 +297,9 @@ export class WaveManager {
         const player = this.scene.data.get('player') as Phaser.Physics.Arcade.Sprite;
         if (!player) return;
 
-        // Bosses drop significantly more coins
-        const coinCount = (GAME_CONFIG as any).BOSSES?.COIN_DROP_COUNT || 75;
+        // Bosses drop significantly more coins, scaling with progress
+        // Formula: 300 + (bossIndex * 150) -> 300, 450, 600, 750, 900
+        const coinCount = GAME_CONFIG.BOSSES.COIN_DROP_COUNT + (bossIndex * 150);
         const coinData: { x: number, y: number, id: string }[] = [];
 
         for (let i = 0; i < coinCount; i++) {
@@ -310,7 +311,7 @@ export class WaveManager {
 
             // Randomize velocity more for a bigger explosion
             const angle = Math.random() * Math.PI * 2;
-            const force = Phaser.Math.Between(200, 450);
+            const force = Phaser.Math.Between(250, 600);
             coin.setVelocity(Math.cos(angle) * force, Math.sin(angle) * force);
 
             coin.removeAllListeners('collected');

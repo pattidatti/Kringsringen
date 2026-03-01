@@ -204,7 +204,7 @@ export const GAME_CONFIG = {
         LEVEL_COMPLETE_DELAY: 1500
     },
     BOSSES: {
-        COIN_DROP_COUNT: 75
+        COIN_DROP_COUNT: 300
     },
     DROPS: {
         COIN_LIFETIME: 10000, // Disappear after 10s if not collected (optimization)

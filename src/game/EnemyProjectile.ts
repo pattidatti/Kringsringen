@@ -112,7 +112,11 @@ export class EnemyProjectile extends Phaser.Physics.Arcade.Sprite {
         }
 
         if (this.body) {
+            this.body.enable = true;
+            (this.body as Phaser.Physics.Arcade.Body).reset(x, y);
+
             const speed = type === 'fireball' ? 350 : 500;
+            // Explicitly set velocity after ensuring body is enabled and reset
             this.scene.physics.velocityFromRotation(angle, speed, this.body.velocity);
         }
     }
