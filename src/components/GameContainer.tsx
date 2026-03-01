@@ -388,6 +388,8 @@ export const GameContainer: React.FC<GameContainerProps> = React.memo(({ network
                 console.log('[GameContainer] Unmounting/Rebooting');
                 clearInterval(scenePoller);
                 if (gameInstanceRef.current) {
+                    try { gameInstanceRef.current.loop.stop(); } catch (_) { }
+                    try { gameInstanceRef.current.input.destroy(); } catch (_) { }
                     gameInstanceRef.current.destroy(true);
                     gameInstanceRef.current = null;
                 }
@@ -647,6 +649,7 @@ export const GameContainer: React.FC<GameContainerProps> = React.memo(({ network
             // while the canvas is still in the DOM (React guarantees cleanup runs
             // before DOM removal).
             try { game.loop.stop(); } catch (_) { /* ignore */ }
+            try { game.input.destroy(); } catch (_) { /* ignore */ }
         }
 
         // Clear phaserGames array to prevent createGame from double-destroying

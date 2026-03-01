@@ -1441,6 +1441,24 @@ export class MainScene extends Phaser.Scene implements IMainScene {
 
             if (!player || !player.body) return;
 
+            // Defensive guard: if keyboard bindings were lost (zombie-listener scenario),
+            // re-initialize them so input works after a Continue Game cycle.
+            if (!this.wasd && this.input.keyboard) {
+                console.warn('[MainScene] Keyboard bindings missing, re-initializing input.');
+                const cursors = this.input.keyboard.createCursorKeys();
+                this.wasd = this.input.keyboard.addKeys({
+                    W: Phaser.Input.Keyboard.KeyCodes.W, A: Phaser.Input.Keyboard.KeyCodes.A,
+                    S: Phaser.Input.Keyboard.KeyCodes.S, D: Phaser.Input.Keyboard.KeyCodes.D,
+                    SPACE: Phaser.Input.Keyboard.KeyCodes.SPACE, SHIFT: Phaser.Input.Keyboard.KeyCodes.SHIFT
+                }) as any;
+                this.hotkeys = this.input.keyboard.addKeys({
+                    '1': Phaser.Input.Keyboard.KeyCodes.ONE, '2': Phaser.Input.Keyboard.KeyCodes.TWO,
+                    '3': Phaser.Input.Keyboard.KeyCodes.THREE, '4': Phaser.Input.Keyboard.KeyCodes.FOUR,
+                    '5': Phaser.Input.Keyboard.KeyCodes.FIVE
+                }) as any;
+                this.data.set('cursors', cursors);
+            }
+
             // --- Iterating Remote Players for dead reckoning updates ---
             // Use cappedDelta for render time calculation if necessary, but interpolation usually uses absolute time.
             // We'll keep renderTime as is, but ensure cappedDelta is "used" by being part of the game loop logic.
