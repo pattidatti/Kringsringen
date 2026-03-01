@@ -150,27 +150,33 @@ class MainScene extends Phaser.Scene implements IMainScene {
         const continueRun = this.game.registry.get('continueRun') as boolean | undefined;
         let startLevelOverride = 1;
         if (continueRun && !netConfig) {
-            console.log('[MainScene] Continuing run...');
-            const run = SaveManager.loadRunProgress();
-            if (run) {
-                console.log('[MainScene] Restored run:', run);
-                // CRITICAL: Clamp level to minimum 1 to prevent STATIC_MAPS[-1] crash
-                const restoredLevel = Math.max(1, run.gameLevel || 1);
-                this.registry.set('gameLevel', restoredLevel);
-                startLevelOverride = restoredLevel;
-                this.registry.set('currentWave', run.currentWave);
-                this.registry.set('playerCoins', run.playerCoins);
-                this.registry.set('upgradeLevels', run.upgradeLevels);
-                this.registry.set('currentWeapon', run.currentWeapon);
-                this.registry.set('unlockedWeapons', run.unlockedWeapons);
-                // Store temporarily; applied after recalculateStats()
-                // If HP is 0, give them 1 HP to avoid immediate pause before world can render,
-                // or ensure the scene starts before the death check.
-                this.game.registry.set('_restoredHP', Math.max(0, run.playerHP));
-                console.log('[MainScene] Restore successful. HP to restore:', run.playerHP);
-                this.game.registry.set('_restoredHP', Math.max(0, run.playerHP));
-            } else {
-                console.warn('[MainScene] No run progress found despite continue flag.');
+            try {
+                console.log('[MainScene] Continuing run...');
+                const run = SaveManager.loadRunProgress();
+                if (run) {
+                    console.log('[MainScene] Restored run:', run);
+                    // CRITICAL: Clamp level to minimum 1 to prevent STATIC_MAPS[-1] crash
+                    const restoredLevel = Math.max(1, run.gameLevel || 1);
+                    this.registry.set('gameLevel', restoredLevel);
+                    startLevelOverride = restoredLevel;
+                    this.registry.set('currentWave', run.currentWave);
+                    this.registry.set('playerCoins', run.playerCoins);
+                    this.registry.set('upgradeLevels', run.upgradeLevels ?? {});
+                    this.registry.set('currentWeapon', run.currentWeapon ?? 'sword');
+                    this.registry.set('unlockedWeapons', run.unlockedWeapons ?? ['sword']);
+                    // Store temporarily; applied after recalculateStats()
+                    // If HP is 0, give them 1 HP to avoid immediate pause before world can render,
+                    // or ensure the scene starts before the death check.
+                    this.game.registry.set('_restoredHP', Math.max(0, run.playerHP));
+                    console.log('[MainScene] Restore successful. HP to restore:', run.playerHP);
+                    this.game.registry.set('_restoredHP', Math.max(0, run.playerHP));
+                } else {
+                    console.warn('[MainScene] No run progress found despite continue flag.');
+                }
+            } catch (e) {
+                console.error('[MainScene] Failed to restore continue run, starting fresh:', e);
+                SaveManager.clearRunProgress();
+                // startLevelOverride stays 1, registry defaults remain
             }
         }
 
@@ -321,11 +327,6 @@ class MainScene extends Phaser.Scene implements IMainScene {
         console.log('[MainScene] Generating initial map for level:', startLevelOverride);
         this.regenerateMap(startLevelOverride);
         console.log('[MainScene] Initial map generated level:', startLevelOverride);
-
-        // SIGNAL: React needs to know we finished create() so it can hide the loading overlay
-        this.registry.set('create-complete', true);
-        this.events.emit('create-complete');
-        console.log('[MainScene] create-complete emitted.');
 
         createAnimations(this);
 
@@ -876,6 +877,11 @@ class MainScene extends Phaser.Scene implements IMainScene {
         if (this.networkManager?.role === 'client') {
             // Handled via netConfig.hostPeerId in create()
         }
+
+        // SIGNAL: React needs to know we finished create() so it can hide the loading overlay
+        this.registry.set('create-complete', true);
+        this.events.emit('create-complete');
+        console.log('[MainScene] create-complete emitted at end of create().');
     }
 
     private applyQualitySettings() {

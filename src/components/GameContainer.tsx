@@ -130,9 +130,24 @@ export const GameContainer: React.FC<GameContainerProps> = React.memo(({ network
             console.log('[GameContainer] Creating Phaser game in container:', phaserContainerRef.current.id);
             setGameInstance(game);
 
-            const setupSceneListeners = () => {
+            let listenersRegistered = false;
+            const MAX_WAIT_MS = 15_000;
+            const startedAt = Date.now();
+
+            const scenePoller = setInterval(() => {
+                if (Date.now() - startedAt > MAX_WAIT_MS) {
+                    clearInterval(scenePoller);
+                    console.error('[GameContainer] Timed out waiting for scene create-complete. Forcing clear.');
+                    setIsLoadingLevel(false);
+                    return;
+                }
+
                 const mainScene = game.scene.getScene('MainScene') as IMainScene;
-                if (mainScene) {
+
+                if (!listenersRegistered && mainScene) {
+                    listenersRegistered = true;
+                    console.log('[GameContainer] MainScene found. Registering event listeners.');
+
                     mainScene.events.on('level-complete', () => {
                         setLoadedPlayers(new Set());
                         setSyncState(s => ({ ...s, loaded: 0 }));
@@ -215,20 +230,15 @@ export const GameContainer: React.FC<GameContainerProps> = React.memo(({ network
 
                     mainScene.events.on('create-complete', () => {
                         console.log('[GameContainer] Scene creation complete. Clearing loading state.');
+                        clearInterval(scenePoller);
                         setIsLoadingLevel(false);
                     });
-
-                    // HARDENING: Check if it already finished before we subscribed
-                    if (game.registry.get('create-complete')) {
-                        console.log('[GameContainer] Scene already complete. Clearing loading state.');
-                        setIsLoadingLevel(false);
-                    }
 
                     mainScene.events.on('player_loaded', (data: any) => {
                         if (networkConfig?.role === 'host') {
                             setLoadedPlayers(prev => {
                                 if (prev.has(data.playerId)) {
-                                    // If we already had them but they are reporting again, 
+                                    // If we already had them but they are reporting again,
                                     // they might have missed the start signal due to a late connection.
                                 }
                                 const next = new Set(prev).add(data.playerId);
@@ -265,7 +275,7 @@ export const GameContainer: React.FC<GameContainerProps> = React.memo(({ network
                                     });
                                     setIsLoadingLevel(false);
                                     setIsWaitingReady(false);
-                                    // Note: we DO NOT clear loadedPlayers here anymore, 
+                                    // Note: we DO NOT clear loadedPlayers here anymore,
                                     // so we can detect late joiners or retries correctly.
                                 }
                                 return next;
@@ -342,16 +352,19 @@ export const GameContainer: React.FC<GameContainerProps> = React.memo(({ network
                             mainScene.restartGame();
                         }
                     });
-
-                } else {
-                    setTimeout(setupSceneListeners, 100);
                 }
-            };
 
-            setupSceneListeners();
+                // Check registry every tick as belt-and-suspenders
+                if (listenersRegistered && game.registry.get('create-complete')) {
+                    console.log('[GameContainer] Scene create-complete detected via registry. Clearing loading state.');
+                    clearInterval(scenePoller);
+                    setIsLoadingLevel(false);
+                }
+            }, 100);
 
             return () => {
-                console.log('[GameContainer] Unmounting/Rebooting. Destroying game instance.');
+                console.log('[GameContainer] Unmounting/Rebooting. Destroying game instance and clearing scene poller.');
+                clearInterval(scenePoller);
                 if (gameInstanceRef.current) {
                     gameInstanceRef.current.destroy(true);
                     gameInstanceRef.current = null;
