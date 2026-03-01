@@ -1,73 +1,30 @@
-# React + TypeScript + Vite
+# Kringsringen
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+En avantgardistisk "bullet heaven" overlevelsesopplevelse bygget med Phaser 3, React og TypeScript.
 
-Currently, two official plugins are available:
+## ⚔️ Oversikt
+Kringsringen er et mørkt, minimalistisk spill hvor du må overleve bølger av monstre i et sirkulært landskap. Bruk gull fra falne fiender til å kjøpe oppgraderinger, låse opp synergier som "Thermal Shock", og bekjemp legendariske bosser.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## 🏗️ Prosjektstruktur
+- `src/game/`: Kjerne-logikken (Phaser scener, managers, spill-objekter).
+- `src/components/`: React UI-lag (Hud, Butikk, Menyer).
+- `src/config/`: Spill-data (Enemies, Bosses, Upgrades, GameConfig).
+- `docs/`: Omfattende spilldesign- og teknisk dokumentasjon.
+- `public/assets/`: Alle spill-aktiva (Sprites, Audio, Kart).
 
-## React Compiler
+## 🛠️ Teknisk Stack
+- **Engine:** Phaser 3.80.1
+- **UI:** React 18
+- **Language:** TypeScript
+- **Styling:** Vanilla CSS (Medieval-themed)
+- **Networking:** PeerJS (Multiplayer)
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## 📖 Dokumentasjon
+- [Game Design Document](file:///home/irik/Kringsringen/docs/gamedesign_document.md) — Mekanikk, monstre og bølgeoversikt.
+- [Audio Catalog](file:///home/irik/Kringsringen/docs/audio_catalog.md) — Oversikt over all lyd og musikk.
+- [Save System](file:///home/irik/Kringsringen/docs/save_system.md) — Teknisk guide til lagring og Phaser lifecycle.
 
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
-
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
-
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+## 🚀 Kom i gang
+1. `npm install`
+2. `npm run dev`
+3. Åpne `http://localhost:5173`

@@ -2,8 +2,8 @@
 
 Dette dokumentet beskriver spillmekanikken, fremgangen og det planlagte innholdet for **Kringsringen**.
 
-> **Dokumentversjon:** 2.2
-> **Sist oppdatert:** 2026-03-01
+> **Dokumentversjon:** 2.3
+> **Sist oppdatert:** 1. mars 2026
 > **Status-notasjon:** ✅ Implementert | ⚠️ Delvis/Bug | 🚧 Planlagt | ❌ Fjernet/Avlyst
 
 ---
@@ -102,9 +102,22 @@ Alle fiendetyper er konfigurert i `src/config/enemies.ts` med sprite, animasjone
 | **Armored Orc** | 250 | 45 | 80 | 0.9 | ✅ |
 | **Greatsword Skeleton** | 200 | 40 | 90 | 0.8 | ✅ |
 | **Elite Orc** | 300 | 50 | 110 | 0.7 | ✅ |
-| **Frost Wizard** | 80 | 25 | 70 | 0.3 | ✅ |
-| **Wizard** | 100 | 35 | 75 | 0.3 | ✅ |
-| **Skeleton Archer** | 60 | 20 | 90 | 0.2 | ✅ |
+#### Frost Wizard
+- **Beskrivelse:** Magic user som kaster fryse-formler.
+- **Base Stats:** 80 HP, 70 Speed, 25 Damage (Frost).
+- **Spesialisering:** `burstCount`: 8. Fyrer en sirkel av frostbolter (Radial Burst) med 250ms windup. ✅
+- **Viktig:** Eksplosjon ved treff gir AoE slow-effekt.
+
+#### Wizard
+- **Beskrivelse:** Magic user som skyter ildkuler med AoE-skade.
+- **Base Stats:** 100 HP, 75 Speed, 35 Damage (Fire).
+- **Synergi:** Thermal Shock (Ild + Is = 3x skade). ✅
+
+#### Skeleton Archer
+- **Beskrivelse:** Ranged attacker som fyrer piler fra avstand.
+- **Base Stats:** 60 HP, 90 Speed, 20 Damage.
+- **Spesialisering:** `multiShotCount`: 3. Fyrer 3 piler i en vifte (v2.0+) når cooldown tillater. ✅
+- **Viktig:** Piler kan nå blokkeres eller unngås ved å dashe.
 | **Healer Wizard** | 150 | 50* | 95 | 0.3 | ✅ |
 
 > *Alle stats er base-verdier og skaleres med niveau-multiplikatoren.*
@@ -143,10 +156,12 @@ Splashscreen, dedikert boss-musikk og HP-bar er implementert (`BossHUD`, `BossSp
 - **Etter:** Level 8 | **Musikk:** `Glitch in the Dungeon.mp3`
 - HP: 3500 | Skade: 90 | Fart: 95 | Skala: 3.2x | Tint: Grønn (0x55ff55)
 - **Spesial:** Høy knockback-resistans (0.95). Bruker Wizard-animasjoner.
+- **Fase 2:** Spawner minions oftere og etterlater røykskyer.
 
 ### Skjelettkongen – *The Undying King* ✅ 💎
 - **Etter:** Level 10 | **Musikk:** `Glitch King.mp3`
 - HP: 5000 | Skade: 110 | Fart: 80 | Skala: 3.5x
+- **Abilities:** Multi-Bone Volley (5 prosjektiler), Mass Raise Dead.
 - **Fase 2 trigger:** 40% HP
 
 ### Åpne feil / Mangler – Bosser
@@ -214,7 +229,7 @@ Prisformel: `kostnad = basePrice × (currentLevel ^ priceScale)` (eksponentiell 
 | `fire_damage` | Brannskade | +15% Ildkule-skade | 10 | 70 | ✅ |
 | `fire_radius` | Eksplosiv Kraft | +20px eksplosionsradius | 5 | 120 | ✅ |
 | `fire_speed` | Lynild | +15% Prosjektilhastighet | 8 | 80 | ✅ |
-| `fire_chain` | Kjedereaksjon | Eksplosjon setter fyr på nærliggende fiender | 3 | 300 | 🚧 Kjøpbar, effekten ikke implementert |
+| `fire_chain` | Kjedereaksjon | Sekundær eksplosjon etter 300ms | 3 | 300 | ✅ |
 
 ### Magi – Frost
 | ID | Navn | Effekt per Lvl | Maks Lvl | BasePris | Status |
@@ -222,7 +237,7 @@ Prisformel: `kostnad = basePrice × (currentLevel ^ priceScale)` (eksponentiell 
 | `frost_damage` | Iskald Makt | +15% Froststav-skade | 10 | 70 | ✅ |
 | `frost_radius` | Frysebølge | +20px frysningsradius | 5 | 120 | ✅ |
 | `frost_slow` | Permafrost | Fiender bremses lengre | 5 | 150 | ✅ |
-| `frost_shatter` | Isknusing | Frosne fiender tar +50% skade og splintrer | 3 | 350 | 🚧 Kjøpbar, effekten ikke implementert |
+| `frost_shatter` | Isknusing | Frosne fiender tar extra skade og splintrer | 3 | 350 | ✅ |
 
 ### Magi – Lyn
 | ID | Navn | Effekt per Lvl | Maks Lvl | BasePris | Status |
@@ -348,17 +363,17 @@ Hvert Map Level laster et statisk kart via `StaticMapLoader` + `StaticMapData`. 
 
 | # | Beskrivelse | Prioritet |
 | :--- | :--- | :--- |
-| B1 | **Spillet krasjer** ved bue-treff med Eksplosive Piler aktivert | Kritisk |
+| B1 | **Spillet krasjer** ved bue-treff med Eksplosive Piler aktivert | ✅ Fikset |
 | B2 | **Movement lock** ved bue og spells er for lang | Høy |
 | B3 | **Lyn er for kraftig** – for liten sjanse til å bomme | Høy |
 | B4 | **Multicast lyn** sender alle bolter til samme mål istedenfor å spre seg | Høy |
 | B5 | **Cooldown-hjul** på hotbar (WoW-stil) mangler | Medium |
 | B6 | **Musikk bytter ikke** etter Level 3 (Level 4+ bruker feil spor) | Medium |
 | B7 | **Ambient-volum** (forest_day) er for lavt | Lav |
-| B8 | **boss-spawn-minion**-event er ikke koblet i MainScene (minions spawner ikke) | Medium |
-| B9 | **Trollblod** (HP-regen) har ingen game-loop-tick – effekten er kjøpbar men passiv | Medium |
-| B10 | **Kjedereaksjon** (fire_chain) og **Isknusing** (frost_shatter) er kjøpbare men uten effekt | Medium |
-| B11 | **Input-lock etter innlasting** – Spilleren kan ikke angripe/bevege seg etter "Fortsett Spill" (uten F5) i noen tilfeller | Høy |
+| B8 | **boss-spawn-minion**-event er ikke koblet i MainScene | ✅ Fikset |
+| B9 | **Trollblod** (HP-regen) har ingen game-loop-tick | ✅ Fikset |
+| B10 | **Kjedereaksjon / Isknusing** mangler logikk | ✅ Fikset |
+| B11 | **Input-lock etter innlasting** | ⚠️ Delvis |
 
 ---
 
@@ -440,5 +455,5 @@ Hvert Map Level laster et statisk kart via `StaticMapLoader` + `StaticMapData`. 
 
 ---
 
-**Dokumentversjon:** 2.2
+**Dokumentversjon:** 2.3
 **Ansvarlig AI Architect:** Antigravity

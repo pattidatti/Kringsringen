@@ -9,13 +9,13 @@
 | `meadow_theme` | `assets/audio/music/meadow_theme.mp3` | 0.5 | ✅ |
 | `exploration_theme` | `assets/audio/music/exploration_theme.mp3` | 0.5 | ✅ |
 | `dragons_fury` | `assets/audio/music/dragons_fury.mp3` | 0.6 | ✅ |
-| `pixel_rush_overture` | `assets/audio/music/Pixel Rush Overture.mp3` | 0.5 | ✅ 💎 |
-| `glitch_in_the_forest` | `assets/audio/music/Glitch in the forest.mp3` | 0.5 | ✅ 💎 |
-| `glitch_in_the_dungeon` | `assets/audio/music/Glitch in the Dungeon.mp3` | 0.5 | ✅ 💎 |
-| `glitch_in_the_catacombs`| `assets/audio/music/Glitch in the Catacombs.mp3`| 0.5 | ✅ 💎 |
-| `glitch_in_the_heavens` | `assets/audio/music/Glitch in the heavens.mp3` | 0.5 | ✅ 💎 |
-| `final_dungeon_loop` | `assets/audio/music/Final Dungeon Loop.mp3` | 0.6 | ✅ 💎 |
-| `glitch_king` | `assets/audio/music/Glitch King.mp3` | 0.6 | ✅ 💎 |
+| `pixel_rush_overture` | `assets/audio/music/Pixel Rush Overture.mp3` | 0.5 | ✅ |
+| `glitch_in_the_forest` | `assets/audio/music/Glitch in the forest.mp3` | 0.5 | ✅ |
+| `glitch_in_the_dungeon` | `assets/audio/music/Glitch in the Dungeon.mp3` | 0.5 | ✅ |
+| `glitch_in_the_catacombs`| `assets/audio/music/Glitch in the Catacombs.mp3`| 0.5 | ✅ |
+| `glitch_in_the_heavens` | `assets/audio/music/Glitch in the heavens.mp3` | 0.5 | ✅ |
+| `final_dungeon_loop` | `assets/audio/music/Final Dungeon Loop.mp3` | 0.6 | ✅ |
+| `glitch_king` | `assets/audio/music/Glitch King.mp3` | 0.6 | ✅ |
 
 ### SFX (Sound Effects)
 

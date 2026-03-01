@@ -56,11 +56,11 @@ Defined in `src/game/SaveManager.ts`:
 | Trigger | Caller | Player position saved? | Enemy state saved? |
 |---------|--------|-----------------------|--------------------|
 | Wave start | `WaveManager.startWave()` lines 86–98 | ❌ | ❌ |
-| Level complete | `MainScene` `level-complete` handler | ❌ | ❌ |
+| Level complete | `MainScene` `level-complete` handler | ✅ | ✅ |
 | Exit to menu | `GameContainer.handleExitToMenu()` → `request-save` event → `MainScene.collectSaveData()` | ✅ | ✅ |
 | Browser close (F5, tab close) | `window.beforeunload` → `collectSaveData()` | ✅ | ✅ |
 
-Wave-start and level-complete saves are registry-only snapshots. They capture the wave counter and coins, but **not** enemy positions or player coordinates. The full-fidelity save (with enemy state and position) only happens on deliberate exit or browser close.
+Wave-start saves are registry-only snapshots. Level-complete, exit-to-menu, and browser-close saves are full-fidelity snapshots (including position and enemy state).
 
 ---
 
