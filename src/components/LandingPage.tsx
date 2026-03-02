@@ -219,7 +219,10 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart, onContinue, onStartM
             {/* Onboarding Tutorial */}
             <AnimatePresence>
                 {showTutorial && (
-                    <OnboardingTutorial onStart={fadeAudioAndStart} />
+                    <OnboardingTutorial
+                        onStart={fadeAudioAndStart}
+                        onClose={() => setShowTutorial(false)}
+                    />
                 )}
             </AnimatePresence>
 
