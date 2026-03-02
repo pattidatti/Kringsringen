@@ -237,7 +237,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 
         for (let i = 0; i < count; i++) {
             const angle = (i / count) * Math.PI * 2;
-            this.scene.events.emit('enemy-fire-projectile', this.x, this.y, angle, burstDamage, projectileType);
+            this.scene.events.emit('enemy-fire-projectile', this.x, this.y, angle, burstDamage, projectileType, true);
         }
         this.lastBurstTime = this.scene.time.now;
     }
@@ -506,7 +506,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
                                 }
                             });
                         }
-                    // Tier-2: Multi-shot spread
+                        // Tier-2: Multi-shot spread
                     } else if (stats.multiShotCount !== undefined && stats.multiShotCooldownL1 !== undefined && stats.multiShotCooldownL10 !== undefined) {
                         const multiCooldown = this.getScaledCooldown(stats.multiShotCooldownL1, stats.multiShotCooldownL10);
                         if (now > this.lastMultiShotTime + multiCooldown) {

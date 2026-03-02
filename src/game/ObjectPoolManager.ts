@@ -236,7 +236,7 @@ export class ObjectPoolManager {
         }
     }
 
-    public getEnemyProjectile(x: number, y: number, angle: number, damage: number, type: 'arrow' | 'fireball' | 'frostball'): EnemyProjectile {
+    public getEnemyProjectile(x: number, y: number, angle: number, damage: number, type: 'arrow' | 'fireball' | 'frostball', isBurst = false): EnemyProjectile {
         let projectile: EnemyProjectile;
         const mainScene = this.scene as any;
         const group = mainScene.enemyProjectiles;
@@ -248,7 +248,7 @@ export class ObjectPoolManager {
         }
 
         if (group) group.add(projectile);
-        projectile.fire(x, y, angle, damage, type);
+        projectile.fire(x, y, angle, damage, type, isBurst);
         return projectile;
     }
 

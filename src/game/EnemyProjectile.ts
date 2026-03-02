@@ -9,6 +9,7 @@ export class EnemyProjectile extends Phaser.Physics.Arcade.Sprite {
     private trail: Phaser.GameObjects.Particles.ParticleEmitter | null = null;
     private light: Phaser.GameObjects.Light | null = null;
     private projectileType: 'arrow' | 'fireball' | 'frostball' = 'arrow';
+    private isBurstProjectile: boolean = false;
 
     constructor(scene: Phaser.Scene, x: number, y: number) {
         super(scene, x, y, 'arrow'); // Default texture
@@ -19,12 +20,13 @@ export class EnemyProjectile extends Phaser.Physics.Arcade.Sprite {
         this.setDepth(200);
     }
 
-    fire(x: number, y: number, angle: number, damage: number, type: 'arrow' | 'fireball' | 'frostball') {
+    fire(x: number, y: number, angle: number, damage: number, type: 'arrow' | 'fireball' | 'frostball', isBurst = false) {
         this.startX = x;
         this.startY = y;
         this.damage = damage;
         this.projectileType = type;
 
+        this.isBurstProjectile = isBurst;
         this.setActive(true);
         this.setVisible(true);
         this.setPosition(x, y);
@@ -68,13 +70,23 @@ export class EnemyProjectile extends Phaser.Physics.Arcade.Sprite {
                 this.trail.resume();
             }
 
-            // Reuse existing light instead of creating new one
-            if (!this.light) {
-                this.light = this.scene.lights.addLight(x, y, 150, tint, 0.33);
-            } else {
-                this.light.setPosition(x, y).setRadius(150).setColor(tint).setIntensity(0.33);
+            // Burst-prosjektiler bruker IKKE PointLight (8 simultane lys = FPS-drop).
+            // Enkelt-prosjektiler (normal fireball/frostball) kan ha lys.
+            if (!this.isBurstProjectile) {
+                if (!this.light) {
+                    this.light = this.scene.lights.addLight(x, y, 150, tint, 0.33);
+                } else {
+                    this.light.setPosition(x, y).setRadius(150).setColor(tint).setIntensity(0.33);
+                }
             }
-            this.postFX.addGlow(tint, 4, 0, false, 0.1, 10);
+
+            // postFX glow er GPU-only og trygt for burst. clear() forhindrer stacking på poolede objekter.
+            const mainSceneFB = this.scene as any;
+            if (mainSceneFB.graphicsQuality !== 'low') {
+                this.postFX.clear();
+                const glowStrength = this.isBurstProjectile ? 6 : 4;
+                this.postFX.addGlow(tint, glowStrength, 0, false, 0.1, 10);
+            }
         } else {
             this.setTexture('arrow');
             this.play(`${this.projectileType}-proj-anim`);
@@ -102,13 +114,20 @@ export class EnemyProjectile extends Phaser.Physics.Arcade.Sprite {
                 this.trail.resume();
             }
 
-            // Reuse existing light instead of creating new one
-            if (!this.light) {
-                this.light = this.scene.lights.addLight(x, y, 80, 0xffffff, 0.1);
-            } else {
-                this.light.setPosition(x, y).setRadius(80).setColor(0xffffff).setIntensity(0.1);
+            // Piler fra burst bruker ikke PointLight av ytelseshensyn
+            if (!this.isBurstProjectile) {
+                if (!this.light) {
+                    this.light = this.scene.lights.addLight(x, y, 80, 0xffffff, 0.1);
+                } else {
+                    this.light.setPosition(x, y).setRadius(80).setColor(0xffffff).setIntensity(0.1);
+                }
             }
-            this.postFX.addGlow(0xffffff, 2, 0, false, 0.05, 5);
+
+            const mainSceneArrow = this.scene as any;
+            if (mainSceneArrow.graphicsQuality !== 'low') {
+                this.postFX.clear();
+                this.postFX.addGlow(0xffffff, 2, 0, false, 0.05, 5);
+            }
         }
 
         if (this.body) {
