@@ -3,6 +3,7 @@ import { UPGRADES } from '../config/upgrades';
 import { SaveManager } from './SaveManager';
 import { GAME_CONFIG } from '../config/GameConfig';
 import type { IMainScene } from './IMainScene';
+import type { ClassConfig } from '../config/classes';
 
 /**
  * Manages player stats, upgrades, and the batched economy system.
@@ -34,6 +35,32 @@ export class PlayerStatsManager {
 
     constructor(scene: IMainScene) {
         this.scene = scene;
+    }
+
+    /**
+     * Fase 1 – Class System.
+     * Kjøres én gang fra MainScene.create() etter at playerClass er satt i registry.
+     * Muterer base-stats slik at recalculateStats() bruker klasse-spesifikke verdier.
+     * VIKTIG: kall denne FØR recalculateStats().
+     */
+    applyClassModifiers(config: ClassConfig): void {
+        this.baseDamage = GAME_CONFIG.PLAYER.BASE_DAMAGE * config.baseStats.damage;
+        this.baseSpeed = GAME_CONFIG.PLAYER.BASE_SPEED * config.baseStats.speed;
+        this.baseMaxHP = GAME_CONFIG.PLAYER.BASE_MAX_HP * config.baseStats.hp;
+        this.baseArmor = config.baseStats.armor; // Additivt flat tall
+
+        if (config.baseStats.attackSpeed !== undefined) {
+            // Lagres i registry – MainScene leser denne for sword/bow attack speed init.
+            this.scene.registry.set('classAttackSpeedMulti', config.baseStats.attackSpeed);
+        } else {
+            this.scene.registry.set('classAttackSpeedMulti', 1.0);
+        }
+
+        if (config.baseStats.dashCharges !== undefined) {
+            this.scene.registry.set('dashCharges', config.baseStats.dashCharges);
+        } else {
+            this.scene.registry.set('dashCharges', 1);
+        }
     }
 
     /** Current calculated damage */

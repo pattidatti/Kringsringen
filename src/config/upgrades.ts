@@ -1,4 +1,5 @@
 import { GAME_CONFIG } from './GameConfig';
+import type { ClassId } from './classes';
 
 export type UpgradeCategory = 'Karakter' | 'Sverd' | 'Bue' | 'Magi' | 'Synergi';
 
@@ -13,6 +14,8 @@ export interface UpgradeConfig {
     description: (level: number) => string;
     iconTint?: string; // Optional CSS filter or color for the icon
     requires?: Record<string, number>; // Record<upgradeId, requiredLevel>
+    /** undefined = shared (alle klasser ser den). Satt = kun den klassen. */
+    classRestriction?: ClassId;
 }
 
 export const UPGRADES: UpgradeConfig[] = [
@@ -93,12 +96,13 @@ export const UPGRADES: UpgradeConfig[] = [
         description: (lvl) => `+${lvl * 5} HP ved dash`
     },
 
-    // --- SVERD ---
+    // --- SVERD (Krieger-eksklusiv) ---
     {
         id: 'damage',
         title: 'Skarpt Stål',
         icon: 'item_sword',
         category: 'Sverd',
+        classRestriction: 'krieger',
         maxLevel: 20,
         basePrice: 60,
         priceScale: 1.5,
@@ -109,6 +113,7 @@ export const UPGRADES: UpgradeConfig[] = [
         title: 'Tungt Slag',
         icon: 'item_sword_heavy',
         category: 'Sverd',
+        classRestriction: 'krieger',
         maxLevel: 10,
         basePrice: 50,
         priceScale: 1.4,
@@ -119,18 +124,20 @@ export const UPGRADES: UpgradeConfig[] = [
         title: 'Berserk',
         icon: 'item_swords_crossed',
         category: 'Sverd',
+        classRestriction: 'krieger',
         maxLevel: 10,
         basePrice: 80,
         priceScale: 1.6,
         description: (lvl) => `+10% Angrepsfart (Nå: +${lvl * 10}%)`
     },
 
-    // --- BUE ---
+    // --- BUE (Archer-eksklusiv) ---
     {
         id: 'bow_cooldown',
         title: 'Rask Trekking',
         icon: 'item_bow',
         category: 'Bue',
+        classRestriction: 'archer',
         maxLevel: 10,
         basePrice: 60,
         priceScale: 1.5,
@@ -141,9 +148,10 @@ export const UPGRADES: UpgradeConfig[] = [
         title: 'Flerskudd',
         icon: 'item_bow',
         category: 'Bue',
+        classRestriction: 'archer',
         maxLevel: 5,
         basePrice: 250,
-        priceScale: 2.5, // Expensive!
+        priceScale: 2.5,
         description: (lvl) => `+1 Pil (Nå: ${1 + lvl} piler)`
     },
     {
@@ -151,6 +159,7 @@ export const UPGRADES: UpgradeConfig[] = [
         title: 'Gjennomboring',
         icon: 'item_spear',
         category: 'Bue',
+        classRestriction: 'archer',
         maxLevel: 3,
         basePrice: 300,
         priceScale: 3.0,
@@ -161,6 +170,7 @@ export const UPGRADES: UpgradeConfig[] = [
         title: 'Skarpere Piler',
         icon: 'item_bow',
         category: 'Bue',
+        classRestriction: 'archer',
         maxLevel: 8,
         basePrice: 80,
         priceScale: 1.8,
@@ -171,6 +181,7 @@ export const UPGRADES: UpgradeConfig[] = [
         title: 'Lynrask Pil',
         icon: 'item_bow',
         category: 'Bue',
+        classRestriction: 'archer',
         maxLevel: 5,
         basePrice: 70,
         priceScale: 1.6,
@@ -181,18 +192,20 @@ export const UPGRADES: UpgradeConfig[] = [
         title: 'Eksplosive Piler',
         icon: 'item_bow',
         category: 'Bue',
+        classRestriction: 'archer',
         maxLevel: 3,
         basePrice: 400,
         priceScale: 2.5,
         description: (lvl) => lvl > 0 ? `Eksplosjon ved treff (Radius: ${80 + (lvl - 1) * 50}px)` : 'Piler eksploderer ved treff'
     },
 
-    // --- MAGI (Fireball) ---
+    // --- MAGI (Fireball – Wizard-eksklusiv) ---
     {
         id: 'fire_damage',
         title: 'Brannskade',
         icon: 'item_magic_staff',
         category: 'Magi',
+        classRestriction: 'wizard',
         maxLevel: 10,
         basePrice: 70,
         priceScale: 1.6,
@@ -203,6 +216,7 @@ export const UPGRADES: UpgradeConfig[] = [
         title: 'Eksplosiv Kraft',
         icon: 'item_magic_staff',
         category: 'Magi',
+        classRestriction: 'wizard',
         maxLevel: 5,
         basePrice: 120,
         priceScale: 1.8,
@@ -213,6 +227,7 @@ export const UPGRADES: UpgradeConfig[] = [
         title: 'Lynild',
         icon: 'item_magic_staff',
         category: 'Magi',
+        classRestriction: 'wizard',
         maxLevel: 8,
         basePrice: 80,
         priceScale: 1.5,
@@ -223,18 +238,20 @@ export const UPGRADES: UpgradeConfig[] = [
         title: 'Kjedereaksjon',
         icon: 'item_magic_staff',
         category: 'Magi',
+        classRestriction: 'wizard',
         maxLevel: 3,
         basePrice: 300,
         priceScale: 2.5,
         description: (lvl) => lvl > 0 ? 'Eksplosjon setter fyr på fiender nær dem' : 'Lås opp kjedereaksjoner'
     },
 
-    // --- MAGI (Frost) ---
+    // --- MAGI (Frost – Wizard-eksklusiv) ---
     {
         id: 'frost_damage',
         title: 'Iskald Makt',
         icon: 'item_frost_orb',
         category: 'Magi',
+        classRestriction: 'wizard',
         maxLevel: 10,
         basePrice: 70,
         priceScale: 1.6,
@@ -245,6 +262,7 @@ export const UPGRADES: UpgradeConfig[] = [
         title: 'Frysebølge',
         icon: 'item_frost_orb',
         category: 'Magi',
+        classRestriction: 'wizard',
         maxLevel: 5,
         basePrice: 120,
         priceScale: 1.8,
@@ -255,6 +273,7 @@ export const UPGRADES: UpgradeConfig[] = [
         title: 'Permafrost',
         icon: 'item_frost_orb',
         category: 'Magi',
+        classRestriction: 'wizard',
         maxLevel: 5,
         basePrice: 150,
         priceScale: 2.0,
@@ -265,18 +284,20 @@ export const UPGRADES: UpgradeConfig[] = [
         title: 'Isknusing',
         icon: 'item_frost_orb',
         category: 'Magi',
+        classRestriction: 'wizard',
         maxLevel: 3,
         basePrice: 350,
         priceScale: 2.8,
         description: (lvl) => lvl > 0 ? 'Frosne fiender tar +50% skade og splintrer' : 'Lås opp isknusing'
     },
 
-    // --- MAGI (Lightning) ---
+    // --- MAGI (Lightning – Wizard-eksklusiv) ---
     {
         id: 'lightning_damage',
         title: 'Tordenstyrke',
         icon: 'item_lightning_staff',
         category: 'Magi',
+        classRestriction: 'wizard',
         maxLevel: 10,
         basePrice: 70,
         priceScale: 1.6,
@@ -287,6 +308,7 @@ export const UPGRADES: UpgradeConfig[] = [
         title: 'Kjedeblunk',
         icon: 'item_lightning_staff',
         category: 'Magi',
+        classRestriction: 'wizard',
         maxLevel: 5,
         basePrice: 200,
         priceScale: 2.0,
@@ -297,6 +319,7 @@ export const UPGRADES: UpgradeConfig[] = [
         title: 'Statisk utladning',
         icon: 'item_lightning_staff',
         category: 'Magi',
+        classRestriction: 'wizard',
         maxLevel: 5,
         basePrice: 150,
         priceScale: 1.8,
@@ -307,6 +330,7 @@ export const UPGRADES: UpgradeConfig[] = [
         title: 'Høyspenning',
         icon: 'item_lightning_staff',
         category: 'Magi',
+        classRestriction: 'wizard',
         maxLevel: 3,
         basePrice: 200,
         priceScale: 2.2,
@@ -317,6 +341,7 @@ export const UPGRADES: UpgradeConfig[] = [
         title: 'Singularitetspil',
         icon: 'item_bow',
         category: 'Bue',
+        classRestriction: 'archer',
         maxLevel: 3,
         basePrice: 1000,
         priceScale: 2.5,
@@ -327,6 +352,7 @@ export const UPGRADES: UpgradeConfig[] = [
         title: 'Giftpil',
         icon: 'item_bow',
         category: 'Bue',
+        classRestriction: 'archer',
         maxLevel: 3,
         basePrice: 500,
         priceScale: 2.5,
@@ -338,6 +364,7 @@ export const UPGRADES: UpgradeConfig[] = [
         title: 'Sjelelenke',
         icon: 'item_lightning_staff',
         category: 'Magi',
+        classRestriction: 'wizard',
         maxLevel: 1,
         basePrice: 1500,
         priceScale: 1,
@@ -349,23 +376,25 @@ export const UPGRADES: UpgradeConfig[] = [
         title: 'Solsnu',
         icon: 'item_sword',
         category: 'Sverd',
+        classRestriction: 'krieger',
         maxLevel: 3,
         basePrice: 1200,
         priceScale: 2.2,
         description: (lvl) => `Sverd-svinger etterlater en mørk sti (Nå: ${30 * lvl}% skade)`
     },
 
-    // --- SYNERGIER ---
+    // --- SYNERGIER (Wizard-eksklusiv) ---
     {
         id: 'thermal_shock',
         title: 'Thermal Shock',
         icon: 'item_synergy_rune',
         category: 'Synergi',
+        classRestriction: 'wizard',
         maxLevel: 1,
-        basePrice: 500, // Expensive
+        basePrice: 500,
         priceScale: 1,
         description: () => 'Konsumerer frys-effekt for å utløse et 3x skade eksplosivt sjokk!',
-        iconTint: 'drop-shadow(0 0 4px #ff5500) hue-rotate(45deg)', // Oransje glød
+        iconTint: 'drop-shadow(0 0 4px #ff5500) hue-rotate(45deg)',
         requires: {
             'fire_damage': 3,
             'frost_slow': 3

@@ -1,3 +1,5 @@
+import type { ClassId } from '../config/classes';
+
 export interface EnemySave {
     type: string;
     x: number;
@@ -20,6 +22,8 @@ export interface RunProgress {
     playerY?: number;
     savedEnemies?: EnemySave[];
     waveEnemiesRemaining?: number;
+    /** Klassen spilleren valgte for denne runen. undefined i gamle saves → resolves til 'krieger'. */
+    playerClass?: ClassId;
 }
 
 export interface SaveData {
@@ -30,6 +34,8 @@ export interface SaveData {
     audioSettings?: any; // Avoiding circular dependency, will be typed in AudioManager
     graphicsQuality?: string;
     tutorialSeen?: boolean;
+    /** Siste klasse spilleren valgte. Brukes for å huske valg på neste run. */
+    lastSelectedClass?: ClassId;
 }
 
 export class SaveManager {
@@ -79,7 +85,9 @@ export class SaveManager {
                     highStage: parsed.highStage || 1,
                     unlockedWeapons: parsed.unlockedWeapons || ['sword'],
                     audioSettings: parsed.audioSettings,
-                    graphicsQuality: parsed.graphicsQuality
+                    graphicsQuality: parsed.graphicsQuality,
+                    tutorialSeen: parsed.tutorialSeen,
+                    lastSelectedClass: parsed.lastSelectedClass
                 };
             }
         } catch (e) {
