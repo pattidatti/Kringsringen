@@ -2141,6 +2141,8 @@ export class MainScene extends Phaser.Scene implements IMainScene {
             savedEnemies: enemies,
             waveEnemiesRemaining: this.waves?.getEnemiesToSpawnRemaining() ?? 0,
             savedAt: Date.now(),
+            /** Bevarer klassen slik at ClassSelector hoppes over ved "Fortsett Spill" */
+            playerClass: this.registry.get('playerClass') ?? 'krieger',
         };
     }
 
@@ -2220,7 +2222,7 @@ export class MainScene extends Phaser.Scene implements IMainScene {
     }
 }
 
-export const createGame = (container: HTMLElement, networkConfig?: NetworkConfig | null, continueRun: boolean = false) => {
+export const createGame = (container: HTMLElement, networkConfig?: NetworkConfig | null, continueRun: boolean = false, selectedClass?: import('../config/classes').ClassId) => {
     // HARDENING: If there are existing Phaser instances, destroy them all to prevent "ghost" games
     if ((window as any).phaserGames && Array.isArray((window as any).phaserGames)) {
         console.log(`[main.ts] Found ${(window as any).phaserGames.length} existing Phaser instances. Destroying all...`);
@@ -2283,6 +2285,9 @@ export const createGame = (container: HTMLElement, networkConfig?: NetworkConfig
     // Initialize registry with saved quality or default
     const saved = SaveManager.load();
     game.registry.set('graphicsQuality', saved.graphicsQuality || 'medium');
+
+    // Set playerClass from ClassSelector (or default 'krieger' for legacy saves)
+    game.registry.set('playerClass', selectedClass ?? 'krieger');
 
     return game;
 };

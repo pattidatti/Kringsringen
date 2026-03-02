@@ -15,14 +15,17 @@ import { PacketType } from '../network/SyncSchemas';
 import { setGameInstance } from '../hooks/useGameRegistry';
 import type { NetworkConfig } from '../App';
 import type { IMainScene } from '../game/IMainScene';
+import type { ClassId } from '../config/classes';
 
 interface GameContainerProps {
     networkConfig?: NetworkConfig | null;
     continueRun?: boolean;
+    /** Klassen spilleren valgte i ClassSelector (eller hentet fra RunProgress) */
+    selectedClass?: ClassId;
     onExitToMenu?: () => void;
 }
 
-export const GameContainer: React.FC<GameContainerProps> = React.memo(({ networkConfig, continueRun, onExitToMenu }) => {
+export const GameContainer: React.FC<GameContainerProps> = React.memo(({ networkConfig, continueRun, selectedClass, onExitToMenu }) => {
     const phaserContainerRef = useRef<HTMLDivElement>(null);
     const gameInstanceRef = useRef<Phaser.Game | null>(null);
 
@@ -116,7 +119,7 @@ export const GameContainer: React.FC<GameContainerProps> = React.memo(({ network
 
     useEffect(() => {
         if (phaserContainerRef.current && !gameInstanceRef.current) {
-            const game = createGame(phaserContainerRef.current, networkConfig, continueRun); // Pass element directly
+            const game = createGame(phaserContainerRef.current, networkConfig, continueRun, selectedClass); // Pass element directly
             gameInstanceRef.current = game;
 
             if (continueRun) {
@@ -735,6 +738,7 @@ export const GameContainer: React.FC<GameContainerProps> = React.memo(({ network
         prev.networkConfig?.peer.id === next.networkConfig?.peer.id &&
         prev.networkConfig?.role === next.networkConfig?.role &&
         prev.continueRun === next.continueRun &&
+        prev.selectedClass === next.selectedClass &&
         prev.onExitToMenu === next.onExitToMenu
     );
 });
