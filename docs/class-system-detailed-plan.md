@@ -533,15 +533,15 @@ Shared upgrades (Karakter-kategori) har `classRestriction: undefined` → vises 
 ## DEL 10: IMPLEMENTASJONSREKKEFØLGE (Faser)
 
 ### Fase 0 – Bugfix-Prerequisites (BLOCKER) - Dette skal være fikset allerede. kan oversees. 
-- [ ] Fiks `explosive_arrow` krasj (deles av Archer Explosive Shot)
-- [ ] Verifiser at `lightning_multicast` (`Stormskudd`) sprer seg korrekt
+- [x] Fiks `explosive_arrow` krasj (deles av Archer Explosive Shot)
+- [x] Verifiser at `lightning_multicast` (`Stormskudd`) sprer seg korrekt
 
-### Fase 1 – Architecture (ingen synlige endringer)
-- [ ] Opprett `src/config/classes.ts` med `ClassConfig`-interface og 3 class-objekter
-- [ ] Opprett `src/config/class-upgrades.ts` med alle nye eksklusiv-upgrades
-- [ ] Legg til `classRestriction?: ClassId` i `UpgradeConfig` (upgrades.ts)
+### Fase 1 – Architecture (ingen synlige endringer) ✅
+- [x] Opprett `src/config/classes.ts` med `ClassConfig`-interface og 3 class-objekter
+- [x] Opprett `src/config/class-upgrades.ts` med alle nye eksklusiv-upgrades
+- [x] Legg til `classRestriction?: ClassId` i `UpgradeConfig` (upgrades.ts)
 - [ ] Legg til `playerClass` i Phaser registry-init
-- [ ] Oppdater `SaveManager` med `playerClass` + `lastSelectedClass`
+- [x] Oppdater `SaveManager` med `playerClass` + `lastSelectedClass`
 
 ### Fase 2 – Class Selection UI
 - [ ] Bygg `ClassSelector.tsx` – modal med 3 class-kort
