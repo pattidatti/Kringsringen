@@ -8,6 +8,7 @@ import { MultiplayerLobby } from './ui/MultiplayerLobby';
 import { SaveManager } from '../game/SaveManager';
 import { AudioManager } from '../game/AudioManager';
 import { AdSenseAd } from './ui/AdSenseAd';
+import { useGameAssetPreloader } from '../hooks/useGameAssetPreloader';
 import Peer from 'peerjs';
 import '../styles/pixel-ui.css';
 
@@ -26,6 +27,8 @@ interface LandingPageProps {
 }
 
 const LandingPage: React.FC<LandingPageProps> = ({ onStart, onContinue, onStartMP }) => {
+    useGameAssetPreloader();
+
     const [showHighscores, setShowHighscores] = useState(false);
     const [showSettings, setShowSettings] = useState(false);
     const [showTutorial, setShowTutorial] = useState(false);
@@ -100,7 +103,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart, onContinue, onStartM
 
             {/* Background image */}
             <img
-                src={import.meta.env.BASE_URL + 'assets/landing-bg.png'}
+                src={import.meta.env.BASE_URL + 'assets/landing-bg.webp'}
                 alt=""
                 className="absolute inset-0 w-full h-full object-cover object-center"
                 draggable={false}

@@ -4,7 +4,11 @@ import { AudioManager } from './AudioManager';
 
 /**
  * Loads all game assets (spritesheets, images, atlases, audio).
- * Called from MainScene.preload().
+ * Called from PreloadScene.preload().
+ *
+ * URLs mirror those in GameAssetUrls.ts, which useGameAssetPreloader uses
+ * to pre-warm the browser cache on the landing page. After a cache hit,
+ * Phaser's load phase completes near-instantly.
  */
 export function loadAssets(scene: Phaser.Scene): void {
     // Player Sprites
