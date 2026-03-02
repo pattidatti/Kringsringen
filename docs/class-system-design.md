@@ -17,18 +17,18 @@ Introduce a **class system** where players choose between **Melee (Krieger), Ran
 **Starting Stats:**
 - Base HP: +30% (heavily armored)
 - Base Damage: +20% (strong melee)
-- Base Speed: -10% (slower, heavy)
+- Base Speed: -5% (lett tyngre, men fortsatt mobil)
 - Base Armor: +2 (natural protection)
 
-**Starting Weapon:** Sword
-**Class Ability:** Whirlwind Slash (chain cleave to nearby enemies)
+**Starting Weapon:** Sword (Slot 1)
+**Class Ability:** Whirlwind Slash (Slot 2) - chain cleave to nearby enemies
 
 **Shop Left Categories:**
-1. **Ønsket** (Desired) - Class-exclusive high-level upgrades
-2. **Karakterforbedring** (Character) - Base stats
-3. **Sverdkraft** (Blade Mastery) - Melee weapon focus
-4. **Raskultur** (Battle Techniques) - Special melee abilities
-5. **Panser** (Armor/Defense) - Defensive synergies
+1. **DRIVKRAFT** (Class-exclusive high-level upgrades)
+2. **KARAKTER** (Base stats)
+3. **MASTRING** (Melee weapon focus)
+4. **KAMPTALENT** (Special melee abilities)
+5. **RUSTNING** (Defensive synergies)
 
 **Sample Class-Exclusive Upgrades:**
 - Utstøtbar Slag (Knockback chains enemies into each other)
@@ -46,15 +46,15 @@ Introduce a **class system** where players choose between **Melee (Krieger), Ran
 - Base Speed: +25% (agile, mobile)
 - Base Attack Speed: +15% (quick shots)
 
-**Starting Weapon:** Bow
-**Class Ability:** Multishot Barrage (rapid fire burst)
+**Starting Weapon:** Bow (Slot 1)
+**Class Ability:** Multishot Barrage (Slot 2) - rapid fire burst
 
 **Shop Left Categories:**
-1. **Ønsket** (Desired) - Class-exclusive high-level upgrades
-2. **Karakterforbedring** (Character) - Base stats
-3. **Buekunst** (Archery Mastery) - Arrow focus
-4. **Pilteknikker** (Arrow Techniques) - Precision abilities
-5. **Mobilitet** (Mobility) - Speed and dodge synergies
+1. **DRIVKRAFT** (Class-exclusive high-level upgrades)
+2. **KARAKTER** (Base stats)
+3. **MASTRING** (Archery focus)
+4. **TALENTER** (Precision abilities)
+5. **SMIDIGHET** (Speed and dodge synergies)
 
 **Sample Class-Exclusive Upgrades:**
 - Rikosjett (Arrows bounce off walls/enemies)
@@ -72,15 +72,15 @@ Introduce a **class system** where players choose between **Melee (Krieger), Ran
 - Base Mana Regen: +50% (faster spell cooldown)
 - Base Attack Speed: +10% (quicker casting)
 
-**Starting Weapon:** Fireball
-**Class Ability:** Elemental Cascade (trigger chain reactions between spell types)
+**Starting Weapons:** Fireball (Slot 1), Frost Bolt (Slot 2), Chain Lightning (Slot 3)
+**Class Ability:** Elemental Cascade (Slot 4) - trigger chain reactions between spell types
 
 **Shop Left Categories:**
-1. **Ønsket** (Desired) - Class-exclusive high-level upgrades
-2. **Karakterforbedring** (Character) - Base stats
-3. **Trolldommekunst** (Elemental Magic) - All spells
-4. **Magisk Synergi** (Magic Synergy) - Spell interactions
-5. **Essoter** (Arcane Secrets) - Advanced techniques
+1. **DRIVKRAFT** (Class-exclusive high-level upgrades)
+2. **KARAKTER** (Base stats)
+3. **MASTRING** (All spells)
+4. **SYNERGI** (Spell interactions)
+5. **ARKAN KUNNSKAP** (Advanced techniques)
 
 **Sample Class-Exclusive Upgrades:**
 - Elementær Overflod (Using one spell boosts damage of others)
@@ -137,18 +137,18 @@ REMOVED/REDESIGNED
 TOTAL UPGRADES: ~90-110
 
 Krieger Sees:
-├── Shared (15): Karakterforbedring
-├── Exclusive (25): Ønsket, Sverdkraft, Raskultur, Panser
+├── Shared (15): KARAKTER
+├── Exclusive (25): DRIVKRAFT, MASTRING, KAMPTALENT, RUSTNING
 └── Total: 40 available
 
 Archer Sees:
-├── Shared (15): Karakterforbedring
-├── Exclusive (25): Ønsket, Buekunst, Pilteknikker, Mobilitet
+├── Shared (15): KARAKTER
+├── Exclusive (25): DRIVKRAFT, MASTRING, TALENTER, SMIDIGHET
 └── Total: 40 available
 
 Wizard Sees:
-├── Shared (15): Karakterforbedring
-├── Exclusive (25): Ønsket, Trolldommekunst, Magisk Synergi, Essoter
+├── Shared (15): KARAKTER
+├── Exclusive (25): DRIVKRAFT, MASTRING, SYNERGI, ARKAN KUNNSKAP
 └── Total: 40 available
 ```
 
@@ -172,29 +172,29 @@ Wizard Sees:
 
 **KRIEGER (Shared + Exclusive):**
 ```
-[Ønsket] ⭐ ← Exclusive: Whirlwind Slash upgrades + unique Krieger legendaries
-[Karakterforbedring] [SHARED] ← Health, Speed, Armor (same for all classes)
-[Sverdkraft] ⭐ ← Exclusive: Melee weapon focus (damage, knockback, attack speed)
-[Raskultur] ⭐ ← Exclusive: Battle technique synergies (Counter, Riposte, etc.)
-[Panser] ⭐ ← Exclusive: Armor/Defense synergies (Thorns, Damage Reduction, etc.)
+[DRIVKRAFT] ⭐ ← Exclusive: Whirlwind Slash upgrades + unique Krieger legendaries
+[KARAKTER] [SHARED] ← Health, Speed, Armor (same for all classes)
+[MASTRING] ⭐ ← Exclusive: Melee weapon focus (damage, knockback, attack speed)
+[KAMPTALENT] ⭐ ← Exclusive: Battle technique synergies (Counter, Riposte, etc.)
+[RUSTNING] ⭐ ← Exclusive: Armor/Defense synergies (Thorns, Damage Reduction, etc.)
 ```
 
 **ARCHER (Shared + Exclusive):**
 ```
-[Ønsket] ⭐ ← Exclusive: Explosive Shot upgrades + unique Archer legendaries
-[Karakterforbedring] [SHARED] ← Health, Speed, Armor (same for all classes)
-[Buekunst] ⭐ ← Exclusive: Archery focus (arrow damage, pierce, multishot)
-[Pilteknikker] ⭐ ← Exclusive: Precision techniques (Ricochet, Charge, etc.)
-[Mobilitet] ⭐ ← Exclusive: Movement synergies (Dash extension, Aerial, etc.)
+[DRIVKRAFT] ⭐ ← Exclusive: Explosive Shot upgrades + unique Archer legendaries
+[KARAKTER] [SHARED] ← Health, Speed, Armor (same for all classes)
+[MASTRING] ⭐ ← Exclusive: Archery focus (arrow damage, pierce, multishot)
+[TALENTER] ⭐ ← Exclusive: Precision techniques (Ricochet, Charge, etc.)
+[SMIDIGHET] ⭐ ← Exclusive: Movement synergies (Dash extension, Aerial, etc.)
 ```
 
 **WIZARD (Shared + Exclusive):**
 ```
-[Ønsket] ⭐ ← Exclusive: Elemental Cascade upgrades + unique Wizard legendaries
-[Karakterforbedring] [SHARED] ← Health, Speed, Armor (same for all classes)
-[Trolldommekunst] ⭐ ← Exclusive: All spells (Fire, Frost, Lightning upgrades)
-[Magisk Synergi] ⭐ ← Exclusive: Cross-spell interactions (Chain reactions, etc.)
-[Essoter] ⭐ ← Exclusive: Arcane secrets (Mana shields, Nullification, etc.)
+[DRIVKRAFT] ⭐ ← Exclusive: Elemental Cascade upgrades + unique Wizard legendaries
+[KARAKTER] [SHARED] ← Health, Speed, Armor (same for all classes)
+[MASTRING] ⭐ ← Exclusive: All spells (Fire, Frost, Lightning upgrades)
+[SYNERGI] ⭐ ← Exclusive: Cross-spell interactions (Chain reactions, etc.)
+[ARKAN KUNNSKAP] ⭐ ← Exclusive: Arcane secrets (Mana shields, Nullification, etc.)
 ```
 
 ### Right Page: Filtered Upgrades
@@ -367,31 +367,41 @@ const filteredItems = UPGRADES.filter(u =>
 
 ## 10. CLASS ABILITIES (Active & Leveling)
 
-Each class has a **unique active ability** that can be triggered and leveled up through upgrades:
+Each class has a **set of active abilities** that can be triggered and leveled up through upgrades.
+
+**Keybinding Mapping:**
+- **SHIFT**: Dash
+- **SPACE**: Angrep (Primary Attack)
+- **1, 2, 3, 4, 5**: Kjerneevner (Main Class Abilities / Weapons)
+  - **Krieger**: Slot 1: Sword, Slot 2: Whirlwind Slash
+  - **Archer**: Slot 1: Bow, Slot 2: Multishot Barrage, Slot 3: Explosive Shot
+  - **Wizard**: Slot 1: Fireball, Slot 2: Frost Bolt, Slot 3: Chain Lightning, Slot 4: Elemental Cascade
+- **Q, E, F, R**: Sekundærevner / Verktøy (Utility/Global Abilities)
+  - Standardized utility slots shared across classes
 
 **KRIEGER - Whirlwind Slash:**
-- **Hotkey:** [Z] (new hotkey slot)
+- **Hotkey:** [2]
 - **Mechanics:** AoE slash in circle around player; hits nearby enemies; bounces knockback between them
 - **Base Cooldown:** 8 seconds
-- **Leveling via shop upgrades:**
+- **Leveling via shop upgrades (DRIVKRAFT):**
   - "Skarpe Kniver" (Lv1-3): Increases damage per level
   - "Rotasjonsfart" (Lv1-3): Reduces cooldown
   - "Eksplosiv Sekvens" (Lv1-2): Each hit reduces next cooldown by X% (synergy)
 
 **ARCHER - Explosive Shot:**
-- **Hotkey:** [X] (new hotkey slot)
+- **Hotkey:** [3]
 - **Mechanics:** Next arrow costs 2x cooldown but explodes on impact, 2x damage, AoE radius
 - **Base Cooldown:** 6 seconds (doubled when triggered = 12s)
-- **Leveling via shop upgrades:**
+- **Leveling via shop upgrades (DRIVKRAFT):**
   - "Massiv Eksplosjon" (Lv1-3): Increases AoE radius
   - "Dødelig Nøyaktighet" (Lv1-3): Increases damage multiplier
   - "Kaskadefyring" (Lv1-2): Spawns extra arrows when explosive hits (synergy)
 
 **WIZARD - Elemental Cascade:**
-- **Hotkey:** [C] (new hotkey slot)
+- **Hotkey:** [4]
 - **Mechanics:** Triggers 50% bonus damage on all active spells for 4 seconds; spells trigger each other
 - **Base Cooldown:** 10 seconds
-- **Leveling via shop upgrades:**
+- **Leveling via shop upgrades (DRIVKRAFT):**
   - "Magisk Resonans" (Lv1-3): Extends duration
   - "Elementær Kraft" (Lv1-3): Increases damage bonus %
   - "Kjede Reaksjon" (Lv1-2): Enemies hit by multiple spell types take extra damage (synergy)
