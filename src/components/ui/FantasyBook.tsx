@@ -6,6 +6,8 @@ import tabRed from '../../assets/ui/fantasy/tabs/red.png';
 import tabGreen from '../../assets/ui/fantasy/tabs/green.png';
 import tabYellow from '../../assets/ui/fantasy/tabs/yellow.png';
 import { UPGRADES, type UpgradeConfig, isItemSpriteIcon } from '../../config/upgrades';
+import { CLASS_UPGRADES } from '../../config/class-upgrades';
+import { CLASS_CONFIGS, resolveClassId } from '../../config/classes';
 import { ItemIcon, type ItemIconKey } from './ItemIcon';
 import { useGameRegistry } from '../../hooks/useGameRegistry';
 import { SettingsContent } from './SettingsContent';
@@ -49,11 +51,28 @@ const TABS: Record<TabKey, { title: string; icon: string; color: string; locked?
 };
 
 const CATEGORY_THEMES: Record<string, { primary: string; secondary: string; border: string; bg: string; text: string }> = {
+    // Delte (legacy + alias)
     'Karakter': { primary: '#fbbf24', secondary: '#f59e0b', border: 'border-amber-500/30', bg: 'bg-amber-950/40', text: 'text-amber-100' },
-    'Sverd': { primary: '#f87171', secondary: '#ef4444', border: 'border-red-500/30', bg: 'bg-red-950/40', text: 'text-red-100' },
-    'Bue': { primary: '#34d399', secondary: '#10b981', border: 'border-emerald-500/30', bg: 'bg-emerald-950/40', text: 'text-emerald-100' },
-    'Magi': { primary: '#818cf8', secondary: '#6366f1', border: 'border-indigo-500/30', bg: 'bg-indigo-950/40', text: 'text-indigo-100' },
-    'Synergi': { primary: '#f97316', secondary: '#ea580c', border: 'border-orange-500/30', bg: 'bg-orange-950/40', text: 'text-orange-100' },
+    'karakter':  { primary: '#fbbf24', secondary: '#f59e0b', border: 'border-amber-500/30', bg: 'bg-amber-950/40', text: 'text-amber-100' },
+    'Sverd':    { primary: '#f87171', secondary: '#ef4444', border: 'border-red-500/30', bg: 'bg-red-950/40', text: 'text-red-100' },
+    'Bue':      { primary: '#34d399', secondary: '#10b981', border: 'border-emerald-500/30', bg: 'bg-emerald-950/40', text: 'text-emerald-100' },
+    'Magi':     { primary: '#818cf8', secondary: '#6366f1', border: 'border-indigo-500/30', bg: 'bg-indigo-950/40', text: 'text-indigo-100' },
+    'Synergi':  { primary: '#f97316', secondary: '#ea580c', border: 'border-orange-500/30', bg: 'bg-orange-950/40', text: 'text-orange-100' },
+    // Krieger (rød)
+    'krieger_drivkraft':  { primary: '#c0392b', secondary: '#e67e22', border: 'border-red-600/40', bg: 'bg-red-950/50', text: 'text-red-100' },
+    'krieger_mastring':   { primary: '#c0392b', secondary: '#e67e22', border: 'border-red-600/40', bg: 'bg-red-950/50', text: 'text-red-100' },
+    'krieger_kamptalent': { primary: '#c0392b', secondary: '#e67e22', border: 'border-red-600/40', bg: 'bg-red-950/50', text: 'text-red-100' },
+    'krieger_rustning':   { primary: '#c0392b', secondary: '#e67e22', border: 'border-red-600/40', bg: 'bg-red-950/50', text: 'text-red-100' },
+    // Archer (grønn)
+    'archer_drivkraft':   { primary: '#27ae60', secondary: '#f1c40f', border: 'border-emerald-600/40', bg: 'bg-emerald-950/50', text: 'text-emerald-100' },
+    'archer_mastring':    { primary: '#27ae60', secondary: '#f1c40f', border: 'border-emerald-600/40', bg: 'bg-emerald-950/50', text: 'text-emerald-100' },
+    'archer_talenter':    { primary: '#27ae60', secondary: '#f1c40f', border: 'border-emerald-600/40', bg: 'bg-emerald-950/50', text: 'text-emerald-100' },
+    'archer_smidighet':   { primary: '#27ae60', secondary: '#f1c40f', border: 'border-emerald-600/40', bg: 'bg-emerald-950/50', text: 'text-emerald-100' },
+    // Wizard (lilla)
+    'wizard_drivkraft':   { primary: '#8e44ad', secondary: '#3498db', border: 'border-purple-600/40', bg: 'bg-purple-950/50', text: 'text-purple-100' },
+    'wizard_mastring':    { primary: '#8e44ad', secondary: '#3498db', border: 'border-purple-600/40', bg: 'bg-purple-950/50', text: 'text-purple-100' },
+    'wizard_synergi':     { primary: '#8e44ad', secondary: '#3498db', border: 'border-purple-600/40', bg: 'bg-purple-950/50', text: 'text-purple-100' },
+    'wizard_arkan':       { primary: '#8e44ad', secondary: '#3498db', border: 'border-purple-600/40', bg: 'bg-purple-950/50', text: 'text-purple-100' },
 };
 
 const StatRow = ({ label, value, icon }: { label: string, value: string | number, icon: string }) => (
@@ -80,7 +99,14 @@ export const FantasyBook: React.FC<FantasyBookProps> = React.memo(({
     onExitGame
 }) => {
     const [activeTab, setActiveTab] = useState<TabKey>('character');
-    const [activeShopCategory, setActiveShopCategory] = useState<UpgradeConfig['category']>('Sverd');
+    const [activeShopCategory, setActiveShopCategory] = useState<string>(
+        () => CLASS_CONFIGS['krieger'].shopCategories[0].id
+    );
+
+    // Class config
+    const rawPlayerClass = useGameRegistry('playerClass', 'krieger');
+    const playerClass = resolveClassId(rawPlayerClass);
+    const classConfig = CLASS_CONFIGS[playerClass];
 
     // Subscribe to Registry for Real-Time Updates
     const level = useGameRegistry('gameLevel', 1);
@@ -104,6 +130,11 @@ export const FantasyBook: React.FC<FantasyBookProps> = React.memo(({
             setActiveTab('upgrades');
         }
     }, [isOpen, mode]);
+
+    // Reset category when class changes
+    useEffect(() => {
+        setActiveShopCategory(classConfig.shopCategories[0].id);
+    }, [playerClass]);
 
     // Page turn sound effect
     useEffect(() => {
@@ -182,13 +213,7 @@ export const FantasyBook: React.FC<FantasyBookProps> = React.memo(({
 
     // --- MERCHANT LEFTS PAGE: Categories ---
     const renderMerchantCategories = () => {
-        const categories: { key: UpgradeConfig['category']; label: string; icon: ItemIconKey }[] = [
-            { key: 'Sverd', label: 'Sverd', icon: 'item_sword' },
-            { key: 'Bue', label: 'Bue', icon: 'item_bow' },
-            { key: 'Karakter', label: 'Karakter', icon: 'item_heart_status' },
-            { key: 'Magi', label: 'Magi', icon: 'item_magic_staff' },
-            { key: 'Synergi', label: 'Synergier', icon: 'item_synergy_rune' }, // Fallback icon
-        ];
+        const categories = classConfig.shopCategories;
 
         return (
             <div className="flex flex-col h-full font-crimson">
@@ -250,15 +275,23 @@ export const FantasyBook: React.FC<FantasyBookProps> = React.memo(({
                     </div>
                 </div>
 
+                {/* Klasse-indikator */}
+                <div className="flex items-center gap-1.5 mb-1 px-1">
+                    <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: classConfig.color }} />
+                    <span className="text-[10px] font-cinzel uppercase tracking-widest opacity-50" style={{ color: classConfig.color }}>
+                        {classConfig.displayName}
+                    </span>
+                </div>
+
                 <div className="space-y-2 flex-1 px-1">
                     {categories.map((cat) => {
-                        const theme = CATEGORY_THEMES[cat.key] || CATEGORY_THEMES['Karakter'];
-                        const isActive = activeShopCategory === cat.key;
+                        const theme = CATEGORY_THEMES[cat.id] || CATEGORY_THEMES['karakter'];
+                        const isActive = activeShopCategory === cat.id;
 
                         return (
                             <button
-                                key={cat.key}
-                                onClick={() => setActiveShopCategory(cat.key)}
+                                key={cat.id}
+                                onClick={() => setActiveShopCategory(cat.id)}
                                 style={isActive ? { backgroundColor: theme.primary + '33', borderColor: theme.primary } : {}}
                                 className={`w-full flex items-center gap-4 p-3 rounded border transition-all duration-200 group relative overflow-hidden
                                     ${isActive
@@ -272,7 +305,7 @@ export const FantasyBook: React.FC<FantasyBookProps> = React.memo(({
                                     className={`w-10 h-10 flex items-center justify-center rounded border transition-colors
                                     ${!isActive ? `bg-slate-100 border-slate-300 text-slate-400 group-hover:border-slate-400 group-hover:text-slate-600` : ''}
                                 `}>
-                                    <ItemIcon icon={cat.icon} size="md" />
+                                    <ItemIcon icon={cat.icon as ItemIconKey} size="md" />
                                 </div>
                                 <span className={`font-cinzel text-xl ${isActive ? `${theme.text} font-bold` : 'text-slate-600 group-hover:text-slate-800'}`}>
                                     {cat.label}
@@ -294,12 +327,15 @@ export const FantasyBook: React.FC<FantasyBookProps> = React.memo(({
 
     // --- MERCHANT RIGHT PAGE: Items ---
     const renderMerchantItems = () => {
-        const shopItems = UPGRADES.filter(u => {
-            if (u.category !== activeShopCategory) return false;
-            if (u.id === 'unlock_bow') return false; // Bow is always unlocked, so hide this
+        const allUpgrades = [...UPGRADES, ...CLASS_UPGRADES];
+        const shopItems = allUpgrades.filter(u => {
+            const catId = u.shopCategoryId ?? u.category.toLowerCase();
+            if (catId !== activeShopCategory) return false;
+            if (u.classRestriction && u.classRestriction !== playerClass) return false;
+            if (u.id === 'unlock_bow') return false;
             return true;
         });
-        const theme = CATEGORY_THEMES[activeShopCategory] || CATEGORY_THEMES['Karakter'];
+        const theme = CATEGORY_THEMES[activeShopCategory] || CATEGORY_THEMES['karakter'];
 
         return (
             <div className="flex flex-col h-full">
@@ -370,15 +406,17 @@ export const FantasyBook: React.FC<FantasyBookProps> = React.memo(({
                                     const cost = Math.floor(item.basePrice * Math.pow(item.priceScale, lvl));
                                     const canAfford = coins >= cost;
                                     const isMaxed = lvl >= item.maxLevel;
+                                    const isExclusive = !!item.classRestriction;
 
-                                    // Check requirements
+                                    // Check requirements (search combined pool)
+                                    const allUpgradesForLookup = [...UPGRADES, ...CLASS_UPGRADES];
                                     let reqMet = true;
                                     let reqText = '';
                                     if (item.requires) {
                                         for (const [rId, rLvl] of Object.entries(item.requires)) {
                                             if ((upgradeLevels[rId] || 0) < rLvl) {
                                                 reqMet = false;
-                                                const rName = UPGRADES.find(u => u.id === rId)?.title || rId;
+                                                const rName = allUpgradesForLookup.find(u => u.id === rId)?.title || rId;
                                                 reqText += `${rName} nivå ${rLvl} kreves. `;
                                             }
                                         }
@@ -394,6 +432,10 @@ export const FantasyBook: React.FC<FantasyBookProps> = React.memo(({
                                                     ? 'bg-slate-800/90 border-slate-600'
                                                     : `${theme.bg} ${theme.border} hover:brightness-105 shadow-md`
                                                 }`}
+                                            style={isExclusive && reqMet ? {
+                                                borderColor: classConfig.color + '55',
+                                                background: `linear-gradient(135deg, ${classConfig.color}12 0%, transparent 55%)`,
+                                            } : {}}
                                         >
                                             {/* Left Side: Info */}
                                             <div className="flex-1 flex flex-col">
