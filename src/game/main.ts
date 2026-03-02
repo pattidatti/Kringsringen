@@ -611,8 +611,8 @@ export class MainScene extends Phaser.Scene implements IMainScene {
                 p.setTint(0xaaaaff);
                 p.setBlendMode(Phaser.BlendModes.ADD);
                 p.setAlpha(0.6);
-                if (this.playerLight) this.playerLight.setRadius(50);
-                if (this.outerPlayerLight) this.outerPlayerLight.setRadius(100);
+                if (this.playerLight) this.playerLight.setRadius(58);
+                if (this.outerPlayerLight) this.outerPlayerLight.setRadius(115);
                 if (this.poolManager) this.poolManager.getDamageText(p.x, p.y - 50, "GHOST", "#aaaaff");
             });
 
@@ -621,8 +621,8 @@ export class MainScene extends Phaser.Scene implements IMainScene {
                 p.clearTint();
                 p.setBlendMode(Phaser.BlendModes.NORMAL);
                 p.setAlpha(1.0);
-                if (this.playerLight) this.playerLight.setRadius(200);
-                if (this.outerPlayerLight) this.outerPlayerLight.setRadius(500);
+                if (this.playerLight) this.playerLight.setRadius(230);
+                if (this.outerPlayerLight) this.outerPlayerLight.setRadius(575);
                 this.combat.flushHP();
                 this.registry.set('playerHP', this.registry.get('playerMaxHP'));
                 if (this.poolManager) this.poolManager.getDamageText(p.x, p.y - 50, "REVIVED", "#55ff55");
@@ -939,8 +939,8 @@ export class MainScene extends Phaser.Scene implements IMainScene {
 
             // Re-create or re-enable lights if needed
             if (!this.playerLight) {
-                this.playerLight = this.lights.addLight(0, 0, 200, 0xfffaf0, 0.7);
-                this.outerPlayerLight = this.lights.addLight(0, 0, 500, 0xfffaf0, 0.4);
+                this.playerLight = this.lights.addLight(0, 0, 230, 0xfffaf0, 0.7);
+                this.outerPlayerLight = this.lights.addLight(0, 0, 575, 0xfffaf0, 0.4);
             } else {
                 this.playerLight.setVisible(true);
                 this.outerPlayerLight.setVisible(true);
@@ -1101,7 +1101,7 @@ export class MainScene extends Phaser.Scene implements IMainScene {
 
         // CREATE LIGHT FOR REMOTE PLAYER IF NEEDED
         if (this.quality.lightingEnabled && !this.remotePlayerLights.has(id)) {
-            const light = this.lights.addLight(px, py, 500, 0xfffaf0, 0.4);
+            const light = this.lights.addLight(px, py, 575, 0xfffaf0, 0.4);
             this.remotePlayerLights.set(id, light);
         }
 
@@ -2196,8 +2196,8 @@ export class MainScene extends Phaser.Scene implements IMainScene {
             player.clearTint();
             player.setBlendMode(Phaser.BlendModes.NORMAL);
             player.setAlpha(1.0);
-            if (this.playerLight) this.playerLight.setRadius(200);
-            if (this.outerPlayerLight) this.outerPlayerLight.setRadius(500);
+            if (this.playerLight) this.playerLight.setRadius(230);
+            if (this.outerPlayerLight) this.outerPlayerLight.setRadius(575);
         }
 
         // Reset remote players visuals
