@@ -167,6 +167,7 @@ export class WaveManager {
         this.enemiesAlive++;
         this.enemiesToSpawnInWave--;
 
+        enemy.removeAllListeners('dead');
         enemy.on('dead', (ex: number, ey: number) => {
             this.enemiesAlive = Math.max(0, this.enemiesAlive - 1);
             this.checkWaveProgress();
@@ -507,6 +508,7 @@ export class WaveManager {
             // Override HP with saved value (reset sets to full maxHP)
             enemy.hp = Math.min(saved.hp, enemy.maxHP);
 
+            enemy.removeAllListeners('dead');
             enemy.on('dead', (ex: number, ey: number) => {
                 this.enemiesAlive = Math.max(0, this.enemiesAlive - 1);
                 this.checkWaveProgress();

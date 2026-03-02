@@ -171,7 +171,7 @@ export class MainScene extends Phaser.Scene implements IMainScene {
                         // REHABILITATION: If a corrupted save has only sword but we are at high level,
                         // unlock the basic arsenal to keep the game playable.
                         let restoredWeapons = run.unlockedWeapons || ['sword'];
-                        if (restoredWeapons.length <= 1 && restoredLevel > 1) {
+                        if (restoredWeapons.length <= 1) {
                             console.log('[MainScene] Corrupted weapon list detected. Rehabilitating arsenal...');
                             restoredWeapons = ['sword', 'bow', 'fireball', 'frost', 'lightning'];
                         }
@@ -451,12 +451,11 @@ export class MainScene extends Phaser.Scene implements IMainScene {
             this.players.add(player);
 
             // Collisions
-            this.physics.add.collider(player, this.enemies);
-            this.physics.add.collider(this.enemies, this.enemies);
             this.physics.add.collider(player, this.obstacles);
-            // Only host handles hard physical separation for enemies to avoid rubberbanding
+            // Only host/singleplayer handles hard physical separation to avoid client rubberbanding
             if (this.networkManager?.role !== 'client') {
                 this.physics.add.collider(player, this.enemies);
+                this.physics.add.collider(this.enemies, this.enemies);
                 this.physics.add.collider(this.bossGroup, this.obstacles);
             }
 
