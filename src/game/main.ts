@@ -32,6 +32,7 @@ import { JitterBuffer } from '../network/JitterBuffer';
 import { EnemyProjectile } from './EnemyProjectile';
 import { getQualityConfig, type QualitySettings, type GraphicsQuality } from '../config/QualityConfig';
 import { BinaryPacker } from '../network/BinaryPacker';
+import { CLASS_CONFIGS, resolveClassId } from '../config/classes';
 
 
 export class MainScene extends Phaser.Scene implements IMainScene {
@@ -242,7 +243,9 @@ export class MainScene extends Phaser.Scene implements IMainScene {
                 };
             }
 
-            // Calculate Initial Stats
+            // Calculate Initial Stats – apply class modifiers first
+            const playerClassId = resolveClassId(this.registry.get('playerClass'));
+            this.stats.applyClassModifiers(CLASS_CONFIGS[playerClassId]);
             this.stats.recalculateStats();
 
             // HP starts at full max (after stats are calculated)
