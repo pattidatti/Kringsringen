@@ -231,7 +231,7 @@ export class InputManager {
 
     private handleClassAbilities(): void {
         const playerClassId = this.scene.registry.get('playerClass');
-        const abilityReady = Date.now() >= (this.scene as any).classAbilityCooldownEnd;
+        const abilityReady = Date.now() >= this.scene.abilityManager.classAbilityCooldownEnd;
 
         if (Phaser.Input.Keyboard.JustDown(this.hotkeys['E'])) {
             this.scene.events.emit('attempt-class-ability-e');

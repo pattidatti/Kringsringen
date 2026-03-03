@@ -356,8 +356,6 @@ export class MainScene extends Phaser.Scene implements IMainScene {
                 return true;
             });
 
-            this.handlePlayerActionCombat(_time, delta);
-
         } catch (error) {
             console.error('[MainScene] Update loop crashed:', error);
         }

@@ -232,10 +232,10 @@ export function createAnimations(scene: Phaser.Scene): void {
         repeat: 0
     });
 
-    // Heal Spell Effect - Row 3, 14 frames (indices 45-58)
+    // Heal Spell Effect - Use first 14 frames
     safeAnims({
         key: 'heal-effect-anim',
-        frames: scene.anims.generateFrameNumbers('heal_effect', { start: 45, end: 58 }),
+        frames: scene.anims.generateFrameNumbers('heal_effect', { start: 0, end: 13 }),
         frameRate: 18,
         repeat: 0
     });

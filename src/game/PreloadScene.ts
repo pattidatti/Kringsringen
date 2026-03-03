@@ -40,7 +40,7 @@ export class PreloadScene extends Phaser.Scene {
         // instance), this.time.delayedCall() would never fire. setTimeout always will.
         this._fallbackTimeout = setTimeout(() => {
             console.error('[PreloadScene] NATIVE TIMEOUT! Assets took >8s. Forcing MainScene transition.');
-            if (this.scene.isActive()) {
+            if (this.sys?.isActive()) {
                 this.scene.start('MainScene');
             }
         }, 8000);
