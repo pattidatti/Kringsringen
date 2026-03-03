@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState, useRef } from 'react';
 import { useGameRegistry, getGameInstance } from '../../hooks/useGameRegistry';
-import { WEAPON_SLOTS, WIZARD_WEAPON_SLOTS, type WeaponId } from '../../config/weapons';
+import { KRIEGER_WEAPON_SLOTS, ARCHER_WEAPON_SLOTS, WIZARD_WEAPON_SLOTS, type WeaponId } from '../../config/weapons';
 import { resolveClassId } from '../../config/classes';
 import { motion } from 'framer-motion';
 import clsx from 'clsx';
@@ -81,7 +81,7 @@ export const Hotbar: React.FC = React.memo(() => {
     const explosiveShotReady = useGameRegistry('explosiveShotReady', false) as boolean;
 
     const classId = resolveClassId(playerClass);
-    const activeSlots = classId === 'wizard' ? WIZARD_WEAPON_SLOTS : WEAPON_SLOTS;
+    const activeSlots = classId === 'wizard' ? WIZARD_WEAPON_SLOTS : (classId === 'archer' ? ARCHER_WEAPON_SLOTS : KRIEGER_WEAPON_SLOTS);
 
     const handleSelectWeapon = useCallback((weaponId: WeaponId) => {
         const game = getGameInstance();
@@ -93,20 +93,19 @@ export const Hotbar: React.FC = React.memo(() => {
     // Keyboard Listeners (class-aware)
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
-            // Suppress weapon switch on class ability hotkeys — Phaser handles them
-            if (classId === 'krieger' && e.key === '2') return; // Whirlwind
-            if (classId === 'wizard' && e.key === '4') return;  // Cascade
-
             const slot = activeSlots.find(s => s.hotkey === e.key);
+            if (!slot) return;
+
             // Skip ability slots — handled by Phaser
-            if (!slot || slot.id.startsWith('ability_')) return;
+            if (slot.id.startsWith('ability_')) return;
+
             if (unlockedWeapons.includes(slot.id)) {
                 handleSelectWeapon(slot.id);
             }
         };
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [activeSlots, classId, unlockedWeapons, handleSelectWeapon]);
+    }, [activeSlots, unlockedWeapons, handleSelectWeapon]);
 
     return (
         <div className="flex items-end justify-center pb-2">

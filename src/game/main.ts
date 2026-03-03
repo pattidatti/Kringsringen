@@ -148,12 +148,15 @@ export class MainScene extends Phaser.Scene implements IMainScene {
             // Load Saved Data
             const saveData = SaveManager.load();
 
+            const playerClassId = resolveClassId(this.registry.get('playerClass'));
+            const classConfig = CLASS_CONFIGS[playerClassId];
+
             // Initialize Registry State — run resources always start fresh
             this.registry.set('playerCoins', 0);
-            this.registry.set('currentWeapon', 'sword');
+            this.registry.set('currentWeapon', classConfig.startingWeapons[0] || 'sword');
             this.registry.set('upgradeLevels', {});
             this.registry.set('highStage', saveData.highStage);
-            this.registry.set('unlockedWeapons', ['sword', 'bow', 'fireball', 'frost', 'lightning']);
+            this.registry.set('unlockedWeapons', [...classConfig.startingWeapons]);
             // Boss state
             this.registry.set('bossComingUp', -1);
             this.registry.set('isBossActive', false);
@@ -171,7 +174,6 @@ export class MainScene extends Phaser.Scene implements IMainScene {
             // Core State
             this.registry.set('gameLevel', 1); // Always initialize to 1 for UI
             this.registry.set('highStage', saveData.highStage);
-            this.registry.set('unlockedWeapons', ['sword', 'bow', 'fireball', 'frost', 'lightning']);
             this.registry.set('playerCoins', 0);
             this.registry.set('currentWave', 1);
             this.registry.set('bossComingUp', -1);
@@ -273,8 +275,7 @@ export class MainScene extends Phaser.Scene implements IMainScene {
             }
 
             // Calculate Initial Stats – apply class modifiers first
-            const playerClassId = resolveClassId(this.registry.get('playerClass'));
-            this.stats.applyClassModifiers(CLASS_CONFIGS[playerClassId]);
+            this.stats.applyClassModifiers(classConfig);
             this.stats.recalculateStats();
 
             // HP starts at full max (after stats are calculated)
@@ -2399,6 +2400,9 @@ export class MainScene extends Phaser.Scene implements IMainScene {
         console.log('[MainScene] restart-game event emitted.');
 
         // Reset Local Registry State
+        const playerClassId = resolveClassId(this.registry.get('playerClass'));
+        const classConfig = CLASS_CONFIGS[playerClassId];
+
         this.registry.set('playerMaxHP', GAME_CONFIG.PLAYER.BASE_MAX_HP);
         this.registry.set('playerHP', GAME_CONFIG.PLAYER.BASE_MAX_HP);
         this.registry.set('playerCoins', 0);
@@ -2407,8 +2411,8 @@ export class MainScene extends Phaser.Scene implements IMainScene {
         this.registry.set('isBossActive', false);
         this.registry.set('bossComingUp', -1);
         this.registry.set('reviveCount', 0);
-        this.registry.set('unlockedWeapons', ['sword']);
-        this.registry.set('currentWeapon', 'sword');
+        this.registry.set('unlockedWeapons', [...classConfig.startingWeapons]);
+        this.registry.set('currentWeapon', classConfig.startingWeapons[0] || 'sword');
         this.registry.set('partyDead', false);
         this.registry.set('upgradeLevels', {});
 
