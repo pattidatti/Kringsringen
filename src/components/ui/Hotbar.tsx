@@ -93,6 +93,10 @@ export const Hotbar: React.FC = React.memo(() => {
     // Keyboard Listeners (class-aware)
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
+            // Suppress weapon switch on class ability hotkeys — Phaser handles them
+            if (classId === 'krieger' && e.key === '2') return; // Whirlwind
+            if (classId === 'wizard' && e.key === '4') return;  // Cascade
+
             const slot = activeSlots.find(s => s.hotkey === e.key);
             // Skip ability slots — handled by Phaser
             if (!slot || slot.id.startsWith('ability_')) return;
@@ -102,7 +106,7 @@ export const Hotbar: React.FC = React.memo(() => {
         };
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [activeSlots, unlockedWeapons, handleSelectWeapon]);
+    }, [activeSlots, classId, unlockedWeapons, handleSelectWeapon]);
 
     return (
         <div className="flex items-end justify-center pb-2">
