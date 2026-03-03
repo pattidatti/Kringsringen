@@ -1,6 +1,5 @@
 import Phaser from 'phaser';
 import type { NetworkConfig } from '../App';
-import { Enemy } from './Enemy';
 import { BossEnemy } from './BossEnemy';
 import { GAME_CONFIG } from '../config/GameConfig';
 import { SaveManager } from './SaveManager';
@@ -94,9 +93,6 @@ export class MainScene extends Phaser.Scene implements IMainScene {
     public pendingDeaths: Set<string> = new Set();
     public quality!: QualitySettings;
 
-    public playerLight!: Phaser.GameObjects.Light;
-    public outerPlayerLight!: Phaser.GameObjects.Light;
-
     constructor() {
         super('MainScene');
     }
@@ -143,6 +139,7 @@ export class MainScene extends Phaser.Scene implements IMainScene {
             this.staticObstacleGrid = new SpatialHashGrid(150);
 
             // Initialize Core Physics Groups
+            console.log('[MainScene] Initializing core physics groups...');
             this.players = this.physics.add.group();
             this.obstacles = this.physics.add.staticGroup();
 
@@ -179,20 +176,23 @@ export class MainScene extends Phaser.Scene implements IMainScene {
                 }
             }
 
-            // Initialize Managers
+            this.poolManager = new ObjectPoolManager(this);
+            this.poolManager.initializeGroups(); // CRITICAL: Do this BEFORE managers that need groups
+
             this.stats = new PlayerStatsManager(this);
             this.combat = new PlayerCombatManager(this);
             this.waves = new WaveManager(this);
-            this.poolManager = new ObjectPoolManager(this);
             this.weather = new WeatherManager(this);
             this.ambient = new AmbientParticleManager(this);
+            console.log('[MainScene] Initializing managers...');
             this.visuals = new SceneVisualManager(this);
-            this.collisions = new CollisionManager(this);
             this.inputManager = new InputManager(this);
             this.networkPacketHandler = new NetworkPacketHandler(this);
             this.eventManager = new SceneEventManager(this);
             this.weaponManager = new WeaponManager(this);
             this.abilityManager = new ClassAbilityManager(this);
+            this.collisions = new CollisionManager(this);
+            console.log('[MainScene] All managers instantiated.');
 
             this.quality = getQualityConfig((this.registry.get('graphicsQuality') as any) || 'medium');
 
@@ -214,13 +214,25 @@ export class MainScene extends Phaser.Scene implements IMainScene {
             this.wasd = this.inputManager.wasd;
             this.hotkeys = this.inputManager.hotkeys;
 
-            // Create Player
+            console.log('[MainScene] Creating player at', this.mapWidth / 2, this.mapHeight / 2);
             this.player = this.physics.add.sprite(this.mapWidth / 2, this.mapHeight / 2, 'player-idle');
-            this.player.setCollideWorldBounds(true).setScale(2).setBodySize(20, 15, true).setOffset(this.player.body!.offset.x, 33).setMass(2).play('player-idle').setPipeline('Light2D');
+            this.player.setCollideWorldBounds(true).setScale(2).setBodySize(20, 15, true).setOffset(this.player.body!.offset.x, 33).setMass(2).play('player-idle');
+
+            if (this.player && this.player.body) {
+                console.log('[MainScene] Player body created successfully.');
+                this.player.setPipeline('Light2D');
+            } else if (this.player) {
+                console.error('[MainScene] FATAL: Player created but has no physics body!');
+            }
+
+            this.data.set('player', this.player);
             this.playerShadow = this.add.sprite(this.player.x, this.player.y + 28, 'shadows', 0).setAlpha(0.4).setDepth(this.player.depth - 1);
             this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
+            console.log('[MainScene] Camera following player.');
 
-            this.poolManager.initializeGroups();
+            // Now that player and groups exist, setup colliders
+            this.collisions.setupColliders(this.player);
+
             this.eventManager.setupEventListeners();
             this.players.add(this.player);
 
@@ -228,6 +240,12 @@ export class MainScene extends Phaser.Scene implements IMainScene {
             this.visuals.regenerateMap(startLevelOverride);
             this.stats.applyClassModifiers(classConfig);
             this.stats.recalculateStats();
+
+            // If singleplayer and fresh run (or restored run that needs starting), start the wave logic!
+            if (!netConfig) {
+                console.log('[MainScene] Starting Level:', startLevelOverride);
+                this.waves.startLevel(startLevelOverride);
+            }
 
             // Multiplayer Initialization
             if (netConfig) {
@@ -257,22 +275,6 @@ export class MainScene extends Phaser.Scene implements IMainScene {
             this.attackHitbox = this.add.rectangle(0, 0, 80, 80, 0xff0000, 0) as any;
             this.physics.add.existing(this.attackHitbox);
             (this.attackHitbox.body as Phaser.Physics.Arcade.Body).enable = false;
-
-            this.physics.add.overlap(this.attackHitbox, this.bossGroup, (_hitbox, boss) => {
-                const b = boss as BossEnemy;
-                if (this.currentSwingHitIds.has(b.id)) return;
-                this.currentSwingHitIds.add(b.id);
-                b.takeDamage(this.stats.damage, '#ffcc00');
-                b.pushback(this.player.x, this.player.y, this.stats.knockback);
-            });
-
-            this.physics.add.overlap(this.attackHitbox, this.enemies, (_hitbox, enemy) => {
-                const e = enemy as Enemy;
-                if (this.currentSwingHitIds.has(e.id)) return;
-                this.currentSwingHitIds.add(e.id);
-                e.takeDamage(this.stats.damage, '#ffcc00');
-                e.pushback(this.player.x, this.player.y, this.stats.knockback);
-            });
 
             this.weather.enableFog();
             this.weather.startRain();
@@ -319,11 +321,16 @@ export class MainScene extends Phaser.Scene implements IMainScene {
 
 
 
+    private lastHeartbeat: number = 0;
     update(_time: number, delta: number) {
         try {
+            if (_time - this.lastHeartbeat > 2000) {
+                this.lastHeartbeat = _time;
+                console.log(`[Heartbeat] Scene: ${this.scene.key}, Player: (${Math.round(this.player?.x)},${Math.round(this.player?.y)}), Camera: (${Math.round(this.cameras.main.scrollX)},${Math.round(this.cameras.main.scrollY)}), Active: ${this.player?.active}`);
+            }
+
             const cappedDelta = Math.min(delta, 100);
             this.poolManager.update(cappedDelta);
-
             this.networkPacketHandler.networkTick();
 
             this.singularities.children.iterate((s: any) => { if (s.active) (s as import('./Singularity').Singularity).update(_time, delta); return true; });
@@ -334,11 +341,6 @@ export class MainScene extends Phaser.Scene implements IMainScene {
 
             const renderTime = this.networkManager ? this.networkManager.getServerTime() - 100 : Date.now();
             this.networkPacketHandler.interpolateRemotePlayers(renderTime);
-
-            if (this.quality.lightingEnabled) {
-                this.playerLight.setPosition(this.player.x, this.player.y);
-                this.outerPlayerLight.setPosition(this.player.x, this.player.y);
-            }
 
             this.visuals.update();
             this.inputManager.update(_time, delta);
@@ -494,6 +496,11 @@ export const createGame = (container: HTMLElement, networkConfig?: NetworkConfig
             autoCenter: Phaser.Scale.CENTER_BOTH
         },
         backgroundColor: '#0f172a'
+    });
+
+    // Global error trap
+    window.addEventListener('error', (event) => {
+        console.error('[GLOBAL ERROR]', event.message, 'at', event.filename, ':', event.lineno);
     });
 
     // Track instance globally for hardening

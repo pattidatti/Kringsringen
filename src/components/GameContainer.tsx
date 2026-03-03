@@ -38,7 +38,11 @@ export const GameContainer: React.FC<GameContainerProps> = React.memo(({ network
     const [readyPlayers, setReadyPlayers] = useState<Set<string>>(new Set());
     const [loadedPlayers, setLoadedPlayers] = useState<Set<string>>(new Set());
     const [isWaitingReady, setIsWaitingReady] = useState(false);
-    const [isLoadingLevel, setIsLoadingLevel] = useState(false);
+    const [isLoadingLevel, setIsLoadingLevel] = useState(true);
+    const setSafeIsLoadingLevel = (val: boolean) => {
+        console.log('[GameContainer] setIsLoadingLevel:', val);
+        setIsLoadingLevel(val);
+    };
     const [readyReason, setReadyReason] = useState<'unpause' | 'next_level' | 'retry' | null>(null);
 
     // Official Host-driven Sync State
@@ -155,11 +159,11 @@ export const GameContainer: React.FC<GameContainerProps> = React.memo(({ network
                 // CRITICAL FIX: If the scene is already complete, clear loading even if listeners aren't bound yet.
                 // This prevents the hang when cached assets make initialization near-instant.
                 if (game.registry.get('create-complete')) {
-                    console.log('[GameContainer] Scene ALREADY complete. Clearing loading state with delay.');
+                    console.log('[GameContainer] create-complete found in registry. Clearing loading state.');
                     clearInterval(scenePoller);
                     setTimeout(() => {
-                        setIsLoadingLevel(false);
-                    }, 200);
+                        setSafeIsLoadingLevel(false);
+                    }, 500);
                     return;
                 }
 

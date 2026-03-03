@@ -20,7 +20,6 @@ export class CollisionManager {
 
     private init(): void {
         this.setupAttackHitbox();
-        this.setupColliders();
     }
 
     private setupAttackHitbox(): void {
@@ -31,8 +30,7 @@ export class CollisionManager {
         this.attackHitbox.body!.setEnable(false);
     }
 
-    private setupColliders(): void {
-        const player = this.scene.data.get('player') as Phaser.Physics.Arcade.Sprite;
+    public setupColliders(player: Phaser.Physics.Arcade.Sprite): void {
         const phaserScene = this.scene as unknown as Phaser.Scene;
 
         // Player vs Obstacles

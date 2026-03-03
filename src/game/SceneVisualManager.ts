@@ -50,12 +50,9 @@ export class SceneVisualManager {
      * Updates visual elements, such as dynamic light positions.
      */
     public update(): void {
-        const player = this.scene.data.get('player') as Phaser.Physics.Arcade.Sprite;
-        const hp = this.scene.registry.get('playerHP') || 100;
-        const maxHP = this.scene.registry.get('playerMaxHP') || 100;
-
         // 1. Update Player Lights
-        if (player && this.playerLight && this.outerPlayerLight) {
+        const player = this.scene.player;
+        if (player && player.active && this.playerLight && this.outerPlayerLight) {
             this.playerLight.setPosition(player.x, player.y);
             this.outerPlayerLight.setPosition(player.x, player.y);
 
@@ -65,6 +62,8 @@ export class SceneVisualManager {
 
         // 2. Update Vignette Intensity based on HP (Red-out)
         if (this.vignetteEffect && this.currentQuality.postFXEnabled) {
+            const hp = this.scene.registry.get('playerHP') || 100;
+            const maxHP = this.scene.registry.get('playerMaxHP') || 100;
             const hpRatio = hp / maxHP;
             if (hpRatio < 0.3) {
                 // Pulse vignette at low HP
@@ -79,13 +78,15 @@ export class SceneVisualManager {
      * Re-applies all lighting and shader settings based on current quality profile.
      */
     public applyQualitySettings(): void {
-        const player = this.scene.data.get('player') as Phaser.Physics.Arcade.Sprite;
+        const player = this.scene.player;
 
         if (this.currentQuality.lightingEnabled) {
+            console.log('[SceneVisualManager] Enabling lights/Light2D...');
             this.scene.lights.enable();
             this.scene.lights.setAmbientColor(0x0a0a0a);
 
             if (player && player.body) player.setPipeline('Light2D');
+            else if (player) console.warn('[SceneVisualManager] Player has no body, skipping pipeline set.');
 
             // Re-create player lights if missing
             if (!this.playerLight) {
@@ -161,6 +162,7 @@ export class SceneVisualManager {
         const mapDef = STATIC_MAPS[mapIndex];
 
         // Load static map – no procedural generation, instant
+        console.log('[SceneVisualManager] Loading map def at index:', mapIndex);
         this.currentMap = new StaticMapLoader(this.scene, this.scene.obstacles, this.mapWidth, this.mapHeight);
         this.currentMap.load(mapDef);
 

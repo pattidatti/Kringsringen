@@ -60,19 +60,20 @@ export function useGameRegistry<T>(key: string, initialValue: T): T {
         const registry = game.registry;
         const events = registry.events;
 
-        // Optimized: only setValue if the registry state has actually diverged from our current state
-        // This avoids the "cascading render" lint error for the common case where useState initialized correctly.
         const current = registry.get(key);
-        setValue(prev => (prev === current ? prev : current));
+        setValue(prev => {
+            const next = current ?? initialValue;
+            return prev === next ? prev : next;
+        });
 
         const onChangeData = (_parent: any, val: T) => {
-            setValue(val);
+            setValue(val ?? initialValue);
         };
         events.on(`changedata-${key}`, onChangeData);
 
         const onSetData = (_parent: any, itemKey: string, val: T) => {
             if (itemKey === key) {
-                setValue(val);
+                setValue(val ?? initialValue);
             }
         };
         events.on('setdata', onSetData);

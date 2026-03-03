@@ -119,7 +119,8 @@ export const Hotbar: React.FC = React.memo(() => {
                     {activeSlots.map((slot) => {
                         const isAbilitySlot = slot.id.startsWith('ability_');
                         const isRealWeapon = !slot.id.startsWith('wrapper_') && !isAbilitySlot;
-                        const isUnlocked = isAbilitySlot || (isRealWeapon && unlockedWeapons.includes(slot.id));
+                        const unlocked = unlockedWeapons || [];
+                        const isUnlocked = isAbilitySlot || (isRealWeapon && unlocked.includes(slot.id));
                         const isActive = isAbilitySlot ? false : currentWeapon === slot.id;
                         const isExplosiveBow = slot.id === 'bow' && classId === 'archer' && explosiveShotReady;
 
