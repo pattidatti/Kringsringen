@@ -43,11 +43,9 @@ export function useGameRegistryThrottled<T>(
         const registry = game.registry;
         const events = registry.events;
 
-        // Sync current value immediately
+        // Sync current value immediately if it diverged since initialization
         const current = registry.get(key);
-        if (current !== undefined) {
-            setValue(current);
-        }
+        setValue(prev => (prev === current ? prev : current));
 
         const updateState = (val: T) => {
             const now = Date.now();

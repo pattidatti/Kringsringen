@@ -58,22 +58,18 @@ export function useGameRegistry<T>(key: string, initialValue: T): T {
         if (!ready || !game) return;
 
         const registry = game.registry;
-        const events = registry.events; // This IS the EventEmitter for DataManager
+        const events = registry.events;
 
-        // Sync current value immediately (scene may have set it before we subscribed)
+        // Optimized: only setValue if the registry state has actually diverged from our current state
+        // This avoids the "cascading render" lint error for the common case where useState initialized correctly.
         const current = registry.get(key);
-        if (current !== undefined) {
-            setValue(current);
-        }
+        setValue(prev => (prev === current ? prev : current));
 
-        // Listen for key-specific change events (fires when existing key is updated)
         const onChangeData = (_parent: any, val: T) => {
             setValue(val);
         };
         events.on(`changedata-${key}`, onChangeData);
 
-        // Listen for generic setdata (fires when a NEW key is created)
-        // Signature: (parent, itemKey, value)
         const onSetData = (_parent: any, itemKey: string, val: T) => {
             if (itemKey === key) {
                 setValue(val);

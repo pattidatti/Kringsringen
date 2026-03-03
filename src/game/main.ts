@@ -76,7 +76,7 @@ export class MainScene extends Phaser.Scene implements IMainScene {
     // ... continued managers and other fields ...
 
     // Weather
-    private weather!: WeatherManager;
+    public weather!: WeatherManager;
 
     // Ambient particles (fireflies / leaves / embers)
     public ambient!: AmbientParticleManager;
