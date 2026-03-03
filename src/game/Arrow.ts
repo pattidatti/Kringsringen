@@ -18,6 +18,7 @@ export class Arrow extends Phaser.Physics.Arcade.Sprite {
     private explosiveLevel: number = 0;
     private singularityLevel: number = 0;
     private poisonLevel: number = 0;
+    private abilityExplosiveRadius: number = 0;
 
     constructor(scene: Phaser.Scene, x: number, y: number) {
         super(scene, x, y, 'arrow');
@@ -97,7 +98,7 @@ export class Arrow extends Phaser.Physics.Arcade.Sprite {
         }
 
         // Handle explosion on impact
-        if (this.explosiveLevel > 0) {
+        if (this.explosiveLevel > 0 || this.abilityExplosiveRadius > 0) {
             this.explode(e.x, e.y);
         }
 
@@ -108,7 +109,7 @@ export class Arrow extends Phaser.Physics.Arcade.Sprite {
         }
     }
 
-    fire(x: number, y: number, angle: number, damage: number, speed: number = 700, pierceCount: number = 0, explosiveLevel: number = 0, singularityLevel: number = 0, poisonLevel: number = 0) {
+    fire(x: number, y: number, angle: number, damage: number, speed: number = 700, pierceCount: number = 0, explosiveLevel: number = 0, singularityLevel: number = 0, poisonLevel: number = 0, abilityExplosiveRadius: number = 0) {
         this.startX = x;
         this.startY = y;
         this.damage = damage;
@@ -117,6 +118,7 @@ export class Arrow extends Phaser.Physics.Arcade.Sprite {
         this.explosiveLevel = explosiveLevel;
         this.singularityLevel = singularityLevel;
         this.poisonLevel = poisonLevel;
+        this.abilityExplosiveRadius = abilityExplosiveRadius;
         this.hitEnemies = new WeakSet();
         this.hitCount = 0;
 
@@ -185,7 +187,9 @@ export class Arrow extends Phaser.Physics.Arcade.Sprite {
 
     private explode(x: number, y: number) {
         const mainScene = this.scene as any;
-        const radius = 80 + (this.explosiveLevel - 1) * 50;
+        const radius = this.abilityExplosiveRadius > 0
+            ? this.abilityExplosiveRadius
+            : 80 + (this.explosiveLevel - 1) * 50;
         const explosionDamage = this.damage * 0.5;
 
         // Spawn explosion effect

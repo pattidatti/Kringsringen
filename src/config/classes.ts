@@ -101,11 +101,11 @@ const KRIEGER: ClassConfig = {
     classAbilityId: 'whirlwind_slash',
     classAbilityHotkey: '2',
     shopCategories: [
-        { id: 'krieger_drivkraft', label: 'DRIVKRAFT ⭐', icon: 'item_swords_crossed', isExclusive: true },
+        { id: 'krieger_drivkraft', label: 'DRIVKRAFT', icon: 'item_swords_crossed', isExclusive: true },
         { id: 'karakter', label: 'KARAKTER', icon: 'item_heart_status', isExclusive: false },
-        { id: 'krieger_mastring', label: 'MASTRING ⭐', icon: 'item_sword', isExclusive: true },
-        { id: 'krieger_kamptalent', label: 'KAMPTALENT ⭐', icon: 'item_swords_crossed', isExclusive: true },
-        { id: 'krieger_rustning', label: 'RUSTNING ⭐', icon: 'item_shield', isExclusive: true },
+        { id: 'krieger_mastring', label: 'MASTRING', icon: 'item_sword', isExclusive: true },
+        { id: 'krieger_kamptalent', label: 'KAMPTALENT', icon: 'item_swords_crossed', isExclusive: true },
+        { id: 'krieger_rustning', label: 'RUSTNING', icon: 'item_shield', isExclusive: true },
     ],
     exclusiveUpgradeIds: [
         // DRIVKRAFT
@@ -143,11 +143,11 @@ const ARCHER: ClassConfig = {
     classAbilityId: 'explosive_shot',
     classAbilityHotkey: '2',
     shopCategories: [
-        { id: 'archer_drivkraft', label: 'DRIVKRAFT ⭐', icon: 'item_bow', isExclusive: true },
+        { id: 'archer_drivkraft', label: 'DRIVKRAFT', icon: 'item_bow', isExclusive: true },
         { id: 'karakter', label: 'KARAKTER', icon: 'item_heart_status', isExclusive: false },
-        { id: 'archer_mastring', label: 'MASTRING ⭐', icon: 'item_bow', isExclusive: true },
-        { id: 'archer_talenter', label: 'TALENTER ⭐', icon: 'item_spear', isExclusive: true },
-        { id: 'archer_smidighet', label: 'SMIDIGHET ⭐', icon: 'item_lightning', isExclusive: true },
+        { id: 'archer_mastring', label: 'MASTRING', icon: 'item_bow', isExclusive: true },
+        { id: 'archer_talenter', label: 'TALENTER', icon: 'item_spear', isExclusive: true },
+        { id: 'archer_smidighet', label: 'SMIDIGHET', icon: 'item_lightning', isExclusive: true },
     ],
     exclusiveUpgradeIds: [
         // DRIVKRAFT
@@ -185,11 +185,11 @@ const WIZARD: ClassConfig = {
     classAbilityId: 'elemental_cascade',
     classAbilityHotkey: '4',
     shopCategories: [
-        { id: 'wizard_drivkraft', label: 'DRIVKRAFT ⭐', icon: 'item_magic_staff', isExclusive: true },
+        { id: 'wizard_drivkraft', label: 'DRIVKRAFT', icon: 'item_magic_staff', isExclusive: true },
         { id: 'karakter', label: 'KARAKTER', icon: 'item_heart_status', isExclusive: false },
-        { id: 'wizard_mastring', label: 'MASTRING ⭐', icon: 'item_frost_orb', isExclusive: true },
-        { id: 'wizard_synergi', label: 'SYNERGI ⭐', icon: 'item_synergy_rune', isExclusive: true },
-        { id: 'wizard_arkan', label: 'ARKAN KUNNSKAP ⭐', icon: 'item_magic_staff', isExclusive: true },
+        { id: 'wizard_mastring', label: 'MASTRING', icon: 'item_frost_orb', isExclusive: true },
+        { id: 'wizard_synergi', label: 'SYNERGI', icon: 'item_synergy_rune', isExclusive: true },
+        { id: 'wizard_arkan', label: 'ARKAN KUNNSKAP', icon: 'item_magic_staff', isExclusive: true },
     ],
     exclusiveUpgradeIds: [
         // DRIVKRAFT

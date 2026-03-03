@@ -5,6 +5,7 @@ import { GameOverOverlay } from './ui/GameOverOverlay';
 import { Hotbar } from './ui/Hotbar';
 import { TopHUD } from './ui/TopHUD';
 import { DashCooldownBar } from './ui/DashCooldownBar';
+import { ClassAbilityBar } from './ui/ClassAbilityBar';
 import { MenuAnchor } from './ui/MenuAnchor';
 import { FantasyBook, type BookMode } from './ui/FantasyBook';
 import { BossSplashScreen } from './ui/BossSplashScreen';
@@ -687,6 +688,7 @@ export const GameContainer: React.FC<GameContainerProps> = React.memo(({ network
                 </div>
 
                 <div className="absolute bottom-6 left-1/2 -translate-x-1/2 pointer-events-auto transition-all duration-500 flex flex-col items-center gap-2">
+                    <ClassAbilityBar />
                     <DashCooldownBar />
                     <Hotbar />
                 </div>
