@@ -33,6 +33,11 @@ import { EnemyProjectile } from './EnemyProjectile';
 import { getQualityConfig, type QualitySettings, type GraphicsQuality } from '../config/QualityConfig';
 import { BinaryPacker } from '../network/BinaryPacker';
 import { CLASS_CONFIGS, resolveClassId } from '../config/classes';
+import { InputManager } from './InputManager';
+import { TextureSetup } from './TextureSetup';
+import { SceneVisualManager } from './SceneVisualManager';
+import { CollisionManager } from './CollisionManager';
+import { NetworkPacketHandler } from './NetworkPacketHandler';
 
 
 export class MainScene extends Phaser.Scene implements IMainScene {
@@ -42,24 +47,15 @@ export class MainScene extends Phaser.Scene implements IMainScene {
     public staticObstacleGrid!: SpatialHashGrid;
     public coins!: Phaser.Physics.Arcade.Group;
     public obstacles!: Phaser.Physics.Arcade.StaticGroup;
-    private attackHitbox!: Phaser.Types.Physics.Arcade.ImageWithDynamicBody;
-    private currentSwingHitIds: Set<string> = new Set();
-    private wasd!: {
-        W: Phaser.Input.Keyboard.Key;
-        A: Phaser.Input.Keyboard.Key;
-        S: Phaser.Input.Keyboard.Key;
-        D: Phaser.Input.Keyboard.Key;
-        SPACE: Phaser.Input.Keyboard.Key;
-        SHIFT: Phaser.Input.Keyboard.Key;
-    };
-    private hotkeys!: {
-        [key: string]: Phaser.Input.Keyboard.Key;
-    };
+    public collisions!: CollisionManager;
+    public inputManager!: InputManager;
+    public visuals!: SceneVisualManager;
+    public networkHandler!: NetworkPacketHandler;
 
-    private arrows!: Phaser.Physics.Arcade.Group;
-    private fireballs!: Phaser.Physics.Arcade.Group;
-    private frostBolts!: Phaser.Physics.Arcade.Group;
-    private lightningBolts!: Phaser.Physics.Arcade.Group;
+    public arrows!: Phaser.Physics.Arcade.Group;
+    public fireballs!: Phaser.Physics.Arcade.Group;
+    public frostBolts!: Phaser.Physics.Arcade.Group;
+    public lightningBolts!: Phaser.Physics.Arcade.Group;
     public singularities!: Phaser.Physics.Arcade.Group;
     private eclipseWakes!: Phaser.Physics.Arcade.Group;
     public bossGroup!: Phaser.Physics.Arcade.Group;
@@ -373,12 +369,19 @@ export class MainScene extends Phaser.Scene implements IMainScene {
                 console.error('[MainScene] CRITICAL: Map generation failed:', e);
             }
 
-            this.applyQualitySettings();
+            this.stats = new PlayerStatsManager(this);
+            this.combat = new PlayerCombatManager(this);
+            this.waves = new WaveManager(this);
 
-            // --- POST PROCESSING ---
-            if (this.quality.postFXEnabled) {
-                this.vignetteEffect = this.cameras.main.postFX.addVignette(0.5, 0.5, 0.85, 0.15);
-            }
+            // Initialize New Managers
+            this.visuals = new SceneVisualManager(this);
+            this.collisions = new CollisionManager(this);
+            this.inputManager = new InputManager(this);
+            this.networkHandler = new NetworkPacketHandler(this);
+
+            // Delegate Visual Setup
+            this.visuals.applyQualitySettings();
+            TextureSetup.create(this);
 
             createAnimations(this);
 
@@ -405,12 +408,6 @@ export class MainScene extends Phaser.Scene implements IMainScene {
                 this.cameras.main.centerOn(savedRun.playerX, savedRun.playerY);
                 console.log(`[MainScene] Restored player position: ${savedRun.playerX}, ${savedRun.playerY}`);
             }
-
-            // Attack Hitbox (invisible circle)
-            this.attackHitbox = this.add.rectangle(0, 0, 60, 60, 0xff0000, 0) as any;
-            this.physics.add.existing(this.attackHitbox);
-            this.attackHitbox.body!.setCircle(30);
-            this.attackHitbox.body!.setEnable(false);
 
             // Enemy Group
             this.enemies = this.physics.add.group({
@@ -674,26 +671,7 @@ export class MainScene extends Phaser.Scene implements IMainScene {
                 }
             });
 
-            const cursors = this.input.keyboard?.createCursorKeys();
-
-            this.wasd = this.input.keyboard?.addKeys({
-                W: Phaser.Input.Keyboard.KeyCodes.W,
-                A: Phaser.Input.Keyboard.KeyCodes.A,
-                S: Phaser.Input.Keyboard.KeyCodes.S,
-                D: Phaser.Input.Keyboard.KeyCodes.D,
-                SPACE: Phaser.Input.Keyboard.KeyCodes.SPACE,
-                SHIFT: Phaser.Input.Keyboard.KeyCodes.SHIFT
-            }) as any;
-
-            this.hotkeys = this.input.keyboard?.addKeys({
-                '1': Phaser.Input.Keyboard.KeyCodes.ONE,
-                '2': Phaser.Input.Keyboard.KeyCodes.TWO,
-                '3': Phaser.Input.Keyboard.KeyCodes.THREE,
-                '4': Phaser.Input.Keyboard.KeyCodes.FOUR,
-                '5': Phaser.Input.Keyboard.KeyCodes.FIVE,
-                'E': Phaser.Input.Keyboard.KeyCodes.E
-            }) as any;
-
+            // Input Context
             this.input.mouse?.disableContextMenu();
 
             this.data.set('player', player);
@@ -1070,142 +1048,9 @@ export class MainScene extends Phaser.Scene implements IMainScene {
     }
 
     private handleNetworkPacket(packet: SyncPacket, conn: DataConnection) {
-        switch (packet.t) {
-            case PacketType.PLAYER_SYNC:
-                if (packet.p) this.updateRemotePlayer(packet.p, packet.ts);
-                if (packet.ps) packet.ps.forEach(p => this.updateRemotePlayer(p, packet.ts));
-                break;
-            case PacketType.ENEMY_SYNC:
-                // Only clients receive this from host
-                if (this.networkManager?.role === 'client' && packet.es) {
-                    this.waves.syncEnemies(packet.es, packet.ts);
-                }
-                break;
-            case PacketType.GAME_EVENT:
-                if (packet.ev) {
-                    if (packet.ev.type === 'hit_request' && this.networkManager?.role === 'host') {
-                        // Host validates the hit using Lag Compensation (Rewind)
-                        const req = packet.ev.data;
-                        let enemy: Enemy | BossEnemy | null = null;
-
-                        if (req.enemyId === 'boss') {
-                            enemy = this.bossGroup.getFirstAlive() as BossEnemy;
-                        } else {
-                            enemy = this.waves.findEnemyById(req.enemyId);
-                        }
-
-                        if (enemy && enemy.active && !enemy.getData('isDead')) { // Using isDead getter safely
-                            const historicalPos = enemy.getHistoricalPosition(packet.ts);
-                            if (historicalPos) {
-                                const dist = Phaser.Math.Distance.Between(historicalPos.x, historicalPos.y, req.hitX, req.hitY);
-                                // The player's attack hitbox radius is 50. Allow 70px for precision grace.
-                                if (dist <= 70) {
-                                    console.log(`[Host] Validated client hit on ${req.enemyId} at lag ${this.networkManager.getServerTime() - packet.ts}ms. Distance: ${dist}`);
-                                    enemy.takeDamage(req.damage, '#ffcc00');
-
-                                    // Remote player pushback source
-                                    const remoteSprite = this.remotePlayers.get(conn.peer);
-                                    if (remoteSprite) {
-                                        enemy.pushback(remoteSprite.x, remoteSprite.y, this.stats.knockback);
-                                    }
-                                } else {
-                                    console.warn(`[Host] Rejected client hit on ${req.enemyId}. Distance ${dist} too far at historical time.`);
-                                }
-                            }
-                        }
-                        break; // Do not broadcast hit_requests
-                    }
-
-                    if (packet.ev.type === 'projectile_hit_request' && this.networkManager?.role === 'host') {
-                        const req = packet.ev.data;
-                        const enemy = this.waves.findEnemyById(req.targetId) || (req.targetId === 'boss' ? this.bossGroup.getFirstAlive() as any : null);
-
-                        if (enemy && enemy.active && !enemy.getData('isDead')) {
-                            const historicalPos = enemy.getHistoricalPosition(req.timestamp || packet.ts);
-                            if (historicalPos) {
-                                const dist = Phaser.Math.Distance.Between(historicalPos.x, historicalPos.y, req.hitX, req.hitY);
-                                // Projectile hitbox grace: 60px base + 40px lag grace
-                                if (dist <= 100) {
-                                    console.log(`[Host] Validated client ${req.projectileType} hit on ${req.targetId} at lag ${this.networkManager.getServerTime() - (req.timestamp || packet.ts)}ms. Distance: ${dist}`);
-                                    enemy.takeDamage(req.damage, req.projectileType === 'frost' ? '#00aaff' : '#ffcc00');
-
-                                    if (req.projectileType === 'frost' && req.isSlow) {
-                                        enemy.applySlow(req.slowDuration);
-                                    }
-
-                                    // Apply pushback from impact point
-                                    enemy.pushback(req.hitX, req.hitY, 150);
-                                } else {
-                                    console.warn(`[Host] Rejected client ${req.projectileType} hit on ${req.targetId}. Distance ${dist} too far.`);
-                                }
-                            }
-                        }
-                        break;
-                    }
-
-                    this.handleGameEvent(packet.ev);
-                    // Relay to all if host
-                    if (this.networkManager?.role === 'host') {
-                        this.networkManager.broadcast(packet);
-                    }
-                }
-                break;
-            case PacketType.GAME_STATE:
-                if (packet.gs) {
-                    this.registry.set('gameLevel', packet.gs.level);
-                    this.registry.set('currentWave', packet.gs.wave);
-                    this.registry.set('isBossActive', packet.gs.isBossActive);
-                    if (packet.gs.bossIndex !== undefined) {
-                        this.registry.set('bossComingUp', packet.gs.bossIndex);
-                    }
-                }
-                break;
-        }
+        this.networkHandler.handlePacket(packet, conn);
     }
 
-    private updateRemotePlayer(p: PackedPlayer, ts: number) {
-        const [id, px, py, _anim, _flipX, _hp, _weapon, name] = p;
-
-        // Use the registry peer ID (not private NetworkManager.peer) to skip ourselves
-        const myId = this.game.registry.get('networkConfig')?.peer.id;
-        if (id === myId) return;
-
-        let remotePlayer = this.remotePlayers.get(id);
-        if (!remotePlayer) {
-            remotePlayer = this.physics.add.sprite(px, py, 'player-idle');
-            remotePlayer.setScale(2);
-            remotePlayer.setDepth(100);
-            this.remotePlayers.set(id, remotePlayer);
-            this.players.add(remotePlayer);
-
-            // Add nickname tag
-            const label = this.add.text(px, py - 40, name || 'Spiller', {
-                fontSize: '12px',
-                fontFamily: 'Alagard',
-                color: '#ffffff',
-                backgroundColor: '#00000088',
-                padding: { x: 4, y: 2 }
-            }).setOrigin(0.5).setDepth(101);
-            this.playerNicknames.set(id, label);
-        }
-
-        // Push to JitterBuffer instead of applying instantly
-        let buffer = this.playerBuffers.get(id);
-        if (!buffer) {
-            buffer = new JitterBuffer<PackedPlayer>(30);
-            this.playerBuffers.set(id, buffer);
-        }
-        buffer.push(ts, p);
-
-        // CREATE LIGHT FOR REMOTE PLAYER IF NEEDED
-        if (this.quality.lightingEnabled && !this.remotePlayerLights.has(id)) {
-            const light = this.lights.addLight(px, py, 575, 0xfffaf0, 0.4);
-            this.remotePlayerLights.set(id, light);
-        }
-
-        // Cache latest packet so host can relay it to other clients
-        this.remotePlayerPackets.set(id, p);
-    }
 
     private removeRemotePlayer(id: string) {
         const sprite = this.remotePlayers.get(id);
@@ -1231,232 +1076,9 @@ export class MainScene extends Phaser.Scene implements IMainScene {
     }
 
     private handleGameEvent(event: any) {
-        if (event.type === 'attack') {
-            const { id, weapon, angle, anim } = event.data;
-            if (id === this.game.registry.get('networkConfig')?.peer.id) return;
-
-            const remoteSprite = this.remotePlayers.get(id);
-            if (remoteSprite) {
-                remoteSprite.play(anim);
-
-                // Spawn projectile for remote player if needed
-                if (weapon === 'bow') {
-                    const arrow = this.arrows.get(remoteSprite.x, remoteSprite.y) as Arrow;
-                    if (arrow) {
-                        arrow.fire(remoteSprite.x, remoteSprite.y, angle, 10, 700, 0, 0);
-                    }
-                } else if (weapon === 'fire') {
-                    const fireball = this.fireballs.get(remoteSprite.x, remoteSprite.y) as Fireball;
-                    if (fireball) fireball.fire(remoteSprite.x, remoteSprite.y, angle, 15);
-                } else if (weapon === 'frost') {
-                    const bolt = this.frostBolts.get(remoteSprite.x, remoteSprite.y) as FrostBolt;
-                    if (bolt) {
-                        const targetX = remoteSprite.x + Math.cos(angle) * 200;
-                        const targetY = remoteSprite.y + Math.sin(angle) * 200;
-                        bolt.fire(remoteSprite.x, remoteSprite.y, targetX, targetY, 12);
-                    }
-                } else if (weapon === 'lightning') {
-                    const bolt = this.lightningBolts.get(remoteSprite.x, remoteSprite.y) as LightningBolt;
-                    if (bolt) {
-                        const targetX = remoteSprite.x + Math.cos(angle) * 300;
-                        const targetY = remoteSprite.y + Math.sin(angle) * 300;
-                        bolt.fire(remoteSprite.x, remoteSprite.y, targetX, targetY, 20, 1);
-                    }
-                }
-            }
-        } else if (event.type === 'party_dead') {
-            this.registry.set('partyDead', true);
-            this.events.emit('party_dead');
-        } else if (event.type === 'restart_game') {
-            this.restartGame();
-        } else if (event.type === 'revive_request') {
-            const { targetId } = event.data;
-            if (this.networkManager?.role === 'host') {
-                this.networkManager.broadcast({
-                    t: PacketType.GAME_EVENT,
-                    ev: { type: 'player_revived', data: { targetId } },
-                    ts: Date.now()
-                });
-                // Handle locally immediately for the host
-                this.handleGameEvent({ type: 'player_revived', data: { targetId } } as any);
-            }
-        } else if (event.type === 'player_revived') {
-            const { targetId } = event.data;
-
-            // Increment the cost multiplier across all clients synced via this event
-            const currentReviveCount = this.registry.get('reviveCount') || 0;
-            this.registry.set('reviveCount', currentReviveCount + 1);
-
-            const isLocal = targetId === this.networkManager?.peerId || !this.networkManager?.role;
-            if (isLocal) {
-                this.events.emit('local-player-revived');
-            } else {
-                const remoteSprite = this.remotePlayers.get(targetId);
-                if (remoteSprite) {
-                    remoteSprite.clearTint();
-                    remoteSprite.setBlendMode(Phaser.BlendModes.NORMAL);
-                    remoteSprite.setAlpha(1.0);
-                }
-            }
-        } else if (event.type === 'spawn_enemy_projectile') {
-            const { x, y, angle, damage, type } = event.data;
-            if (this.networkManager?.role === 'client') {
-                this.poolManager.getEnemyProjectile(x, y, angle, damage, type);
-            }
-        } else if (event.type === 'spawn_coins') {
-            const { x, y, count, coins } = event.data;
-            const player = this.data.get('player') as Phaser.Physics.Arcade.Sprite;
-
-            if (coins && Array.isArray(coins)) {
-                coins.forEach((cData: any) => {
-                    const coin = this.coins.get(cData.x, cData.y) as Coin;
-                    if (coin) {
-                        coin.spawn(cData.x, cData.y, player, cData.id);
-                        coin.removeAllListeners('collected');
-                        this.setupCoinCollection(coin);
-                    }
-                });
-            } else {
-                // Fallback for older packet versions
-                for (let i = 0; i < count; i++) {
-                    const coin = this.coins.get(x, y) as Coin;
-                    if (coin) {
-                        coin.spawn(x, y, player);
-                        coin.removeAllListeners('collected');
-                        this.setupCoinCollection(coin);
-                    }
-                }
-            }
-        } else if (event.type === 'coin_collect') {
-            const { amount, x, y, id } = event.data;
-            // Host acts as authority on total gold
-            if (this.networkManager?.role === 'host') {
-                this.stats.addCoins(amount);
-            } else {
-                // Client receives this from Host (via relay)
-                this.stats.addCoins(amount);
-            }
-
-            // Visually remove the coin. Priority: ID match, Fallback: Proximity
-            let removed = false;
-            this.coins.children.iterate((c: any) => {
-                if (c.active && id && c.id === id) {
-                    c.setActive(false);
-                    c.setVisible(false);
-                    if (c.body) c.body.enable = false;
-                    removed = true;
-                    return false;
-                }
-                return true;
-            });
-
-            if (!removed && x !== undefined && y !== undefined) {
-                this.coins.children.iterate((c: any) => {
-                    // Increased radius to 150 to account for drift/lag in coin movement
-                    if (c.active && Phaser.Math.Distance.Between(c.x, c.y, x, y) < 150) {
-                        c.setActive(false);
-                        c.setVisible(false);
-                        if (c.body) c.body.enable = false;
-                        return false;
-                    }
-                    return true;
-                });
-            }
-        } else if (event.type === 'enemy_death') {
-            const { id } = event.data;
-            const enemy = this.waves.findEnemyById(id) || (id === 'boss' ? this.bossGroup.getFirstAlive() as any : null);
-            if (enemy) {
-                if (enemy.die) {
-                    enemy.die();
-                } else {
-                    enemy.disable();
-                }
-            } else {
-                // Buffer the death so it applies if logic spawns it later from an old unreliable packet
-                this.pendingDeaths.add(id);
-            }
-        } else if (event.type === 'damage_player') {
-            // Received damage signal (either for local player or remote player)
-            const { id, damage, x, y } = event.data;
-            const myId = this.networkManager?.peerId;
-
-            if (!id || id === myId) {
-                // It's for us (local player)
-                this.combat.takePlayerDamage(damage, x, y);
-            } else {
-                // It's for a remote player. Show visual feedback on their sprite.
-                const remoteSprite = this.remotePlayers.get(id);
-                if (remoteSprite) {
-                    // Blood splatter
-                    this.poolManager.spawnBloodEffect(remoteSprite.x, remoteSprite.y);
-                    // Damage number
-                    this.poolManager.getDamageText(remoteSprite.x, remoteSprite.y - 40, damage);
-                    // Brief red tint
-                    remoteSprite.setTint(0xff0000);
-                    this.time.delayedCall(150, () => {
-                        if (remoteSprite.active) remoteSprite.clearTint();
-                    });
-                }
-            }
-        } else if (event.type === 'level_complete') {
-            const { nextLevel } = event.data;
-            if (this.networkManager?.role === 'client') {
-                // Clients follow host authority on level completion
-                this.registry.set('gameLevel', nextLevel - 1); // Set current before increment in event
-                this.events.emit('level-complete');
-            }
-        } else if (event.type === 'sync_pause') {
-            this.events.emit('sync_pause', event.data);
-        } else if (event.type === 'player_loaded') {
-            this.events.emit('player_loaded', event.data);
-        } else if (event.type === 'player_ready') {
-            this.events.emit('player_ready', event.data);
-        } else if (event.type === 'start_level') {
-            this.events.emit('start_level', event.data);
-        } else if (event.type === 'resume_game') {
-            this.events.emit('resume_game', event.data);
-        } else if (event.type === 'sync_players_state') {
-            this.events.emit('sync_players_state', event.data);
-        } else if (event.type === 'enemy_heal') {
-            // Client-side visual sync for healing
-            const { targetId, amount } = event.data;
-            const target = this.waves.findEnemyById(targetId);
-            if (target) {
-                target.hp += amount;
-
-                // Spawn effect on client
-                const effect = this.add.sprite(target.x, target.y, 'heal_effect');
-                effect.setDepth(target.depth + 1);
-                effect.setScale(target.scale * 1.5);
-                effect.play('heal-effect-anim');
-                effect.on('animationcomplete', () => effect.destroy());
-
-                this.poolManager.getDamageText(target.x, target.y - 40, `+${Math.round(amount)}`, '#55ff55');
-
-                target.setTint(0xccffcc);
-                this.time.delayedCall(500, () => {
-                    if (target.active && !target.getIsDead()) target.clearTint();
-                });
-            }
-        }
+        this.networkHandler.handleGameEvent(event);
     }
 
-    private setupCoinCollection(coin: Coin) {
-        coin.on('collected', () => {
-            // If client picks up, tell host (host handles the central score)
-            if (this.networkManager?.role === 'client') {
-                this.networkManager.broadcast({
-                    t: PacketType.GAME_EVENT,
-                    ev: { type: 'coin_collect', data: { amount: 1, x: coin.x, y: coin.y, id: coin.id } },
-                    ts: Date.now()
-                });
-            } else {
-                // Host picked up locally
-                this.stats.addCoins(1);
-            }
-            AudioManager.instance.playSFX('coin_collect');
-        });
-    }
 
     /** Spawn a boss at the center of the map. */
     private spawnBoss(bossIndex: number): void {
