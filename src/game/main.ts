@@ -1912,10 +1912,12 @@ export class MainScene extends Phaser.Scene implements IMainScene {
             }
 
             // Handle Orientation (Face Mouse)
-            if (pointer.worldX > player.x) {
-                player.setFlipX(false);
-            } else if (pointer.worldX < player.x) {
-                player.setFlipX(true);
+            if (!this.isWhirlwinding) {
+                if (pointer.worldX > player.x) {
+                    player.setFlipX(false);
+                } else if (pointer.worldX < player.x) {
+                    player.setFlipX(true);
+                }
             }
 
             // Handle Block (Right Click)
@@ -2474,6 +2476,17 @@ export class MainScene extends Phaser.Scene implements IMainScene {
 
         this.player.play('player-attack');
         this.events.emit('player-swing');
+
+        // Spin 2 laps (4π radians) over 500ms
+        this.tweens.add({
+            targets: this.player,
+            rotation: Math.PI * 4,
+            duration: 500,
+            ease: 'Linear',
+            onComplete: () => {
+                this.player.setRotation(0);
+            }
+        });
 
         // VFX burst
         const quality = this.registry.get('graphicsQuality') as GraphicsQuality;
