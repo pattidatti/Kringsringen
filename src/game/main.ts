@@ -4,8 +4,6 @@ import { Enemy } from './Enemy';
 import { BossEnemy } from './BossEnemy';
 import { BOSS_CONFIGS } from '../config/bosses';
 import { GAME_CONFIG } from '../config/GameConfig';
-import { StaticMapLoader } from './StaticMapLoader';
-import { STATIC_MAPS } from './StaticMapData';
 import { Arrow } from './Arrow';
 import { Fireball } from './Fireball';
 import { FrostBolt } from './FrostBolt';
@@ -13,6 +11,7 @@ import { LightningBolt } from './LightningBolt';
 import { Singularity } from './Singularity';
 import { EclipseWake } from './EclipseWake';
 import { Coin } from './Coin';
+import { EnemyProjectile } from './EnemyProjectile';
 import { SaveManager } from './SaveManager';
 import { ObjectPoolManager } from './ObjectPoolManager';
 import { SpatialHashGrid } from './SpatialGrid';
@@ -21,14 +20,13 @@ import { createAnimations } from './AnimationSetup';
 import { WaveManager } from './WaveManager';
 import { PlayerStatsManager } from './PlayerStatsManager';
 import { PlayerCombatManager } from './PlayerCombatManager';
-import { IMainScene } from './IMainScene';
+import type { IMainScene } from './IMainScene';
 import { PreloadScene } from './PreloadScene';
 import { WeatherManager } from './WeatherManager';
 import { AmbientParticleManager } from './AmbientParticleManager';
 import { NetworkManager } from '../network/NetworkManager';
 import { PacketType, type PackedPlayer, type SyncPacket } from '../network/SyncSchemas';
 import { JitterBuffer } from '../network/JitterBuffer';
-import { EnemyProjectile } from './EnemyProjectile';
 import { type QualitySettings } from '../config/QualityConfig';
 import { CLASS_CONFIGS, resolveClassId } from '../config/classes';
 import { InputManager } from './InputManager';
@@ -36,6 +34,8 @@ import { TextureSetup } from './TextureSetup';
 import { SceneVisualManager } from './SceneVisualManager';
 import { CollisionManager } from './CollisionManager';
 import { NetworkPacketHandler } from './NetworkPacketHandler';
+import { WeaponManager } from './WeaponManager';
+import { ClassAbilityManager } from './ClassAbilityManager';
 
 
 export class MainScene extends Phaser.Scene implements IMainScene {
@@ -49,13 +49,15 @@ export class MainScene extends Phaser.Scene implements IMainScene {
     public inputManager!: InputManager;
     public visuals!: SceneVisualManager;
     public networkHandler!: NetworkPacketHandler;
+    public weaponManager!: WeaponManager;
+    public abilityManager!: ClassAbilityManager;
 
     public arrows!: Phaser.Physics.Arcade.Group;
     public fireballs!: Phaser.Physics.Arcade.Group;
     public frostBolts!: Phaser.Physics.Arcade.Group;
     public lightningBolts!: Phaser.Physics.Arcade.Group;
     public singularities!: Phaser.Physics.Arcade.Group;
-    private eclipseWakes!: Phaser.Physics.Arcade.Group;
+    public eclipseWakes!: Phaser.Physics.Arcade.Group;
     public bossGroup!: Phaser.Physics.Arcade.Group;
     private players!: Phaser.Physics.Arcade.Group;
     public poolManager!: ObjectPoolManager;
@@ -66,7 +68,6 @@ export class MainScene extends Phaser.Scene implements IMainScene {
     public waves!: WaveManager;
 
     // Map Generation
-    private currentMap: StaticMapLoader | null = null;
     private mapWidth: number = 3000;
     private mapHeight: number = 3000;
     private playerShadow: Phaser.GameObjects.Sprite | null = null;
@@ -90,10 +91,7 @@ export class MainScene extends Phaser.Scene implements IMainScene {
     private weather!: WeatherManager;
 
     // Ambient particles (fireflies / leaves / embers)
-    private ambient!: AmbientParticleManager;
-
-    // Vignette post-FX — strength driven by player HP
-    private vignetteEffect: any = null;
+    public ambient!: AmbientParticleManager;
 
     public deathSparkEmitter!: Phaser.GameObjects.Particles.ParticleEmitter;
 
@@ -205,6 +203,8 @@ export class MainScene extends Phaser.Scene implements IMainScene {
             this.collisions = new CollisionManager(this);
             this.inputManager = new InputManager(this);
             this.networkHandler = new NetworkPacketHandler(this);
+            this.weaponManager = new WeaponManager(this);
+            this.abilityManager = new ClassAbilityManager(this);
 
             AudioManager.instance.setScene(this);
 
@@ -218,26 +218,13 @@ export class MainScene extends Phaser.Scene implements IMainScene {
             this.playerShadow = this.add.sprite(this.player.x, this.player.y + 28, 'shadows', 0).setAlpha(0.4).setDepth(this.player.depth - 1);
             this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
 
-            // Group Initialization (simplified)
-            const groups: any = {
-                enemies: { classType: Enemy, maxSize: 100 },
-                bossGroup: { classType: BossEnemy, maxSize: 1 },
-                arrows: { classType: Arrow, maxSize: 50 },
-                fireballs: { classType: Fireball, maxSize: 30 },
-                frostBolts: { classType: FrostBolt, maxSize: 20 },
-                lightningBolts: { classType: LightningBolt, maxSize: 30 },
-                singularities: { classType: Singularity, maxSize: 10 },
-                eclipseWakes: { classType: EclipseWake, maxSize: 20 },
-                coins: { classType: Coin, maxSize: 5000 },
-                enemyProjectiles: { classType: EnemyProjectile, maxSize: 50 }
-            };
-            Object.keys(groups).forEach(key => (this as any)[key] = this.physics.add.group({ ...groups[key], runChildUpdate: true }));
+            this.setupGroups();
 
             this.players = this.physics.add.group();
             this.players.add(this.player);
 
             // Scene Logic setup
-            this.regenerateMap(startLevelOverride);
+            this.visuals.regenerateMap(startLevelOverride);
             this.stats.applyClassModifiers(classConfig);
             this.stats.recalculateStats();
 
@@ -286,42 +273,7 @@ export class MainScene extends Phaser.Scene implements IMainScene {
                 e.pushback(this.player.x, this.player.y, this.stats.knockback);
             });
 
-            // Player Hit Logic (Event-Driven)
-            this.events.on('enemy-hit-player', (damage: number, _type: string, x?: number, y?: number, target?: any) => {
-                const player = this.data.get('player');
-                const role = this.networkManager?.role as string | undefined;
-
-                if (target === player) {
-                    // Local player takes damage
-                    this.combat.takePlayerDamage(damage, x, y);
-
-                    // Host must notify CLIENTS that the Host was hit
-                    if (role === 'host' && this.networkManager) {
-                        this.networkManager.broadcast({
-                            t: PacketType.GAME_EVENT,
-                            ev: { type: 'damage_player', data: { id: this.networkManager.peerId, damage, x, y } },
-                            ts: Date.now()
-                        });
-                    }
-                } else if (role === 'host' && this.networkManager) {
-                    // Host validates that a remote player was hit and notifies EVERYONE
-                    let targetPeerId: string | null = null;
-                    this.remotePlayers.forEach((sprite, peerId) => {
-                        if (sprite === target) targetPeerId = peerId;
-                    });
-
-                    if (targetPeerId) {
-                        // 1. Broadcast to all clients
-                        this.networkManager.broadcast({
-                            t: PacketType.GAME_EVENT,
-                            ev: { type: 'damage_player', data: { id: targetPeerId, damage, x, y } },
-                            ts: Date.now()
-                        });
-                        // 2. Trigger visual feedback LOCALLY on the Host's screen for the client sprite
-                        this.handleGameEvent({ type: 'damage_player', data: { id: targetPeerId, damage, x, y } } as any);
-                    }
-                }
-            });
+            this.setupEventListeners();
 
             // Input Context
             this.input.mouse?.disableContextMenu();
@@ -613,9 +565,7 @@ export class MainScene extends Phaser.Scene implements IMainScene {
                 }
 
                 // Schedule map regeneration after level complete delay
-                this.time.delayedCall(1000, () => {
-                    this.regenerateMap(nextLevel);
-                });
+                this.time.delayedCall(1000, () => this.visuals.regenerateMap(nextLevel));
             });
 
             // Save run on browser close (singleplayer only)
@@ -629,29 +579,7 @@ export class MainScene extends Phaser.Scene implements IMainScene {
                 window.removeEventListener('beforeunload', handleUnload);
             });
 
-            // Listen for class abilities
-            this.events.on('attempt-class-ability-e', () => {
-                const playerClassId = resolveClassId(this.registry.get('playerClass'));
-                if (playerClassId === 'archer') {
-                    // Archer has a special E key logic
-                    this.activateArcherSpecial();
-                }
-            });
-
-            this.events.on('attempt-class-ability-2', () => {
-                const playerClassId = resolveClassId(this.registry.get('playerClass'));
-                if (playerClassId === 'krieger') this.activateWhirlwind();
-                else if (playerClassId === 'wizard') this.activateCascade();
-                else if (playerClassId === 'archer') this.activateExplosiveShot();
-            });
-
-            this.events.on('attempt-attack', () => {
-                this.handlePlayerActionCombat(this.time.now, 16.6); // delta placeholder
-            });
-
-            this.events.on('play-footstep', () => {
-                AudioManager.instance.playSFX('footstep');
-            });
+            this.events.on('play-footstep', () => AudioManager.instance.playSFX('footstep'));
 
             // Start Weather Effects
             this.weather.enableFog();
@@ -723,43 +651,7 @@ export class MainScene extends Phaser.Scene implements IMainScene {
         boss.initAsBoss(spawnX, spawnY, player, config);
     }
 
-    /** Load the static map for a given level. */
-    private regenerateMap(level: number) {
-        // Safety: Ensure level is at least 1 and within bounds
-        const safeLevel = Math.max(1, level);
 
-        // Clean up old map
-        if (this.currentMap) {
-            this.currentMap.destroy();
-        }
-
-        // Select map definition (capped at last entry)
-        const mapIndex = Math.min(safeLevel - 1, STATIC_MAPS.length - 1);
-        const mapDef = STATIC_MAPS[mapIndex];
-
-        // Load static map – no procedural generation, instant
-        this.currentMap = new StaticMapLoader(this, this.obstacles, this.mapWidth, this.mapHeight);
-        this.currentMap.load(mapDef);
-
-        // Populate static grid for efficient pathfinding lookups
-        this.staticObstacleGrid.clear();
-        this.obstacles.getChildren().forEach((obs: any) => {
-            const body = obs.body as Phaser.Physics.Arcade.StaticBody;
-            if (body) {
-                this.staticObstacleGrid.insert({
-                    x: obs.x,
-                    y: obs.y,
-                    width: body.width,
-                    height: body.height
-                });
-            }
-        });
-
-        // Swap ambient particle theme to match the new level
-        this.ambient.setTheme(safeLevel);
-
-        this.events.emit('map-ready', { level: safeLevel });
-    }
 
     update(_time: number, delta: number) {
         try {
@@ -782,7 +674,7 @@ export class MainScene extends Phaser.Scene implements IMainScene {
                 this.outerPlayerLight.setPosition(this.player.x, this.player.y);
             }
 
-            this.updateVignette();
+            this.visuals.update();
             this.inputManager.update(_time, delta);
 
             // Update Spatial Grid
@@ -803,20 +695,7 @@ export class MainScene extends Phaser.Scene implements IMainScene {
         }
     }
 
-    private updateVignette() {
-        if (!this.quality.postFXEnabled || !this.vignetteEffect) return;
-        const hp = this.registry.get('playerHP') || 0;
-        const max = this.registry.get('playerMaxHP') || 100;
-        const ratio = hp / max;
 
-        if (ratio < 0.3) {
-            const urgency = 1 + (0.3 - ratio) * 5;
-            const pulse = (Math.sin(this.time.now / (380 / urgency)) + 1) * 0.5;
-            this.vignetteEffect.strength = 0.30 + pulse * 0.45;
-        } else {
-            this.vignetteEffect.strength = Phaser.Math.Linear(this.vignetteEffect.strength, 0.15, 0.08);
-        }
-    }
 
     private handlePlayerActionCombat(_time: number, _delta: number) {
         const player = this.player;
@@ -833,308 +712,136 @@ export class MainScene extends Phaser.Scene implements IMainScene {
         );
         this.attackHitbox.setRotation(angle);
 
-        // This method will be expanded in the next step to include full weapon logic,
-        // but for now we ensure it handles the basics to keep lints happy.
-        this.handleWeaponExecution(angle);
+        this.weaponManager.handleWeaponExecution(angle);
     }
 
-    private handleWeaponExecution(angle: number) {
-        const player = this.player;
-        const currentWeapon = this.registry.get('currentWeapon');
-        const lastCd = this.registry.get('weaponCooldown');
-        if (lastCd && Date.now() < lastCd.timestamp + lastCd.duration) return;
-
-        this.data.set('isAttacking', true);
-
-        // Safety valve
-        this.time.delayedCall(1500, () => {
-            if (this.data.get('isAttacking')) {
-                this.data.set('isAttacking', false);
-                player.play('player-idle');
-            }
-        });
-
-        if (currentWeapon === 'sword') {
-            this.executeSwordAttack(angle);
-        } else if (currentWeapon === 'bow') {
-            this.executeBowAttack(angle);
-        } else if (currentWeapon === 'fireball') {
-            this.executeFireballAttack(angle);
-        } else if (currentWeapon === 'frost') {
-            this.executeFrostAttack(angle);
-        } else if (currentWeapon === 'lightning') {
-            this.executeLightningAttack(angle);
-        }
+    private setupGroups() {
+        const groups: any = {
+            enemies: { classType: Enemy, maxSize: 100 },
+            bossGroup: { classType: BossEnemy, maxSize: 1 },
+            arrows: { classType: Arrow, maxSize: 50 },
+            fireballs: { classType: Fireball, maxSize: 30 },
+            frostBolts: { classType: FrostBolt, maxSize: 20 },
+            lightningBolts: { classType: LightningBolt, maxSize: 30 },
+            singularities: { classType: Singularity, maxSize: 10 },
+            eclipseWakes: { classType: EclipseWake, maxSize: 20 },
+            coins: { classType: Coin, maxSize: 5000 },
+            enemyProjectiles: { classType: EnemyProjectile, maxSize: 50 }
+        };
+        Object.keys(groups).forEach(key => (this as any)[key] = this.physics.add.group({ ...groups[key], runChildUpdate: true }));
     }
 
-    private executeSwordAttack(angle: number) {
-        const attackSpeedMult = this.registry.get('playerAttackSpeed') || 1;
-        const swordCooldown = GAME_CONFIG.WEAPONS.SWORD.cooldown / attackSpeedMult;
+    private setupEventListeners() {
+        // Player Hit Logic (Event-Driven)
+        this.events.on('enemy-hit-player', (damage: number, _type: string, x?: number, y?: number, target?: any) => {
+            const player = this.data.get('player');
+            const role = this.networkManager?.role as string | undefined;
 
-        const ATTACK_ANIMS = ['player-attack', 'player-attack-2'];
-        const idx = this.data.get('attackAnimIndex') || 0;
-        const attackAnimKey = ATTACK_ANIMS[idx];
-        this.data.set('attackAnimIndex', (idx + 1) % ATTACK_ANIMS.length);
+            if (target === player) {
+                // Local player takes damage
+                this.combat.takePlayerDamage(damage, x, y);
 
-        this.registry.set('weaponCooldown', { duration: swordCooldown, timestamp: Date.now() });
-
-        this.currentSwingHitIds.clear();
-        this.player.play(attackAnimKey);
-        this.events.emit('player-swing');
-
-        this.networkManager?.broadcast({
-            t: PacketType.GAME_EVENT,
-            ev: {
-                type: 'attack',
-                data: { id: this.networkManager.peerId, weapon: 'sword', anim: attackAnimKey, angle }
-            },
-            ts: Date.now()
-        });
-
-        this.time.delayedCall(Math.max(100, swordCooldown * 0.3), () => {
-            (this.attackHitbox.body as Phaser.Physics.Arcade.Body).enable = true;
-            this.time.delayedCall(100, () => {
-                (this.attackHitbox.body as Phaser.Physics.Arcade.Body).enable = false;
-            });
-        });
-
-        this.player.once(`animationcomplete-${attackAnimKey}`, () => {
-            this.data.set('isAttacking', false);
-            this.player.play('player-idle');
-        });
-
-        // ECLIPSE STRIKE
-        const eclipseLevel = this.registry.get('playerEclipseLevel') || 0;
-        if (eclipseLevel > 0) {
-            const wake = this.eclipseWakes.get(this.player.x, this.player.y) as EclipseWake;
-            if (wake) {
-                const wakeDamage = this.stats.damage * 0.3 * eclipseLevel;
-                wake.spawn(this.player.x, this.player.y, angle, wakeDamage);
-            }
-        }
-    }
-
-    private executeBowAttack(angle: number) {
-        const bowCooldown = this.stats.playerCooldown;
-        this.registry.set('weaponCooldown', { duration: bowCooldown, timestamp: Date.now() });
-        this.player.play('player-bow');
-
-        this.time.delayedCall(bowCooldown * 0.5, () => {
-            const arrowDamageMultiplier = this.registry.get('playerArrowDamageMultiplier') || 1;
-            const arrowSpeed = this.registry.get('playerArrowSpeed') || GAME_CONFIG.WEAPONS.BOW.speed;
-            const pierceCount = this.registry.get('playerPierceCount') || 0;
-            const explosiveLevel = this.registry.get('playerExplosiveLevel') || 0;
-            const baseDamage = this.stats.damage * GAME_CONFIG.WEAPONS.BOW.damageMult * arrowDamageMultiplier;
-            const singularityLevel = this.registry.get('playerSingularityLevel') || 0;
-            const poisonLevel = this.registry.get('playerPoisonLevel') || 0;
-
-            const arrow = this.arrows.get(this.player.x, this.player.y) as Arrow;
-            if (arrow) {
-                if (this.explosiveShotReady) {
-                    const levels = (this.registry.get('upgradeLevels') || {}) as Record<string, number>;
-                    const abilityDamage = baseDamage * (2.0 + (levels['exp_shot_damage'] || 0) * 0.3);
-                    const abilityRadius = 120 + (levels['exp_shot_radius'] || 0) * 40;
-                    arrow.fire(this.player.x, this.player.y, angle, abilityDamage, arrowSpeed, pierceCount, explosiveLevel, singularityLevel, poisonLevel, abilityRadius);
-                    this.explosiveShotReady = false;
-                    this.registry.set('explosiveShotReady', false);
-                    this.classAbilityCooldownEnd = Date.now() + 12000;
-                    this.registry.set('classAbilityCooldown', { duration: 12000, timestamp: Date.now() });
-                } else {
-                    arrow.fire(this.player.x, this.player.y, angle, baseDamage, arrowSpeed, pierceCount, explosiveLevel, singularityLevel, poisonLevel);
+                // Host must notify CLIENTS that the Host was hit
+                if (role === 'host' && this.networkManager) {
+                    this.networkManager.broadcast({
+                        t: PacketType.GAME_EVENT,
+                        ev: { type: 'damage_player', data: { id: this.networkManager.peerId, damage, x, y } },
+                        ts: Date.now()
+                    });
                 }
-                this.events.emit('bow-shot');
-
-                this.networkManager?.broadcast({
-                    t: PacketType.GAME_EVENT,
-                    ev: {
-                        type: 'attack',
-                        data: { id: this.networkManager.peerId, weapon: 'bow', anim: 'player-bow', angle }
-                    },
-                    ts: Date.now()
+            } else if (role === 'host' && this.networkManager) {
+                // Host validates that a remote player was hit and notifies EVERYONE
+                let targetPeerId: string | null = null;
+                this.remotePlayers.forEach((sprite, peerId) => {
+                    if (sprite === target) targetPeerId = peerId;
                 });
 
-                const projectiles = this.registry.get('playerProjectiles') || 1;
-                if (projectiles > 1) {
-                    for (let i = 1; i < projectiles; i++) {
-                        const offset = Math.ceil(i / 2) * 10 * (Math.PI / 180) * (i % 2 === 0 ? -1 : 1);
-                        const subArrow = this.arrows.get(this.player.x, this.player.y) as Arrow;
-                        if (subArrow) subArrow.fire(this.player.x, this.player.y, angle + offset, baseDamage, arrowSpeed, pierceCount, explosiveLevel, 0, poisonLevel);
-                    }
+                if (targetPeerId) {
+                    // 1. Broadcast to all clients
+                    this.networkManager.broadcast({
+                        t: PacketType.GAME_EVENT,
+                        ev: { type: 'damage_player', data: { id: targetPeerId, damage, x, y } },
+                        ts: Date.now()
+                    });
+                    // 2. Trigger visual feedback LOCALLY on the Host's screen for the client sprite
+                    this.handleGameEvent({ type: 'damage_player', data: { id: targetPeerId, damage, x, y } } as any);
                 }
             }
         });
 
-        this.player.once('animationcomplete-player-bow', () => {
-            this.data.set('isAttacking', false);
-            this.player.play('player-idle');
+        // Listen for Upgrades
+        this.events.off('apply-upgrade');
+        this.events.on('apply-upgrade', (upgradeId: string) => {
+            this.stats.applyUpgrade(upgradeId);
         });
-    }
 
-    private executeFireballAttack(angle: number) {
-        const fireCd = GAME_CONFIG.WEAPONS.FIREBALL.cooldown;
-        this.registry.set('weaponCooldown', { duration: fireCd, timestamp: Date.now() });
-        this.player.play('player-bow');
-        this.events.emit('fireball-cast');
-
-        this.time.delayedCall(100, () => {
-            const fireball = this.fireballs.get(this.player.x, this.player.y) as Fireball;
-            if (fireball) {
-                const cascadeBonus = Date.now() < this.cascadeActiveUntil ? 1.5 + ((this.registry.get('upgradeLevels') || {})['cascade_damage'] || 0) * 0.15 : 1;
-                fireball.fire(this.player.x, this.player.y, angle, this.stats.damage * GAME_CONFIG.WEAPONS.FIREBALL.damageMult * (this.registry.get('fireballDamageMulti') || 1) * cascadeBonus);
+        // Listen for Revive Purchases
+        this.events.off('buy-revive');
+        this.events.on('buy-revive', (targetId: string) => {
+            if (this.networkManager?.role === 'client') {
+                this.networkManager.broadcast({
+                    t: PacketType.GAME_EVENT,
+                    ev: { type: 'revive_request', data: { targetId } },
+                    ts: Date.now()
+                });
+            } else {
+                this.handleGameEvent({ type: 'player_revived', data: { targetId } } as any);
                 this.networkManager?.broadcast({
                     t: PacketType.GAME_EVENT,
-                    ev: { type: 'attack', data: { id: this.networkManager.peerId, weapon: 'fire', anim: 'player-cast', angle } },
+                    ev: { type: 'player_revived', data: { targetId } },
                     ts: Date.now()
                 });
             }
         });
 
-        this.player.once('animationcomplete-player-bow', () => {
-            this.data.set('isAttacking', false);
-            this.player.play('player-idle');
-        });
-    }
-
-    private executeFrostAttack(angle: number) {
-        const frostCd = GAME_CONFIG.WEAPONS.FROST.cooldown;
-        this.registry.set('weaponCooldown', { duration: frostCd, timestamp: Date.now() });
-        this.player.play('player-cast');
-
-        const pointer = this.input.activePointer;
-        const frostTarget = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
-
-        this.time.delayedCall(100, () => {
-            const frostBolt = this.frostBolts.get(this.player.x, this.player.y) as FrostBolt;
-            if (frostBolt) {
-                const cascadeBonus = Date.now() < this.cascadeActiveUntil ? 1.5 + ((this.registry.get('upgradeLevels') || {})['cascade_damage'] || 0) * 0.15 : 1;
-                frostBolt.fire(this.player.x, this.player.y, frostTarget.x, frostTarget.y, this.stats.damage * GAME_CONFIG.WEAPONS.FROST.damageMult * (this.registry.get('frostDamageMulti') || 1) * cascadeBonus);
-                this.events.emit('frost-cast');
-                this.networkManager?.broadcast({
-                    t: PacketType.GAME_EVENT,
-                    ev: { type: 'attack', data: { id: this.networkManager.peerId, weapon: 'frost', anim: 'player-cast', angle } },
-                    ts: Date.now()
-                });
-            }
-        });
-
-        this.player.once('animationcomplete-player-cast', () => {
-            this.data.set('isAttacking', false);
-            this.player.play('player-idle');
-        });
-    }
-
-    private executeLightningAttack(angle: number) {
-        const ltgCd = GAME_CONFIG.WEAPONS.LIGHTNING.cooldown;
-        this.registry.set('weaponCooldown', { duration: ltgCd, timestamp: Date.now() });
-        this.player.play('player-cast');
-        const pointer = this.input.activePointer;
-        const ltTarget = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
-
-        this.time.delayedCall(100, () => {
-            const cascadeBonus = Date.now() < this.cascadeActiveUntil ? 1.5 + ((this.registry.get('upgradeLevels') || {})['cascade_damage'] || 0) * 0.15 : 1;
-            const baseDamage = this.stats.damage * GAME_CONFIG.WEAPONS.LIGHTNING.damageMult * (this.registry.get('lightningDamageMulti') || 1) * cascadeBonus;
-            const bolt = this.lightningBolts.get(this.player.x, this.player.y) as LightningBolt;
-            if (bolt) bolt.fire(this.player.x, this.player.y, ltTarget.x, ltTarget.y, baseDamage, this.registry.get('lightningBounces') || GAME_CONFIG.WEAPONS.LIGHTNING.bounces, new Set(), angle);
-            this.events.emit('lightning-cast');
-            this.networkManager?.broadcast({
-                t: PacketType.GAME_EVENT,
-                ev: { type: 'attack', data: { id: this.networkManager.peerId, weapon: 'lightning', anim: 'player-cast', angle } },
-                ts: Date.now()
+        this.events.on('start-next-level', (lvl?: number) => this.waves.startLevel(lvl ?? this.registry.get('gameLevel') + 1));
+        this.events.on('start-boss', (idx: number) => {
+            const config = BOSS_CONFIGS[idx];
+            if (config) this.registry.set('bossName', config.name);
+            this.registry.set('bossSplashVisible', true);
+            this.time.delayedCall(3200, () => {
+                this.registry.set('bossSplashVisible', false);
+                this.spawnBoss(idx);
             });
         });
 
-        this.player.once('animationcomplete-player-cast', () => {
-            this.data.set('isAttacking', false);
-            this.player.play('player-idle');
-        });
-    }
-
-    // ── Class Ability Methods ────────────────────────────────────────────────
-
-    private activateWhirlwind(): void {
-        const levels = (this.registry.get('upgradeLevels') || {}) as Record<string, number>;
-        const damageMult = 1 + (levels['whirl_damage'] || 0) * 0.25;
-        const cdLvl = levels['whirl_cooldown'] || 0;
-        const chainLvl = levels['whirl_chain'] || 0;
-        const damage = this.stats.damage * damageMult;
-        const radius = 120;
-        const cd = 8000 * Math.pow(0.8, cdLvl);
-
-        this.isWhirlwinding = true;
-        this.data.set('isWhirlwinding', true);
-        this.classAbilityCooldownEnd = Date.now() + cd;
-        this.registry.set('classAbilityCooldown', { duration: cd, timestamp: Date.now() });
-
-        this.player.play('player-attack');
-        this.events.emit('player-swing');
-
-        this.tweens.add({
-            targets: this.player,
-            rotation: Math.PI * 4,
-            duration: 500,
-            ease: 'Linear',
-            onComplete: () => { this.player.setRotation(0); }
+        this.events.on('boss-spawn-minion', (x: number, y: number, type: string) => {
+            const minion = this.enemies.get(x, y) as Enemy | null;
+            if (minion) minion.reset(x, y, this.player, 1.0, type);
         });
 
-        const px = this.player.x, py = this.player.y;
-        const hitEnemies = (this.enemies.getChildren() as Enemy[]).filter(e => e.active && Phaser.Math.Distance.Between(px, py, e.x, e.y) <= radius);
-
-        hitEnemies.forEach(e => {
-            e.takeDamage(damage, '#ffcc00');
-            e.pushback(px, py, this.stats.knockback * 1.5);
+        this.events.on('boss-died-collect-all', (x: number, y: number, idx: number) => {
+            this.waves.spawnBossCoins(x, y, idx);
+            this.combat.setDashIframe(true);
+            this.time.delayedCall(2000, () => this.combat.setDashIframe(false));
+            this.time.delayedCall(400, () => this.coins.children.iterate((c: any) => { if (c.active) (c as Coin).forceMagnet = true; return true; }));
         });
 
-        this.time.delayedCall(500, () => {
-            hitEnemies.forEach(e => { if (e.active) { e.takeDamage(damage, '#ffaa00'); e.pushback(px, py, this.stats.knockback); } });
-            if (chainLvl > 0) {
-                const reduction = Math.min(hitEnemies.length * (chainLvl === 1 ? 0.05 : 0.07), chainLvl === 1 ? 0.25 : 0.35);
-                this.classAbilityCooldownEnd -= cd * reduction;
+        this.events.on('enemy-fire-projectile', (x: number, y: number, ang: number, dmg: number, type: any, burst?: boolean) => {
+            if (this.networkManager?.role === 'client') return;
+            this.poolManager.getEnemyProjectile(x, y, ang, dmg, type, burst);
+            this.networkManager?.broadcast({ t: PacketType.GAME_EVENT, ev: { type: 'spawn_enemy_projectile', data: { x, y, angle: ang, damage: dmg, type } }, ts: Date.now() });
+        });
+
+        this.events.on('level-complete', () => {
+            const next = this.registry.get('gameLevel') + 1;
+            this.coins.clear(true, true);
+            this.enemies.clear(true, true);
+            this.bossGroup.clear(true, true);
+            if (!this.registry.get('isMultiplayer')) {
+                SaveManager.saveRunProgress({
+                    gameLevel: next, currentWave: 1, playerCoins: this.registry.get('playerCoins'),
+                    upgradeLevels: this.registry.get('upgradeLevels'), currentWeapon: this.registry.get('currentWeapon'),
+                    unlockedWeapons: this.registry.get('unlockedWeapons'), playerHP: this.registry.get('playerHP'),
+                    playerMaxHP: this.registry.get('playerMaxHP'), savedAt: Date.now()
+                });
             }
-            this.isWhirlwinding = false;
-            this.data.set('isWhirlwinding', false);
-        });
-    }
-
-    private activateExplosiveShot(): void {
-        this.explosiveShotReady = true;
-        this.data.set('explosiveShotReady', true);
-        this.registry.set('explosiveShotReady', true);
-        this.time.delayedCall(5000, () => {
-            if (this.explosiveShotReady) {
-                this.explosiveShotReady = false;
-                this.data.set('explosiveShotReady', false);
-                this.registry.set('explosiveShotReady', false);
-            }
-        });
-    }
-
-    private activateCascade(): void {
-        const levels = (this.registry.get('upgradeLevels') || {}) as Record<string, number>;
-        const duration = (4 + (levels['cascade_duration'] || 0) * 2) * 1000;
-        const cd = 10000;
-
-        this.cascadeActiveUntil = Date.now() + duration;
-        this.classAbilityCooldownEnd = this.cascadeActiveUntil + cd;
-        this.registry.set('classAbilityCooldown', { duration: duration + cd, timestamp: Date.now() });
-
-        const cascadeEmitter = this.add.particles(this.player.x, this.player.y, 'arrow', {
-            lifespan: 1200, speed: { min: 20, max: 50 }, scale: { start: 0.25, end: 0 },
-            alpha: { start: 0.5, end: 0 }, angle: { min: 0, max: 360 }, frequency: 40,
-            tint: [0xff00ff, 0x00ffff, 0xffff00, 0x88ff00], blendMode: 'ADD', follow: this.player,
+            this.time.delayedCall(1000, () => this.visuals.regenerateMap(next));
         });
 
-        this.time.delayedCall(duration, () => { cascadeEmitter.destroy(); });
-    }
-
-    private activateArcherSpecial(): void {
-        const upgLvls3 = (this.registry.get('upgradeLevels') || {}) as Record<string, number>;
-        const timeSlowLvl = upgLvls3['time_slow_arrow'] || 0;
-        if (timeSlowLvl > 0) {
-            const slowDuration = 3000 + timeSlowLvl * 1000;
-            this.enemies.children.iterate((e: any) => { if (e && e.active) e.applySlow?.(slowDuration); return true; });
-            this.bossGroup.children.iterate((boss: any) => { if (boss && boss.active) boss.applySlow?.(slowDuration); return true; });
-            this.poolManager.getDamageText(this.player.x, this.player.y - 70, 'TIME SLOW!', '#88aaff');
-        }
+        this.events.on('attempt-class-ability-e', () => this.abilityManager.attemptSpecialE());
+        this.events.on('attempt-class-ability-2', () => this.abilityManager.attemptAbility2());
+        this.events.on('attempt-attack', () => this.handlePlayerActionCombat(this.time.now, 16.6));
     }
 
 
@@ -1195,7 +902,7 @@ export class MainScene extends Phaser.Scene implements IMainScene {
         }
         this.remotePlayers.forEach(rp => { rp.clearTint(); rp.setBlendMode(Phaser.BlendModes.NORMAL); rp.setAlpha(1.0); });
         this.stats.recalculateStats();
-        this.regenerateMap(1);
+        this.visuals.regenerateMap(1);
         if (this.networkManager?.role !== 'client') this.waves.startLevel(1);
         this.scene.resume();
     }

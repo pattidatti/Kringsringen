@@ -20,6 +20,8 @@ export interface IMainScene extends Phaser.Scene {
     fireballs: Phaser.Physics.Arcade.Group;
     frostBolts: Phaser.Physics.Arcade.Group;
     lightningBolts: Phaser.Physics.Arcade.Group;
+    singularities: Phaser.Physics.Arcade.Group;
+    eclipseWakes: Phaser.Physics.Arcade.Group;
     spatialGrid: SpatialHashGrid;
     staticObstacleGrid: SpatialHashGrid;
     poolManager: ObjectPoolManager;
@@ -30,11 +32,16 @@ export interface IMainScene extends Phaser.Scene {
     visuals: import('./SceneVisualManager').SceneVisualManager;
     collisions: import('./CollisionManager').CollisionManager;
     networkHandler: import('./NetworkPacketHandler').NetworkPacketHandler;
+    weaponManager: import('./WeaponManager').WeaponManager;
+    abilityManager: import('./ClassAbilityManager').ClassAbilityManager;
     deathSparkEmitter: Phaser.GameObjects.Particles.ParticleEmitter;
     networkManager?: NetworkManager;
     pendingDeaths: Set<string>;
     classAbilityCooldownEnd: number;
     shadowStepUntil: number;
+    isWhirlwinding: boolean;
+    explosiveShotReady: boolean;
+    cascadeActiveUntil: number;
     restartGame(): void;
     collectSaveData(): RunProgress;
 }

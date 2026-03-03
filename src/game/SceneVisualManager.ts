@@ -2,6 +2,8 @@ import Phaser from 'phaser';
 import type { IMainScene } from './IMainScene';
 import { getQualityConfig, type QualitySettings, type GraphicsQuality } from '../config/QualityConfig';
 import { GAME_CONFIG } from '../config/GameConfig';
+import { StaticMapLoader } from './StaticMapLoader';
+import { STATIC_MAPS } from './StaticMapData';
 
 /**
  * Manages game visuals including lighting, post-processing, and quality scaling.
@@ -13,6 +15,11 @@ export class SceneVisualManager {
     private vignetteEffect: any = null;
     private remotePlayerLights: Map<string, Phaser.GameObjects.Light> = new Map();
     private currentQuality!: QualitySettings;
+
+    // Map Management
+    private currentMap: StaticMapLoader | null = null;
+    private mapWidth: number = 3000;
+    private mapHeight: number = 3000;
 
     constructor(scene: IMainScene) {
         this.scene = scene;
@@ -77,7 +84,7 @@ export class SceneVisualManager {
             this.scene.lights.enable();
             this.scene.lights.setAmbientColor(0x0a0a0a);
 
-            if (player) player.setPipeline('Light2D');
+            if (player && player.body) player.setPipeline('Light2D');
 
             // Re-create player lights if missing
             if (!this.playerLight) {
@@ -136,6 +143,45 @@ export class SceneVisualManager {
             this.scene.lights.removeLight(light);
             this.remotePlayerLights.delete(id);
         }
+    }
+
+    /** Load the static map for a given level. */
+    public regenerateMap(level: number) {
+        // Safety: Ensure level is at least 1 and within bounds
+        const safeLevel = Math.max(1, level);
+
+        // Clean up old map
+        if (this.currentMap) {
+            this.currentMap.destroy();
+        }
+
+        // Select map definition (capped at last entry)
+        const mapIndex = Math.min(safeLevel - 1, STATIC_MAPS.length - 1);
+        const mapDef = STATIC_MAPS[mapIndex];
+
+        // Load static map – no procedural generation, instant
+        this.currentMap = new StaticMapLoader(this.scene, this.scene.obstacles, this.mapWidth, this.mapHeight);
+        this.currentMap.load(mapDef);
+
+        // Populate static grid for efficient pathfinding lookups
+        this.scene.staticObstacleGrid.clear();
+        this.scene.obstacles.getChildren().forEach((obs: any) => {
+            const body = obs.body as Phaser.Physics.Arcade.StaticBody;
+            if (body) {
+                this.scene.staticObstacleGrid.insert({
+                    x: obs.x,
+                    y: obs.y,
+                    width: body.width,
+                    height: body.height
+                });
+            }
+        });
+
+        // Swap ambient particle theme to match the new level
+        // @ts-ignore - ambient is private on MainScene currently
+        if ((this.scene as any).ambient) (this.scene as any).ambient.setTheme(safeLevel);
+
+        this.scene.events.emit('map-ready', { level: safeLevel });
     }
 
     public destroy(): void {
