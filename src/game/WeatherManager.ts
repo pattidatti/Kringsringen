@@ -125,7 +125,7 @@ export class WeatherManager {
         }
 
         // Add a subtle tint to the scene for "mood"
-        this.scene.cameras.main.setBackgroundColor(0x020617);
+        this.scene.cameras.main.setBackgroundColor(0x000000);
         // We don't actually want to fade out, we use a very subtle tint overlay if needed
     }
 

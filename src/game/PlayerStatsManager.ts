@@ -191,7 +191,7 @@ export class PlayerStatsManager {
         // ── Class Upgrade Stats ──────────────────────────────────────────
         // Coin Magnet radius
         const coinMagnetLvl = levels['coin_magnet'] || 0;
-        this.scene.registry.set('coinMagnetRadius', 150 + coinMagnetLvl * 50);
+        this.scene.registry.set('coinMagnetRadius', 400 + coinMagnetLvl * 50);
 
         // Archer: Headshot – bonus crit chance on arrows
         const headshotLvl = levels['headshot'] || 0;

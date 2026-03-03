@@ -90,8 +90,18 @@ export class SceneVisualManager {
 
             // Re-create player lights if missing
             if (!this.playerLight) {
-                this.playerLight = this.scene.lights.addLight(0, 0, 230, 0xfffaf0, 0.7);
-                this.outerPlayerLight = this.scene.lights.addLight(0, 0, 575, 0xfffaf0, 0.4);
+                this.playerLight = this.scene.lights.addLight(
+                    0, 0,
+                    GAME_CONFIG.LIGHTING.PLAYER_INNER_RADIUS,
+                    GAME_CONFIG.LIGHTING.PLAYER_COLOR,
+                    GAME_CONFIG.LIGHTING.PLAYER_INTENSITY_INNER
+                );
+                this.outerPlayerLight = this.scene.lights.addLight(
+                    0, 0,
+                    GAME_CONFIG.LIGHTING.PLAYER_OUTER_RADIUS,
+                    GAME_CONFIG.LIGHTING.PLAYER_COLOR,
+                    GAME_CONFIG.LIGHTING.PLAYER_INTENSITY_OUTER
+                );
             } else if (this.playerLight && this.outerPlayerLight) {
                 this.playerLight.setVisible(true);
                 this.outerPlayerLight.setVisible(true);
@@ -119,17 +129,22 @@ export class SceneVisualManager {
         if (!this.playerLight || !this.outerPlayerLight) return;
 
         if (isDead) {
-            this.playerLight.setRadius(58);
-            this.outerPlayerLight.setRadius(115);
+            this.playerLight.setRadius(GAME_CONFIG.LIGHTING.GHOST_INNER_RADIUS);
+            this.outerPlayerLight.setRadius(GAME_CONFIG.LIGHTING.GHOST_OUTER_RADIUS);
         } else {
-            this.playerLight.setRadius(230);
-            this.outerPlayerLight.setRadius(575);
+            this.playerLight.setRadius(GAME_CONFIG.LIGHTING.PLAYER_INNER_RADIUS);
+            this.outerPlayerLight.setRadius(GAME_CONFIG.LIGHTING.PLAYER_OUTER_RADIUS);
         }
     }
 
     public addRemotePlayerLight(id: string, x: number, y: number): void {
         if (this.currentQuality.lightingEnabled && !this.remotePlayerLights.has(id)) {
-            const light = this.scene.lights.addLight(x, y, 575, 0xfffaf0, 0.4);
+            const light = this.scene.lights.addLight(
+                x, y,
+                GAME_CONFIG.LIGHTING.PLAYER_OUTER_RADIUS,
+                GAME_CONFIG.LIGHTING.PLAYER_COLOR,
+                GAME_CONFIG.LIGHTING.PLAYER_INTENSITY_OUTER
+            );
             this.remotePlayerLights.set(id, light);
         }
     }

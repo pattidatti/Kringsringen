@@ -32,8 +32,8 @@ export const GAME_CONFIG = {
         BASE_KNOCKBACK: 400,
         BASE_CRIT_CHANCE: 0.05,
         BASE_PROJECTILES: 1,
-        PICKUP_RANGE: 100, // Default collection range
-        MAGNET_RANGE: 350, // Default magnet range
+        PICKUP_RANGE: 150, // Default collection range
+        MAGNET_RANGE: 500, // Default magnet range
         // --- DASH ---
         DASH_COOLDOWN_MS: 7000, // 7 seconds default
         DASH_DISTANCE: 220,      // pixels
@@ -249,6 +249,15 @@ export const GAME_CONFIG = {
             totalTicks: [4, 6, 8] as const,             // total ticks per level
             color: 0x00cc44
         }
+    },
+    LIGHTING: {
+        PLAYER_INNER_RADIUS: 230,
+        PLAYER_OUTER_RADIUS: 750, // Increased from 575
+        GHOST_INNER_RADIUS: 58,
+        GHOST_OUTER_RADIUS: 115,
+        PLAYER_COLOR: 0xfffaf0,
+        PLAYER_INTENSITY_INNER: 0.7,
+        PLAYER_INTENSITY_OUTER: 0.4
     }
 };
 

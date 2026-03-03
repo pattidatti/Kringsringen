@@ -17,9 +17,12 @@
 - [x] Når man trykker avslutt spill må musikk fades ut, og vi får tilbake musikken/ambiance på landingpage. 
 - [x] Når man trykker "fortsett spill" spawner man inn som død, uavhengig av HP man hadde i siste spillet. 
 - [x] Cooldown på Whirlwind vises ikke på baren nede. 
-- [ ] Enemies som orc og slime skyver spilleren i større grad enn å angripe. 
-- [ ] Enemies som orc og slime skyver spilleren i større grad enn å angripe. 
-- [ ] Krieger får av og til tilgang på Fireball når man trykker på hotkey 2. 
+- [ ] Enemies som orc og slime skyver spilleren i større grad enn å angripe.  
+- [x] Krieger får av og til tilgang på Fireball når man trykker på hotkey 2. 
+- [ ] Radius på gull pickup må være større default. 
+- [ ] Krieger og Archer trenger en ekstra default ability som de begynner med på slott 3. Noe jucy, kult, medium kort cooldown, som passer til klassen. 
+- [ ] Ytre radius på lys fra spilleren må økes litt. 
+
 
 
 

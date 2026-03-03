@@ -689,7 +689,7 @@ export const GameContainer: React.FC<GameContainerProps> = React.memo(({ network
     return (
         <div
             id="game-ui-wrapper"
-            className="w-full h-full relative overflow-hidden bg-slate-950 font-sans selection:bg-cyan-500/30"
+            className="w-full h-full relative overflow-hidden bg-black font-sans selection:bg-cyan-500/30"
             onContextMenu={(e) => e.preventDefault()}
         >
             {/* Phaser Game Layer */}

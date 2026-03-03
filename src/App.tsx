@@ -95,7 +95,7 @@ function App() {
   }
 
   return (
-    <div className="w-full h-screen bg-slate-950 relative">
+    <div className="w-full h-screen bg-black relative">
       {/* Toggle Button */}
       <div className="absolute bottom-4 right-4 z-50">
         <FantasyButton

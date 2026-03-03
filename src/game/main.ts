@@ -509,7 +509,7 @@ export const createGame = (container: HTMLElement, networkConfig?: NetworkConfig
             mode: Phaser.Scale.RESIZE,
             autoCenter: Phaser.Scale.CENTER_BOTH
         },
-        backgroundColor: '#020617'
+        backgroundColor: '#000000'
     });
 
     // Global error trap
