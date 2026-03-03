@@ -5,7 +5,10 @@ Velkommen til den tekniske dokumentasjonen for *Kringsringen*. Her finner du det
 ## Developer Guides
 
 ### [CLAUDE.md](../CLAUDE.md)
-Developer guide for Claude Code — architecture overview, file structure, key systems, configuration, and debugging notes.
+Developer guide for Claude Code — architecture overview, file structure, key systems.
+
+### [Architecture Guide](./architecture.md)
+En teknisk dypdykk i Manager-mønsteret og hvordan `main.ts` delegerer logikk.
 
 ## Innhold
 
@@ -20,6 +23,12 @@ Teknisk referanse for to-lags lagringsarkitektur: RunProgress-interface, sjekkpu
 
 ### [Lydkatalog](./audio_catalog.md)
 Oversikt over lydeffekter og bakgrunnsmusikk brukt i spillet.
+
+### [Synergier & Spesialer](./synergies.md)
+Liste over våpen-synergier (f.eks. Thermal Shock) og unike gjenstander.
+
+### [UI Design Guide](./ui_guide.md)
+Prinsipper for spillets visuelle uttrykk og Medieval-tema.
 
 ## Nøkkelsystemer
 

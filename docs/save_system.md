@@ -31,6 +31,8 @@ Defined in `src/game/SaveManager.ts`:
 | `upgradeLevels` | `Record<string, number>` | All upgrades purchased this run |
 | `currentWeapon` | `string` | Active weapon hotkey/ID |
 | `unlockedWeapons` | `string[]` | All unlocked weapons |
+| `playerClass` | `'krieger' \| 'archer' \| 'wizard'` | Selected character class |
+| `classAbilityLevel` | `number` | Class ability level (1-3) |
 | `playerHP` | `number` | HP at save time |
 | `playerMaxHP` | `number` | Max HP at save time |
 | `playerX?` | `number` | Player world X at save time (optional) |

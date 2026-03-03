@@ -176,11 +176,13 @@ Alle 5 våpen er tilgjengelige fra spillstart (ingen kjøpes lenger). Hotkeys 1�
 
 | Hotkey | Våpen | Status | Beskrivelse |
 | :--- | :--- | :--- | :--- |
-| **1** | **Sverd** | ✅ | Melee, svinganimert. Blokkering (høyreklikk) reduserer skade 80%. |
-| **2** | **Bue** | ⚠️ Bug | Ranged, 700px/s pilhastighet. Støtter multishot og gjennomboring (se bugs). |
-| **3** | **Ildkule** | ✅ | Magic, AoE eksplosjon, 80px splash. |
-| **4** | **Frostbolt** | ✅ | Magic, bremser fiender. Splash-radius 100px. |
-| **5** | **Lyn** | ⚠️ Balanse | Homing-bolt, kjedeblinker til nye mål. Meget kraftig. |
+| **1** | **Sverd** | ✅ | Melee. Blokkering (høyreklikk) reduserer skade 80%. |
+| **2** | **Bue** | ✅ | Ranged. Pilhastighet 700px/s. |
+| **3** | **Ildkule** | ✅ | Magic. AoE eksplosjon, 80px splash. |
+| **4** | **Frostbolt** | ✅ | Magic. Bremser fiender. Splash 100px. |
+| **5** | **Lyn** | ✅ | Homing-bolt. Kjedeblinker til nye mål. |
+| **Shift**| **Dash** | ✅ | Rask unnamanøver. |
+| **[2-4]** | **Klasse-Evne**| ✅ | Unik evne basert på valgt klasse (se Seksjon 13). |
 
 ### Åpne feil – Våpen
 - ⚠️ **Bue krasjer** spillet ved treff med Eksplosive Piler aktivert
@@ -455,5 +457,31 @@ Hvert Map Level laster et statisk kart via `StaticMapLoader` + `StaticMapData`. 
 
 ---
 
-**Dokumentversjon:** 2.3
+---
+
+## 13. Klassesystem (Classes) ✅
+
+Spilleren velger én av tre klasser ved start av en ny run. Hver klasse har unike stats, startvåpen og en kraftig Klasse-Evne som kan oppgraderes i butikken under kategorien **DRIVKRAFT**.
+
+### 🛡️ Krieger (Melee Warrior)
+- **Identitet:** Nærkamps-spesialist, høy HP, tung knockback.
+- **Start-stats:** +30% HP, +20% Damage, +2 Armor, -5% Speed.
+- **Startvåpen:** Sverd (Hotkey 1).
+- **Klasse-Evne:** **Whirlwind Slash** (Hotkey 2). Roterende angrep som treffer alle fiender rundt spilleren.
+
+### 🏹 Archer (Ranged Specialist)
+- **Identitet:** Rask, fragil, kontroll over piler.
+- **Start-stats:** +25% Speed, +15% Damage, +15% Atk Speed, -10% HP.
+- **Startvåpen:** Bue (Hotkey 1).
+- **Klasse-Evne:** **Multishot Barrage** (Hotkey 2). Fyrer en salve med piler i en rask sekvens.
+
+### 🧙 Wizard (Magic User)
+- **Identitet:** Magisk mestring, mana-basert, elemental kontroll.
+- **Start-stats:** +50% CDR (Mana Regen), +25% Damage, +10% Atk Speed, -20% HP.
+- **Startvåpen:** Ildkule (Slot 1), Frostbolt (Slot 2), Chain Lightning (Slot 3).
+- **Klasse-Evne:** **Elemental Cascade** (Hotkey 4). Triggere kjedereaksjoner mellom ulike magityper.
+
+---
+
+**Dokumentversjon:** 2.5
 **Ansvarlig AI Architect:** Antigravity

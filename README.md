@@ -20,9 +20,10 @@ Kringsringen er et mørkt, minimalistisk spill hvor du må overleve bølger av m
 - **Networking:** PeerJS (Multiplayer)
 
 ## 📖 Dokumentasjon
-- [Game Design Document](file:///home/irik/Kringsringen/docs/gamedesign_document.md) — Mekanikk, monstre og bølgeoversikt.
-- [Audio Catalog](file:///home/irik/Kringsringen/docs/audio_catalog.md) — Oversikt over all lyd og musikk.
-- [Save System](file:///home/irik/Kringsringen/docs/save_system.md) — Teknisk guide til lagring og Phaser lifecycle.
+- [Game Design Document](./docs/gamedesign_document.md) — Mekanikk, monstre og bølgeoversikt.
+- [Architecture Guide](./docs/architecture.md) — Manager-mønster og systemflyt.
+- [Audio Catalog](./docs/audio_catalog.md) — Oversikt over all lyd og musikk.
+- [Save System](./docs/save_system.md) — Teknisk guide til lagring og Phaser lifecycle.
 
 ## 🚀 Kom i gang
 1. `npm install`

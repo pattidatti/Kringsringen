@@ -35,6 +35,11 @@
 | `dash` | `whoosh_1.wav` | 1 | 1.0 | ±0.1 | `main.ts` → `player-dash` |
 | `upgrade_buy` | `coins_gather_quick.wav`| 1 | 0.5 | — | `Merchant` → purchase |
 | `page_turn` | `page_turn.wav` | 1 | 0.5 | — | `Merchant` → navigation |
+| `paper_move` | `paper_move.wav` | 1 | 0.4 | — | `FantasyBook` → open |
+| `paper_move_rev`| `paper_move_reverse.wav`| 1 | 0.4 | — | `FantasyBook` → close |
+| `fireball_hit` | `fireball_hit.wav` | 1 | 0.5 | — | `Fireball.ts` → impact |
+| `ping` | `glass_ping_small.wav` | 1 | 0.3 | — | `NetworkManager` → latency check |
+| `ice_freeze` | `ice_freeze.wav` | 1 | 0.5 | — | `FrostBolt.ts` → status effect |
 
 All SFX files are in `public/assets/audio/sfx/`.
 
