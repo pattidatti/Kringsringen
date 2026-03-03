@@ -129,17 +129,12 @@ export class InputManager {
                 this.scene.registry.set('currentWeapon', 'frost');
             if (this.hotkeys['3']?.isDown && curWep !== 'lightning' && unlocked.includes('lightning'))
                 this.scene.registry.set('currentWeapon', 'lightning');
-        } else {
+        } else if (playerClassId === 'archer') {
+            if (this.hotkeys['1']?.isDown && curWep !== 'bow' && unlocked.includes('bow'))
+                this.scene.registry.set('currentWeapon', 'bow');
+        } else if (playerClassId === 'krieger') {
             if (this.hotkeys['1']?.isDown && curWep !== 'sword' && unlocked.includes('sword'))
                 this.scene.registry.set('currentWeapon', 'sword');
-            if (playerClassId !== 'krieger' && this.hotkeys['2']?.isDown && curWep !== 'bow' && unlocked.includes('bow'))
-                this.scene.registry.set('currentWeapon', 'bow');
-            if (this.hotkeys['3']?.isDown && curWep !== 'fireball' && unlocked.includes('fireball'))
-                this.scene.registry.set('currentWeapon', 'fireball');
-            if (this.hotkeys['4']?.isDown && curWep !== 'frost' && unlocked.includes('frost'))
-                this.scene.registry.set('currentWeapon', 'frost');
-            if (this.hotkeys['5']?.isDown && curWep !== 'lightning' && unlocked.includes('lightning'))
-                this.scene.registry.set('currentWeapon', 'lightning');
         }
     }
 

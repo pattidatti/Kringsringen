@@ -1,4 +1,4 @@
-import type { ClassId } from '../config/classes';
+import { CLASS_CONFIGS, type ClassId } from '../config/classes';
 
 export interface EnemySave {
     type: string;
@@ -74,14 +74,16 @@ export class SaveManager {
         const restoredUpgrades = run.upgradeLevels ?? {};
         const restoredWeapon = run.currentWeapon ?? 'sword';
 
-        // REHABILITATION: If a corrupted save has only sword but we are at high level,
-        // unlock the basic arsenal to keep the game playable.
-        let restoredWeapons = run.unlockedWeapons || ['sword'];
-        if (restoredWeapons.length <= 1) {
-            console.log('[SaveManager] Corrupted weapon list detected. Rehabilitating arsenal...');
-            restoredWeapons = ['sword', 'bow', 'fireball', 'frost', 'lightning'];
+        // REHABILITATION: If a corrupted save has no weapons, restore to class defaults.
+        // Wizard starts with 3, Others with 1. We only flag as corrupted if it's empty.
+        let restoredWeapons = run.unlockedWeapons || [];
+
+        if (restoredWeapons.length === 0) {
+            const playerClassId = run.playerClass || 'krieger';
+            const classConfig = CLASS_CONFIGS[playerClassId];
+            console.log(`[SaveManager] Empty weapon list detected for ${playerClassId}. Restoring to starting weapons.`);
+            restoredWeapons = [...(classConfig?.startingWeapons || ['sword'])];
         }
-        if (!restoredWeapons.includes('sword')) restoredWeapons.push('sword');
 
         return {
             ...run,
