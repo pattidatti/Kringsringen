@@ -4,6 +4,15 @@ import type { PlayerStatsManager } from './PlayerStatsManager';
 import type { PlayerCombatManager } from './PlayerCombatManager';
 import type { WaveManager } from './WaveManager';
 import type { RunProgress } from './SaveManager';
+import type { CollisionManager } from './CollisionManager';
+import type { WeaponManager } from './WeaponManager';
+import type { ClassAbilityManager } from './ClassAbilityManager';
+import type { SceneEventManager } from './SceneEventManager';
+import type { SceneVisualManager } from './SceneVisualManager';
+import type { NetworkPacketHandler } from './NetworkPacketHandler';
+import type { WeatherManager } from './WeatherManager';
+import type { AmbientParticleManager } from './AmbientParticleManager';
+import type { InputManager } from './InputManager';
 
 /**
  * Lightweight interface for MainScene.
@@ -30,18 +39,16 @@ export interface IMainScene extends Phaser.Scene {
     stats: PlayerStatsManager;
     combat: PlayerCombatManager;
     waves: WaveManager;
-    inputManager: any;
-    visuals: any;
-    collisions: any;
-    networkPacketHandler: any;
-    weaponManager: any;
-    abilityManager: any;
-    eventManager: any;
-    weather: any;
-    ambient: any;
+    inputManager: InputManager;
+    visuals: SceneVisualManager;
+    collisions: CollisionManager;
+    networkPacketHandler: NetworkPacketHandler;
+    weaponManager: WeaponManager;
+    abilityManager: ClassAbilityManager;
+    eventManager: SceneEventManager;
+    weather: WeatherManager;
+    ambient: AmbientParticleManager;
     player: Phaser.Physics.Arcade.Sprite;
-    attackHitbox: Phaser.Physics.Arcade.Sprite;
-    currentSwingHitIds: Set<string>;
     quality: any;
     networkManager?: any;
     remotePlayers: Map<string, Phaser.Physics.Arcade.Sprite>;

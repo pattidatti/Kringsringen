@@ -1,7 +1,13 @@
 # Bugs fra refaktor/classe
-- [ ] Krieger: Sverd gjør ikke skade på enemies 
-- [ ] Det mørke overlayet over mappet er veldig blått, akkurat som det blå fra react? blør inn i scenen eller noe slikt. 
-- [ ] Når Krieger tar skade, oppdateres ikke HP baren hans oppe til venstre. 
+- [x] Krieger: Sverd gjør ikke skade på enemies 
+- [x] Det mørke overlayet over mappet er veldig blått, akkurat som det blå fra react? blør inn i scenen eller noe slikt. 
+- [x] Når Krieger tar skade, oppdateres ikke HP baren hans oppe til venstre. 
+- [ ] Mellomrom brukes til Dash, det skal den ikke. Bare angrep er på mellomrom. 
+- [ ] Flammepil/eksplosiv/hotkey 2 for archer bør skyte skuddet med en gang knappen trykkes, ikke lade opp til neste angrep. 
+- [ ] Elemental Cascade er en forvrirrende spell; må gjøres om til noe helt annet. 
+- [ ] Enemies blir lett stuck - Trenger smartere pathing. 
+- [ ] Hvit tekst på lysebrun bakgrunn passer dårlig, må være svart tekst (i boken, f.eks. inne på Mastring, Krigsrop, Livsstaling osv.)
+
 
 
 

@@ -83,6 +83,19 @@ export class ClassAbilityManager {
         this.explosiveShotReady = true;
         this.scene.data.set('explosiveShotReady', true);
         this.scene.registry.set('explosiveShotReady', true);
+
+        // Ensure bow is equipped for the ability
+        this.scene.registry.set('currentWeapon', 'bow');
+
+        // Reset cooldown to allow immediate firing
+        this.scene.registry.set('weaponCooldown', { duration: 0, timestamp: 0 });
+
+        // Trigger immediate attack
+        const player = this.scene.data.get('player') as Phaser.Physics.Arcade.Sprite;
+        const pointer = this.scene.input.activePointer;
+        const angle = Phaser.Math.Angle.Between(player.x, player.y, pointer.worldX, pointer.worldY);
+        this.scene.weaponManager.handleWeaponExecution(angle);
+
         this.scene.time.delayedCall(5000, () => {
             if (this.explosiveShotReady) {
                 this.explosiveShotReady = false;

@@ -147,7 +147,7 @@ export class InputManager {
         const isDashing = this.scene.data.get('isDashing');
         const dashState = this.scene.registry.get('dashState') || { isActive: false, readyAt: 0 };
 
-        if ((this.wasd.SHIFT.isDown || this.wasd.SPACE.isDown) && !isDashing && Date.now() >= dashState.readyAt) {
+        if (this.wasd.SHIFT.isDown && !isDashing && Date.now() >= dashState.readyAt) {
             this.executeDash();
         }
     }

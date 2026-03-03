@@ -66,8 +66,6 @@ export class MainScene extends Phaser.Scene implements IMainScene {
     private mapHeight: number = 3000;
     public playerShadow: Phaser.GameObjects.Sprite | null = null;
 
-    public attackHitbox!: Phaser.Physics.Arcade.Sprite;
-    public currentSwingHitIds: Set<string> = new Set();
     public setupEventHandlers!: () => void;
     public wasd!: any;
     public hotkeys!: any;
@@ -271,10 +269,6 @@ export class MainScene extends Phaser.Scene implements IMainScene {
             }
             if (savedRun?.playerX !== undefined) this.player.setPosition(savedRun.playerX, savedRun.playerY);
 
-            // Initialize Hitbox
-            this.attackHitbox = this.add.rectangle(0, 0, 80, 80, 0xff0000, 0) as any;
-            this.physics.add.existing(this.attackHitbox);
-            (this.attackHitbox.body as Phaser.Physics.Arcade.Body).enable = false;
 
             this.weather.enableFog();
             this.weather.startRain();
@@ -332,6 +326,8 @@ export class MainScene extends Phaser.Scene implements IMainScene {
             const cappedDelta = Math.min(delta, 100);
             this.poolManager.update(cappedDelta);
             this.networkPacketHandler.networkTick();
+            this.stats.flushEconomy();
+            this.combat.flushHP();
 
             this.singularities.children.iterate((s: any) => { if (s.active) (s as import('./Singularity').Singularity).update(_time, delta); return true; });
             this.eclipseWakes.children.iterate((w: any) => { if (w.active) (w as import('./EclipseWake').EclipseWake).update(_time, delta); return true; });
@@ -372,11 +368,11 @@ export class MainScene extends Phaser.Scene implements IMainScene {
 
         const angle = Phaser.Math.Angle.Between(player.x, player.y, pointer.worldX, pointer.worldY);
         const radius = 50;
-        this.attackHitbox.setPosition(
+        this.collisions.attackHitbox.setPosition(
             player.x + Math.cos(angle) * radius,
             player.y + Math.sin(angle) * radius
         );
-        this.attackHitbox.setRotation(angle);
+        this.collisions.attackHitbox.setRotation(angle);
 
         this.weaponManager.handleWeaponExecution(angle);
     }
@@ -493,7 +489,7 @@ export const createGame = (container: HTMLElement, networkConfig?: NetworkConfig
             mode: Phaser.Scale.RESIZE,
             autoCenter: Phaser.Scale.CENTER_BOTH
         },
-        backgroundColor: '#0f172a'
+        backgroundColor: '#020617'
     });
 
     // Global error trap

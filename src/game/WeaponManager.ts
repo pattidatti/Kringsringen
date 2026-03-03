@@ -70,8 +70,7 @@ export class WeaponManager {
 
         this.scene.registry.set('weaponCooldown', { duration: swordCooldown, timestamp: Date.now() });
 
-        // @ts-ignore - currentSwingHitIds is public on MainScene but we should probably add it to IMainScene if we want better types
-        if ((this.scene as any).currentSwingHitIds) (this.scene as any).currentSwingHitIds.clear();
+        this.scene.collisions.currentSwingHitIds.clear();
 
         player.play(attackAnimKey);
         this.scene.events.emit('player-swing');
@@ -86,13 +85,10 @@ export class WeaponManager {
         });
 
         this.scene.time.delayedCall(Math.max(100, swordCooldown * 0.3), () => {
-            const hitbox = (this.scene as any).attackHitbox;
-            if (hitbox && hitbox.body) {
-                (hitbox.body as Phaser.Physics.Arcade.Body).enable = true;
-                this.scene.time.delayedCall(100, () => {
-                    (hitbox.body as Phaser.Physics.Arcade.Body).enable = false;
-                });
-            }
+            this.scene.collisions.enableAttackHitbox(this.scene.collisions.attackHitbox.x, this.scene.collisions.attackHitbox.y, 40);
+            this.scene.time.delayedCall(100, () => {
+                this.scene.collisions.disableAttackHitbox();
+            });
         });
 
         player.once(`animationcomplete-${attackAnimKey}`, () => {

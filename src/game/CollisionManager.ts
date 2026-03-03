@@ -10,8 +10,8 @@ import { PacketType } from '../network/SyncSchemas';
  */
 export class CollisionManager {
     private scene: IMainScene;
-    private attackHitbox!: Phaser.Types.Physics.Arcade.ImageWithDynamicBody;
-    private currentSwingHitIds: Set<string> = new Set();
+    public attackHitbox!: Phaser.Types.Physics.Arcade.ImageWithDynamicBody;
+    public currentSwingHitIds: Set<string> = new Set();
 
     constructor(scene: IMainScene) {
         this.scene = scene;
@@ -24,10 +24,11 @@ export class CollisionManager {
 
     private setupAttackHitbox(): void {
         const phaserScene = this.scene as unknown as Phaser.Scene;
-        this.attackHitbox = phaserScene.add.rectangle(0, 0, 60, 60, 0xff0000, 0) as any;
+        this.attackHitbox = phaserScene.add.rectangle(0, 0, 80, 80, 0xff0000, 0) as any;
         phaserScene.physics.add.existing(this.attackHitbox);
-        this.attackHitbox.body!.setCircle(30);
-        this.attackHitbox.body!.setEnable(false);
+        const body = this.attackHitbox.body as Phaser.Physics.Arcade.Body;
+        body.setCircle(40);
+        body.setEnable(false);
     }
 
     public setupColliders(player: Phaser.Physics.Arcade.Sprite): void {
