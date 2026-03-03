@@ -7,6 +7,11 @@ import type { DataConnection } from 'peerjs';
 /**
  * Handles incoming network packets, game events, and remote player interpolation.
  */
+import { JitterBuffer } from '../network/JitterBuffer';
+
+/**
+ * Handles incoming network packets, game events, and remote player interpolation.
+ */
 export class NetworkPacketHandler {
     private scene: IMainScene;
     private lastSentPlayerStates: Map<string, string> = new Map();
@@ -14,8 +19,38 @@ export class NetworkPacketHandler {
     private networkTickCount: number = 0;
     private lastSyncTime: number = 0;
 
+    // Multiplayer State
+    public remotePlayers: Map<string, Phaser.Physics.Arcade.Sprite> = new Map();
+    public playerNicknames: Map<string, Phaser.GameObjects.Text> = new Map();
+    public playerBuffers: Map<string, JitterBuffer<PackedPlayer>> = new Map();
+    public remotePlayerPackets: Map<string, PackedPlayer> = new Map();
+    public remotePlayerLights: Map<string, Phaser.GameObjects.Light> = new Map();
+
     constructor(scene: IMainScene) {
         this.scene = scene;
+    }
+
+    public removeRemotePlayer(id: string) {
+        const sprite = this.remotePlayers.get(id);
+        if (sprite) {
+            sprite.destroy();
+            this.remotePlayers.delete(id);
+        }
+
+        const label = this.playerNicknames.get(id);
+        if (label) {
+            label.destroy();
+            this.playerNicknames.delete(id);
+        }
+
+        const light = this.remotePlayerLights.get(id);
+        if (light) {
+            this.scene.lights.removeLight(light);
+            this.remotePlayerLights.delete(id);
+        }
+
+        this.playerBuffers.delete(id);
+        this.remotePlayerPackets.delete(id);
     }
 
     /**
@@ -72,9 +107,9 @@ export class NetworkPacketHandler {
         const myId = this.scene.game.registry.get('networkConfig')?.peer.id;
         if (id === myId) return;
 
-        const buffer = (this.scene as any).playerBuffers.get(id);
+        const buffer = this.playerBuffers.get(id);
         if (buffer) {
-            buffer.push({ state: p, timestamp: ts });
+            buffer.push(ts, p);
         }
     }
 
@@ -92,7 +127,7 @@ export class NetworkPacketHandler {
                     enemy.takeDamage(req.damage, '#ffcc00');
 
                     // Apply knockback from the remote player's position
-                    const remoteSprite = (this.scene as any).remotePlayers.get(peerId);
+                    const remoteSprite = this.remotePlayers.get(peerId);
                     if (remoteSprite) {
                         enemy.pushback(remoteSprite.x, remoteSprite.y, this.scene.stats.knockback);
                     }
@@ -226,7 +261,7 @@ export class NetworkPacketHandler {
         if (isLocal) {
             this.scene.events.emit('local-player-revived');
         } else {
-            const remoteSprite = (this.scene as any).remotePlayers.get(targetId);
+            const remoteSprite = this.remotePlayers.get(targetId);
             if (remoteSprite) {
                 remoteSprite.clearTint();
                 remoteSprite.setBlendMode(Phaser.BlendModes.NORMAL);
@@ -236,7 +271,7 @@ export class NetworkPacketHandler {
     }
 
     private handleRemoteAttack(data: any): void {
-        const remoteSprite = (this.scene as any).remotePlayers.get(data.id);
+        const remoteSprite = this.remotePlayers.get(data.id);
         if (remoteSprite) {
             remoteSprite.play(data.anim || 'player-attack');
 
@@ -313,7 +348,7 @@ export class NetworkPacketHandler {
         if (!id || id === myId) {
             this.scene.combat.takePlayerDamage(damage, x, y);
         } else {
-            const remoteSprite = (this.scene as any).remotePlayers.get(id);
+            const remoteSprite = this.remotePlayers.get(id);
             if (remoteSprite) {
                 this.scene.poolManager.spawnBloodEffect(remoteSprite.x, remoteSprite.y);
                 this.scene.poolManager.getDamageText(remoteSprite.x, remoteSprite.y - 40, damage);
@@ -404,7 +439,7 @@ export class NetworkPacketHandler {
         // Local player
         processPlayer(this.localPackedPlayer);
         // Remote players
-        (this.scene as any).remotePlayerPackets.forEach((p: PackedPlayer) => processPlayer(p));
+        this.remotePlayerPackets.forEach((p: PackedPlayer) => processPlayer(p));
 
         this.scene.registry.set('partyState', partyState);
 
@@ -450,7 +485,7 @@ export class NetworkPacketHandler {
      */
     public interpolateRemotePlayers(renderTime: number): void {
         (this.scene as any).remotePlayers.forEach((remotePlayer: any, id: string) => {
-            const buffer = (this.scene as any).playerBuffers.get(id);
+            const buffer = this.playerBuffers.get(id);
             if (buffer) {
                 const sample = buffer.sample(renderTime);
                 if (sample) {
@@ -467,7 +502,7 @@ export class NetworkPacketHandler {
                     this.applyRemoteVitals(remotePlayer, activeState);
                 }
             }
-            const label = (this.scene as any).playerNicknames.get(id);
+            const label = this.playerNicknames.get(id);
             if (label) label.setPosition(remotePlayer.x, remotePlayer.y - 40);
         });
     }

@@ -9,6 +9,12 @@ import { Enemy } from './Enemy';
 export class ClassAbilityManager {
     private scene: IMainScene;
 
+    public isWhirlwinding: boolean = false;
+    public explosiveShotReady: boolean = false;
+    public cascadeActiveUntil: number = 0;
+    public shadowStepUntil: number = 0;
+    public classAbilityCooldownEnd: number = 0;
+
     constructor(scene: IMainScene) {
         this.scene = scene;
     }
@@ -38,9 +44,9 @@ export class ClassAbilityManager {
 
         const player = this.scene.data.get('player') as Phaser.Physics.Arcade.Sprite;
 
-        this.scene.isWhirlwinding = true;
+        this.isWhirlwinding = true;
         this.scene.data.set('isWhirlwinding', true);
-        this.scene.classAbilityCooldownEnd = Date.now() + cd;
+        this.classAbilityCooldownEnd = Date.now() + cd;
         this.scene.registry.set('classAbilityCooldown', { duration: cd, timestamp: Date.now() });
 
         player.play('player-attack');
@@ -66,20 +72,20 @@ export class ClassAbilityManager {
             hitEnemies.forEach(e => { if (e.active) { e.takeDamage(damage, '#ffaa00'); e.pushback(px, py, this.scene.stats.knockback); } });
             if (chainLvl > 0) {
                 const reduction = Math.min(hitEnemies.length * (chainLvl === 1 ? 0.05 : 0.07), chainLvl === 1 ? 0.25 : 0.35);
-                this.scene.classAbilityCooldownEnd -= cd * reduction;
+                this.classAbilityCooldownEnd -= cd * reduction;
             }
-            this.scene.isWhirlwinding = false;
+            this.isWhirlwinding = false;
             this.scene.data.set('isWhirlwinding', false);
         });
     }
 
     private activateExplosiveShot(): void {
-        this.scene.explosiveShotReady = true;
+        this.explosiveShotReady = true;
         this.scene.data.set('explosiveShotReady', true);
         this.scene.registry.set('explosiveShotReady', true);
         this.scene.time.delayedCall(5000, () => {
-            if (this.scene.explosiveShotReady) {
-                this.scene.explosiveShotReady = false;
+            if (this.explosiveShotReady) {
+                this.explosiveShotReady = false;
                 this.scene.data.set('explosiveShotReady', false);
                 this.scene.registry.set('explosiveShotReady', false);
             }
@@ -93,8 +99,8 @@ export class ClassAbilityManager {
 
         const player = this.scene.data.get('player') as Phaser.Physics.Arcade.Sprite;
 
-        this.scene.cascadeActiveUntil = Date.now() + duration;
-        this.scene.classAbilityCooldownEnd = this.scene.cascadeActiveUntil + cd;
+        this.cascadeActiveUntil = Date.now() + duration;
+        this.classAbilityCooldownEnd = this.cascadeActiveUntil + cd;
         this.scene.registry.set('classAbilityCooldown', { duration: duration + cd, timestamp: Date.now() });
 
         const cascadeEmitter = this.scene.add.particles(player.x, player.y, 'arrow', {

@@ -1,4 +1,14 @@
 import { EnemyProjectile } from './EnemyProjectile';
+import { Enemy } from './Enemy';
+import { BossEnemy } from './BossEnemy';
+import { Arrow } from './Arrow';
+import { Fireball } from './Fireball';
+import { FrostBolt } from './FrostBolt';
+import { LightningBolt } from './LightningBolt';
+import { Singularity } from './Singularity';
+import { EclipseWake } from './EclipseWake';
+import { Coin } from './Coin';
+import type { IMainScene } from './IMainScene';
 
 export class ObjectPoolManager {
     private scene: Phaser.Scene;
@@ -18,6 +28,25 @@ export class ObjectPoolManager {
 
     constructor(scene: Phaser.Scene) {
         this.scene = scene;
+    }
+
+    public initializeGroups() {
+        const mainScene = this.scene as IMainScene;
+        const groups: any = {
+            enemies: { classType: Enemy, maxSize: 100 },
+            bossGroup: { classType: BossEnemy, maxSize: 1 },
+            arrows: { classType: Arrow, maxSize: 50 },
+            fireballs: { classType: Fireball, maxSize: 30 },
+            frostBolts: { classType: FrostBolt, maxSize: 20 },
+            lightningBolts: { classType: LightningBolt, maxSize: 30 },
+            singularities: { classType: Singularity, maxSize: 10 },
+            eclipseWakes: { classType: EclipseWake, maxSize: 20 },
+            coins: { classType: Coin, maxSize: 5000 },
+            enemyProjectiles: { classType: EnemyProjectile, maxSize: 50 }
+        };
+        Object.keys(groups).forEach(key => {
+            (mainScene as any)[key] = this.scene.physics.add.group({ ...groups[key], runChildUpdate: true });
+        });
     }
 
     public getDamageText(x: number, y: number, amount: number | string, color: string = '#ffffff'): Phaser.GameObjects.Text {

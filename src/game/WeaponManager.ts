@@ -127,16 +127,16 @@ export class WeaponManager {
 
             const arrow = this.scene.arrows.get(player.x, player.y) as Arrow;
             if (arrow) {
-                if (this.scene.explosiveShotReady) {
+                if (this.scene.abilityManager.explosiveShotReady) {
                     const levels = (this.scene.registry.get('upgradeLevels') || {}) as Record<string, number>;
                     const abilityDamage = baseDamage * (2.0 + (levels['exp_shot_damage'] || 0) * 0.3);
                     const abilityRadius = 120 + (levels['exp_shot_radius'] || 0) * 40;
                     arrow.fire(player.x, player.y, angle, abilityDamage, arrowSpeed, pierceCount, explosiveLevel, singularityLevel, poisonLevel, abilityRadius);
 
-                    // Reset through scene so everyone is in sync
-                    (this.scene as any).explosiveShotReady = false;
+                    // Reset through manager
+                    this.scene.abilityManager.explosiveShotReady = false;
                     this.scene.registry.set('explosiveShotReady', false);
-                    this.scene.classAbilityCooldownEnd = Date.now() + 12000;
+                    this.scene.abilityManager.classAbilityCooldownEnd = Date.now() + 12000;
                     this.scene.registry.set('classAbilityCooldown', { duration: 12000, timestamp: Date.now() });
                 } else {
                     arrow.fire(player.x, player.y, angle, baseDamage, arrowSpeed, pierceCount, explosiveLevel, singularityLevel, poisonLevel);
@@ -178,7 +178,7 @@ export class WeaponManager {
         this.scene.time.delayedCall(100, () => {
             const fireball = this.scene.fireballs.get(player.x, player.y) as Fireball;
             if (fireball) {
-                const cascadeBonus = Date.now() < this.scene.cascadeActiveUntil ? 1.5 + ((this.scene.registry.get('upgradeLevels') || {})['cascade_damage'] || 0) * 0.15 : 1;
+                const cascadeBonus = Date.now() < this.scene.abilityManager.cascadeActiveUntil ? 1.5 + ((this.scene.registry.get('upgradeLevels') || {})['cascade_damage'] || 0) * 0.15 : 1;
                 fireball.fire(player.x, player.y, angle, this.scene.stats.damage * GAME_CONFIG.WEAPONS.FIREBALL.damageMult * (this.scene.registry.get('fireballDamageMulti') || 1) * cascadeBonus);
 
                 this.scene.networkManager?.broadcast({
@@ -206,7 +206,7 @@ export class WeaponManager {
         this.scene.time.delayedCall(100, () => {
             const frostBolt = this.scene.frostBolts.get(player.x, player.y) as FrostBolt;
             if (frostBolt) {
-                const cascadeBonus = Date.now() < this.scene.cascadeActiveUntil ? 1.5 + ((this.scene.registry.get('upgradeLevels') || {})['cascade_damage'] || 0) * 0.15 : 1;
+                const cascadeBonus = Date.now() < this.scene.abilityManager.cascadeActiveUntil ? 1.5 + ((this.scene.registry.get('upgradeLevels') || {})['cascade_damage'] || 0) * 0.15 : 1;
                 frostBolt.fire(player.x, player.y, frostTarget.x, frostTarget.y, this.scene.stats.damage * GAME_CONFIG.WEAPONS.FROST.damageMult * (this.scene.registry.get('frostDamageMulti') || 1) * cascadeBonus);
                 this.scene.events.emit('frost-cast');
 
@@ -232,7 +232,7 @@ export class WeaponManager {
         const ltTarget = this.scene.cameras.main.getWorldPoint(pointer.x, pointer.y);
 
         this.scene.time.delayedCall(100, () => {
-            const cascadeBonus = Date.now() < this.scene.cascadeActiveUntil ? 1.5 + ((this.scene.registry.get('upgradeLevels') || {})['cascade_damage'] || 0) * 0.15 : 1;
+            const cascadeBonus = Date.now() < this.scene.abilityManager.cascadeActiveUntil ? 1.5 + ((this.scene.registry.get('upgradeLevels') || {})['cascade_damage'] || 0) * 0.15 : 1;
             const baseDamage = this.scene.stats.damage * GAME_CONFIG.WEAPONS.LIGHTNING.damageMult * (this.scene.registry.get('lightningDamageMulti') || 1) * cascadeBonus;
             const bolt = this.scene.lightningBolts.get(player.x, player.y) as LightningBolt;
             if (bolt) {

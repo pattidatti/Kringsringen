@@ -3,7 +3,6 @@ import type { IMainScene } from './IMainScene';
 import { Enemy } from './Enemy';
 import { BossEnemy } from './BossEnemy';
 import { EnemyProjectile } from './EnemyProjectile';
-import { Coin } from './Coin';
 import { PacketType } from '../network/SyncSchemas';
 
 /**

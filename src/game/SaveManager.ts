@@ -66,6 +66,35 @@ export class SaveManager {
         }
     }
 
+    static rehabilitateRunProgress(run: RunProgress): RunProgress {
+        // CRITICAL: Clamp level to minimum 1 to prevent STATIC_MAPS[-1] crash
+        const restoredLevel = Math.max(1, run.gameLevel || 1);
+        const restoredWave = run.currentWave ?? 1;
+        const restoredCoins = run.playerCoins ?? 0;
+        const restoredUpgrades = run.upgradeLevels ?? {};
+        const restoredWeapon = run.currentWeapon ?? 'sword';
+
+        // REHABILITATION: If a corrupted save has only sword but we are at high level,
+        // unlock the basic arsenal to keep the game playable.
+        let restoredWeapons = run.unlockedWeapons || ['sword'];
+        if (restoredWeapons.length <= 1) {
+            console.log('[SaveManager] Corrupted weapon list detected. Rehabilitating arsenal...');
+            restoredWeapons = ['sword', 'bow', 'fireball', 'frost', 'lightning'];
+        }
+        if (!restoredWeapons.includes('sword')) restoredWeapons.push('sword');
+
+        return {
+            ...run,
+            gameLevel: restoredLevel,
+            currentWave: restoredWave,
+            playerCoins: restoredCoins,
+            upgradeLevels: restoredUpgrades,
+            currentWeapon: restoredWeapon,
+            unlockedWeapons: restoredWeapons,
+            playerHP: Math.max(0, run.playerHP)
+        };
+    }
+
     static clearRunProgress(): void {
         localStorage.removeItem(this.RUN_KEY);
     }

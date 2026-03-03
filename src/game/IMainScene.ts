@@ -3,7 +3,6 @@ import type { ObjectPoolManager } from './ObjectPoolManager';
 import type { PlayerStatsManager } from './PlayerStatsManager';
 import type { PlayerCombatManager } from './PlayerCombatManager';
 import type { WaveManager } from './WaveManager';
-import type { NetworkManager } from '../network/NetworkManager';
 import type { RunProgress } from './SaveManager';
 
 /**
@@ -22,6 +21,7 @@ export interface IMainScene extends Phaser.Scene {
     lightningBolts: Phaser.Physics.Arcade.Group;
     singularities: Phaser.Physics.Arcade.Group;
     eclipseWakes: Phaser.Physics.Arcade.Group;
+    enemyProjectiles: Phaser.Physics.Arcade.Group;
     spatialGrid: SpatialHashGrid;
     staticObstacleGrid: SpatialHashGrid;
     poolManager: ObjectPoolManager;
@@ -31,17 +31,19 @@ export interface IMainScene extends Phaser.Scene {
     inputManager: import('./InputManager').InputManager;
     visuals: import('./SceneVisualManager').SceneVisualManager;
     collisions: import('./CollisionManager').CollisionManager;
-    networkHandler: import('./NetworkPacketHandler').NetworkPacketHandler;
+    networkPacketHandler: import('./NetworkPacketHandler').NetworkPacketHandler;
     weaponManager: import('./WeaponManager').WeaponManager;
     abilityManager: import('./ClassAbilityManager').ClassAbilityManager;
-    deathSparkEmitter: Phaser.GameObjects.Particles.ParticleEmitter;
-    networkManager?: NetworkManager;
+    eventManager: any;
+    networkManager?: import('../network/NetworkManager').NetworkManager;
+    remotePlayers: Map<string, Phaser.Physics.Arcade.Sprite>;
+    playerNicknames: Map<string, Phaser.GameObjects.Text>;
+    playerBuffers: Map<string, import('../network/JitterBuffer').JitterBuffer<import('../network/SyncSchemas').PackedPlayer>>;
+    remotePlayerPackets: Map<string, import('../network/SyncSchemas').PackedPlayer>;
+    remotePlayerLights: Map<string, Phaser.GameObjects.Light>;
     pendingDeaths: Set<string>;
-    classAbilityCooldownEnd: number;
-    shadowStepUntil: number;
-    isWhirlwinding: boolean;
-    explosiveShotReady: boolean;
-    cascadeActiveUntil: number;
     restartGame(): void;
+    handlePlayerActionCombat(time: number, delta: number): void;
+    spawnBoss(idx: number): void;
     collectSaveData(): RunProgress;
 }

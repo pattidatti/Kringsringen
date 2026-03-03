@@ -51,7 +51,7 @@ export class InputManager {
      * Updates movement and checks for action triggers.
      * Called from MainScene.update().
      */
-    public update(time: number, delta: number): void {
+    public update(time: number, _delta: number): void {
         const player = this.scene.data.get('player') as Phaser.Physics.Arcade.Sprite;
         const hp = this.scene.registry.get('playerHP') || 0;
         if (!player || !player.body || hp <= 0) return;

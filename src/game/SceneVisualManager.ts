@@ -90,7 +90,7 @@ export class SceneVisualManager {
             if (!this.playerLight) {
                 this.playerLight = this.scene.lights.addLight(0, 0, 230, 0xfffaf0, 0.7);
                 this.outerPlayerLight = this.scene.lights.addLight(0, 0, 575, 0xfffaf0, 0.4);
-            } else {
+            } else if (this.playerLight && this.outerPlayerLight) {
                 this.playerLight.setVisible(true);
                 this.outerPlayerLight.setVisible(true);
             }
