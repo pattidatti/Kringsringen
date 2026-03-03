@@ -93,6 +93,28 @@ export class MainScene extends Phaser.Scene implements IMainScene {
     private explosiveShotReady: boolean = false;
     private cascadeActiveUntil: number = 0;
 
+    // ── Fase 6: Krieger Combat State ─────────────────────────────────────────
+    private momentumStacks: number = 0;
+    private momentumLastHitTime: number = 0;
+    private battleCryKills: number = 0;
+    private battleCryActiveUntil: number = 0;
+    private fortificationStartedAt: number = 0;
+    private fortificationActive: boolean = false;
+    private lastKillWasMelee: boolean = false;
+    private berserkerMulti: number = 1;
+    private ironWillUsedThisLevel: boolean = false;
+
+    // ── Fase 6: Archer Combat State ──────────────────────────────────────────
+    private bowChargeStart: number = 0;
+    private timeSlowCooldownEnd: number = 0;
+    private shadowStepUntil: number = 0;
+
+    // ── Fase 6: Wizard Combat State ──────────────────────────────────────────
+    private arcaneInsightCastTotal: number = 0;
+    private overfloadActiveUntil: Record<string, number> = {};
+    private nextCastFree: boolean = false;
+    private overloadHits: number = 0;
+
     // Weather
     private weather!: WeatherManager;
 
@@ -508,8 +530,73 @@ export class MainScene extends Phaser.Scene implements IMainScene {
                         }
                     }
                 } else {
-                    e.takeDamage(this.stats.damage, '#ffcc00'); // Gold for physical
+                    const levels = (this.registry.get('upgradeLevels') || {}) as Record<string, number>;
+                    let swordDamage = this.stats.damage;
+
+                    // Executioner – bonus damage vs low-HP enemies
+                    const execLvl = levels['executioner'] || 0;
+                    if (execLvl > 0 && e.hp / e.maxHP < 0.25) {
+                        swordDamage *= 1 + execLvl * 0.5;
+                    }
+
+                    // Heavy Momentum – stacking damage per consecutive hit
+                    const momentumLvl = levels['heavy_momentum'] || 0;
+                    if (momentumLvl > 0) {
+                        const now = Date.now();
+                        if (now - this.momentumLastHitTime > 3000) this.momentumStacks = 0;
+                        swordDamage *= (1 + this.momentumStacks * 0.10);
+                        this.momentumStacks = Math.min(this.momentumStacks + 1, momentumLvl * 3);
+                        this.momentumLastHitTime = now;
+                    }
+
+                    // Battle Cry – active damage multiplier
+                    const battleCryLvl = levels['battle_cry'] || 0;
+                    if (battleCryLvl > 0 && Date.now() < this.battleCryActiveUntil) {
+                        swordDamage *= 1 + battleCryLvl * 0.15;
+                    }
+
+                    // Berserker Rage – HP-ratio passive multiplier
+                    swordDamage *= this.berserkerMulti;
+
+                    this.lastKillWasMelee = true;
+                    const wasAlive = e.hp > 0;
+                    e.takeDamage(swordDamage, '#ffcc00');
                     e.pushback(player.x, player.y, this.stats.knockback);
+
+                    // Utstotbar Slag – AOE knockback + damage to nearby enemies on hit
+                    const utstotbarLvl = levels['utstotbar_slag'] || 0;
+                    if (utstotbarLvl > 0) {
+                        const nearby = this.spatialGrid.findNearby({ x: e.x, y: e.y, width: 1, height: 1 }, 150);
+                        nearby.forEach(cell => {
+                            if (cell.ref !== e && cell.ref && (cell.ref as Enemy).active && !(cell.ref as Enemy).getIsDead()) {
+                                const neighbor = cell.ref as Enemy;
+                                neighbor.takeDamage(swordDamage * 0.4, '#ff8800');
+                                neighbor.pushback(e.x, e.y, this.stats.knockback * 0.6);
+                            }
+                        });
+                    }
+
+                    // Death check for livsstaling + battle_cry
+                    if (wasAlive && e.hp <= 0) {
+                        // Livsstaling – heal on melee kill
+                        const livsstalLvl = levels['livsstaling'] || 0;
+                        if (livsstalLvl > 0 && this.lastKillWasMelee) {
+                            const heal = livsstalLvl * 8;
+                            const curHP = this.registry.get('playerHP') as number;
+                            const maxHP = this.registry.get('playerMaxHP') as number;
+                            this.registry.set('playerHP', Math.min(maxHP, curHP + heal));
+                            this.poolManager.getDamageText(player.x, player.y - 50, `+${heal}`, '#55ff55');
+                        }
+                        // Battle Cry – kill counter
+                        if (battleCryLvl > 0) {
+                            this.battleCryKills++;
+                            if (this.battleCryKills >= 5) {
+                                this.battleCryKills = 0;
+                                this.battleCryActiveUntil = Date.now() + 8000;
+                                this.poolManager.getDamageText(player.x, player.y - 70, 'BATTLE CRY!', '#ffaa00');
+                            }
+                        }
+                    }
                 }
             });
 
@@ -602,7 +689,8 @@ export class MainScene extends Phaser.Scene implements IMainScene {
                 '2': Phaser.Input.Keyboard.KeyCodes.TWO,
                 '3': Phaser.Input.Keyboard.KeyCodes.THREE,
                 '4': Phaser.Input.Keyboard.KeyCodes.FOUR,
-                '5': Phaser.Input.Keyboard.KeyCodes.FIVE
+                '5': Phaser.Input.Keyboard.KeyCodes.FIVE,
+                'E': Phaser.Input.Keyboard.KeyCodes.E
             }) as any;
 
             this.input.mouse?.disableContextMenu();
@@ -1561,6 +1649,55 @@ export class MainScene extends Phaser.Scene implements IMainScene {
             const pointer = this.input.activePointer;
             let speed = this.stats.speed;
 
+            // ── Fase 6: Berserker Rage – HP-ratio damage multiplier ──────────────
+            {
+                const upgLvls = (this.registry.get('upgradeLevels') || {}) as Record<string, number>;
+                const berserkerLvl = upgLvls['berserker_rage'] || 0;
+                if (berserkerLvl > 0 && playerMaxHP > 0) {
+                    const hpRatio = playerHP / playerMaxHP;
+                    this.berserkerMulti = 1 + Math.floor((1 - hpRatio) / 0.2) * berserkerLvl * 0.05;
+                } else {
+                    this.berserkerMulti = 1;
+                }
+
+                // Fortification – standing still grants armor bonus
+                const fortLvl = upgLvls['fortification'] || 0;
+                if (fortLvl > 0) {
+                    const body = player.body as Phaser.Physics.Arcade.Body;
+                    const isMoving = Math.abs(body.velocity.x) > 5 || Math.abs(body.velocity.y) > 5;
+                    if (isMoving) {
+                        this.fortificationStartedAt = 0;
+                        if (this.fortificationActive) {
+                            this.fortificationActive = false;
+                            // Remove fortification armor bonus
+                            const curArmor = this.registry.get('playerArmor') || 0;
+                            this.registry.set('playerArmor', Math.max(0, curArmor - fortLvl * 2));
+                        }
+                    } else {
+                        if (this.fortificationStartedAt === 0) {
+                            this.fortificationStartedAt = Date.now();
+                        } else if (!this.fortificationActive && Date.now() - this.fortificationStartedAt >= 2000) {
+                            this.fortificationActive = true;
+                            // Add fortification armor bonus
+                            const curArmor = this.registry.get('playerArmor') || 0;
+                            this.registry.set('playerArmor', curArmor + fortLvl * 2);
+                            this.poolManager.getDamageText(player.x, player.y - 50, 'FORTIFIED', '#aaccff');
+                        }
+                    }
+                }
+
+                // Shadow Step – alpha fade after dash (archer)
+                if (Date.now() < this.shadowStepUntil) {
+                    player.setAlpha(0.15);
+                } else if (player.alpha < 1 && !this.data.get('isDashing')) {
+                    player.setAlpha(1);
+                }
+
+                // Time Slow state is managed via E-hotkey in class ability section below.
+                // Enemies check their own 'slowUntil' data key in Enemy.preUpdate().
+            }
+
+
             // Update Spatial Grid
             this.spatialGrid.clear();
             this.enemies.children.iterate((enemy: any) => {
@@ -1672,6 +1809,13 @@ export class MainScene extends Phaser.Scene implements IMainScene {
                         this.combat.setDashIframe(false);
                         player.play('player-idle');
 
+                        // Shadow Step – Archer: become translucent after dash
+                        const upgLvls2 = (this.registry.get('upgradeLevels') || {}) as Record<string, number>;
+                        const shadowStepLvl = upgLvls2['shadow_step'] || 0;
+                        if (shadowStepLvl > 0) {
+                            this.shadowStepUntil = Date.now() + shadowStepLvl * 500;
+                        }
+
                         // Lifesteal upgrade effect
                         const heal = this.stats.getDashLifestealHP();
                         if (heal > 0) {
@@ -1711,6 +1855,31 @@ export class MainScene extends Phaser.Scene implements IMainScene {
                     Phaser.Input.Keyboard.JustDown(this.hotkeys['4']) &&
                     abilityReady) {
                     this.activateCascade();
+                }
+
+                // ── Fase 6: Time Slow Arrow (Archer) – E-key ─────────────────
+                if (playerClassId === 'archer' && Phaser.Input.Keyboard.JustDown(this.hotkeys['E'])) {
+                    const upgLvls3 = (this.registry.get('upgradeLevels') || {}) as Record<string, number>;
+                    const timeSlowLvl = upgLvls3['time_slow_arrow'] || 0;
+                    if (timeSlowLvl > 0 && Date.now() >= this.timeSlowCooldownEnd) {
+                        const slowDuration = 3000;
+                        const cooldown = 15000 - timeSlowLvl * 3000;
+                        this.timeSlowCooldownEnd = Date.now() + cooldown;
+                        // Apply slow to all active enemies
+                        this.enemies.children.iterate((enemy: any) => {
+                            if (enemy && enemy.active && !enemy.isDead) {
+                                enemy.applySlow(slowDuration);
+                            }
+                            return true;
+                        });
+                        if (this.bossGroup) {
+                            this.bossGroup.children.iterate((boss: any) => {
+                                if (boss && boss.active) boss.applySlow?.(slowDuration);
+                                return true;
+                            });
+                        }
+                        this.poolManager.getDamageText(player.x, player.y - 70, 'TIME SLOW!', '#88aaff');
+                    }
                 }
             }
 
@@ -2345,7 +2514,7 @@ export class MainScene extends Phaser.Scene implements IMainScene {
             });
             if (chainLvl > 0) {
                 const pctPerHit = chainLvl === 1 ? 0.05 : 0.07;
-                const maxPct   = chainLvl === 1 ? 0.25 : 0.35;
+                const maxPct = chainLvl === 1 ? 0.25 : 0.35;
                 const reduction = Math.min(hitEnemies.length * pctPerHit, maxPct);
                 this.classAbilityCooldownEnd -= cd * reduction;
             }

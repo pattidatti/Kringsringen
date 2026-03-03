@@ -258,6 +258,20 @@ export class LightningBolt extends Phaser.Physics.Arcade.Sprite {
                     // Visual link (could add a line/effect here later)
                 }
             }
+
+            // ── Fase 6: Frozen Lightning – 4x damage on frozen enemies ──────
+            const upgLvls = (mainScene.registry.get('upgradeLevels') || {}) as Record<string, number>;
+            const frozenLightningLvl = upgLvls['frozen_lightning'] || 0;
+            if (frozenLightningLvl > 0) {
+                // Check if enemy is frozen (has active slow)
+                const frozenUntil = hitEnemy.getData('slowUntil') || 0;
+                if (Date.now() < frozenUntil) {
+                    hitEnemy.takeDamage(this.damage * 3, '#00aaff'); // Extra 3x (total 4x)
+                    if (mainScene.poolManager) {
+                        mainScene.poolManager.getDamageText(hitEnemy.x, hitEnemy.y - 50, '❄ x4!', '#00ccff');
+                    }
+                }
+            }
         }
 
         // Add to hit set

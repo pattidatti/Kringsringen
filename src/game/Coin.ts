@@ -73,8 +73,11 @@ export class Coin extends Phaser.Physics.Arcade.Sprite {
         const dy = (this.targetStart as any).y - this.y;
         const distSq = dx * dx + dy * dy;
 
+        // Read magnet range from registry (supports coin_magnet upgrade)
+        const dynamicMagnetRange = (this.scene.registry.get('coinMagnetRadius') as number | undefined) ?? this.magnetRange;
+
         // Optimization: use distance squared to avoid Math.sqrt
-        if (this.forceMagnet || distSq < this.magnetRange * this.magnetRange) {
+        if (this.forceMagnet || distSq < dynamicMagnetRange * dynamicMagnetRange) {
             const angle = Math.atan2(dy, dx);
             const currentSpeed = this.forceMagnet ? this.speed * 1.5 : this.speed;
             this.setVelocity(

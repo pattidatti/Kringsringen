@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { UPGRADES } from '../config/upgrades';
+import { CLASS_UPGRADES } from '../config/class-upgrades';
 import { SaveManager } from './SaveManager';
 import { GAME_CONFIG } from '../config/GameConfig';
 import type { IMainScene } from './IMainScene';
@@ -181,7 +182,54 @@ export class PlayerStatsManager {
 
         // Misc
         this.scene.registry.set('playerLuck', 1.0);
-        this.scene.registry.set('playerCritChance', this.baseCritChance);
+
+        // Crit Chance (base + upgrades)
+        const critChanceLvl = levels['crit_chance'] || 0;
+        const finalCritChance = this.baseCritChance + critChanceLvl * 0.05;
+        this.scene.registry.set('playerCritChance', finalCritChance);
+
+        // ── Class Upgrade Stats ──────────────────────────────────────────
+        // Coin Magnet radius
+        const coinMagnetLvl = levels['coin_magnet'] || 0;
+        this.scene.registry.set('coinMagnetRadius', 150 + coinMagnetLvl * 50);
+
+        // Archer: Headshot – bonus crit chance on arrows
+        const headshotLvl = levels['headshot'] || 0;
+        this.scene.registry.set('arrowCritBonus', headshotLvl * 0.15);
+
+        // Archer: Eagle Eye – faster arrows + max range cap
+        const eagleEyeLvl = levels['eagle_eye'] || 0;
+        if (eagleEyeLvl > 0) {
+            const baseArrowSpeed = this.scene.registry.get('playerArrowSpeed') || GAME_CONFIG.WEAPONS.BOW.speed;
+            this.scene.registry.set('playerArrowSpeed', baseArrowSpeed * (1 + eagleEyeLvl * 0.20));
+            this.scene.registry.set('playerArrowMaxRange', 800 + eagleEyeLvl * 200);
+        }
+
+        // Archer: Luftmobilitet – extra dash charges
+        const luftLvl = levels['luftmobilitet'] || 0;
+        if (luftLvl > 0) {
+            const baseDashCharges = this.scene.registry.get('dashCharges') || 1;
+            this.scene.registry.set('dashCharges', baseDashCharges + luftLvl);
+        }
+
+        // Wizard: Massiv Eksplosjon – larger fireball radius
+        const massivEksLvl = levels['massiv_eksplosjon'] || 0;
+        if (massivEksLvl > 0) {
+            const currentRadius = this.scene.registry.get('fireballRadius') || GAME_CONFIG.WEAPONS.FIREBALL.splashRadius;
+            this.scene.registry.set('fireballRadius', currentRadius + massivEksLvl * 40);
+        }
+
+        // Wizard: Manaring – Damage Reduction bonus (used in PlayerCombatManager)
+        const manaringLvl = levels['manaring'] || 0;
+        this.scene.registry.set('manaringDRBonus', manaringLvl === 1 ? 0.25 : manaringLvl === 2 ? 0.40 : 0);
+
+        // Warrior: Skadeskalering – armor-scaled damage
+        const skadekLvl = levels['skadeskalering'] || 0;
+        if (skadekLvl > 0) {
+            const armorLvl2 = levels['armor'] || 0;
+            this.playerDamage *= (1 + armorLvl2 * skadekLvl * 0.05);
+            this.scene.registry.set('playerDamage', this.playerDamage);
+        }
 
         // Dash stats (Previously fixed, using current values but verifying formula)
         const dashCdLvl = levels['dash_cooldown'] || 0;
@@ -195,7 +243,7 @@ export class PlayerStatsManager {
     /** Apply an upgrade by ID (increments level, saves, recalculates) */
     applyUpgrade(upgradeId: string): void {
         const levels = this.scene.registry.get('upgradeLevels') || {};
-        const config = UPGRADES.find(u => u.id === upgradeId);
+        const config = [...UPGRADES, ...CLASS_UPGRADES].find(u => u.id === upgradeId);
 
         if (!config) return;
 

@@ -15,12 +15,20 @@ export class PlayerCombatManager {
     /** Active camera blur FX reference – removed after the hit-impact fades. */
     private hitBlurFX: any = null;
 
+    /** Fase 6: iron_will – can only trigger once per level/wave */
+    private ironWillUsedThisLevel: boolean = false;
+
     constructor(scene: IMainScene) {
         this.scene = scene;
     }
 
     /** Whether the player is currently in knockback recovery */
     get isKnockedBack(): boolean { return Date.now() < this._knockbackEndTime; }
+
+    /** Reset iron_will charge (call at level/wave start) */
+    public resetIronWill(): void {
+        this.ironWillUsedThisLevel = false;
+    }
 
     /** Handle incoming damage to the player */
     takePlayerDamage(amount: number, srcX?: number, srcY?: number): void {
@@ -32,15 +40,71 @@ export class PlayerCombatManager {
         const isBlocking = this.scene.data.get('isBlocking') as boolean;
         const player = this.scene.data.get('player') as Phaser.Physics.Arcade.Sprite;
         const armor = this.scene.registry.get('playerArmor') || 0;
+        const levels = (this.scene.registry.get('upgradeLevels') || {}) as Record<string, number>;
 
         // Armor Reduction: Damage - Armor (min 1)
         let damageAfterArmor = Math.max(1, amount - armor);
 
         // Block reduces damage by 80%
-        const actualDamage = isBlocking ? damageAfterArmor * 0.2 : damageAfterArmor;
+        let actualDamage = isBlocking ? damageAfterArmor * 0.2 : damageAfterArmor;
+
+        // ── Fase 6: Mana Shield (Wizard) – chance to absorb damage ──────────
+        const manaShieldLvl = levels['mana_shield'] || 0;
+        if (manaShieldLvl > 0 && Math.random() < manaShieldLvl * 0.30) {
+            // Shield absorbs: show feedback but skip damage
+            this.scene.poolManager.getDamageText(player.x, player.y - 40, 'MANA SHIELD', '#00aaff');
+            // Reduce a spell cooldown by 2s
+            const weaponCd = this.scene.registry.get('weaponCooldown') as { duration: number; timestamp: number } | undefined;
+            if (weaponCd) {
+                this.scene.registry.set('weaponCooldown', { duration: weaponCd.duration, timestamp: weaponCd.timestamp - 2000 });
+            }
+            // Apply camera shake + red flash for visual feedback even on absorb
+            this.scene.cameras.main.shake(100, 0.006);
+            return;
+        }
+
+        // ── Fase 6: Manaring DR bonus (Wizard, during Cascade) ──────────────
+        const manaringDR = this.scene.registry.get('manaringDRBonus') || 0;
+        const cascadeActiveUntil = this.scene.registry.get('cascadeActiveUntil') || 0;
+        if (manaringDR > 0 && Date.now() < cascadeActiveUntil) {
+            actualDamage *= (1 - manaringDR);
+        }
 
         // Throttled HP update
         this.pendingHPChange -= actualDamage;
+
+        // ── Fase 6: Iron Will (Krieger) – survive lethal hit with 1 HP ──────
+        const ironWillLvl = levels['iron_will'] || 0;
+        if (ironWillLvl > 0 && !this.ironWillUsedThisLevel && hp + this.pendingHPChange <= 0) {
+            this.ironWillUsedThisLevel = true;
+            // Clamp to 1 HP
+            this.pendingHPChange = -(hp - 1);
+            this.scene.poolManager.getDamageText(player.x, player.y - 60, 'JERNVILJE!', '#ffd700');
+        }
+
+        // ── Fase 6: Counter Strike (Krieger) – return damage on hit ─────────
+        const counterLvl = levels['counter_strike'] || 0;
+        if (counterLvl > 0 && Math.random() < counterLvl * 0.20) {
+            const nearby = this.scene.spatialGrid.findNearby({ x: player.x, y: player.y, width: 1, height: 1 }, 250);
+            if (nearby.length > 0) {
+                const target = nearby[0].ref as any;
+                if (target && target.takeDamage) {
+                    target.takeDamage(actualDamage * counterLvl * 0.25, '#ff4444');
+                }
+            }
+        }
+
+        // ── Fase 6: Blodust (Krieger) – reflect damage to source enemy ──────
+        const blodustLvl = levels['blodust'] || 0;
+        if (blodustLvl > 0 && srcX !== undefined && srcY !== undefined) {
+            const nearSrc = this.scene.spatialGrid.findNearby({ x: srcX, y: srcY, width: 1, height: 1 }, 60);
+            if (nearSrc.length > 0) {
+                const srcEnemy = nearSrc[0].ref as any;
+                if (srcEnemy && srcEnemy.takeDamage) {
+                    srcEnemy.takeDamage(actualDamage * blodustLvl * 0.15, '#cc0000');
+                }
+            }
+        }
 
         // Screen Shake
         this.scene.cameras.main.shake(200, 0.014);

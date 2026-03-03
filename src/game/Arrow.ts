@@ -90,6 +90,64 @@ export class Arrow extends Phaser.Physics.Arcade.Sprite {
         } else {
             e.takeDamage(this.damage, '#ffffff');
             e.pushback(this.startX, this.startY, 150);
+
+            // ── Fase 6: Archer pil-effekter ──────────────────────────────────
+            const levels = (mainScene.registry?.get('upgradeLevels') || {}) as Record<string, number>;
+
+            // Pindown – chance to pin enemy in place
+            const pindownLvl = levels['pindown'] || 0;
+            if (pindownLvl > 0 && Math.random() < pindownLvl * 0.20) {
+                e.setVelocity(0, 0);
+                e.setData('pinnedUntil', Date.now() + 1500 + pindownLvl * 500);
+            }
+
+            // Kite Mastery – reduce dash CD on kill
+            const kiteLvl = levels['kite_mastery'] || 0;
+            const wasAlive = e.hp > 0;
+            if (kiteLvl > 0 && wasAlive && e.hp <= 0) {
+                const dashState = mainScene.registry.get('dashState') || { isActive: false, readyAt: 0 };
+                const dashCooldown = mainScene.registry.get('dashCooldown') || 7000;
+                if (dashState.readyAt > Date.now()) {
+                    dashState.readyAt = Math.max(Date.now(), dashState.readyAt - dashCooldown * kiteLvl * 0.20);
+                    mainScene.registry.set('dashState', dashState);
+                }
+
+                // Shadeskudd – spawn extra arrows on kill
+                const shadeskuddLvl = levels['shadeskudd'] || 0;
+                if (shadeskuddLvl > 0 && mainScene.arrows) {
+                    const nearbyEnemies = mainScene.spatialGrid?.findNearby({ x: e.x, y: e.y, width: 1, height: 1 }, 400) || [];
+                    let spawned = 0;
+                    for (const cell of nearbyEnemies) {
+                        if (spawned >= shadeskuddLvl) break;
+                        if (cell.ref && cell.ref !== e && cell.ref.active && !cell.ref.getIsDead()) {
+                            const spawnArrow = mainScene.arrows.get(e.x, e.y);
+                            if (spawnArrow) {
+                                const ang = Phaser.Math.Angle.Between(e.x, e.y, cell.ref.x, cell.ref.y);
+                                spawnArrow.fire(e.x, e.y, ang, this.damage, this.speed, 0, 0, 0, 0);
+                                spawned++;
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Rikosjett – arrow bounces to nearest other enemy
+            const rikosjettLvl = levels['rikosjett'] || 0;
+            const ricochetCount = this.getData('ricochetCount') || 0;
+            if (rikosjettLvl > 0 && ricochetCount < rikosjettLvl && mainScene.arrows) {
+                const nearbyEnemies = mainScene.spatialGrid?.findNearby({ x: e.x, y: e.y, width: 1, height: 1 }, 500) || [];
+                for (const cell of nearbyEnemies) {
+                    if (cell.ref && cell.ref !== e && !this.hitEnemies.has(cell.ref) && cell.ref.active && !cell.ref.getIsDead()) {
+                        const bounceArrow = mainScene.arrows.get(e.x, e.y);
+                        if (bounceArrow) {
+                            const ang = Phaser.Math.Angle.Between(e.x, e.y, cell.ref.x, cell.ref.y);
+                            bounceArrow.fire(e.x, e.y, ang, this.damage, this.speed, 0, 0, 0, 0);
+                            bounceArrow.setData('ricochetCount', ricochetCount + 1);
+                        }
+                        break;
+                    }
+                }
+            }
         }
 
         // Apply poison on impact

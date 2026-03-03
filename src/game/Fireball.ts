@@ -223,6 +223,55 @@ export class Fireball extends Phaser.Physics.Arcade.Sprite {
                 mainScene.poolManager.spawnFireballExplosion(hitX, hitY);
             });
         }
+
+        // ── Fase 6: Wizard Spell Effects ─────────────────────────────────────
+        const upgLvls = (mainScene.registry?.get('upgradeLevels') || {}) as Record<string, number>;
+
+        // Arcane Insight: every 4 casts, slice the active cooldown
+        const arcaneInsightLvl = upgLvls['arcane_insight'] || 0;
+        if (arcaneInsightLvl > 0) {
+            mainScene._arcaneInsightCasts = (mainScene._arcaneInsightCasts || 0) + 1;
+            if (mainScene._arcaneInsightCasts % 4 === 0) {
+                const weaponCd = mainScene.registry.get('weaponCooldown') as { duration: number; timestamp: number } | undefined;
+                if (weaponCd) {
+                    const reduction = arcaneInsightLvl === 1 ? 0.30 : 0.60;
+                    const remaining = (weaponCd.timestamp + weaponCd.duration) - Date.now();
+                    if (remaining > 0) {
+                        mainScene.registry.set('weaponCooldown', {
+                            duration: weaponCd.duration,
+                            timestamp: weaponCd.timestamp - remaining * reduction
+                        });
+                    }
+                }
+            }
+        }
+
+        // Overload: 3 hits → gratis neste kast (flagg leses i main.ts spell-cast)
+        const overloadLvl = upgLvls['overload'] || 0;
+        if (overloadLvl > 0) {
+            mainScene._overloadHits = (mainScene._overloadHits || 0) + 1;
+            if (mainScene._overloadHits >= 3) {
+                mainScene._overloadHits = 0;
+                mainScene._nextCastFree = true;
+                const p = mainScene.data?.get('player');
+                if (p && mainScene.poolManager) {
+                    mainScene.poolManager.getDamageText(p.x, p.y - 70, 'OVERLOAD!', '#cc88ff');
+                }
+            }
+        }
+
+        // Spell Echo: chance for free cast (no cooldown set)
+        const spellEchoLvl = upgLvls['spell_echo'] || 0;
+        if (spellEchoLvl > 0 && Math.random() < spellEchoLvl * 0.15) {
+            mainScene._nextCastFree = true;
+        }
+
+        // Elementar Overfload: register fireball cross-element window
+        const overfloadLvl = upgLvls['elementar_overfload'] || 0;
+        if (overfloadLvl > 0) {
+            if (!mainScene._overfloadActiveUntil) mainScene._overfloadActiveUntil = {};
+            mainScene._overfloadActiveUntil['fireball'] = Date.now() + 5000;
+        }
     }
 
     update() {
