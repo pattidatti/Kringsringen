@@ -362,6 +362,7 @@ export class MainScene extends Phaser.Scene implements IMainScene {
 
             this.visuals.update();
             this.inputManager.update(_time, delta);
+            this.abilityManager.update(_time, delta);
 
             // Update Spatial Grid
             this.flowFieldManager.update(this.player.x, this.player.y);

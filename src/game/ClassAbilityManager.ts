@@ -16,6 +16,8 @@ export class ClassAbilityManager {
     public classAbility4CooldownEnd: number = 0;
 
     private bulwarkGraphics: Phaser.GameObjects.Graphics | null = null;
+    private bulwarkAlpha: number = 0;
+    private bulwarkRotation: number = 0;
 
     constructor(scene: IMainScene) {
         this.scene = scene;
@@ -79,8 +81,8 @@ export class ClassAbilityManager {
 
         this.scene.tweens.add({
             targets: player,
-            rotation: Math.PI * 8, // 4 full rotations over 1000ms
-            duration: 1000,
+            rotation: Math.PI * 24, // 12 full rotations over 3000ms (maintains visual speed)
+            duration: 3000,
             ease: 'Linear',
             onUpdate: (tween) => {
                 if (!this.isWhirlwinding) {
@@ -136,16 +138,24 @@ export class ClassAbilityManager {
             return hitEnemies;
         };
 
-        // First hit (start)
-        triggerHit('#ffcc00');
+        // Periodic damage ticks every 200ms
+        // Ticks at: 0ms, 200ms, 400ms, ..., 2800ms (15 total ticks)
+        for (let i = 0; i < 15; i++) {
+            this.scene.time.delayedCall(i * 200, () => {
+                if (this.isWhirlwinding) {
+                    const hitEnemies = triggerHit(i === 0 ? '#ffcc00' : '#ffaa00');
 
-        // Second hit (500ms)
-        this.scene.time.delayedCall(500, () => {
-            if (this.isWhirlwinding) triggerHit('#ffaa00');
-        });
+                    // Avant-Garde Juice: Visual feedback on every tick that hits something
+                    if (hitEnemies.length > 0) {
+                        this.scene.swordSparkEmitter.emitParticleAt(player.x, player.y - 15, 3);
+                        this.scene.cameras.main.shake(50, 0.005);
+                    }
+                }
+            });
+        }
 
-        // Third hit and end (1000ms)
-        this.scene.time.delayedCall(1000, () => {
+        // Final hit and end (3000ms)
+        this.scene.time.delayedCall(3000, () => {
             if (!this.isWhirlwinding) return;
             const finalHit = triggerHit('#ffaa00');
             if (chainLvl > 0) {
@@ -239,51 +249,107 @@ export class ClassAbilityManager {
         if (this.bulwarkGraphics) this.bulwarkGraphics.destroy();
         this.bulwarkGraphics = this.scene.add.graphics();
         this.bulwarkGraphics.setDepth(player.depth + 1);
+        this.bulwarkGraphics.setBlendMode(Phaser.BlendModes.ADD); // Ensure transparency/glow works
+        this.bulwarkAlpha = 0;
+        this.bulwarkRotation = 0;
 
         this.scene.tweens.add({
-            targets: this.bulwarkGraphics,
-            alpha: { start: 0, end: 1 },
+            targets: this,
+            bulwarkAlpha: 1,
             duration: 200,
-            onUpdate: () => {
-                if (!this.bulwarkGraphics) return;
-                this.bulwarkGraphics.clear();
-                this.bulwarkGraphics.lineStyle(3, 0xffdd44, 0.8);
-                this.bulwarkGraphics.fillStyle(0xffaa00, 0.1);
-
-                // Draw hexagonal shell
-                const points = [];
-                for (let i = 0; i < 6; i++) {
-                    const angle = (i / 6) * Math.PI * 2;
-                    points.push({
-                        x: player.x + Math.cos(angle) * 60,
-                        y: player.y + Math.sin(angle) * 60
-                    });
-                }
-                this.bulwarkGraphics.beginPath();
-                this.bulwarkGraphics.moveTo(points[0].x, points[0].y);
-                for (let i = 1; i < 6; i++) this.bulwarkGraphics.lineTo(points[i].x, points[i].y);
-                this.bulwarkGraphics.closePath();
-                this.bulwarkGraphics.strokePath();
-                this.bulwarkGraphics.fillPath();
-
-                // Projectile reflection happens in CollisionManager
-            }
+            ease: 'Cubic.out'
         });
 
         this.scene.time.delayedCall(duration, () => {
-            if (this.bulwarkGraphics) {
-                this.scene.tweens.add({
-                    targets: this.bulwarkGraphics,
-                    alpha: 0,
-                    duration: 200,
-                    onComplete: () => {
-                        this.bulwarkGraphics?.destroy();
-                        this.bulwarkGraphics = null;
-                    }
-                });
-            }
-            this.scene.registry.set('bulwarkActiveUntil', 0);
+            this.scene.tweens.add({
+                targets: this,
+                bulwarkAlpha: 0,
+                duration: 200,
+                onComplete: () => {
+                    this.bulwarkGraphics?.destroy();
+                    this.bulwarkGraphics = null;
+                    this.scene.registry.set('bulwarkActiveUntil', 0);
+                }
+            });
         });
+
+        // Sfx placeholder or trigger
+        this.scene.events.emit('sfx-shield-up');
+    }
+
+    public update(time: number, delta: number): void {
+        const player = this.scene.data.get('player') as Phaser.Physics.Arcade.Sprite;
+        const bulwarkActiveUntil = this.scene.registry.get('bulwarkActiveUntil') || 0;
+        const now = Date.now();
+
+        if (this.bulwarkGraphics && player && player.active) {
+            this.bulwarkGraphics.clear();
+            this.bulwarkGraphics.setAlpha(this.bulwarkAlpha);
+
+            // Juice: Rotation
+            this.bulwarkRotation += delta * 0.002;
+
+            // Juice: Pulsing scale
+            const pulse = 1 + Math.sin(time * 0.008) * 0.05;
+            const radius = 60 * pulse;
+
+            // Visual details: Glow and Shell (Iron Bulwark: Blue/Gold)
+            // Outer Gold Glow
+            this.bulwarkGraphics.lineStyle(6, 0xffaa00, 0.3 * this.bulwarkAlpha);
+            this.drawHexagon(player.x, player.y, radius + 6, this.bulwarkRotation * 0.5);
+
+            // Inner Cyan Pulse
+            const innerPulse = 0.8 + Math.sin(time * 0.015) * 0.2;
+            this.bulwarkGraphics.lineStyle(2, 0x00ffff, 0.6 * innerPulse * this.bulwarkAlpha);
+            this.drawHexagon(player.x, player.y, radius - 5, -this.bulwarkRotation);
+
+            // Main Gold Shell
+            this.bulwarkGraphics.lineStyle(3, 0xffdd44, 0.9 * this.bulwarkAlpha);
+            this.bulwarkGraphics.fillStyle(0xffaa00, 0.05 * this.bulwarkAlpha);
+            this.drawHexagon(player.x, player.y, radius, this.bulwarkRotation);
+
+            // --- Visual Timer ---
+            if (bulwarkActiveUntil > now) {
+                const duration = 5000;
+                const remaining = bulwarkActiveUntil - now;
+                const progress = Math.max(0, remaining / duration);
+
+                // Smart Position: Avoid overlap with Whirlwind (Whirlwind is at y+35)
+                const timerY = this.isWhirlwinding ? 60 : 35;
+                const targetX = player.x;
+                const targetY = player.y + timerY;
+
+                // Background
+                this.bulwarkGraphics.lineStyle(4, 0x000000, 0.5 * this.bulwarkAlpha);
+                this.bulwarkGraphics.beginPath();
+                this.bulwarkGraphics.arc(targetX, targetY, 14, 0, Math.PI * 2, false);
+                this.bulwarkGraphics.strokePath();
+
+                // Progress Arc (Cyan/White for Bulwark)
+                this.bulwarkGraphics.lineStyle(3, 0x00ccff, 1 * this.bulwarkAlpha);
+                this.bulwarkGraphics.beginPath();
+                this.bulwarkGraphics.arc(targetX, targetY, 14, -Math.PI / 2, -Math.PI / 2 + (Math.PI * 2 * progress), false);
+                this.bulwarkGraphics.strokePath();
+            }
+        }
+    }
+
+    private drawHexagon(x: number, y: number, radius: number, rotation: number): void {
+        if (!this.bulwarkGraphics) return;
+        const points = [];
+        for (let i = 0; i < 6; i++) {
+            const angle = rotation + (i / 6) * Math.PI * 2;
+            points.push({
+                x: x + Math.cos(angle) * radius,
+                y: y + Math.sin(angle) * radius
+            });
+        }
+        this.bulwarkGraphics.beginPath();
+        this.bulwarkGraphics.moveTo(points[0].x, points[0].y);
+        for (let i = 1; i < 6; i++) this.bulwarkGraphics.lineTo(points[i].x, points[i].y);
+        this.bulwarkGraphics.closePath();
+        this.bulwarkGraphics.strokePath();
+        this.bulwarkGraphics.fillPath();
     }
 
     private activateChainGrapple(): void {
@@ -296,35 +362,122 @@ export class ClassAbilityManager {
         const player = this.scene.data.get('player') as Phaser.Physics.Arcade.Sprite;
         const radius = 400;
 
-        // Visual: Flashy circle
-        const ring = this.scene.add.circle(player.x, player.y, 10, 0xffffff, 0.2);
+        // 1. Visceral Shockwave Effect
+        const ring = this.scene.add.circle(player.x, player.y, 10, 0xaaaaaa, 0.4);
+        ring.setStrokeStyle(4, 0xffffff, 0.8);
+        ring.setDepth(player.depth - 1);
         this.scene.tweens.add({
             targets: ring,
             radius: radius,
             alpha: 0,
-            duration: 300,
+            duration: 350,
+            ease: 'Expo.out',
             onComplete: () => ring.destroy()
         });
 
+        // Minor initial shake when hooks fly out
+        this.scene.cameras.main.shake(150, 0.005);
+
         // Search for enemies in radius
-        const enemies = this.scene.spatialGrid.findNearby({
+        const nearbyEntries = this.scene.spatialGrid.findNearby({
             x: player.x,
             y: player.y,
             width: 1,
             height: 1
         }, radius);
 
-        enemies.forEach(entry => {
+        const chainGraphics = this.scene.add.graphics();
+        chainGraphics.setDepth(player.depth - 1);
+        const activeChains: Array<{ enemy: Enemy, color: number }> = [];
+
+        nearbyEntries.forEach(entry => {
             const enemy = entry.ref as Enemy;
             if (enemy && enemy.active && !enemy.getIsDead()) {
-                this.scene.tweens.add({
-                    targets: enemy,
-                    x: player.x + (enemy.x - player.x) * 0.2,
-                    y: player.y + (enemy.y - player.y) * 0.2,
-                    duration: 200,
-                    ease: 'Cubic.out',
-                    onUpdate: () => {
-                        if (enemy.body) enemy.setVelocity(0, 0);
+                activeChains.push({ enemy, color: 0xcccccc });
+
+                // Vekt: Tension/Stun phase before the pull starts
+                enemy.setTint(0xffaa00);
+                if (enemy.body) enemy.setVelocity(0, 0);
+
+                // Start the pull after a short tension delay
+                this.scene.time.delayedCall(150, () => {
+                    if (!enemy.active || enemy.getIsDead()) return;
+
+                    enemy.clearTint();
+                    this.scene.tweens.add({
+                        targets: enemy,
+                        x: player.x + (enemy.x - player.x) * 0.15, // Pull close but not on top
+                        y: player.y + (enemy.y - player.y) * 0.15,
+                        duration: 350,
+                        ease: 'Back.out', // Snappy pull
+                        onUpdate: () => {
+                            if (enemy.body) enemy.setVelocity(0, 0);
+                        },
+                        onComplete: () => {
+                            if (!enemy.active) return;
+
+                            // 2. Impact Layer
+                            // Remove from active chains so it stops drawing
+                            const idx = activeChains.findIndex(c => c.enemy === enemy);
+                            if (idx !== -1) activeChains.splice(idx, 1);
+
+                            // Juice: Spark explosion on impact
+                            this.scene.swordSparkEmitter.emitParticleAt(enemy.x, enemy.y, 5);
+                            this.scene.cameras.main.shake(100, 0.008);
+
+                            // Visual: Impact Text
+                            this.scene.poolManager.getDamageText(enemy.x, enemy.y - 40, 'PULL!', '#ffffff');
+
+                            // Stun enemy briefly on impact
+                            enemy.setTint(0xffffff);
+                            this.scene.time.delayedCall(200, () => { if (enemy.active) enemy.clearTint(); });
+                        }
+                    });
+                });
+            }
+        });
+
+        // 3. Dynamic Chain Rendering Loop
+        const renderTimer = this.scene.time.addEvent({
+            delay: 16,
+            repeat: 100, // Should cover the 350ms duration + tension
+            callback: () => {
+                chainGraphics.clear();
+                if (activeChains.length === 0) {
+                    renderTimer.destroy();
+                    chainGraphics.destroy();
+                    return;
+                }
+
+                activeChains.forEach(chain => {
+                    if (chain.enemy && chain.enemy.active) {
+                        // Draw a jagged/segmented chain for aesthetic
+                        chainGraphics.lineStyle(2, chain.color, 0.8);
+
+                        const startX = player.x;
+                        const startY = player.y;
+                        const endX = chain.enemy.x;
+                        const endY = chain.enemy.y;
+
+                        // Zig-zag effect for 'tension'
+                        const segments = 6;
+                        chainGraphics.beginPath();
+                        chainGraphics.moveTo(startX, startY);
+
+                        for (let i = 1; i < segments; i++) {
+                            const t = i / segments;
+                            const px = startX + (endX - startX) * t;
+                            const py = startY + (endY - startY) * t;
+                            const jitter = (Math.random() - 0.5) * 4;
+                            chainGraphics.lineTo(px + jitter, py + jitter);
+                        }
+
+                        chainGraphics.lineTo(endX, endY);
+                        chainGraphics.strokePath();
+
+                        // Add small 'hook' circle at the end
+                        chainGraphics.fillStyle(0xffffff, 1);
+                        chainGraphics.fillCircle(endX, endY, 4);
                     }
                 });
             }

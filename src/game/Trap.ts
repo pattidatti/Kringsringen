@@ -3,7 +3,6 @@ import type { IMainScene } from './IMainScene';
 import { Enemy } from './Enemy';
 
 export class Trap extends Phaser.Physics.Arcade.Sprite {
-    private duration: number = 0;
     private stunDuration: number = 2000;
     private radius: number = 100;
     private isSprung: boolean = false;
@@ -42,8 +41,8 @@ export class Trap extends Phaser.Physics.Arcade.Sprite {
         const enemies = mainScene.spatialGrid.findNearby({
             x: this.x,
             y: this.y,
-            width: 20,
-            height: 20
+            width: 32,
+            height: 32
         }, this.radius);
 
         for (const entry of enemies) {
@@ -68,8 +67,8 @@ export class Trap extends Phaser.Physics.Arcade.Sprite {
         const nearby = mainScene.spatialGrid.findNearby({
             x: this.x,
             y: this.y,
-            width: 0,
-            height: 0
+            width: 32,
+            height: 32
         }, this.radius * 1.5);
 
         for (const entry of nearby) {

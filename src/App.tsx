@@ -87,6 +87,7 @@ function App() {
         {showClassSelector && (
           <ClassSelector
             onSelect={handleClassSelected}
+            onClose={() => setShowClassSelector(false)}
             defaultClass={selectedClass}
           />
         )}

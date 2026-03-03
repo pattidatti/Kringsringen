@@ -8,6 +8,8 @@ import { LightningBolt } from './LightningBolt';
 import { Singularity } from './Singularity';
 import { EclipseWake } from './EclipseWake';
 import { Coin } from './Coin';
+import { Decoy } from './Decoy';
+import { Trap } from './Trap';
 import type { IMainScene } from './IMainScene';
 
 export class ObjectPoolManager {
@@ -43,8 +45,8 @@ export class ObjectPoolManager {
             eclipseWakes: { classType: EclipseWake, maxSize: 20 },
             coins: { classType: Coin, maxSize: 5000 },
             enemyProjectiles: { classType: EnemyProjectile, maxSize: 50 },
-            decoys: { maxSize: 10 },
-            traps: { maxSize: 20 }
+            decoys: { classType: Decoy, maxSize: 10 },
+            traps: { classType: Trap, maxSize: 20 }
         };
         Object.keys(groups).forEach(key => {
             (mainScene as any)[key] = this.scene.physics.add.group({ ...groups[key], runChildUpdate: true });

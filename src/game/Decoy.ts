@@ -12,6 +12,7 @@ export class Decoy extends Phaser.Physics.Arcade.Sprite {
         this.setScale(2);
         this.setTint(0x8888ff);
         this.setAlpha(0.6);
+        this.setData('isDecoy', true);
     }
 
     public spawn(x: number, y: number, duration: number = 3000) {
@@ -53,8 +54,8 @@ export class Decoy extends Phaser.Physics.Arcade.Sprite {
         const enemies = mainScene.spatialGrid.findNearby({
             x: this.x,
             y: this.y,
-            width: 0,
-            height: 0
+            width: 32,
+            height: 32
         }, radius);
 
         const damage = mainScene.stats.damage * 2;

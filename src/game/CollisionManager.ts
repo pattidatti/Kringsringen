@@ -78,9 +78,12 @@ export class CollisionManager {
                         projectile.body.velocity.x *= -1.5;
                         projectile.body.velocity.y *= -1.5;
                         projectile.setRotation(Math.atan2(projectile.body.velocity.y, projectile.body.velocity.x));
-                        // Mark as friendly to enemies
                         projectile.setData('isReflected', true);
                         this.scene.poolManager.getDamageText(projectile.x, projectile.y - 20, "REFLECT!", "#ffdd44");
+
+                        // Juice: Sparks and Shake
+                        this.scene.swordSparkEmitter.emitParticleAt(projectile.x, projectile.y, 10);
+                        this.scene.cameras.main.shake(100, 0.005);
                     }
                 } else {
                     // Normal hit logic (delegated to EnemyProjectile.onHitPlayer via overlap in EnemyProjectile)

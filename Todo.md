@@ -19,9 +19,10 @@
 - [x] Cooldown på Whirlwind vises ikke på baren nede. 
 - [ ] Enemies som orc og slime skyver spilleren i større grad enn å angripe.  
 - [x] Krieger får av og til tilgang på Fireball når man trykker på hotkey 2. 
-- [ ] Radius på gull pickup må være større default. 
-- [ ] Krieger og Archer trenger en ekstra default ability som de begynner med på slott 3. Noe jucy, kult, medium kort cooldown, som passer til klassen. 
-- [ ] Ytre radius på lys fra spilleren må økes litt. 
+- [x] Radius på gull pickup må være større default. 
+- [x] Krieger og Archer trenger en ekstra default ability som de begynner med på slott 3. Noe jucy, kult, medium kort cooldown, som passer til klassen. 
+- [x] Ytre radius på lys fra spilleren må økes litt. 
+- [ ] Whirlwind treffer i Orkehøvding, undersøk og fiks.  
 
 
 

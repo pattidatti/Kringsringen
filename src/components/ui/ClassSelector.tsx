@@ -1,196 +1,175 @@
 /**
- * ClassSelector – Fase 2
+ * ClassSelector – Fase 3 (Avant-Garde Redesign)
  * Vises ved nytt spill. Spilleren velger mellom Krieger, Archer og Wizard.
- * Bruker Framer Motion for stagger-animasjon og class-farger fra CLASS_CONFIGS.
+ * Fokus på visuell tyngde, minimal tekst og premium følelse.
  */
 
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { CLASS_CONFIGS } from '../../config/classes';
 import type { ClassId, ClassConfig } from '../../config/classes';
-
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
 interface ClassSelectorProps {
-    /** Callback med valgt ClassId. Kalles kun etter eksplisitt "VELG"-klikk. */
     onSelect: (classId: ClassId) => void;
-    /** Valgfri: forhåndsvalgt klasse (f.eks. lastSelectedClass fra SaveManager) */
+    onClose: () => void;
     defaultClass?: ClassId;
 }
 
-// ─── Stat bar spec ────────────────────────────────────────────────────────────
+// ─── Stats Config ─────────────────────────────────────────────────────────────
 
-interface StatBarDef {
-    label: string;
-    emoji: string;
-    /** Returnerer en verdi 0-100 for fyllingsgrad (basert på ClassConfig) */
-    getValue: (cfg: ClassConfig) => number;
-    /** Leserlig diff-tekst, f.eks. "+30%" eller "+2" */
-    getDiff: (cfg: ClassConfig) => string;
-}
-
-const STAT_BARS: StatBarDef[] = [
-    {
-        label: 'HP',
-        emoji: '❤️',
-        getValue: (c) => Math.round(c.baseStats.hp * 60),     // 0.80 → 48, 1.30 → 78
-        getDiff: (c) => {
-            const pct = Math.round((c.baseStats.hp - 1) * 100);
-            return pct >= 0 ? `+${pct}%` : `${pct}%`;
-        },
-    },
-    {
-        label: 'Fart',
-        emoji: '⚡',
-        getValue: (c) => Math.round(c.baseStats.speed * 60),
-        getDiff: (c) => {
-            const pct = Math.round((c.baseStats.speed - 1) * 100);
-            return pct >= 0 ? `+${pct}%` : `${pct}%`;
-        },
-    },
-    {
-        label: 'Skade',
-        emoji: '⚔️',
-        getValue: (c) => Math.round(c.baseStats.damage * 60),
-        getDiff: (c) => {
-            const pct = Math.round((c.baseStats.damage - 1) * 100);
-            return pct >= 0 ? `+${pct}%` : `${pct}%`;
-        },
-    },
-    {
-        label: 'Rustning',
-        emoji: '🛡️',
-        getValue: (c) => Math.round(c.baseStats.armor * 25 + 30), // 0 → 30, 2 → 80
-        getDiff: (c) => {
-            const a = c.baseStats.armor;
-            return a > 0 ? `+${a}` : '0';
-        },
-    },
-];
+const STAT_LABELS: Record<string, { emoji: string; label: string }> = {
+    hp: { emoji: '❤️', label: 'HP' },
+    speed: { emoji: '⚡', label: 'Fart' },
+    damage: { emoji: '⚔️', label: 'Skade' },
+    armor: { emoji: '🛡️', label: 'Rustning' },
+};
 
 // ─── Class Card ───────────────────────────────────────────────────────────────
 
 interface ClassCardProps {
     config: ClassConfig;
     isSelected: boolean;
-    isConfirming: boolean;
+    isAnyConfirming: boolean;
     onClick: () => void;
     index: number;
 }
 
-const CLASS_EMOJI: Record<ClassId, string> = {
-    krieger: '⚔️',
-    archer: '🏹',
-    wizard: '🔮',
-};
-
-const ClassCard: React.FC<ClassCardProps> = ({ config, isSelected, isConfirming, onClick, index }) => {
+const ClassCard: React.FC<ClassCardProps> = ({ config, isSelected, isAnyConfirming, onClick, index }) => {
     const color = config.color;
     const accentColor = config.accentColor;
 
     return (
         <motion.div
-            variants={{
-                hidden: { y: 48, opacity: 0 },
-                visible: { y: 0, opacity: 1 },
+            layout="position"
+            initial={{ opacity: 0, y: 30, filter: 'blur(10px)' }}
+            animate={{
+                y: 0,
+                filter: 'blur(0px)',
+                scale: isAnyConfirming && !isSelected ? 0.9 : 1,
+                opacity: isAnyConfirming && !isSelected ? 0.1 : 1
             }}
-            animate={
-                isConfirming
-                    ? isSelected
-                        ? { scale: 1.05, y: -10, filter: 'brightness(1.2)' }
-                        : { opacity: 0.3, scale: 0.95, filter: 'grayscale(100%)' }
-                    : { scale: 1, y: isSelected ? -6 : 0, opacity: 1 }
-            }
-            transition={{ duration: 0.45, ease: 'easeOut', delay: isConfirming ? 0 : index * 0.1 }}
-            onClick={onClick}
+            transition={{
+                duration: 0.5,
+                delay: index * 0.1,
+                ease: [0.23, 1, 0.32, 1]
+            }}
+            whileHover={!isAnyConfirming ? { y: -8, scale: 1.02, transition: { duration: 0.2 } } : {}}
+            onClick={(e) => {
+                e.stopPropagation();
+                onClick();
+            }}
+            className={`relative group cursor-pointer overflow-hidden rounded-2xl border-2 transition-all duration-500 w-[340px] h-[520px] select-none
+                ${isSelected ? 'border-transparent shadow-[0_0_60px_-15px_rgba(0,0,0,0.5)]' : 'border-white/10 grayscale-[40%] hover:grayscale-0'}
+            `}
             style={{
-                border: isSelected
-                    ? `1.5px solid ${color}`
-                    : '1px solid rgba(255,255,255,0.12)',
-                boxShadow: isSelected
-                    ? `0 0 28px ${color}55, 0 4px 24px rgba(0,0,0,0.5)`
-                    : '0 4px 20px rgba(0,0,0,0.4)',
-                background: isSelected
-                    ? `linear-gradient(160deg, ${color}18 0%, rgba(15,23,42,0.95) 60%)`
-                    : 'rgba(15,23,42,0.9)',
-                transition: 'border 0.25s ease, box-shadow 0.25s ease, background 0.25s ease',
-                cursor: isConfirming ? 'default' : 'pointer',
-                pointerEvents: isConfirming ? 'none' : 'auto',
+                background: isSelected ? `linear-gradient(180deg, ${color}33 0%, #020617 100%)` : '#0f172a80',
+                boxShadow: isSelected ? `0 0 40px ${color}44` : 'none'
             }}
-            className="relative flex flex-col rounded-xl overflow-hidden w-64 select-none"
-            whileHover={!isConfirming ? { y: -4 } : undefined}
-            whileTap={!isConfirming ? { scale: 0.97 } : undefined}
         >
-            {/* Top color strip */}
-            <div
-                className="h-1 w-full"
-                style={{ background: `linear-gradient(90deg, ${color}, ${accentColor})` }}
-            />
-
-            {/* Header */}
-            <div className="flex flex-col items-center pt-6 pb-3 px-5">
-                <span className="text-5xl mb-2">{CLASS_EMOJI[config.id]}</span>
-                <h2
-                    className="font-cinzel text-2xl font-bold tracking-widest uppercase"
-                    style={{ color, textShadow: `0 0 12px ${color}80` }}
-                >
-                    {config.displayName}
-                </h2>
-                <p
-                    className="font-crimson text-sm mt-1 opacity-60 tracking-wide"
-                    style={{ color: accentColor }}
-                >
-                    {config.tagline}
-                </p>
+            {/* Portrait Background */}
+            <div className="absolute inset-0 z-0">
+                <motion.img
+                    src={config.portrait}
+                    alt={config.displayName}
+                    className="w-full h-full object-cover opacity-60 transition-transform duration-700 group-hover:scale-110"
+                    animate={isSelected ? { scale: 1.05, opacity: 0.8 } : { scale: 1, opacity: 0.5 }}
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#020617] via-transparent to-transparent opacity-90" />
             </div>
 
-            {/* Description */}
-            <p className="font-crimson text-sm text-slate-300 leading-relaxed px-5 pb-4 opacity-80 text-center">
-                {config.description}
-            </p>
+            {/* Selection Glow */}
+            <AnimatePresence>
+                {isSelected && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="absolute inset-0 border-2 rounded-2xl z-10"
+                        style={{ borderColor: color, boxShadow: `inset 0 0 30px ${color}44` }}
+                    />
+                )}
+            </AnimatePresence>
 
-            {/* Stat bars */}
-            <div className="flex flex-col gap-2 px-5 pb-4">
-                {STAT_BARS.map((bar) => {
-                    const fill = Math.min(100, Math.max(0, bar.getValue(config)));
-                    const diff = bar.getDiff(config);
-                    return (
-                        <div key={bar.label} className="flex items-center gap-2">
-                            <span className="text-xs w-4">{bar.emoji}</span>
-                            <span className="text-xs text-slate-400 w-14 font-crimson">{bar.label}</span>
-                            <div className="flex-1 h-1.5 bg-slate-700/60 rounded-full overflow-hidden">
-                                <div
-                                    className="h-full rounded-full"
-                                    style={{
-                                        width: `${fill}%`,
-                                        background: `linear-gradient(90deg, ${color}99, ${accentColor})`,
-                                        transition: 'width 0.5s ease',
-                                    }}
-                                />
-                            </div>
+            {/* Content Overlay */}
+            <div className="relative z-20 h-full flex flex-col justify-end p-8">
+                {/* Visual Identity */}
+                <div className="mb-4">
+                    <motion.h2
+                        className="font-fantasy text-4xl tracking-tighter uppercase mb-1"
+                        style={{ color: '#fff', textShadow: `0 0 20px ${color}` }}
+                    >
+                        {config.displayName}
+                    </motion.h2>
+                    <div className="flex gap-2 flex-wrap">
+                        {config.traits.map(trait => (
                             <span
-                                className="text-xs w-10 text-right font-cinzel"
-                                style={{ color: diff.startsWith('-') ? '#f87171' : accentColor }}
+                                key={trait}
+                                className="text-[10px] uppercase tracking-[0.2em] px-2 py-0.5 rounded bg-white/10 text-white/70 backdrop-blur-md border border-white/5"
                             >
-                                {diff}
+                                {trait}
                             </span>
-                        </div>
-                    );
-                })}
+                        ))}
+                    </div>
+                </div>
+
+                {/* Sub-description (Streamlined) */}
+                <p className="font-crimson text-sm text-white/60 leading-relaxed mb-6 italic">
+                    "{config.tagline.split(' · ').join(' — ')}"
+                </p>
+
+                {/* Simplified Stats (Premium style) */}
+                <div className="grid grid-cols-2 gap-x-6 gap-y-3 pt-6 border-t border-white/10">
+                    {Object.entries(config.baseStats).slice(0, 4).map(([key, val]) => {
+                        const spec = STAT_LABELS[key] || { emoji: '?', label: key };
+                        const isPositive = val >= 1 || (key === 'armor' && val > 0);
+                        const displayVal = key === 'armor'
+                            ? (val > 0 ? `+${val}` : '0')
+                            : `${val > 1 ? '+' : ''}${Math.round((val - 1) * 100)}%`;
+
+                        return (
+                            <div key={key} className="flex flex-col">
+                                <span className="text-[9px] uppercase tracking-widest text-white/40 mb-1">{spec.label}</span>
+                                <span className="text-xs font-cinzel font-bold" style={{ color: isPositive ? accentColor : '#f87171' }}>
+                                    {displayVal}
+                                </span>
+                            </div>
+                        );
+                    })}
+                </div>
+
+                {/* Ability Preview */}
+                <div className="mt-8 flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-white/5 border border-white/10 text-white/40 text-xs font-bold font-cinzel">
+                        {config.classAbilityHotkey}
+                    </div>
+                    <div className="flex flex-col">
+                        <span className="text-[8px] uppercase tracking-widest text-white/30">Signatur Evne</span>
+                        <span className="text-xs font-cinzel text-white/80 uppercase">
+                            {config.classAbilityId.replace(/_/g, ' ')}
+                        </span>
+                    </div>
+                </div>
             </div>
 
-            {/* Ability tagline */}
-            <div
-                className="mx-5 mb-6 rounded-lg px-3 py-2 text-center text-xs font-crimson"
-                style={{
-                    background: `${color}18`,
-                    border: `1px solid ${color}40`,
-                    color: accentColor,
-                }}
-            >
-                Evne [{config.classAbilityHotkey}]: <span className="opacity-70">{config.classAbilityId.replace(/_/g, ' ')}</span>
-            </div>
+            {/* Selection Overlay */}
+            {isAnyConfirming && isSelected && (
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="absolute inset-0 z-30 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+                >
+                    <motion.div
+                        initial={{ scale: 2, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        className="text-white font-cinzel text-5xl font-bold uppercase tracking-[0.5em]"
+                        style={{ textShadow: `0 0 40px ${color}` }}
+                    >
+                        VALGT
+                    </motion.div>
+                </motion.div>
+            )}
         </motion.div>
     );
 };
@@ -199,77 +178,76 @@ const ClassCard: React.FC<ClassCardProps> = ({ config, isSelected, isConfirming,
 
 const CLASS_ORDER: ClassId[] = ['krieger', 'archer', 'wizard'];
 
-export const ClassSelector: React.FC<ClassSelectorProps> = ({ onSelect, defaultClass }) => {
-    const [selectedClass, setSelectedClass] = useState<ClassId>(defaultClass ?? 'krieger');
+export const ClassSelector: React.FC<ClassSelectorProps> = ({ onSelect, onClose }) => {
+    const [selectedId, setSelectedId] = useState<ClassId | null>(null);
     const [isConfirming, setIsConfirming] = useState(false);
 
-    const handleCardClick = (id: ClassId) => {
+    const handleSelect = (id: ClassId) => {
         if (isConfirming) return;
-
-        setSelectedClass(id);
+        setSelectedId(id);
         setIsConfirming(true);
 
-        // Stagger/delight animation before transitioning to the game
+        // Premium feel: Let the choice settle for a moment
         setTimeout(() => {
             onSelect(id);
-        }, 700);
+        }, 1200);
     };
 
     return (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center">
-            {/* Backdrop */}
-            <motion.div
-                className="absolute inset-0 bg-slate-950/85 backdrop-blur-sm"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.4 }}
-            />
-
-            {/* Content */}
-            <div className="relative z-10 flex flex-col items-center gap-8 px-4">
-                {/* Title */}
+        <div
+            className="fixed inset-0 z-[500] flex flex-col items-center justify-center overflow-hidden"
+            onClick={onClose}
+        >
+            {/* Immersive Background */}
+            <div className="absolute inset-0 z-0">
+                <div className="absolute inset-0 bg-slate-950/60 backdrop-blur-md" />
                 <motion.div
-                    className="text-center"
-                    initial={{ opacity: 0, y: -20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.5, ease: 'easeOut' }}
-                >
-                    <h1
-                        className="font-fantasy text-5xl tracking-widest uppercase"
-                        style={{
-                            color: '#fde68a',
-                            textShadow: '0 0 24px rgba(253,230,138,0.4), 2px 2px 0 #000',
-                        }}
-                    >
-                        Velg Din Klasse
-                    </h1>
-                    <p className="font-crimson text-slate-400 text-lg mt-2 tracking-wide">
-                        Hvem er du på slagmarken, kriger?
-                    </p>
-                </motion.div>
-
-                {/* Cards */}
-                <motion.div
-                    className="flex flex-row gap-5 items-stretch"
-                    initial="hidden"
-                    animate="visible"
-                    variants={{ visible: { transition: { staggerChildren: 0.1 } } }}
-                >
-                    {CLASS_ORDER.map((id, index) => {
-                        const config = CLASS_CONFIGS[id];
-                        return (
-                            <ClassCard
-                                key={id}
-                                config={config}
-                                isSelected={selectedClass === id}
-                                isConfirming={isConfirming}
-                                index={index}
-                                onClick={() => handleCardClick(id)}
-                            />
-                        );
-                    })}
-                </motion.div>
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 0.1 }}
+                    className="absolute inset-0 pointer-events-none"
+                    style={{ backgroundImage: 'url("https://www.transparenttextures.com/patterns/carbon-fibre.png")' }}
+                />
             </div>
+
+            {/* Header Content */}
+            <motion.div
+                initial={{ opacity: 0, y: -40 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 1.2, ease: [0.23, 1, 0.32, 1] }}
+                className="relative z-10 text-center mb-16"
+            >
+                <h1 className="font-cinzel text-6xl font-bold tracking-[0.3em] uppercase text-white mb-4">
+                    VELG DIN <span className="text-amber-200">SKJEBNE</span>
+                </h1>
+                <div className="h-0.5 w-64 bg-gradient-to-r from-transparent via-amber-200/50 to-transparent mx-auto mb-4" />
+                <p className="font-crimson text-white/40 text-xl tracking-[0.15em] lowercase">
+                    "mørket kaller, hvem svarer?"
+                </p>
+            </motion.div>
+
+            {/* Class Cards Grid */}
+            <div className="relative z-10 flex flex-row gap-10 items-center justify-center">
+                {CLASS_ORDER.map((id, index) => (
+                    <ClassCard
+                        key={id}
+                        config={CLASS_CONFIGS[id]}
+                        isSelected={selectedId === id}
+                        isAnyConfirming={isConfirming}
+                        onClick={() => handleSelect(id)}
+                        index={index}
+                    />
+                ))}
+            </div>
+
+            {/* Footer Guidance */}
+            <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 0.3 }}
+                transition={{ delay: 2, duration: 1 }}
+                className="absolute bottom-12 text-white/40 font-cinzel text-[10px] tracking-[0.4em] uppercase"
+            >
+                Klikk for å starte din reise
+            </motion.div>
         </div>
     );
 };

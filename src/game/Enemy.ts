@@ -565,24 +565,33 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 
         let flowVector = (this.scene as unknown as IMainScene).flowFieldManager?.getVector(this.x, this.y);
 
+        const nearestTarget = this.getNearestTarget();
         let targetAngle = 0;
 
-        if (flowVector && (flowVector.x !== 0 || flowVector.y !== 0)) {
-            // Flow Field direction
+        if (nearestTarget && (nearestTarget as any).getData?.('isDecoy')) {
+            // Direct targeting for decoys to hijack the flow field path
+            targetAngle = Phaser.Math.Angle.Between(this.x, this.y, nearestTarget.x, nearestTarget.y);
+        } else if (flowVector && (flowVector.x !== 0 || flowVector.y !== 0)) {
+            // Flow Field direction for players
             targetAngle = Math.atan2(flowVector.y, flowVector.x);
         } else {
-            // Fallback to direct targeting (e.g., if flow field isn't ready or we are exactly at target cell)
-            let nearestTarget: { x: number; y: number } | null = null;
+            // Fallback to direct targeting
             if (this.enemyType === 'healer_wizard') {
-                nearestTarget = this.getNearestDamagedAlly() ?? this.getNearestAlly();
-            }
-            if (!nearestTarget) nearestTarget = this.getNearestTarget();
-
-            if (!nearestTarget) {
+                const target = this.getNearestDamagedAlly() ?? this.getNearestAlly();
+                if (target) {
+                    targetAngle = Phaser.Math.Angle.Between(this.x, this.y, target.x, target.y);
+                } else if (nearestTarget) {
+                    targetAngle = Phaser.Math.Angle.Between(this.x, this.y, nearestTarget.x, nearestTarget.y);
+                } else {
+                    this.setVelocity(0, 0);
+                    return;
+                }
+            } else if (nearestTarget) {
+                targetAngle = Phaser.Math.Angle.Between(this.x, this.y, nearestTarget.x, nearestTarget.y);
+            } else {
                 this.setVelocity(0, 0);
                 return;
             }
-            targetAngle = Phaser.Math.Angle.Between(this.x, this.y, nearestTarget.x, nearestTarget.y);
         }
 
         // Interest

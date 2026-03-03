@@ -59,6 +59,10 @@ export interface ClassConfig {
     classAbilityId: string;
     /** Hotkey-string for ability ('2', '4' osv.) */
     classAbilityHotkey: string;
+    /** 3 korte nøkkelord for klassen */
+    traits: string[];
+    /** Path til portrett-bilde */
+    portrait: string;
     /** Rekkefølge og definisjon av shop-kategorier */
     shopCategories: ShopCategoryDef[];
     /** Upgrade-IDs som KUN denne klassen ser */
@@ -100,6 +104,8 @@ const KRIEGER: ClassConfig = {
     startingWeapons: ['sword'],
     classAbilityId: 'whirlwind_slash',
     classAbilityHotkey: '2',
+    traits: ['Solid rustning', 'Høy styrke', 'Tungt sverd'],
+    portrait: 'assets/ui/portraits/krieger_portrait.png',
     shopCategories: [
         { id: 'krieger_drivkraft', label: 'DRIVKRAFT', icon: 'item_swords_crossed', isExclusive: true },
         { id: 'karakter', label: 'KARAKTER', icon: 'item_heart_status', isExclusive: false },
@@ -142,6 +148,8 @@ const ARCHER: ClassConfig = {
     startingWeapons: ['bow'],
     classAbilityId: 'explosive_shot',
     classAbilityHotkey: '2',
+    traits: ['Lynrask', 'Presise skudd', 'Høy mobilitet'],
+    portrait: 'assets/ui/portraits/archer_portrait.png',
     shopCategories: [
         { id: 'archer_drivkraft', label: 'DRIVKRAFT', icon: 'item_bow', isExclusive: true },
         { id: 'karakter', label: 'KARAKTER', icon: 'item_heart_status', isExclusive: false },
@@ -184,6 +192,8 @@ const WIZARD: ClassConfig = {
     startingWeapons: ['fireball', 'frost', 'lightning'],
     classAbilityId: 'arcane_singularity',
     classAbilityHotkey: '4',
+    traits: ['Elementær kraft', 'Områdekontroll', 'Mektige spells'],
+    portrait: 'assets/ui/portraits/wizard_portrait.png',
     shopCategories: [
         { id: 'wizard_drivkraft', label: 'DRIVKRAFT', icon: 'item_magic_staff', isExclusive: true },
         { id: 'karakter', label: 'KARAKTER', icon: 'item_heart_status', isExclusive: false },
