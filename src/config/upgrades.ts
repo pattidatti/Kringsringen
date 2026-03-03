@@ -450,6 +450,18 @@ export const UPGRADES: UpgradeConfig[] = [
         priceScale: 1.9,
         description: (lvl) => `+${lvl * 5}% kritisk-sjanse`
     },
+    {
+        id: 'frost_trap',
+        title: 'Frostfelle',
+        icon: 'item_frost_orb',
+        category: 'Bue',
+        classRestriction: 'archer',
+        shopCategoryId: 'archer_talenter',
+        maxLevel: 5,
+        basePrice: 200,
+        priceScale: 1.8,
+        description: (lvl) => `Legg ut en felle som stunter fiender i ${1.5 + lvl * 0.5}s.`
+    },
 ];
 
 export function isItemSpriteIcon(icon: string): icon is `item_${string}` {

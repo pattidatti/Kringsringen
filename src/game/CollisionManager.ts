@@ -65,6 +65,42 @@ export class CollisionManager {
         phaserScene.physics.add.overlap(this.attackHitbox, this.scene.bossGroup, (_hitbox, boss) => {
             this.handlePlayerMeleeHit(boss as BossEnemy);
         });
+
+        // Projectile Reflection (Iron Bulwark)
+        phaserScene.physics.add.overlap(
+            (this.scene as any).enemyProjectiles,
+            player,
+            (projectile: any, _player: any) => {
+                const bulwarkActiveUntil = this.scene.registry.get('bulwarkActiveUntil') || 0;
+                if (Date.now() < bulwarkActiveUntil) {
+                    // Reflect!
+                    if (projectile.body) {
+                        projectile.body.velocity.x *= -1.5;
+                        projectile.body.velocity.y *= -1.5;
+                        projectile.setRotation(Math.atan2(projectile.body.velocity.y, projectile.body.velocity.x));
+                        // Mark as friendly to enemies
+                        projectile.setData('isReflected', true);
+                        this.scene.poolManager.getDamageText(projectile.x, projectile.y - 20, "REFLECT!", "#ffdd44");
+                    }
+                } else {
+                    // Normal hit logic (delegated to EnemyProjectile.onHitPlayer via overlap in EnemyProjectile)
+                    // Note: EnemyProjectile already has its own overlap with players setup in its fire() or elsewhere?
+                    // Actually, let's look at setupColliders again.
+                }
+            }
+        );
+
+        // Reflected Projectiles vs Enemies
+        phaserScene.physics.add.overlap(
+            (this.scene as any).enemyProjectiles,
+            this.scene.enemies,
+            (projectile: any, enemy: any) => {
+                if (projectile.getData('isReflected')) {
+                    enemy.takeDamage(this.scene.stats.damage * 2, '#ffdd44');
+                    projectile.destroy(); // Or return to pool
+                }
+            }
+        );
     }
 
     private handlePlayerMeleeHit(target: Enemy | BossEnemy): void {

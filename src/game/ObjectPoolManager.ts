@@ -42,7 +42,9 @@ export class ObjectPoolManager {
             singularities: { classType: Singularity, maxSize: 10 },
             eclipseWakes: { classType: EclipseWake, maxSize: 20 },
             coins: { classType: Coin, maxSize: 5000 },
-            enemyProjectiles: { classType: EnemyProjectile, maxSize: 50 }
+            enemyProjectiles: { classType: EnemyProjectile, maxSize: 50 },
+            decoys: { maxSize: 10 },
+            traps: { maxSize: 20 }
         };
         Object.keys(groups).forEach(key => {
             (mainScene as any)[key] = this.scene.physics.add.group({ ...groups[key], runChildUpdate: true });

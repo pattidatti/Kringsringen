@@ -243,6 +243,14 @@ export class InputManager {
                 this.scene.events.emit('attempt-class-ability-2');
             }
         }
+
+        if (Phaser.Input.Keyboard.JustDown(this.hotkeys['3'])) {
+            this.scene.events.emit('attempt-class-ability-3');
+        }
+
+        if (Phaser.Input.Keyboard.JustDown(this.hotkeys['4'])) {
+            this.scene.events.emit('attempt-class-ability-4');
+        }
     }
 
     private handleMovement(time: number): void {

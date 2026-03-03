@@ -1139,6 +1139,23 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 
         let validTargets: any[] = [];
 
+        // Check for Decoys first
+        if (mainScene.decoys && mainScene.decoys.countActive() > 0) {
+            let nearestDecoy: any = null;
+            let minDistDecoy = 400; // Search radius for decoys
+            mainScene.decoys.children.iterate((d: any) => {
+                if (d.active) {
+                    const dist = Phaser.Math.Distance.Between(this.x, this.y, d.x, d.y);
+                    if (dist < minDistDecoy) {
+                        minDistDecoy = dist;
+                        nearestDecoy = d;
+                    }
+                }
+                return true;
+            });
+            if (nearestDecoy) return nearestDecoy;
+        }
+
         // Local player
         const localIsDead = mainScene.registry.get('playerHP') <= 0;
         if (!localIsDead && (this.targetStart as any).active) {

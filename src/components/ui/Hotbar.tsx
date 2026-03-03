@@ -78,6 +78,8 @@ export const Hotbar: React.FC = React.memo(() => {
     const weaponCooldown = useGameRegistry('weaponCooldown', null) as { duration: number, timestamp: number } | null;
     const playerClass = useGameRegistry('playerClass', 'krieger') as string;
     const classAbilityCooldown = useGameRegistry('classAbilityCooldown', null) as { duration: number, timestamp: number } | null;
+    const classAbility3Cooldown = useGameRegistry('classAbility3Cooldown', null) as { duration: number, timestamp: number } | null;
+    const classAbility4Cooldown = useGameRegistry('classAbility4Cooldown', null) as { duration: number, timestamp: number } | null;
     const explosiveShotReady = useGameRegistry('explosiveShotReady', false) as boolean;
 
     const classId = resolveClassId(playerClass);
@@ -200,8 +202,14 @@ export const Hotbar: React.FC = React.memo(() => {
                                 {isUnlocked && !isAbilitySlot && weaponCooldown && (
                                     <RadialCooldown duration={weaponCooldown.duration} timestamp={weaponCooldown.timestamp} />
                                 )}
-                                {isAbilitySlot && classAbilityCooldown && (
+                                {isAbilitySlot && slot.hotkey === '2' && classAbilityCooldown && (
                                     <RadialCooldown duration={classAbilityCooldown.duration} timestamp={classAbilityCooldown.timestamp} />
+                                )}
+                                {isAbilitySlot && slot.hotkey === '3' && classAbility3Cooldown && (
+                                    <RadialCooldown duration={classAbility3Cooldown.duration} timestamp={classAbility3Cooldown.timestamp} />
+                                )}
+                                {isAbilitySlot && slot.hotkey === '4' && classAbility4Cooldown && (
+                                    <RadialCooldown duration={classAbility4Cooldown.duration} timestamp={classAbility4Cooldown.timestamp} />
                                 )}
 
                                 {/* Hotkey badge */}

@@ -127,6 +127,8 @@ export class SceneEventManager {
 
         scene.events.on('attempt-class-ability-e', () => scene.abilityManager.attemptSpecialE());
         scene.events.on('attempt-class-ability-2', () => scene.abilityManager.attemptAbility2());
+        scene.events.on('attempt-class-ability-3', () => scene.abilityManager.attemptAbility3());
+        scene.events.on('attempt-class-ability-4', () => scene.abilityManager.attemptAbility4());
         scene.events.on('attempt-attack', () => scene.handlePlayerActionCombat(scene.time.now, 16.6));
     }
 }

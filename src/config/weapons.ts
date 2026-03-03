@@ -10,11 +10,15 @@ export interface WeaponUIConfig {
 export const KRIEGER_WEAPON_SLOTS: WeaponUIConfig[] = [
     { id: 'sword', label: 'SVERD', hotkey: '1', icon: 'item_sword' },
     { id: 'ability_whirlwind', label: 'WHIRLWIND', hotkey: '2', icon: 'item_swords_crossed' },
+    { id: 'ability_bulwark', label: 'BULWARK', hotkey: '3', icon: 'item_shield' },
+    { id: 'ability_grapple', label: 'GRAPPLE', hotkey: '4', icon: 'item_chain' },
 ];
 
 export const ARCHER_WEAPON_SLOTS: WeaponUIConfig[] = [
     { id: 'bow', label: 'BUE', hotkey: '1', icon: 'item_bow' },
     { id: 'ability_explosive', label: 'E-SHOT', hotkey: '2', icon: 'item_bow' },
+    { id: 'ability_vault', label: 'VAULT', hotkey: '3', icon: 'item_lightning' },
+    { id: 'ability_decoy', label: 'DECOY', hotkey: '4', icon: 'item_shadow_orb' },
 ];
 
 /** Wizard-specific hotbar: Fire=1, Frost=2, Lightning=3, Cascade ability=4 */

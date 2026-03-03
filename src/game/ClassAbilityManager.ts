@@ -11,9 +11,11 @@ export class ClassAbilityManager {
 
     public isWhirlwinding: boolean = false;
     public explosiveShotReady: boolean = false;
-    public cascadeActiveUntil: number = 0;
-    public shadowStepUntil: number = 0;
     public classAbilityCooldownEnd: number = 0;
+    public classAbility3CooldownEnd: number = 0;
+    public classAbility4CooldownEnd: number = 0;
+
+    private bulwarkGraphics: Phaser.GameObjects.Graphics | null = null;
 
     constructor(scene: IMainScene) {
         this.scene = scene;
@@ -24,6 +26,18 @@ export class ClassAbilityManager {
         if (playerClassId === 'krieger') this.activateWhirlwind();
         else if (playerClassId === 'wizard') this.activateArcaneSingularity();
         else if (playerClassId === 'archer') this.activateExplosiveShot();
+    }
+
+    public attemptAbility3(): void {
+        const playerClassId = resolveClassId(this.scene.registry.get('playerClass'));
+        if (playerClassId === 'krieger') this.activateIronBulwark();
+        else if (playerClassId === 'archer') this.activateVaultAndVolley();
+    }
+
+    public attemptAbility4(): void {
+        const playerClassId = resolveClassId(this.scene.registry.get('playerClass'));
+        if (playerClassId === 'krieger') this.activateChainGrapple();
+        else if (playerClassId === 'archer') this.activateShadowDecoy();
     }
 
     public attemptSpecialE(): void {
@@ -200,7 +214,7 @@ export class ClassAbilityManager {
         const spawnX = pointer.worldX;
         const spawnY = pointer.worldY;
 
-        this.cascadeActiveUntil = Date.now() + duration; // keeping variable name for state consistency if needed
+        this.classAbility3CooldownEnd = Date.now() + duration; // keeping variable name for state consistency if needed
         this.classAbilityCooldownEnd = Date.now() + cd;
         this.scene.registry.set('classAbilityCooldown', { duration: cd, timestamp: Date.now() });
 
@@ -210,11 +224,194 @@ export class ClassAbilityManager {
         }
     }
 
-    private activateArcherSpecial(): void {
-        const upgLvls = (this.scene.registry.get('upgradeLevels') || {}) as Record<string, number>;
-        const timeSlowLvl = upgLvls['time_slow_arrow'] || 0;
+    private activateIronBulwark(): void {
+        const cd = 12000;
+        const duration = 5000;
+        if (Date.now() < this.classAbility3CooldownEnd) return;
+
+        this.classAbility3CooldownEnd = Date.now() + cd;
+        this.scene.registry.set('classAbility3Cooldown', { duration: cd, timestamp: Date.now() });
+        this.scene.registry.set('bulwarkActiveUntil', Date.now() + duration);
+
         const player = this.scene.data.get('player') as Phaser.Physics.Arcade.Sprite;
 
+        // Visual Shell
+        if (this.bulwarkGraphics) this.bulwarkGraphics.destroy();
+        this.bulwarkGraphics = this.scene.add.graphics();
+        this.bulwarkGraphics.setDepth(player.depth + 1);
+
+        this.scene.tweens.add({
+            targets: this.bulwarkGraphics,
+            alpha: { start: 0, end: 1 },
+            duration: 200,
+            onUpdate: () => {
+                if (!this.bulwarkGraphics) return;
+                this.bulwarkGraphics.clear();
+                this.bulwarkGraphics.lineStyle(3, 0xffdd44, 0.8);
+                this.bulwarkGraphics.fillStyle(0xffaa00, 0.1);
+
+                // Draw hexagonal shell
+                const points = [];
+                for (let i = 0; i < 6; i++) {
+                    const angle = (i / 6) * Math.PI * 2;
+                    points.push({
+                        x: player.x + Math.cos(angle) * 60,
+                        y: player.y + Math.sin(angle) * 60
+                    });
+                }
+                this.bulwarkGraphics.beginPath();
+                this.bulwarkGraphics.moveTo(points[0].x, points[0].y);
+                for (let i = 1; i < 6; i++) this.bulwarkGraphics.lineTo(points[i].x, points[i].y);
+                this.bulwarkGraphics.closePath();
+                this.bulwarkGraphics.strokePath();
+                this.bulwarkGraphics.fillPath();
+
+                // Projectile reflection happens in CollisionManager
+            }
+        });
+
+        this.scene.time.delayedCall(duration, () => {
+            if (this.bulwarkGraphics) {
+                this.scene.tweens.add({
+                    targets: this.bulwarkGraphics,
+                    alpha: 0,
+                    duration: 200,
+                    onComplete: () => {
+                        this.bulwarkGraphics?.destroy();
+                        this.bulwarkGraphics = null;
+                    }
+                });
+            }
+            this.scene.registry.set('bulwarkActiveUntil', 0);
+        });
+    }
+
+    private activateChainGrapple(): void {
+        const cd = 10000;
+        if (Date.now() < this.classAbility4CooldownEnd) return;
+
+        this.classAbility4CooldownEnd = Date.now() + cd;
+        this.scene.registry.set('classAbility4Cooldown', { duration: cd, timestamp: Date.now() });
+
+        const player = this.scene.data.get('player') as Phaser.Physics.Arcade.Sprite;
+        const radius = 400;
+
+        // Visual: Flashy circle
+        const ring = this.scene.add.circle(player.x, player.y, 10, 0xffffff, 0.2);
+        this.scene.tweens.add({
+            targets: ring,
+            radius: radius,
+            alpha: 0,
+            duration: 300,
+            onComplete: () => ring.destroy()
+        });
+
+        // Search for enemies in radius
+        const enemies = this.scene.spatialGrid.findNearby({
+            x: player.x,
+            y: player.y,
+            width: 1,
+            height: 1
+        }, radius);
+
+        enemies.forEach(entry => {
+            const enemy = entry.ref as Enemy;
+            if (enemy && enemy.active && !enemy.getIsDead()) {
+                this.scene.tweens.add({
+                    targets: enemy,
+                    x: player.x + (enemy.x - player.x) * 0.2,
+                    y: player.y + (enemy.y - player.y) * 0.2,
+                    duration: 200,
+                    ease: 'Cubic.out',
+                    onUpdate: () => {
+                        if (enemy.body) enemy.setVelocity(0, 0);
+                    }
+                });
+            }
+        });
+    }
+
+    private activateVaultAndVolley(): void {
+        const cd = 7000;
+        if (Date.now() < this.classAbility3CooldownEnd) return;
+
+        this.classAbility3CooldownEnd = Date.now() + cd;
+        this.scene.registry.set('classAbility3Cooldown', { duration: cd, timestamp: Date.now() });
+
+        const player = this.scene.data.get('player') as Phaser.Physics.Arcade.Sprite;
+        const pointer = this.scene.input.activePointer;
+        const angle = Phaser.Math.Angle.Between(player.x, player.y, pointer.worldX, pointer.worldY);
+
+        // Leap backward
+        const leapDist = 180;
+        const targetX = player.x - Math.cos(angle) * leapDist;
+        const targetY = player.y - Math.sin(angle) * leapDist;
+
+        this.scene.tweens.add({
+            targets: player,
+            x: targetX,
+            y: targetY,
+            duration: 300,
+            ease: 'Cubic.out',
+            onStart: () => {
+                // Ghosting effect
+                for (let i = 0; i < 3; i++) {
+                    this.scene.time.delayedCall(i * 80, () => {
+                        const ghost = this.scene.add.sprite(player.x, player.y, player.texture.key, player.frame.name);
+                        ghost.setScale(player.scaleX, player.scaleY).setAlpha(0.4).setTint(0x88ccff);
+                        this.scene.tweens.add({ targets: ghost, alpha: 0, duration: 300, onComplete: () => ghost.destroy() });
+                    });
+                }
+            }
+        });
+
+        // Volley: Fire 5 arrows in a fan
+        for (let i = -2; i <= 2; i++) {
+            const arrowAngle = angle + (i * 0.15);
+            const arrow = (this.scene as any).arrows.get(player.x, player.y);
+            if (arrow) {
+                arrow.fire(player.x, player.y, arrowAngle, this.scene.stats.damage * 0.7);
+            }
+        }
+    }
+
+    private activateShadowDecoy(): void {
+        const cd = 15000;
+        if (Date.now() < this.classAbility4CooldownEnd) return;
+
+        this.classAbility4CooldownEnd = Date.now() + cd;
+        this.scene.registry.set('classAbility4Cooldown', { duration: cd, timestamp: Date.now() });
+
+        const player = this.scene.data.get('player') as Phaser.Physics.Arcade.Sprite;
+
+        // Spawn Decoy
+        const decoy = (this.scene as any).decoys.get(player.x, player.y) as any;
+        if (decoy) {
+            decoy.spawn(player.x, player.y);
+        }
+
+        // Pseudo-invis for player
+        player.setAlpha(0.3);
+        this.scene.time.delayedCall(1500, () => {
+            player.setAlpha(1);
+        });
+    }
+
+    private activateArcherSpecial(): void {
+        const upgLvls = (this.scene.registry.get('upgradeLevels') || {}) as Record<string, number>;
+        const frostTrapLvl = upgLvls['frost_trap'] || 0;
+        const player = this.scene.data.get('player') as Phaser.Physics.Arcade.Sprite;
+
+        // If we have frost trap, we use it here (Hotkey E variant or passive)
+        // For now, let's trigger it manually or as part of the Special
+        if (frostTrapLvl > 0) {
+            const trap = (this.scene as any).traps.get(player.x, player.y) as any;
+            if (trap) {
+                trap.spawn(player.x, player.y, 1500 + frostTrapLvl * 500);
+            }
+        }
+
+        const timeSlowLvl = upgLvls['time_slow_arrow'] || 0;
         if (timeSlowLvl > 0) {
             const slowDuration = 3000 + timeSlowLvl * 1000;
             this.scene.enemies.children.iterate((e: any) => { if (e && e.active) e.applySlow?.(slowDuration); return true; });

@@ -52,6 +52,8 @@ export class MainScene extends Phaser.Scene implements IMainScene {
     public singularities!: Phaser.Physics.Arcade.Group;
     public eclipseWakes!: Phaser.Physics.Arcade.Group;
     public enemyProjectiles!: Phaser.Physics.Arcade.Group;
+    public decoys!: Phaser.Physics.Arcade.Group;
+    public traps!: Phaser.Physics.Arcade.Group;
     public spatialGrid!: SpatialHashGrid;
     public staticObstacleGrid!: SpatialHashGrid;
     public flowFieldManager!: FlowFieldManager;
@@ -349,6 +351,8 @@ export class MainScene extends Phaser.Scene implements IMainScene {
 
             this.singularities.children.iterate((s: any) => { if (s.active) (s as import('./Singularity').Singularity).update(_time, delta); return true; });
             this.eclipseWakes.children.iterate((w: any) => { if (w.active) (w as import('./EclipseWake').EclipseWake).update(_time, delta); return true; });
+            this.decoys.children.iterate((d: any) => { if (d.active) (d as any).update?.(_time, delta); return true; });
+            this.traps.children.iterate((t: any) => { if (t.active) (t as any).update?.(_time, delta); return true; });
 
             if (this.player && this.playerShadow) this.playerShadow.setPosition(this.player.x, this.player.y + 28);
             if (!this.player || !this.player.body) return;
@@ -446,7 +450,7 @@ export class MainScene extends Phaser.Scene implements IMainScene {
         this.enemies.clear(true, true);
         this.bossGroup.clear(true, true);
         this.coins.clear(true, true);
-        ['arrows', 'fireballs', 'frostBolts', 'lightningBolts'].forEach(g => (this as any)[g].clear(true, true));
+        ['arrows', 'fireballs', 'frostBolts', 'lightningBolts', 'decoys', 'traps'].forEach(g => (this as any)[g].clear(true, true));
 
         if (this.player) {
             this.player.setPosition(this.mapWidth / 2, this.mapHeight / 2);
