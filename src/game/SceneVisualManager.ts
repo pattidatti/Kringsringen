@@ -33,6 +33,7 @@ export class SceneVisualManager {
         // Listen for quality changes
         this.scene.game.registry.events.on('changedata-graphicsQuality', (_parent: any, val: GraphicsQuality) => {
             this.currentQuality = getQualityConfig(val);
+            (this.scene as any).quality = this.currentQuality;
             this.applyQualitySettings();
         });
 

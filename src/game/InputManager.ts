@@ -6,7 +6,7 @@ import type { IMainScene } from './IMainScene';
  */
 export class InputManager {
     private scene: IMainScene;
-    private wasd!: {
+    public wasd!: {
         W: Phaser.Input.Keyboard.Key;
         A: Phaser.Input.Keyboard.Key;
         S: Phaser.Input.Keyboard.Key;
@@ -14,7 +14,7 @@ export class InputManager {
         SPACE: Phaser.Input.Keyboard.Key;
         SHIFT: Phaser.Input.Keyboard.Key;
     };
-    private hotkeys!: {
+    public hotkeys!: {
         [key: string]: Phaser.Input.Keyboard.Key;
     };
 

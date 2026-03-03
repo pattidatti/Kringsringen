@@ -18,6 +18,7 @@ import { AmbientParticleManager } from './AmbientParticleManager';
 import { PacketType, type SyncPacket } from '../network/SyncSchemas';
 import { type QualitySettings } from '../config/QualityConfig';
 import { CLASS_CONFIGS, resolveClassId } from '../config/classes';
+import { getQualityConfig } from '../config/QualityConfig';
 import { InputManager } from './InputManager';
 import { TextureSetup } from './TextureSetup';
 import { SceneVisualManager } from './SceneVisualManager';
@@ -31,10 +32,9 @@ import { BOSS_CONFIGS } from '../config/bosses';
 
 
 export class MainScene extends Phaser.Scene implements IMainScene {
-    public player!: Phaser.Physics.Arcade.Sprite;
+    public players!: Phaser.Physics.Arcade.Group;
     public enemies!: Phaser.Physics.Arcade.Group;
-    public spatialGrid!: SpatialHashGrid;
-    public staticObstacleGrid!: SpatialHashGrid;
+    public bossGroup!: Phaser.Physics.Arcade.Group;
     public coins!: Phaser.Physics.Arcade.Group;
     public obstacles!: Phaser.Physics.Arcade.StaticGroup;
     public collisions!: CollisionManager;
@@ -52,8 +52,9 @@ export class MainScene extends Phaser.Scene implements IMainScene {
     public singularities!: Phaser.Physics.Arcade.Group;
     public eclipseWakes!: Phaser.Physics.Arcade.Group;
     public enemyProjectiles!: Phaser.Physics.Arcade.Group;
-    public bossGroup!: Phaser.Physics.Arcade.Group;
-    private players!: Phaser.Physics.Arcade.Group;
+    public spatialGrid!: SpatialHashGrid;
+    public staticObstacleGrid!: SpatialHashGrid;
+    public player!: Phaser.Physics.Arcade.Sprite;
     public poolManager!: ObjectPoolManager;
 
     // Managers
@@ -64,7 +65,7 @@ export class MainScene extends Phaser.Scene implements IMainScene {
     // Map Generation
     private mapWidth: number = 3000;
     private mapHeight: number = 3000;
-    private playerShadow: Phaser.GameObjects.Sprite | null = null;
+    public playerShadow: Phaser.GameObjects.Sprite | null = null;
 
     public attackHitbox!: Phaser.Physics.Arcade.Sprite;
     public currentSwingHitIds: Set<string> = new Set();
@@ -137,6 +138,14 @@ export class MainScene extends Phaser.Scene implements IMainScene {
             this.registry.set('upgradeLevels', {});
             console.log('[MainScene] Registry initialized.');
 
+            // Initialize Grids
+            this.spatialGrid = new SpatialHashGrid(150);
+            this.staticObstacleGrid = new SpatialHashGrid(150);
+
+            // Initialize Core Physics Groups
+            this.players = this.physics.add.group();
+            this.obstacles = this.physics.add.staticGroup();
+
             // Restore saved run progress (singleplayer continue only)
             const continueRun = this.game.registry.get('continueRun') as boolean | undefined;
             let startLevelOverride = 1;
@@ -185,11 +194,25 @@ export class MainScene extends Phaser.Scene implements IMainScene {
             this.weaponManager = new WeaponManager(this);
             this.abilityManager = new ClassAbilityManager(this);
 
+            this.quality = getQualityConfig((this.registry.get('graphicsQuality') as any) || 'medium');
+
             AudioManager.instance.setScene(this);
 
             this.visuals.applyQualitySettings();
             TextureSetup.create(this);
             createAnimations(this);
+
+            this.deathSparkEmitter = this.add.particles(0, 0, 'flare', {
+                speed: { min: 50, max: 100 },
+                scale: { start: 0.5, end: 0 },
+                blendMode: 'ADD',
+                lifespan: 300,
+                emitting: false
+            });
+
+            // Link Input Keys
+            this.wasd = this.inputManager.wasd;
+            this.hotkeys = this.inputManager.hotkeys;
 
             // Create Player
             this.player = this.physics.add.sprite(this.mapWidth / 2, this.mapHeight / 2, 'player-idle');

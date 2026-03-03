@@ -15,6 +15,7 @@ export interface IMainScene extends Phaser.Scene {
     bossGroup: Phaser.Physics.Arcade.Group;
     coins: Phaser.Physics.Arcade.Group;
     obstacles: Phaser.Physics.Arcade.StaticGroup;
+    players: Phaser.Physics.Arcade.Group;
     arrows: Phaser.Physics.Arcade.Group;
     fireballs: Phaser.Physics.Arcade.Group;
     frostBolts: Phaser.Physics.Arcade.Group;
@@ -49,6 +50,8 @@ export interface IMainScene extends Phaser.Scene {
     remotePlayerPackets: Map<string, any>;
     remotePlayerLights: Map<string, Phaser.GameObjects.Light>;
     pendingDeaths: Set<string>;
+    deathSparkEmitter: Phaser.GameObjects.Particles.ParticleEmitter;
+    playerShadow: Phaser.GameObjects.Sprite | null;
     restartGame(): void;
     handlePlayerActionCombat(time: number, delta: number): void;
     spawnBoss(idx: number): void;
