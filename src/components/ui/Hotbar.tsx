@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState, useRef } from 'react';
 import { useGameRegistry, getGameInstance } from '../../hooks/useGameRegistry';
-import { WEAPON_SLOTS, type WeaponId } from '../../config/weapons';
+import { WEAPON_SLOTS, WIZARD_WEAPON_SLOTS, type WeaponId } from '../../config/weapons';
+import { resolveClassId } from '../../config/classes';
 import { motion } from 'framer-motion';
 import clsx from 'clsx';
 import { FantasyPanel } from './FantasyPanel';
@@ -75,6 +76,12 @@ export const Hotbar: React.FC = React.memo(() => {
     const currentWeapon = useGameRegistry('currentWeapon', 'sword');
     const unlockedWeapons = useGameRegistry('unlockedWeapons', ['sword']) as WeaponId[];
     const weaponCooldown = useGameRegistry('weaponCooldown', null) as { duration: number, timestamp: number } | null;
+    const playerClass = useGameRegistry('playerClass', 'krieger') as string;
+    const classAbilityCooldown = useGameRegistry('classAbilityCooldown', null) as { duration: number, timestamp: number } | null;
+    const explosiveShotReady = useGameRegistry('explosiveShotReady', false) as boolean;
+
+    const classId = resolveClassId(playerClass);
+    const activeSlots = classId === 'wizard' ? WIZARD_WEAPON_SLOTS : WEAPON_SLOTS;
 
     const handleSelectWeapon = useCallback((weaponId: WeaponId) => {
         const game = getGameInstance();
@@ -83,17 +90,19 @@ export const Hotbar: React.FC = React.memo(() => {
         }
     }, []);
 
-    // Keyboard Listeners
+    // Keyboard Listeners (class-aware)
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
-            const slot = WEAPON_SLOTS.find(s => s.hotkey === e.key);
-            if (slot && unlockedWeapons.includes(slot.id)) {
+            const slot = activeSlots.find(s => s.hotkey === e.key);
+            // Skip ability slots — handled by Phaser
+            if (!slot || slot.id.startsWith('ability_')) return;
+            if (unlockedWeapons.includes(slot.id)) {
                 handleSelectWeapon(slot.id);
             }
         };
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [unlockedWeapons, handleSelectWeapon]);
+    }, [activeSlots, unlockedWeapons, handleSelectWeapon]);
 
     return (
         <div className="flex items-end justify-center pb-2">
@@ -104,10 +113,12 @@ export const Hotbar: React.FC = React.memo(() => {
                 style={{ filter: 'drop-shadow(0 -4px 8px rgba(0,0,0,0.6))' }}
             >
                 <div className="flex gap-1" role="tablist" aria-label="Weapon Selection">
-                    {WEAPON_SLOTS.map((slot) => {
-                        const isRealWeapon = !slot.id.startsWith('wrapper_');
-                        const isUnlocked = isRealWeapon && unlockedWeapons.includes(slot.id);
-                        const isActive = currentWeapon === slot.id;
+                    {activeSlots.map((slot) => {
+                        const isAbilitySlot = slot.id.startsWith('ability_');
+                        const isRealWeapon = !slot.id.startsWith('wrapper_') && !isAbilitySlot;
+                        const isUnlocked = isAbilitySlot || (isRealWeapon && unlockedWeapons.includes(slot.id));
+                        const isActive = isAbilitySlot ? false : currentWeapon === slot.id;
+                        const isExplosiveBow = slot.id === 'bow' && classId === 'archer' && explosiveShotReady;
 
                         return (
                             <div
@@ -176,9 +187,17 @@ export const Hotbar: React.FC = React.memo(() => {
                                     </span>
                                 ) : null}
 
-                                {/* Cooldown Sweep Overlay */}
-                                {isUnlocked && weaponCooldown && (
+                                {/* Explosive Shot ready glow (Archer) */}
+                                {isExplosiveBow && (
+                                    <div className="absolute inset-0 rounded-md animate-pulse bg-orange-500/40 z-10 pointer-events-none" />
+                                )}
+
+                                {/* Cooldown Sweep Overlay — weapon slots use weaponCooldown, ability slot uses classAbilityCooldown */}
+                                {isUnlocked && !isAbilitySlot && weaponCooldown && (
                                     <RadialCooldown duration={weaponCooldown.duration} timestamp={weaponCooldown.timestamp} />
+                                )}
+                                {isAbilitySlot && classAbilityCooldown && (
+                                    <RadialCooldown duration={classAbilityCooldown.duration} timestamp={classAbilityCooldown.timestamp} />
                                 )}
 
                                 {/* Hotkey badge */}

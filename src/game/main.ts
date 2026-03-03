@@ -86,6 +86,13 @@ export class MainScene extends Phaser.Scene implements IMainScene {
     // Audio throttle
     private lastFootstepTime: number = 0;
 
+    // ── Class Ability State ──────────────────────────────────────────────────
+    private classAbilityCooldownEnd: number = 0;
+    private classAbilityMaxCooldown: number = 8000;
+    private isWhirlwinding: boolean = false;
+    private explosiveShotReady: boolean = false;
+    private cascadeActiveUntil: number = 0;
+
     // Weather
     private weather!: WeatherManager;
 
@@ -1688,22 +1695,50 @@ export class MainScene extends Phaser.Scene implements IMainScene {
             }
 
 
-            // Handle Weapon Switching
+            // ── Class Abilities (must run before weapon switching) ──────────
+            const playerClassId = resolveClassId(this.registry.get('playerClass'));
+            const abilityReady = Date.now() >= this.classAbilityCooldownEnd;
+            if ((this.registry.get('playerHP') || 0) > 0) {
+                if (playerClassId === 'krieger' &&
+                    Phaser.Input.Keyboard.JustDown(this.hotkeys['2']) &&
+                    abilityReady && !this.isWhirlwinding) {
+                    this.activateWhirlwind();
+                } else if (playerClassId === 'archer' &&
+                    Phaser.Input.Keyboard.JustDown(this.hotkeys['2']) &&
+                    abilityReady && !this.explosiveShotReady) {
+                    this.activateExplosiveShot();
+                } else if (playerClassId === 'wizard' &&
+                    Phaser.Input.Keyboard.JustDown(this.hotkeys['4']) &&
+                    abilityReady) {
+                    this.activateCascade();
+                }
+            }
+
+            // Handle Weapon Switching (class-aware)
             const unlocked = this.registry.get('unlockedWeapons') || ['sword'];
-            if (this.hotkeys['1']?.isDown && this.registry.get('currentWeapon') !== 'sword' && unlocked.includes('sword')) {
-                this.registry.set('currentWeapon', 'sword');
-            }
-            if (this.hotkeys['2']?.isDown && this.registry.get('currentWeapon') !== 'bow' && unlocked.includes('bow')) {
-                this.registry.set('currentWeapon', 'bow');
-            }
-            if (this.hotkeys['3']?.isDown && this.registry.get('currentWeapon') !== 'fireball' && unlocked.includes('fireball')) {
-                this.registry.set('currentWeapon', 'fireball');
-            }
-            if (this.hotkeys['4']?.isDown && this.registry.get('currentWeapon') !== 'frost' && unlocked.includes('frost')) {
-                this.registry.set('currentWeapon', 'frost');
-            }
-            if (this.hotkeys['5']?.isDown && this.registry.get('currentWeapon') !== 'lightning' && unlocked.includes('lightning')) {
-                this.registry.set('currentWeapon', 'lightning');
+            const curWep = this.registry.get('currentWeapon');
+            if (playerClassId === 'wizard') {
+                // Wizard remap: Fire=1, Frost=2, Lightning=3, Cascade=4 (ability only)
+                if (this.hotkeys['1']?.isDown && curWep !== 'fireball' && unlocked.includes('fireball'))
+                    this.registry.set('currentWeapon', 'fireball');
+                if (this.hotkeys['2']?.isDown && curWep !== 'frost' && unlocked.includes('frost'))
+                    this.registry.set('currentWeapon', 'frost');
+                if (this.hotkeys['3']?.isDown && curWep !== 'lightning' && unlocked.includes('lightning'))
+                    this.registry.set('currentWeapon', 'lightning');
+                // hotkey '4' reserved for Cascade ability — no weapon switch
+            } else {
+                // Default mapping (Krieger + Archer)
+                if (this.hotkeys['1']?.isDown && curWep !== 'sword' && unlocked.includes('sword'))
+                    this.registry.set('currentWeapon', 'sword');
+                // Krieger: '2' is Whirlwind ability only — suppress bow switch
+                if (playerClassId !== 'krieger' && this.hotkeys['2']?.isDown && curWep !== 'bow' && unlocked.includes('bow'))
+                    this.registry.set('currentWeapon', 'bow');
+                if (this.hotkeys['3']?.isDown && curWep !== 'fireball' && unlocked.includes('fireball'))
+                    this.registry.set('currentWeapon', 'fireball');
+                if (this.hotkeys['4']?.isDown && curWep !== 'frost' && unlocked.includes('frost'))
+                    this.registry.set('currentWeapon', 'frost');
+                if (this.hotkeys['5']?.isDown && curWep !== 'lightning' && unlocked.includes('lightning'))
+                    this.registry.set('currentWeapon', 'lightning');
             }
 
             // Handle Orientation (Face Mouse)
@@ -1827,7 +1862,22 @@ export class MainScene extends Phaser.Scene implements IMainScene {
 
                         const arrow = this.arrows.get(player.x, player.y) as Arrow;
                         if (arrow) {
-                            arrow.fire(player.x, player.y, angle, baseDamage, arrowSpeed, pierceCount, explosiveLevel, singularityLevel, poisonLevel);
+                            if (this.explosiveShotReady) {
+                                // Consume Explosive Shot charge
+                                const levels = (this.registry.get('upgradeLevels') || {}) as Record<string, number>;
+                                const expDmgLvl = levels['exp_shot_damage'] || 0;
+                                const expRadLvl = levels['exp_shot_radius'] || 0;
+                                const abilityDamage = baseDamage * (2.0 + expDmgLvl * 0.3);
+                                const abilityRadius = 120 + expRadLvl * 40;
+                                arrow.fire(player.x, player.y, angle, abilityDamage, arrowSpeed, pierceCount, explosiveLevel, singularityLevel, poisonLevel, abilityRadius);
+                                this.explosiveShotReady = false;
+                                this.registry.set('explosiveShotReady', false);
+                                this.classAbilityMaxCooldown = 12000;
+                                this.classAbilityCooldownEnd = Date.now() + 12000;
+                                this.registry.set('classAbilityCooldown', { duration: 12000, timestamp: Date.now() });
+                            } else {
+                                arrow.fire(player.x, player.y, angle, baseDamage, arrowSpeed, pierceCount, explosiveLevel, singularityLevel, poisonLevel);
+                            }
                             this.events.emit('bow-shot');
 
                             // SYNC BOW ATTACK
@@ -1874,7 +1924,10 @@ export class MainScene extends Phaser.Scene implements IMainScene {
                         const fireball = this.fireballs.get(player.x, player.y) as Fireball;
                         if (fireball) {
                             const fireDmgMult = this.registry.get('fireballDamageMulti') || 1;
-                            fireball.fire(player.x, player.y, angle, this.stats.damage * GAME_CONFIG.WEAPONS.FIREBALL.damageMult * fireDmgMult);
+                            const cascadeBonus = Date.now() < this.cascadeActiveUntil
+                                ? 1.5 + ((this.registry.get('upgradeLevels') || {})['cascade_damage'] || 0) * 0.15
+                                : 1;
+                            fireball.fire(player.x, player.y, angle, this.stats.damage * GAME_CONFIG.WEAPONS.FIREBALL.damageMult * fireDmgMult * cascadeBonus);
                             this.events.emit('fireball-cast');
 
                             // SYNC FIRE ATTACK
@@ -1910,7 +1963,10 @@ export class MainScene extends Phaser.Scene implements IMainScene {
                         const frostBolt = this.frostBolts.get(player.x, player.y) as FrostBolt;
                         if (frostBolt) {
                             const frostDmgMult = this.registry.get('frostDamageMulti') || 1;
-                            frostBolt.fire(player.x, player.y, frostTarget.x, frostTarget.y, this.stats.damage * GAME_CONFIG.WEAPONS.FROST.damageMult * frostDmgMult);
+                            const cascadeBonus = Date.now() < this.cascadeActiveUntil
+                                ? 1.5 + ((this.registry.get('upgradeLevels') || {})['cascade_damage'] || 0) * 0.15
+                                : 1;
+                            frostBolt.fire(player.x, player.y, frostTarget.x, frostTarget.y, this.stats.damage * GAME_CONFIG.WEAPONS.FROST.damageMult * frostDmgMult * cascadeBonus);
                             this.events.emit('frost-cast');
 
                             // SYNC FROST ATTACK
@@ -1946,7 +2002,10 @@ export class MainScene extends Phaser.Scene implements IMainScene {
                     this.time.delayedCall(100, () => {
                         const dmgMult = this.registry.get('lightningDamageMulti') || 1;
                         const bounces = this.registry.get('lightningBounces') || GAME_CONFIG.WEAPONS.LIGHTNING.bounces;
-                        const baseDamage = this.stats.damage * GAME_CONFIG.WEAPONS.LIGHTNING.damageMult * dmgMult;
+                        const cascadeBonus = Date.now() < this.cascadeActiveUntil
+                            ? 1.5 + ((this.registry.get('upgradeLevels') || {})['cascade_damage'] || 0) * 0.15
+                            : 1;
+                        const baseDamage = this.stats.damage * GAME_CONFIG.WEAPONS.LIGHTNING.damageMult * dmgMult * cascadeBonus;
                         const baseAngle = Phaser.Math.Angle.Between(player.x, player.y, ltTarget.x, ltTarget.y);
 
                         const bolt = this.lightningBolts.get(player.x, player.y) as LightningBolt;
@@ -2222,6 +2281,121 @@ export class MainScene extends Phaser.Scene implements IMainScene {
         }
         this.scene.resume(); // CRITICAL: Ensure scene is resumed if it was paused
         console.log('[MainScene] restartGame cleanup complete.');
+    }
+
+    // ── Class Ability Methods ────────────────────────────────────────────────
+
+    private activateWhirlwind(): void {
+        const levels = (this.registry.get('upgradeLevels') || {}) as Record<string, number>;
+        const damageMult = 1 + (levels['whirl_damage'] || 0) * 0.25;
+        const cdLvl = levels['whirl_cooldown'] || 0;
+        const chainLvl = levels['whirl_chain'] || 0;
+        const damage = this.stats.damage * damageMult;
+        const radius = 120;
+        const cd = 8000 * Math.pow(0.8, cdLvl);
+
+        this.isWhirlwinding = true;
+        this.classAbilityMaxCooldown = cd;
+        this.classAbilityCooldownEnd = Date.now() + cd;
+        this.registry.set('classAbilityCooldown', { duration: cd, timestamp: Date.now() });
+
+        this.player.play('player-attack');
+        this.events.emit('player-swing');
+
+        // VFX burst
+        const quality = this.registry.get('graphicsQuality') as GraphicsQuality;
+        if (quality !== 'low') {
+            const emitter = this.add.particles(this.player.x, this.player.y, 'arrow', {
+                quantity: 16, lifespan: 500, speed: { min: 80, max: 180 },
+                scale: { start: 0.4, end: 0 }, alpha: { start: 0.9, end: 0 },
+                angle: { min: 0, max: 360 }, tint: 0xffcc00, blendMode: 'ADD', emitting: false,
+            });
+            emitter.explode(16, this.player.x, this.player.y);
+            this.time.delayedCall(600, () => emitter.destroy());
+        }
+
+        const px = this.player.x, py = this.player.y;
+        const hitEnemies: Enemy[] = (this.enemies.getChildren() as Enemy[]).filter(e =>
+            e.active && Phaser.Math.Distance.Between(px, py, e.x, e.y) <= radius
+        );
+
+        // Hit boss group too
+        if (this.bossGroup) {
+            (this.bossGroup.getChildren() as BossEnemy[]).forEach(b => {
+                if (b.active && Phaser.Math.Distance.Between(px, py, b.x, b.y) <= radius) {
+                    b.takeDamage(damage, '#ffcc00');
+                    b.pushback(px, py, this.stats.knockback * 1.5);
+                }
+            });
+        }
+
+        // First hit immediately
+        hitEnemies.forEach(e => {
+            e.takeDamage(damage, '#ffcc00');
+            e.pushback(px, py, this.stats.knockback * 1.5);
+        });
+
+        // Second hit + chain CD reduction at end of spin
+        this.time.delayedCall(500, () => {
+            hitEnemies.forEach(e => {
+                if (e.active) {
+                    e.takeDamage(damage, '#ffaa00');
+                    e.pushback(px, py, this.stats.knockback);
+                }
+            });
+            if (chainLvl > 0) {
+                const pctPerHit = chainLvl === 1 ? 0.05 : 0.07;
+                const maxPct   = chainLvl === 1 ? 0.25 : 0.35;
+                const reduction = Math.min(hitEnemies.length * pctPerHit, maxPct);
+                this.classAbilityCooldownEnd -= cd * reduction;
+            }
+            this.isWhirlwinding = false;
+        });
+    }
+
+    private activateExplosiveShot(): void {
+        this.explosiveShotReady = true;
+        this.registry.set('explosiveShotReady', true);
+
+        // Auto-cancel after 5 s if not fired
+        this.time.delayedCall(5000, () => {
+            if (this.explosiveShotReady) {
+                this.explosiveShotReady = false;
+                this.registry.set('explosiveShotReady', false);
+            }
+        });
+    }
+
+    private activateCascade(): void {
+        const levels = (this.registry.get('upgradeLevels') || {}) as Record<string, number>;
+        const durationLvl = levels['cascade_duration'] || 0;
+        const duration = (4 + durationLvl * 2) * 1000;
+        const cd = 10000;
+
+        this.cascadeActiveUntil = Date.now() + duration;
+        this.classAbilityMaxCooldown = duration + cd;
+        this.classAbilityCooldownEnd = this.cascadeActiveUntil + cd;
+        this.registry.set('classAbilityCooldown', {
+            duration: duration + cd,
+            timestamp: Date.now(),
+        });
+
+        // VFX: rainbow particle ring following player
+        const quality = this.registry.get('graphicsQuality') as GraphicsQuality;
+        let cascadeEmitter: Phaser.GameObjects.Particles.ParticleEmitter | null = null;
+        if (quality !== 'low') {
+            cascadeEmitter = this.add.particles(this.player.x, this.player.y, 'arrow', {
+                lifespan: 1200, speed: { min: 20, max: 50 },
+                scale: { start: 0.25, end: 0 }, alpha: { start: 0.5, end: 0 },
+                angle: { min: 0, max: 360 }, frequency: 40,
+                tint: [0xff00ff, 0x00ffff, 0xffff00, 0x88ff00],
+                blendMode: 'ADD', follow: this.player,
+            });
+        }
+
+        this.time.delayedCall(duration, () => {
+            cascadeEmitter?.destroy();
+        });
     }
 }
 
