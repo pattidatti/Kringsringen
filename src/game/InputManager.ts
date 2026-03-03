@@ -145,9 +145,10 @@ export class InputManager {
 
     private handleDash(): void {
         const isDashing = this.scene.data.get('isDashing');
+        const isWhirlwinding = this.scene.data.get('isWhirlwinding');
         const dashState = this.scene.registry.get('dashState') || { isActive: false, readyAt: 0 };
 
-        if (this.wasd.SHIFT.isDown && !isDashing && Date.now() >= dashState.readyAt) {
+        if (this.wasd.SHIFT.isDown && !isDashing && !isWhirlwinding && Date.now() >= dashState.readyAt) {
             this.executeDash();
         }
     }
@@ -273,14 +274,18 @@ export class InputManager {
 
         player.setVelocity(vx, vy);
 
-        if (vx !== 0 || vy !== 0) {
-            if (player.anims.currentAnim?.key !== 'player-walk') player.play('player-walk');
-            if (time - this.lastFootstepTime > 250) {
-                this.lastFootstepTime = time;
-                this.scene.events.emit('play-footstep');
+        const isWhirlwinding = this.scene.data.get('isWhirlwinding') as boolean;
+
+        if (!isWhirlwinding) {
+            if (vx !== 0 || vy !== 0) {
+                if (player.anims.currentAnim?.key !== 'player-walk') player.play('player-walk');
+                if (time - this.lastFootstepTime > 250) {
+                    this.lastFootstepTime = time;
+                    this.scene.events.emit('play-footstep');
+                }
+            } else {
+                if (player.anims.currentAnim?.key !== 'player-idle') player.play('player-idle');
             }
-        } else {
-            if (player.anims.currentAnim?.key !== 'player-idle') player.play('player-idle');
         }
     }
 

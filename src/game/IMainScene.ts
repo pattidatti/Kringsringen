@@ -13,6 +13,7 @@ import type { NetworkPacketHandler } from './NetworkPacketHandler';
 import type { WeatherManager } from './WeatherManager';
 import type { AmbientParticleManager } from './AmbientParticleManager';
 import type { InputManager } from './InputManager';
+import type { FlowFieldManager } from './pathing/FlowFieldManager';
 
 /**
  * Lightweight interface for MainScene.
@@ -35,6 +36,7 @@ export interface IMainScene extends Phaser.Scene {
     enemyPool?: import('./ObjectPoolManager').ObjectPoolManager;
     spatialGrid: SpatialHashGrid;
     staticObstacleGrid: SpatialHashGrid;
+    flowFieldManager: FlowFieldManager;
     poolManager: ObjectPoolManager;
     stats: PlayerStatsManager;
     combat: PlayerCombatManager;
@@ -58,6 +60,7 @@ export interface IMainScene extends Phaser.Scene {
     remotePlayerLights: Map<string, Phaser.GameObjects.Light>;
     pendingDeaths: Set<string>;
     deathSparkEmitter: Phaser.GameObjects.Particles.ParticleEmitter;
+    swordSparkEmitter: Phaser.GameObjects.Particles.ParticleEmitter;
     playerShadow: Phaser.GameObjects.Sprite | null;
     restartGame(): void;
     handlePlayerActionCombat(time: number, delta: number): void;

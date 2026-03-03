@@ -2,11 +2,26 @@
 - [x] Krieger: Sverd gjør ikke skade på enemies 
 - [x] Det mørke overlayet over mappet er veldig blått, akkurat som det blå fra react? blør inn i scenen eller noe slikt. 
 - [x] Når Krieger tar skade, oppdateres ikke HP baren hans oppe til venstre. 
-- [ ] Mellomrom brukes til Dash, det skal den ikke. Bare angrep er på mellomrom. 
-- [ ] Flammepil/eksplosiv/hotkey 2 for archer bør skyte skuddet med en gang knappen trykkes, ikke lade opp til neste angrep. 
-- [ ] Elemental Cascade er en forvrirrende spell; må gjøres om til noe helt annet. 
-- [ ] Enemies blir lett stuck - Trenger smartere pathing. 
-- [ ] Hvit tekst på lysebrun bakgrunn passer dårlig, må være svart tekst (i boken, f.eks. inne på Mastring, Krigsrop, Livsstaling osv.)
+- [x] Mellomrom brukes til Dash, det skal den ikke. Bare angrep er på mellomrom. 
+- [x] Flammepil/eksplosiv/hotkey 2 for archer bør skyte skuddet med en gang knappen trykkes, ikke lade opp til neste angrep. 
+- [x] Elemental Cascade er en forvrirrende spell; må gjøres om til noe helt annet. 
+- [x] Enemies blir lett stuck - Trenger smartere pathing. 
+- [x] Hvit tekst på lysebrun bakgrunn passer dårlig, må være svart tekst (i boken, f.eks. inne på Mastring, Krigsrop, Livsstaling osv.)
+- [x] Krieger Whirlwind må vare dobbelt så lenge (og få sterke visuelle effekter)
+- [x] Må ha liten screenshake/juice på sverdangrep, gjerne små partikler som flyr ut fra sverdet(ish) også. 
+- [x] Høyreklikk må "blockes" i spillet, slik at en kan bruke det i block, ikke åpne browser meny. 
+- [x] Når man trykker "prøv igjen" etter å ha død og respawner, så oppdateres ikke UI lengre(coins, hp, score, våpenselekt osv)
+- [x] Når man bruker whirlwind, må swrod attack animations spilles av helt til angrepet er ferdig. 
+- [x] Whirlwind må ha en liten visuell indikator for hvor lenge den varer, mens den pågår. 
+- [x] Når man velger klasse på landingpage, holder det at en trykker på klassen, ikke at en må trykke på en ekstra knapp for å bekrefte valget. 
+- [x] Når man trykker avslutt spill må musikk fades ut, og vi får tilbake musikken/ambiance på landingpage. 
+- [x] Når man trykker "fortsett spill" spawner man inn som død, uavhengig av HP man hadde i siste spillet. 
+- [x] Cooldown på Whirlwind vises ikke på baren nede. 
+- [ ] Enemies som orc og slime skyver spilleren i større grad enn å angripe. 
+- [ ] Enemies som orc og slime skyver spilleren i større grad enn å angripe. 
+- [ ] Krieger får av og til tilgang på Fireball når man trykker på hotkey 2. 
+
+
 
 
 

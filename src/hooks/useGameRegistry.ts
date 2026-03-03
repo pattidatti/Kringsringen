@@ -3,23 +3,37 @@ import Phaser from 'phaser';
 
 // Singleton to hold the game instance reference
 let gameInstance: Phaser.Game | null = null;
-const instanceListeners = new Set<() => void>();
+const readyListeners = new Set<() => void>();
+const instanceListeners = new Set<(game: Phaser.Game | null) => void>();
 
 export const setGameInstance = (game: Phaser.Game | null) => {
     console.log('[useGameRegistry] setGameInstance:', !!game);
     gameInstance = game;
-    instanceListeners.forEach(fn => fn());
+
+    // Notify those waiting for any instance at all (usually first boot)
     if (game) {
-        instanceListeners.clear();
+        readyListeners.forEach(fn => fn());
+        readyListeners.clear();
     }
+
+    // Notify those tracking lifecycle (e.g. hooks that need to resubscribe)
+    instanceListeners.forEach(fn => fn(game));
 };
 
 export const onGameReady = (fn: () => void) => {
     if (gameInstance) {
         fn();
     } else {
-        instanceListeners.add(fn);
+        readyListeners.add(fn);
     }
+    return () => { readyListeners.delete(fn); };
+};
+
+/**
+ * Subscribe to every change of the global game instance (mounts/unmounts).
+ */
+export const onGameInstanceChange = (fn: (game: Phaser.Game | null) => void) => {
+    instanceListeners.add(fn);
     return () => { instanceListeners.delete(fn); };
 };
 
@@ -37,29 +51,31 @@ export const getGameInstance = () => gameInstance;
  * @param initialValue Fallback value if registry or key doesn't exist yet
  */
 export function useGameRegistry<T>(key: string, initialValue: T): T {
+    // Track the current game instance locally so we can resubscribe if it changes
+    const [game, setGame] = useState<Phaser.Game | null>(getGameInstance);
+
     const [value, setValue] = useState<T>(() => {
-        if (gameInstance) {
-            return gameInstance.registry.get(key) ?? initialValue;
+        if (game) {
+            return game.registry.get(key) ?? initialValue;
         }
         return initialValue;
     });
 
-    // Force re-run of subscription effect when game instance appears
-    const [ready, setReady] = useState(!!gameInstance);
-
-    // Wait for game instance if not available yet
+    // Listen for global game instance changes (Phaser rebooting)
     useEffect(() => {
-        return onGameReady(() => setReady(true));
+        return onGameInstanceChange((newInstance) => {
+            setGame(newInstance);
+        });
     }, []);
 
-    // Subscribe to registry events
+    // Subscribe to registry events of the current active game instance
     useEffect(() => {
-        const game = getGameInstance();
-        if (!ready || !game) return;
+        if (!game) return;
 
         const registry = game.registry;
         const events = registry.events;
 
+        // Sync local state with current registry value immediately upon new game instance
         const current = registry.get(key);
         setValue(prev => {
             const next = current ?? initialValue;
@@ -82,7 +98,7 @@ export function useGameRegistry<T>(key: string, initialValue: T): T {
             events.off(`changedata-${key}`, onChangeData);
             events.off('setdata', onSetData);
         };
-    }, [key, ready]);
+    }, [key, game]);
 
     return value;
 }

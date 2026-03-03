@@ -52,27 +52,27 @@ const TABS: Record<TabKey, { title: string; icon: string; color: string; locked?
 
 const CATEGORY_THEMES: Record<string, { primary: string; secondary: string; border: string; bg: string; text: string }> = {
     // Delte (legacy + alias)
-    'Karakter': { primary: '#fbbf24', secondary: '#f59e0b', border: 'border-amber-500/30', bg: 'bg-amber-950/40', text: 'text-amber-100' },
-    'karakter':  { primary: '#fbbf24', secondary: '#f59e0b', border: 'border-amber-500/30', bg: 'bg-amber-950/40', text: 'text-amber-100' },
-    'Sverd':    { primary: '#f87171', secondary: '#ef4444', border: 'border-red-500/30', bg: 'bg-red-950/40', text: 'text-red-100' },
-    'Bue':      { primary: '#34d399', secondary: '#10b981', border: 'border-emerald-500/30', bg: 'bg-emerald-950/40', text: 'text-emerald-100' },
-    'Magi':     { primary: '#818cf8', secondary: '#6366f1', border: 'border-indigo-500/30', bg: 'bg-indigo-950/40', text: 'text-indigo-100' },
-    'Synergi':  { primary: '#f97316', secondary: '#ea580c', border: 'border-orange-500/30', bg: 'bg-orange-950/40', text: 'text-orange-100' },
+    'Karakter': { primary: '#b45309', secondary: '#f59e0b', border: 'border-amber-900/40', bg: 'bg-amber-100/40', text: 'text-amber-950' },
+    'karakter': { primary: '#b45309', secondary: '#f59e0b', border: 'border-amber-900/40', bg: 'bg-amber-100/40', text: 'text-amber-950' },
+    'Sverd': { primary: '#991b1b', secondary: '#ef4444', border: 'border-red-900/40', bg: 'bg-red-100/40', text: 'text-red-950' },
+    'Bue': { primary: '#065f46', secondary: '#10b981', border: 'border-emerald-900/40', bg: 'bg-emerald-100/40', text: 'text-emerald-950' },
+    'Magi': { primary: '#3730a3', secondary: '#6366f1', border: 'border-indigo-900/40', bg: 'bg-indigo-100/40', text: 'text-indigo-950' },
+    'Synergi': { primary: '#9a3412', secondary: '#ea580c', border: 'border-orange-900/40', bg: 'bg-orange-100/40', text: 'text-orange-950' },
     // Krieger (rød)
-    'krieger_drivkraft':  { primary: '#c0392b', secondary: '#e67e22', border: 'border-red-600/40', bg: 'bg-red-950/50', text: 'text-red-100' },
-    'krieger_mastring':   { primary: '#c0392b', secondary: '#e67e22', border: 'border-red-600/40', bg: 'bg-red-950/50', text: 'text-red-100' },
-    'krieger_kamptalent': { primary: '#c0392b', secondary: '#e67e22', border: 'border-red-600/40', bg: 'bg-red-950/50', text: 'text-red-100' },
-    'krieger_rustning':   { primary: '#c0392b', secondary: '#e67e22', border: 'border-red-600/40', bg: 'bg-red-950/50', text: 'text-red-100' },
+    'krieger_drivkraft': { primary: '#7f1d1d', secondary: '#c0392b', border: 'border-red-900/30', bg: 'bg-red-200/30', text: 'text-red-950' },
+    'krieger_mastring': { primary: '#7f1d1d', secondary: '#c0392b', border: 'border-red-900/30', bg: 'bg-red-200/30', text: 'text-red-950' },
+    'krieger_kamptalent': { primary: '#7f1d1d', secondary: '#c0392b', border: 'border-red-900/30', bg: 'bg-red-200/30', text: 'text-red-950' },
+    'krieger_rustning': { primary: '#7f1d1d', secondary: '#c0392b', border: 'border-red-900/30', bg: 'bg-red-200/30', text: 'text-red-950' },
     // Archer (grønn)
-    'archer_drivkraft':   { primary: '#27ae60', secondary: '#f1c40f', border: 'border-emerald-600/40', bg: 'bg-emerald-950/50', text: 'text-emerald-100' },
-    'archer_mastring':    { primary: '#27ae60', secondary: '#f1c40f', border: 'border-emerald-600/40', bg: 'bg-emerald-950/50', text: 'text-emerald-100' },
-    'archer_talenter':    { primary: '#27ae60', secondary: '#f1c40f', border: 'border-emerald-600/40', bg: 'bg-emerald-950/50', text: 'text-emerald-100' },
-    'archer_smidighet':   { primary: '#27ae60', secondary: '#f1c40f', border: 'border-emerald-600/40', bg: 'bg-emerald-950/50', text: 'text-emerald-100' },
+    'archer_drivkraft': { primary: '#14532d', secondary: '#27ae60', border: 'border-emerald-900/30', bg: 'bg-emerald-200/30', text: 'text-emerald-950' },
+    'archer_mastring': { primary: '#14532d', secondary: '#27ae60', border: 'border-emerald-900/30', bg: 'bg-emerald-200/30', text: 'text-emerald-950' },
+    'archer_talenter': { primary: '#14532d', secondary: '#27ae60', border: 'border-emerald-900/30', bg: 'bg-emerald-200/30', text: 'text-emerald-950' },
+    'archer_smidighet': { primary: '#14532d', secondary: '#27ae60', border: 'border-emerald-900/30', bg: 'bg-emerald-200/30', text: 'text-emerald-950' },
     // Wizard (lilla)
-    'wizard_drivkraft':   { primary: '#8e44ad', secondary: '#3498db', border: 'border-purple-600/40', bg: 'bg-purple-950/50', text: 'text-purple-100' },
-    'wizard_mastring':    { primary: '#8e44ad', secondary: '#3498db', border: 'border-purple-600/40', bg: 'bg-purple-950/50', text: 'text-purple-100' },
-    'wizard_synergi':     { primary: '#8e44ad', secondary: '#3498db', border: 'border-purple-600/40', bg: 'bg-purple-950/50', text: 'text-purple-100' },
-    'wizard_arkan':       { primary: '#8e44ad', secondary: '#3498db', border: 'border-purple-600/40', bg: 'bg-purple-950/50', text: 'text-purple-100' },
+    'wizard_drivkraft': { primary: '#4c1d95', secondary: '#8e44ad', border: 'border-purple-900/30', bg: 'bg-purple-200/30', text: 'text-purple-950' },
+    'wizard_mastring': { primary: '#4c1d95', secondary: '#8e44ad', border: 'border-purple-900/30', bg: 'bg-purple-200/30', text: 'text-purple-950' },
+    'wizard_synergi': { primary: '#4c1d95', secondary: '#8e44ad', border: 'border-purple-900/30', bg: 'bg-purple-200/30', text: 'text-purple-950' },
+    'wizard_arkan': { primary: '#4c1d95', secondary: '#8e44ad', border: 'border-purple-900/30', bg: 'bg-purple-200/30', text: 'text-purple-950' },
 };
 
 const StatRow = ({ label, value, icon }: { label: string, value: string | number, icon: string }) => (
@@ -429,19 +429,19 @@ export const FantasyBook: React.FC<FantasyBookProps> = React.memo(({
                                             animate={{ opacity: 1, x: 0 }}
                                             className={`flex p-4 border rounded-lg transition-all group relative overflow-hidden gap-4
                                                 ${!reqMet
-                                                    ? 'bg-slate-800/90 border-slate-600'
-                                                    : `${theme.bg} ${theme.border} hover:brightness-105 shadow-md`
+                                                    ? 'bg-slate-200/70 border-slate-400/50 grayscale opacity-80'
+                                                    : `${theme.bg} ${theme.border} hover:brightness-[1.03] shadow-sm hover:shadow`
                                                 }`}
                                             style={isExclusive && reqMet ? {
-                                                borderColor: classConfig.color + '55',
-                                                background: `linear-gradient(135deg, ${classConfig.color}12 0%, transparent 55%)`,
+                                                borderColor: classConfig.color + '66',
+                                                background: `linear-gradient(135deg, ${classConfig.color}18 0%, transparent 75%)`,
                                             } : {}}
                                         >
                                             {/* Left Side: Info */}
                                             <div className="flex-1 flex flex-col">
                                                 <div className="flex items-center gap-3 mb-2">
                                                     <div className={`w-10 h-10 flex items-center justify-center rounded-lg border 
-                                                        ${!reqMet ? 'bg-slate-700/50 border-slate-500 grayscale' : `bg-white/50 ${theme.border}`}`}>
+                                                        ${!reqMet ? 'bg-slate-300/60 border-slate-400' : `bg-white/70 ${theme.border}`}`}>
                                                         {isItemSpriteIcon(item.icon)
                                                             ? <ItemIcon
                                                                 icon={item.icon as ItemIconKey}
@@ -454,16 +454,16 @@ export const FantasyBook: React.FC<FantasyBookProps> = React.memo(({
                                                             />
                                                         }
                                                     </div>
-                                                    <span className={`font-bold text-xl ${!reqMet ? 'text-slate-200' : theme.text}`}>{item.title}</span>
+                                                    <span className={`font-bold text-xl ${!reqMet ? 'text-slate-600' : theme.text}`}>{item.title}</span>
                                                 </div>
 
                                                 <div className={`text-lg pl-1 leading-snug font-crimson mt-2
-                                                    ${!reqMet ? 'text-slate-300' : `${theme.text} opacity-90`}
+                                                    ${!reqMet ? 'text-slate-600' : `${theme.text} opacity-90`}
                                                 `}>
                                                     {item.description(lvl + 1)}
                                                 </div>
                                                 {!reqMet && (
-                                                    <div className="text-sm text-red-400 font-bold mt-3 p-2 bg-red-950/40 rounded border border-red-900/30 flex items-center gap-2">
+                                                    <div className="text-sm text-red-800 font-bold mt-3 p-2 bg-red-100/60 rounded border border-red-900/20 flex items-center gap-2">
                                                         <span>🔒</span>
                                                         <span>{reqText}</span>
                                                     </div>
@@ -472,7 +472,7 @@ export const FantasyBook: React.FC<FantasyBookProps> = React.memo(({
 
                                             {/* Right Side: Action & Level */}
                                             <div className="flex flex-col w-28 shrink-0 justify-between items-end gap-2">
-                                                <span className={`text-3xl font-bold ${theme.text} opacity-90 block mt-1 tracking-tighter`}>{lvl}/{item.maxLevel}</span>
+                                                <span className={`text-3xl font-bold ${!reqMet ? 'text-slate-500' : theme.text} opacity-90 block mt-1 tracking-tighter`}>{lvl}/{item.maxLevel}</span>
 
                                                 <div className="w-full mt-auto">
                                                     {isMaxed ? (
@@ -483,10 +483,10 @@ export const FantasyBook: React.FC<FantasyBookProps> = React.memo(({
                                                         <button
                                                             onClick={() => actions.onBuyUpgrade(item.id, cost)}
                                                             disabled={!canAfford || !reqMet}
-                                                            className={`w-full py-2 text-base font-bold border rounded-lg transition-all flex items-center justify-center gap-1.5 shadow-md
+                                                            className={`w-full py-2 text-base font-bold border rounded-lg transition-all flex items-center justify-center gap-1.5 shadow-sm
                                                                 ${canAfford && reqMet
-                                                                    ? 'bg-amber-400 border-amber-600 text-amber-900 hover:bg-amber-300 hover:-translate-y-0.5 active:translate-y-0 active:shadow-inner'
-                                                                    : 'bg-slate-800/80 border-slate-600/50 text-slate-400 cursor-not-allowed opacity-80'}
+                                                                    ? 'bg-amber-100 border-amber-400 text-amber-950 hover:bg-amber-50 hover:-translate-y-0.5 active:translate-y-0 active:shadow-inner'
+                                                                    : 'bg-slate-200/80 border-slate-400/50 text-slate-500 cursor-not-allowed opacity-80'}
                                                             `}
                                                         >
                                                             <span>{cost}</span>

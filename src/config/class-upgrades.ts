@@ -466,11 +466,11 @@ const ARCHER_SMIDIGHET: ClassUpgradeConfig[] = [
 
 // ─── WIZARD ──────────────────────────────────────────────────────────────────
 
-/** Wizard DRIVKRAFT: Elemental Cascade ability-nivåer + legendaries */
+/** Wizard DRIVKRAFT: Arcane Singularity ability-nivåer + legendaries */
 const WIZARD_DRIVKRAFT: ClassUpgradeConfig[] = [
     {
-        id: 'cascade_duration',
-        title: 'Magisk Resonans',
+        id: 'singularity_duration',
+        title: 'Mørk Materie',
         icon: 'item_magic_staff',
         category: 'Magi',
         classRestriction: 'wizard',
@@ -480,11 +480,11 @@ const WIZARD_DRIVKRAFT: ClassUpgradeConfig[] = [
         basePrice: 250,
         priceScale: 2.4,
         iconTint: 'drop-shadow(0 0 5px #8800ff) hue-rotate(200deg)',
-        description: (lvl) => `+2s Cascade-varighet per nivå (Nå: ${4 + lvl * 2}s)`,
+        description: (lvl) => `+${lvl * 0.5}s Singularitet-varighet (Nå: ${3 + lvl * 0.5}s)`,
     },
     {
-        id: 'cascade_damage',
-        title: 'Elementær Kraft',
+        id: 'singularity_radius',
+        title: 'Hendelseshorisont',
         icon: 'item_magic_staff',
         category: 'Magi',
         classRestriction: 'wizard',
@@ -494,12 +494,12 @@ const WIZARD_DRIVKRAFT: ClassUpgradeConfig[] = [
         basePrice: 280,
         priceScale: 2.5,
         iconTint: 'drop-shadow(0 0 5px #8800ff) hue-rotate(200deg)',
-        requires: { cascade_duration: 1 },
-        description: (lvl) => `+${50 + lvl * 15}% skadebonus under Cascade (Nå: ${50 + lvl * 15}%)`,
+        requires: { singularity_duration: 1 },
+        description: (lvl) => `+${lvl * 25}% draradius (Nå: ${100 + lvl * 25}%)`,
     },
     {
-        id: 'cascade_chain',
-        title: 'Kjede Reaksjon',
+        id: 'singularity_damage',
+        title: 'Knusende Gravitasjon',
         icon: 'item_lightning_staff',
         category: 'Magi',
         classRestriction: 'wizard',
@@ -509,11 +509,11 @@ const WIZARD_DRIVKRAFT: ClassUpgradeConfig[] = [
         basePrice: 600,
         priceScale: 3.0,
         iconTint: 'drop-shadow(0 0 5px #8800ff) hue-rotate(200deg)',
-        requires: { cascade_damage: 2 },
+        requires: { singularity_radius: 2 },
         description: (lvl) =>
             lvl === 1
-                ? 'Fiende truffet av 2+ trolldomstyper tar +50% ekstraskade'
-                : 'Fiende truffet av 3 typer tar +100% ekstraskade',
+                ? 'Eksplosjonen gjør +50% skade på fiender i sentrum'
+                : 'Eksplosjonen gjør +100% skade på fiender i sentrum',
     },
     {
         id: 'manaring',
@@ -525,9 +525,9 @@ const WIZARD_DRIVKRAFT: ClassUpgradeConfig[] = [
         maxLevel: 2,
         basePrice: 450,
         priceScale: 2.8,
-        requires: { cascade_duration: 2 },
+        requires: { singularity_duration: 2 },
         description: (lvl) =>
-            `Aktiv Cascade gir +${lvl === 1 ? 25 : 40}% skade-reduksjon`,
+            `Aktiv Singularitet gir +${lvl === 1 ? 25 : 40}% skade-reduksjon over hele kartet`,
     },
     {
         id: 'elementar_overfload',
@@ -552,7 +552,7 @@ const WIZARD_DRIVKRAFT: ClassUpgradeConfig[] = [
         maxLevel: 1,
         basePrice: 900,
         priceScale: 1.0,
-        requires: { cascade_chain: 1 },
+        requires: { singularity_damage: 1 },
         description: () =>
             'Kastet trolldom kolliderer med fiendebolt og ødelegger begge',
         iconTint: 'drop-shadow(0 0 8px #8800ff) hue-rotate(200deg) brightness(1.3)',
@@ -601,7 +601,7 @@ const WIZARD_SYNERGI: ClassUpgradeConfig[] = [
         maxLevel: 1,
         basePrice: 1000,
         priceScale: 1.0,
-        requires: { frost_slow: 5, cascade_duration: 2 },
+        requires: { frost_slow: 5, singularity_duration: 2 },
         description: () =>
             'Fullfryst fiende kan kastes som prosjektil mot andre',
         iconTint: 'drop-shadow(0 0 6px #8800ff) hue-rotate(200deg)',

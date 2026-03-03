@@ -47,6 +47,19 @@ export class TextureSetup {
         graphics.fillCircle(4, 4, 4);
         graphics.generateTexture('spark', 8, 8);
 
+        // --- WHIRLWIND SLASH ---
+        graphics.clear();
+        graphics.lineStyle(16, 0xff4400, 0.4);
+        graphics.beginPath();
+        graphics.arc(64, 64, 56, 0, Math.PI * 1.5, false);
+        graphics.strokePath();
+
+        graphics.lineStyle(24, 0xffaa00, 0.8);
+        graphics.beginPath();
+        graphics.arc(64, 64, 56, 0, Math.PI * 0.5, false);
+        graphics.strokePath();
+        graphics.generateTexture('whirlwind_slash', 128, 128);
+
         graphics.destroy();
     }
 }

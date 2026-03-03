@@ -63,11 +63,10 @@ export class PlayerCombatManager {
             return;
         }
 
-        // ── Fase 6: Manaring DR bonus (Wizard, during Cascade) ──────────────
-        const manaringDR = this.scene.registry.get('manaringDRBonus') || 0;
-        const cascadeActiveUntil = this.scene.registry.get('cascadeActiveUntil') || 0;
-        if (manaringDR > 0 && Date.now() < cascadeActiveUntil) {
-            actualDamage *= (1 - manaringDR);
+        // ── Fase 6: Global Damage Reduction (Wizard Manaring) ──────────────
+        const globalDR = this.scene.registry.get('globalDamageReduction') || 0;
+        if (globalDR > 0) {
+            actualDamage *= (1 - globalDR);
         }
 
         // Throttled HP update

@@ -284,6 +284,46 @@ export class AudioManager {
     }
 
     /**
+     * Scene-independent audio fader to ensure fades don't get stuck if the Phaser scene is paused.
+     */
+    private manualFade(sound: Phaser.Sound.BaseSound, targetVolume: number, duration: number, onComplete?: () => void) {
+        const startVolume = (sound as any).volume || 0;
+        const startTime = Date.now();
+
+        // Ensure duration is positive to avoid divide by zero
+        if (duration <= 0) {
+            try { (sound as any).volume = targetVolume; } catch (e) { }
+            if (onComplete) onComplete();
+            return;
+        }
+
+        const interval = setInterval(() => {
+            try {
+                if (!sound || (sound as any).pendingRemove || (sound as any).isDestroyed) {
+                    clearInterval(interval);
+                    if (onComplete) onComplete();
+                    return;
+                }
+
+                const elapsed = Date.now() - startTime;
+                if (elapsed >= duration) {
+                    (sound as any).volume = targetVolume;
+                    clearInterval(interval);
+                    if (onComplete) onComplete();
+                    return;
+                }
+
+                const progress = elapsed / duration;
+                (sound as any).volume = startVolume + (targetVolume - startVolume) * progress;
+            } catch (e) {
+                console.warn('[AudioManager] manualFade interrupted due to destroyed sound object.', e);
+                clearInterval(interval);
+                if (onComplete) onComplete();
+            }
+        }, 50); // 20hz update rate
+    }
+
+    /**
      * Plays/Transistions background music with cross-fade.
      * If the track is lazy-loaded and not yet in cache, it will be loaded on demand.
      */
@@ -309,11 +349,8 @@ export class AudioManager {
         // Fade out current BGM
         if (this.currentBGM) {
             const oldBGM = this.currentBGM;
-            this.scene.tweens.add({
-                targets: oldBGM,
-                volume: 0,
-                duration: fadeDuration,
-                onComplete: () => oldBGM.stop()
+            this.manualFade(oldBGM, 0, fadeDuration, () => {
+                try { oldBGM.stop(); } catch (e) { }
             });
         }
 
@@ -322,11 +359,7 @@ export class AudioManager {
         this.currentBGMId = id;
         this.currentBGM.play();
 
-        this.scene.tweens.add({
-            targets: this.currentBGM,
-            volume: finalVolume,
-            duration: fadeDuration
-        });
+        this.manualFade(this.currentBGM, finalVolume, fadeDuration);
     }
 
     /**
@@ -355,11 +388,8 @@ export class AudioManager {
         // Fade out current BGS
         if (this.currentBGS) {
             const oldBGS = this.currentBGS;
-            this.scene.tweens.add({
-                targets: oldBGS,
-                volume: 0,
-                duration: fadeDuration,
-                onComplete: () => oldBGS.stop()
+            this.manualFade(oldBGS, 0, fadeDuration, () => {
+                try { oldBGS.stop(); } catch (e) { }
             });
         }
 
@@ -368,10 +398,57 @@ export class AudioManager {
         this.currentBGSId = id;
         this.currentBGS.play();
 
-        this.scene.tweens.add({
-            targets: this.currentBGS,
-            volume: finalVolume,
-            duration: fadeDuration
+        this.manualFade(this.currentBGS, finalVolume, fadeDuration);
+    }
+
+    /**
+     * Fades out and stops all currently playing BGM and BGS.
+     * Returns a promise that resolves when the fade is complete, 
+     * or after a timeout to ensure progression.
+     */
+    public fadeOutAndStopAll(duration: number = 1000): Promise<void> {
+        return new Promise((resolve) => {
+            if (!this.scene) {
+                resolve();
+                return;
+            }
+
+            let completedTweens = 0;
+            let expectedTweens = 0;
+
+            const onComplete = () => {
+                completedTweens++;
+                if (completedTweens >= expectedTweens) {
+                    resolve();
+                }
+            };
+
+            if (this.currentBGM) {
+                expectedTweens++;
+                const oldBGM = this.currentBGM;
+                this.manualFade(oldBGM, 0, duration, () => {
+                    try { oldBGM.stop(); } catch (e) { }
+                    onComplete();
+                });
+                this.currentBGM = null;
+                this.currentBGMId = null;
+            }
+
+            if (this.currentBGS) {
+                expectedTweens++;
+                const oldBGS = this.currentBGS;
+                this.manualFade(oldBGS, 0, duration, () => {
+                    try { oldBGS.stop(); } catch (e) { }
+                    onComplete();
+                });
+                this.currentBGS = null;
+                this.currentBGSId = null;
+            }
+
+            if (expectedTweens === 0) {
+                resolve();
+                return;
+            }
         });
     }
 

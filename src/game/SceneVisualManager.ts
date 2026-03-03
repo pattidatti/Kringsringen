@@ -180,6 +180,11 @@ export class SceneVisualManager {
             }
         });
 
+        // Generate Pathing Cost Field
+        if (this.scene.flowFieldManager) {
+            this.scene.flowFieldManager.buildCostField(this.scene.obstacles);
+        }
+
         // Swap ambient particle theme to match the new level
         // @ts-ignore - ambient is private on MainScene currently
         if ((this.scene as any).ambient) (this.scene as any).ambient.setTheme(safeLevel);

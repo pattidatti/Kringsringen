@@ -56,6 +56,7 @@ export const GameContainer: React.FC<GameContainerProps> = React.memo(({ network
     const isWaitingReadyRef = useRef(isWaitingReady);
     const isLoadingLevelRef = useRef(isLoadingLevel);
     const readyReasonRef = useRef(readyReason);
+    const isExitingRef = useRef(false);
 
     const [rebootKey, setRebootKey] = useState(0);
     const rebootKeyRef = useRef(rebootKey);
@@ -641,7 +642,10 @@ export const GameContainer: React.FC<GameContainerProps> = React.memo(({ network
         }
     }, [isBookOpen, handleBookClose, networkConfig]);
 
-    const handleExitToMenu = useCallback(() => {
+    const handleExitToMenu = useCallback(async () => {
+        if (isExitingRef.current) return;
+        isExitingRef.current = true;
+
         const game = gameInstanceRef.current;
         if (game && !networkConfig) {
             try {
@@ -652,6 +656,14 @@ export const GameContainer: React.FC<GameContainerProps> = React.memo(({ network
             } catch (e) {
                 console.error('[GameContainer] request-save emit failed:', e);
             }
+
+            try {
+                const { AudioManager } = await import('../game/AudioManager');
+                await AudioManager.instance.fadeOutAndStopAll(1000);
+            } catch (e) {
+                console.error('[GameContainer] Error during audio fadeout:', e);
+            }
+
             // Stop the game loop synchronously to prevent further rendering.
             // Do NOT call game.destroy() here — let the cleanup effect handle it
             // while the canvas is still in the DOM (React guarantees cleanup runs
@@ -675,7 +687,11 @@ export const GameContainer: React.FC<GameContainerProps> = React.memo(({ network
     }), [applyShopUpgrade, applyRevive]);
 
     return (
-        <div id="game-ui-wrapper" className="w-full h-full relative overflow-hidden bg-slate-950 font-sans selection:bg-cyan-500/30">
+        <div
+            id="game-ui-wrapper"
+            className="w-full h-full relative overflow-hidden bg-slate-950 font-sans selection:bg-cyan-500/30"
+            onContextMenu={(e) => e.preventDefault()}
+        >
             {/* Phaser Game Layer */}
             <div
                 id="phaser-game-container"

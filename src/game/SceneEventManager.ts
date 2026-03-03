@@ -106,18 +106,21 @@ export class SceneEventManager {
             scene.networkManager?.broadcast({ t: PacketType.GAME_EVENT, ev: { type: 'spawn_enemy_projectile', data: { x, y, angle: ang, damage: dmg, type } }, ts: Date.now() });
         });
 
+        scene.events.on('request-save', () => {
+            if (!scene.registry.get('isMultiplayer')) {
+                const data = scene.collectSaveData();
+                SaveManager.saveRunProgress(data);
+                console.log('[SceneEventManager] Game saved via request-save.');
+            }
+        });
+
         scene.events.on('level-complete', () => {
             const next = scene.registry.get('gameLevel') + 1;
             scene.coins.clear(true, true);
             scene.enemies.clear(true, true);
             scene.bossGroup.clear(true, true);
             if (!scene.registry.get('isMultiplayer')) {
-                SaveManager.saveRunProgress({
-                    gameLevel: next, currentWave: 1, playerCoins: scene.registry.get('playerCoins'),
-                    upgradeLevels: scene.registry.get('upgradeLevels'), currentWeapon: scene.registry.get('currentWeapon'),
-                    unlockedWeapons: scene.registry.get('unlockedWeapons'), playerHP: scene.registry.get('playerHP'),
-                    playerMaxHP: scene.registry.get('playerMaxHP'), savedAt: Date.now()
-                });
+                SaveManager.saveRunProgress(scene.collectSaveData());
             }
             scene.time.delayedCall(1000, () => scene.visuals.regenerateMap(next));
         });

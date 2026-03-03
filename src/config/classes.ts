@@ -170,7 +170,7 @@ const WIZARD: ClassConfig = {
     description:
         'Mesteren av elementær magi. Tre distinkte trolldommer — Ildkule, Frostbolt og Lynglimt — ' +
         'skaper synergieffekter ingen annen klasse kan matche. ' +
-        'Elemental Cascade aktiverer en 50% skadebonus-aura som lar trolldommene utløse hverandre i kaskader.',
+        'Arcane Singularity maner frem et massivt tyngdefelt som suger fiender inn over 3 sekunder, før det kollapser i en knusende eksplosjon.',
     color: '#8e44ad',
     accentColor: '#3498db',
     particleColor: '#aa00ff',
@@ -182,7 +182,7 @@ const WIZARD: ClassConfig = {
         attackSpeed: 1.10,  // +10% Angrepsfart (raskere kasting)
     },
     startingWeapons: ['fireball', 'frost', 'lightning'],
-    classAbilityId: 'elemental_cascade',
+    classAbilityId: 'arcane_singularity',
     classAbilityHotkey: '4',
     shopCategories: [
         { id: 'wizard_drivkraft', label: 'DRIVKRAFT', icon: 'item_magic_staff', isExclusive: true },

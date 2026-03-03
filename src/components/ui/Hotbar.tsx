@@ -60,7 +60,7 @@ const RadialCooldown = React.memo(({ duration, timestamp }: { duration: number, 
     if (isComplete) return null;
 
     return (
-        <svg viewBox="0 0 50 50" className="absolute inset-0 w-full h-full -rotate-90 pointer-events-none z-30 opacity-40 mix-blend-multiply">
+        <svg viewBox="0 0 50 50" className="absolute inset-0 w-full h-full -rotate-90 pointer-events-none z-30 opacity-60">
             <circle
                 ref={circleRef}
                 cx="25"

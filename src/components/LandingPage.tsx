@@ -41,14 +41,39 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart, onContinue, onStartM
         if (!audio) return;
 
         const tryPlay = () => {
-            audio.volume = AudioManager.instance.getEffectiveBGSVolume(0.5);
-            audio.play().catch(() => {/* autoplay blocked, ignore */ });
+            const targetVolume = AudioManager.instance.getEffectiveBGSVolume(0.5);
+            if (audio.volume === targetVolume && !audio.paused) {
+                // Already playing and at correct volume
+                document.removeEventListener('mousedown', tryPlay);
+                document.removeEventListener('keydown', tryPlay);
+                return;
+            }
+
+            audio.volume = 0;
+            audio.play().then(() => {
+                let currentVol = 0;
+                const steps = 20;
+                const step = targetVolume / steps;
+
+                const fadeIn = setInterval(() => {
+                    currentVol += step;
+                    if (currentVol >= targetVolume || audio.paused) {
+                        currentVol = targetVolume;
+                        clearInterval(fadeIn);
+                    }
+                    audio.volume = Math.max(0, Math.min(1, currentVol));
+                }, 50);
+            }).catch(() => {/* autoplay blocked, ignore */ });
+
             document.removeEventListener('mousedown', tryPlay);
             document.removeEventListener('keydown', tryPlay);
         };
 
         document.addEventListener('mousedown', tryPlay);
         document.addEventListener('keydown', tryPlay);
+
+        // Try to play immediately (will succeed if we returned from the game due to previous interaction)
+        tryPlay();
 
         return () => {
             document.removeEventListener('mousedown', tryPlay);

@@ -28,6 +28,7 @@ import { ClassAbilityManager } from './ClassAbilityManager';
 import { SceneEventManager } from './SceneEventManager';
 import { NetworkManager } from '../network/NetworkManager';
 import { BOSS_CONFIGS } from '../config/bosses';
+import { FlowFieldManager } from './pathing/FlowFieldManager';
 
 
 export class MainScene extends Phaser.Scene implements IMainScene {
@@ -53,6 +54,7 @@ export class MainScene extends Phaser.Scene implements IMainScene {
     public enemyProjectiles!: Phaser.Physics.Arcade.Group;
     public spatialGrid!: SpatialHashGrid;
     public staticObstacleGrid!: SpatialHashGrid;
+    public flowFieldManager!: FlowFieldManager;
     public player!: Phaser.Physics.Arcade.Sprite;
     public poolManager!: ObjectPoolManager;
 
@@ -80,6 +82,7 @@ export class MainScene extends Phaser.Scene implements IMainScene {
     public ambient!: AmbientParticleManager;
 
     public deathSparkEmitter!: Phaser.GameObjects.Particles.ParticleEmitter;
+    public swordSparkEmitter!: Phaser.GameObjects.Particles.ParticleEmitter;
 
     // Multiplayer properties (delegated to networkPacketHandler)
     public networkManager?: NetworkManager;
@@ -135,6 +138,7 @@ export class MainScene extends Phaser.Scene implements IMainScene {
             // Initialize Grids
             this.spatialGrid = new SpatialHashGrid(150);
             this.staticObstacleGrid = new SpatialHashGrid(150);
+            this.flowFieldManager = new FlowFieldManager(this, this.mapWidth, this.mapHeight);
 
             // Initialize Core Physics Groups
             console.log('[MainScene] Initializing core physics groups...');
@@ -208,6 +212,17 @@ export class MainScene extends Phaser.Scene implements IMainScene {
                 emitting: false
             });
 
+            this.swordSparkEmitter = this.add.particles(0, 0, 'spark', {
+                speed: { min: 150, max: 350 }, // Explosive burst
+                scale: { start: 2.0, end: 0.5 }, // Much larger sparks
+                alpha: { start: 1, end: 0 },
+                tint: 0xffcc44,
+                blendMode: 'ADD',
+                lifespan: { min: 150, max: 300 }, // Slightly longer
+                emitting: false
+            });
+            this.swordSparkEmitter.setDepth(150);
+
             // Link Input Keys
             this.wasd = this.inputManager.wasd;
             this.hotkeys = this.inputManager.hotkeys;
@@ -239,6 +254,19 @@ export class MainScene extends Phaser.Scene implements IMainScene {
             this.stats.applyClassModifiers(classConfig);
             this.stats.recalculateStats();
 
+            // HP Restoration logic — MUST happen before waves.startLevel to prevent autosaving HP=0
+            const restoredHP = this.game.registry.get('_restoredHP');
+            this.registry.set('playerHP', this.stats.maxHP);
+            if (restoredHP !== undefined) {
+                this.registry.set('playerHP', Math.min(restoredHP, this.stats.maxHP));
+                this.game.registry.remove('_restoredHP');
+                console.log('[MainScene] HP Restored to:', this.registry.get('playerHP'));
+            }
+
+            if (savedRun?.playerX !== undefined) {
+                this.player.setPosition(savedRun.playerX, savedRun.playerY);
+            }
+
             // If singleplayer and fresh run (or restored run that needs starting), start the wave logic!
             if (!netConfig) {
                 console.log('[MainScene] Starting Level:', startLevelOverride);
@@ -259,16 +287,6 @@ export class MainScene extends Phaser.Scene implements IMainScene {
                 }
                 console.log('[MainScene] NetworkManager initialized as', netConfig.role);
             }
-
-            // HP Restoration logic
-            const restoredHP = this.game.registry.get('_restoredHP');
-            this.registry.set('playerHP', this.stats.maxHP);
-            if (restoredHP !== undefined) {
-                this.registry.set('playerHP', Math.min(restoredHP, this.stats.maxHP));
-                this.game.registry.remove('_restoredHP');
-            }
-            if (savedRun?.playerX !== undefined) this.player.setPosition(savedRun.playerX, savedRun.playerY);
-
 
             this.weather.enableFog();
             this.weather.startRain();
@@ -342,6 +360,7 @@ export class MainScene extends Phaser.Scene implements IMainScene {
             this.inputManager.update(_time, delta);
 
             // Update Spatial Grid
+            this.flowFieldManager.update(this.player.x, this.player.y);
             this.spatialGrid.clear();
             this.enemies.children.iterate((e: any) => {
                 if (e.active && !e.isDead) this.spatialGrid.insert({ x: e.x, y: e.y, width: e.body?.width || 40, height: e.body?.height || 40, id: e.id, ref: e });
@@ -422,6 +441,7 @@ export class MainScene extends Phaser.Scene implements IMainScene {
         this.registry.set('currentWeapon', classConfig.startingWeapons[0] || 'sword');
         this.registry.set('partyDead', false);
         this.registry.set('upgradeLevels', {});
+        this.registry.set('classAbilityCooldown', null);
 
         this.enemies.clear(true, true);
         this.bossGroup.clear(true, true);

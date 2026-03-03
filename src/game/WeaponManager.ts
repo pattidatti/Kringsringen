@@ -85,6 +85,22 @@ export class WeaponManager {
         });
 
         this.scene.time.delayedCall(Math.max(100, swordCooldown * 0.3), () => {
+            // Avant-Garde Juice: Micro-shake and directional spark burst
+            this.scene.cameras.main.shake(80, 0.005);
+            // Adjust start position to be slightly in front of the character
+            const reach = 25;
+            const pyCenter = player.y - 10; // A bit lower than helmet
+            const px = player.x + Math.cos(angle) * reach;
+            const py = pyCenter + Math.sin(angle) * reach;
+
+            const angleDeg = Phaser.Math.RadToDeg(angle);
+            // Spark amount depends on graphics quality
+            const sparkCount = Math.max(10, Math.floor(25 * (this.scene.quality?.particleMultiplier || 1.0)));
+
+            // Bulletproof Emission using native Phaser 3.60 API
+            this.scene.swordSparkEmitter.setEmitterAngle({ min: angleDeg - 35, max: angleDeg + 35 });
+            this.scene.swordSparkEmitter.emitParticleAt(px, py, sparkCount);
+
             this.scene.collisions.enableAttackHitbox(this.scene.collisions.attackHitbox.x, this.scene.collisions.attackHitbox.y, 40);
             this.scene.time.delayedCall(100, () => {
                 this.scene.collisions.disableAttackHitbox();

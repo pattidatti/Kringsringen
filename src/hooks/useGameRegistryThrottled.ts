@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import { getGameInstance, onGameReady } from './useGameRegistry';
+import Phaser from 'phaser';
+import { getGameInstance, onGameInstanceChange } from './useGameRegistry';
 
 /**
  * Throttled version of useGameRegistry.
@@ -16,36 +17,36 @@ export function useGameRegistryThrottled<T>(
     throttleMs: number = 100,
     priorityCondition?: (val: T) => boolean
 ): T {
+    // Track current active game instance
+    const [game, setGame] = useState<Phaser.Game | null>(getGameInstance);
+
     const [value, setValue] = useState<T>(() => {
-        const game = getGameInstance();
         if (game) {
             return game.registry.get(key) ?? initialValue;
         }
         return initialValue;
     });
 
-    // Force re-run of subscription effect when game instance appears
-    const [ready, setReady] = useState(!!getGameInstance());
-
     const lastRenderTimeRef = useRef<number>(0);
     const pendingValueRef = useRef<T | undefined>(undefined);
     const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-    // Wait for game instance if not available yet
+    // Listen for global game instance changes (Phaser rebooting)
     useEffect(() => {
-        return onGameReady(() => setReady(true));
+        return onGameInstanceChange((newInstance) => {
+            setGame(newInstance);
+        });
     }, []);
 
     useEffect(() => {
-        const game = getGameInstance();
-        if (!ready || !game) return;
+        if (!game) return;
 
         const registry = game.registry;
         const events = registry.events;
 
-        // Sync current value immediately if it diverged since initialization
+        // Sync current value immediately if it diverged since initialization or instance change
         const current = registry.get(key);
-        setValue(prev => (prev === current ? prev : current));
+        setValue(prev => (prev === current ? prev : (current ?? initialValue)));
 
         const updateState = (val: T) => {
             const now = Date.now();
@@ -61,7 +62,7 @@ export function useGameRegistryThrottled<T>(
             const isPriority = priorityCondition ? priorityCondition(val) : false;
 
             if (isPriority || timeSinceLastRender >= throttleMs) {
-                setValue(val);
+                setValue(val ?? initialValue);
                 lastRenderTimeRef.current = now;
                 pendingValueRef.current = undefined;
             } else {
@@ -69,7 +70,7 @@ export function useGameRegistryThrottled<T>(
                 pendingValueRef.current = val;
                 timeoutRef.current = setTimeout(() => {
                     if (pendingValueRef.current !== undefined) {
-                        setValue(pendingValueRef.current);
+                        setValue(pendingValueRef.current ?? initialValue);
                         lastRenderTimeRef.current = Date.now();
                         pendingValueRef.current = undefined;
                     }
@@ -90,7 +91,7 @@ export function useGameRegistryThrottled<T>(
             events.off('setdata', onSetData);
             if (timeoutRef.current) clearTimeout(timeoutRef.current);
         };
-    }, [key, throttleMs, priorityCondition, ready]);
+    }, [key, throttleMs, priorityCondition, game]);
 
     return value;
 }

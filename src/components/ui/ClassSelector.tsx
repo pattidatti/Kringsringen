@@ -8,7 +8,7 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { CLASS_CONFIGS } from '../../config/classes';
 import type { ClassId, ClassConfig } from '../../config/classes';
-import { FantasyButton } from './FantasyButton';
+
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -74,8 +74,8 @@ const STAT_BARS: StatBarDef[] = [
 interface ClassCardProps {
     config: ClassConfig;
     isSelected: boolean;
+    isConfirming: boolean;
     onClick: () => void;
-    onConfirm: () => void;
     index: number;
 }
 
@@ -85,7 +85,7 @@ const CLASS_EMOJI: Record<ClassId, string> = {
     wizard: '🔮',
 };
 
-const ClassCard: React.FC<ClassCardProps> = ({ config, isSelected, onClick, onConfirm, index }) => {
+const ClassCard: React.FC<ClassCardProps> = ({ config, isSelected, isConfirming, onClick, index }) => {
     const color = config.color;
     const accentColor = config.accentColor;
 
@@ -95,7 +95,14 @@ const ClassCard: React.FC<ClassCardProps> = ({ config, isSelected, onClick, onCo
                 hidden: { y: 48, opacity: 0 },
                 visible: { y: 0, opacity: 1 },
             }}
-            transition={{ duration: 0.45, ease: 'easeOut', delay: index * 0.1 }}
+            animate={
+                isConfirming
+                    ? isSelected
+                        ? { scale: 1.05, y: -10, filter: 'brightness(1.2)' }
+                        : { opacity: 0.3, scale: 0.95, filter: 'grayscale(100%)' }
+                    : { scale: 1, y: isSelected ? -6 : 0, opacity: 1 }
+            }
+            transition={{ duration: 0.45, ease: 'easeOut', delay: isConfirming ? 0 : index * 0.1 }}
             onClick={onClick}
             style={{
                 border: isSelected
@@ -107,13 +114,13 @@ const ClassCard: React.FC<ClassCardProps> = ({ config, isSelected, onClick, onCo
                 background: isSelected
                     ? `linear-gradient(160deg, ${color}18 0%, rgba(15,23,42,0.95) 60%)`
                     : 'rgba(15,23,42,0.9)',
-                transform: isSelected ? 'translateY(-6px)' : 'translateY(0)',
-                transition: 'all 0.25s ease',
-                cursor: 'pointer',
+                transition: 'border 0.25s ease, box-shadow 0.25s ease, background 0.25s ease',
+                cursor: isConfirming ? 'default' : 'pointer',
+                pointerEvents: isConfirming ? 'none' : 'auto',
             }}
             className="relative flex flex-col rounded-xl overflow-hidden w-64 select-none"
-            whileHover={{ y: -4 }}
-            whileTap={{ scale: 0.97 }}
+            whileHover={!isConfirming ? { y: -4 } : undefined}
+            whileTap={!isConfirming ? { scale: 0.97 } : undefined}
         >
             {/* Top color strip */}
             <div
@@ -175,7 +182,7 @@ const ClassCard: React.FC<ClassCardProps> = ({ config, isSelected, onClick, onCo
 
             {/* Ability tagline */}
             <div
-                className="mx-5 mb-4 rounded-lg px-3 py-2 text-center text-xs font-crimson"
+                className="mx-5 mb-6 rounded-lg px-3 py-2 text-center text-xs font-crimson"
                 style={{
                     background: `${color}18`,
                     border: `1px solid ${color}40`,
@@ -183,23 +190,6 @@ const ClassCard: React.FC<ClassCardProps> = ({ config, isSelected, onClick, onCo
                 }}
             >
                 Evne [{config.classAbilityHotkey}]: <span className="opacity-70">{config.classAbilityId.replace(/_/g, ' ')}</span>
-            </div>
-
-            {/* CTA button */}
-            <div className="px-5 pb-6">
-                <FantasyButton
-                    label={isSelected ? '✓ Valgt' : 'VELG'}
-                    variant={isSelected ? 'primary' : 'secondary'}
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        if (isSelected) {
-                            onConfirm();
-                        } else {
-                            onClick();
-                        }
-                    }}
-                    className="w-full text-sm !text-black [text-shadow:none]"
-                />
             </div>
         </motion.div>
     );
@@ -211,9 +201,18 @@ const CLASS_ORDER: ClassId[] = ['krieger', 'archer', 'wizard'];
 
 export const ClassSelector: React.FC<ClassSelectorProps> = ({ onSelect, defaultClass }) => {
     const [selectedClass, setSelectedClass] = useState<ClassId>(defaultClass ?? 'krieger');
+    const [isConfirming, setIsConfirming] = useState(false);
 
-    const handleConfirm = (id: ClassId) => {
-        onSelect(id);
+    const handleCardClick = (id: ClassId) => {
+        if (isConfirming) return;
+
+        setSelectedClass(id);
+        setIsConfirming(true);
+
+        // Stagger/delight animation before transitioning to the game
+        setTimeout(() => {
+            onSelect(id);
+        }, 700);
     };
 
     return (
@@ -263,30 +262,12 @@ export const ClassSelector: React.FC<ClassSelectorProps> = ({ onSelect, defaultC
                                 key={id}
                                 config={config}
                                 isSelected={selectedClass === id}
+                                isConfirming={isConfirming}
                                 index={index}
-                                onClick={() => setSelectedClass(id)}
-                                onConfirm={() => handleConfirm(id)}
+                                onClick={() => handleCardClick(id)}
                             />
                         );
                     })}
-                </motion.div>
-
-                {/* Confirm bar */}
-                <motion.div
-                    className="flex flex-col items-center gap-2"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 0.5, duration: 0.4 }}
-                >
-                    <FantasyButton
-                        label={`Start som ${CLASS_CONFIGS[selectedClass].displayName} →`}
-                        variant="primary"
-                        onClick={() => handleConfirm(selectedClass)}
-                        className="text-base px-8 !text-black [text-shadow:none]"
-                    />
-                    <p className="text-slate-500 text-xs font-crimson">
-                        Klassen kan ikke endres etter start
-                    </p>
                 </motion.div>
             </div>
         </div>

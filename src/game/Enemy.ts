@@ -563,20 +563,27 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         const interests = Enemy.INTEREST_BUFFER;
         const dangers = Enemy.DANGER_BUFFER;
 
-        // --- Target Selection ---
-        let nearestTarget: { x: number; y: number } | null = null;
-        if (this.enemyType === 'healer_wizard') {
-            nearestTarget = this.getNearestDamagedAlly() ?? this.getNearestAlly();
-        }
-        if (!nearestTarget) nearestTarget = this.getNearestTarget();
+        let flowVector = (this.scene as unknown as IMainScene).flowFieldManager?.getVector(this.x, this.y);
 
-        // If no target exists in the entire game, we stop or wander (here we just stop AI)
-        if (!nearestTarget) {
-            this.setVelocity(0, 0);
-            return;
-        }
+        let targetAngle = 0;
 
-        const targetAngle = Phaser.Math.Angle.Between(this.x, this.y, nearestTarget.x, nearestTarget.y);
+        if (flowVector && (flowVector.x !== 0 || flowVector.y !== 0)) {
+            // Flow Field direction
+            targetAngle = Math.atan2(flowVector.y, flowVector.x);
+        } else {
+            // Fallback to direct targeting (e.g., if flow field isn't ready or we are exactly at target cell)
+            let nearestTarget: { x: number; y: number } | null = null;
+            if (this.enemyType === 'healer_wizard') {
+                nearestTarget = this.getNearestDamagedAlly() ?? this.getNearestAlly();
+            }
+            if (!nearestTarget) nearestTarget = this.getNearestTarget();
+
+            if (!nearestTarget) {
+                this.setVelocity(0, 0);
+                return;
+            }
+            targetAngle = Phaser.Math.Angle.Between(this.x, this.y, nearestTarget.x, nearestTarget.y);
+        }
 
         // Interest
         for (let i = 0; i < numRays; i++) {
@@ -587,35 +594,9 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 
         const myRadius = Math.max(this.body!.width, this.body!.height) * 0.5;
 
-        // --- Dangers: Static Obstacles (Spatial Grid Lookup) ---
-        const staticGrid = (this.scene as any).staticObstacleGrid;
-        if (staticGrid) {
-            const searchRadius = myRadius + 60;
-            const obstacles = staticGrid.findNearby({ x: this.x, y: this.y, width: this.body!.width, height: this.body!.height }, searchRadius);
-
-            for (const obs of obstacles) {
-                const obsRadius = obs.width ? Math.max(obs.width, obs.height) * 0.5 : 20;
-                const minClearance = myRadius + obsRadius + 20;
-                const dist = Phaser.Math.Distance.Between(this.x, this.y, obs.x, obs.y);
-
-                if (dist < minClearance) {
-                    const ang = Phaser.Math.Angle.Between(this.x, this.y, obs.x, obs.y);
-                    for (let i = 0; i < numRays; i++) {
-                        const rayAngle = (i / numRays) * Math.PI * 2;
-                        const dot = Math.cos(rayAngle - ang);
-                        if (dot > 0.4) {
-                            // Scale danger by proximity and intensity of the heading
-                            const weight = Math.pow(dot, 2); // Sharper falloff for rays not directly at obstacle
-                            const proximity = 1 - (dist / minClearance);
-                            dangers[i] = Math.max(dangers[i], weight * proximity);
-                        }
-                    }
-                }
-            }
-        }
-
         // --- Separation: Dynamic Entities (Spatial Grid Lookup) ---
-        const dynamicGrid = (this.scene as any).spatialGrid;
+        // (Static Obstacles are now handled purely by the Flow Field)
+        const dynamicGrid = (this.scene as unknown as IMainScene).spatialGrid;
         if (dynamicGrid) {
             const searchRadius = myRadius + 40;
             const neighbors = dynamicGrid.findNearby({ x: this.x, y: this.y, width: this.body!.width, height: this.body!.height }, searchRadius);
@@ -652,10 +633,10 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         }
 
         // --- Stuck Detection & Recovery ---
+        // Retained for dynamic body traffic jams (e.g., swarms pinning an enemy)
         const currentSpeed = (this.body as Phaser.Physics.Arcade.Body).speed;
         const stuckThreshold = this.id.includes('boss') ? speed * 0.4 : speed * 0.2;
 
-        // If we want to move but are slow
         if (maxScore > 0.3 && currentSpeed < stuckThreshold) {
             this.stuckTimer += delta;
         } else {
@@ -664,13 +645,10 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 
         const stuckDurationLimit = this.id.includes('boss') ? 150 : 250;
         if (this.stuckTimer > stuckDurationLimit && this.recoveryTimer <= 0) {
-            // TRAP ERADICATION: Scan for the clearest path that still has some forward interest
             let bestRecoveryIdx = -1;
             let bestRecoveryScore = -100;
 
             for (let i = 0; i < numRays; i++) {
-                // Recovery score: High interest (forward-ish), LOW danger
-                // We weight danger heavily to find a way OUT of the trap.
                 const recoveryScore = interests[i] * 0.5 - (dangers[i] * 2.0);
                 if (recoveryScore > bestRecoveryScore) {
                     bestRecoveryScore = recoveryScore;
