@@ -88,7 +88,7 @@ export class MainScene extends Phaser.Scene implements IMainScene {
 
     // ── Class Ability State ──────────────────────────────────────────────────
     private classAbilityCooldownEnd: number = 0;
-    private classAbilityMaxCooldown: number = 8000;
+
     private isWhirlwinding: boolean = false;
     private explosiveShotReady: boolean = false;
     private cascadeActiveUntil: number = 0;
@@ -102,18 +102,18 @@ export class MainScene extends Phaser.Scene implements IMainScene {
     private fortificationActive: boolean = false;
     private lastKillWasMelee: boolean = false;
     private berserkerMulti: number = 1;
-    private ironWillUsedThisLevel: boolean = false;
+
 
     // ── Fase 6: Archer Combat State ──────────────────────────────────────────
-    private bowChargeStart: number = 0;
+
     private timeSlowCooldownEnd: number = 0;
     private shadowStepUntil: number = 0;
 
     // ── Fase 6: Wizard Combat State ──────────────────────────────────────────
-    private arcaneInsightCastTotal: number = 0;
-    private overfloadActiveUntil: Record<string, number> = {};
-    private nextCastFree: boolean = false;
-    private overloadHits: number = 0;
+    public _arcaneInsightCasts: number = 0;
+    public _overloadActiveUntil: Record<string, number> = {};
+    public _nextCastFree: boolean = false;
+    public _overloadHits: number = 0;
 
     // Weather
     private weather!: WeatherManager;
@@ -2044,7 +2044,6 @@ export class MainScene extends Phaser.Scene implements IMainScene {
                                 arrow.fire(player.x, player.y, angle, abilityDamage, arrowSpeed, pierceCount, explosiveLevel, singularityLevel, poisonLevel, abilityRadius);
                                 this.explosiveShotReady = false;
                                 this.registry.set('explosiveShotReady', false);
-                                this.classAbilityMaxCooldown = 12000;
                                 this.classAbilityCooldownEnd = Date.now() + 12000;
                                 this.registry.set('classAbilityCooldown', { duration: 12000, timestamp: Date.now() });
                             } else {
@@ -2470,7 +2469,6 @@ export class MainScene extends Phaser.Scene implements IMainScene {
         const cd = 8000 * Math.pow(0.8, cdLvl);
 
         this.isWhirlwinding = true;
-        this.classAbilityMaxCooldown = cd;
         this.classAbilityCooldownEnd = Date.now() + cd;
         this.registry.set('classAbilityCooldown', { duration: cd, timestamp: Date.now() });
 
@@ -2559,7 +2557,6 @@ export class MainScene extends Phaser.Scene implements IMainScene {
         const cd = 10000;
 
         this.cascadeActiveUntil = Date.now() + duration;
-        this.classAbilityMaxCooldown = duration + cd;
         this.classAbilityCooldownEnd = this.cascadeActiveUntil + cd;
         this.registry.set('classAbilityCooldown', {
             duration: duration + cd,

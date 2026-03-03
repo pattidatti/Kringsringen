@@ -266,11 +266,11 @@ export class Fireball extends Phaser.Physics.Arcade.Sprite {
             mainScene._nextCastFree = true;
         }
 
-        // Elementar Overfload: register fireball cross-element window
-        const overfloadLvl = upgLvls['elementar_overfload'] || 0;
-        if (overfloadLvl > 0) {
-            if (!mainScene._overfloadActiveUntil) mainScene._overfloadActiveUntil = {};
-            mainScene._overfloadActiveUntil['fireball'] = Date.now() + 5000;
+        // Elementar Overload: register fireball cross-element window
+        const elemOverloadLvl = upgLvls['elementar_overfload'] || 0;
+        if (elemOverloadLvl > 0) {
+            if (!mainScene._overloadActiveUntil) mainScene._overloadActiveUntil = {};
+            mainScene._overloadActiveUntil['fireball'] = Date.now() + 5000;
         }
     }
 
