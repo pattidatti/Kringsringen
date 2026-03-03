@@ -31,6 +31,25 @@ function generateUUID(): string {
     });
 }
 
+interface SF2Tile {
+    id: string;
+    x: number;
+    y: number;
+    spriteSheetId: string;
+    tileIndex: number;
+    rot: number;
+    flipX: boolean;
+    scaleX: number;
+    attributes: Record<string, any>;
+}
+
+interface SF2Layer {
+    id: string;
+    name: string;
+    tiles: SF2Tile[];
+    collider: boolean;
+}
+
 function exportLevel(levelDef: any, index: number) {
     console.log(`Exporting Level ${levelDef.level}...`);
 
@@ -53,7 +72,7 @@ function exportLevel(levelDef: any, index: number) {
         }
     });
 
-    const layers = [
+    const layers: SF2Layer[] = [
         {
             id: generateUUID(),
             name: "Ground",
@@ -91,7 +110,7 @@ function exportLevel(levelDef: any, index: number) {
                 flipX: false,
                 scaleX: 1,
                 attributes: {}
-            } as any);
+            });
         }
     }
 
@@ -107,7 +126,7 @@ function exportLevel(levelDef: any, index: number) {
             flipX: false,
             scaleX: 1,
             attributes: {}
-        } as any);
+        });
     });
 
     // 5. Objects
@@ -124,7 +143,7 @@ function exportLevel(levelDef: any, index: number) {
                 flipX: false,
                 scaleX: 1,
                 attributes: { assetId: obj.assetId, physics: obj.physics }
-            } as any);
+            });
         }
     });
 

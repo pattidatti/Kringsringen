@@ -1,3 +1,18 @@
+# Bugs fra refaktor/classe
+- [ ] Krieger: Sverd gjør ikke skade på enemies 
+- [ ] Det mørke overlayet over mappet er veldig blått, akkurat som det blå fra react? blør inn i scenen eller noe slikt. 
+- [ ] Når Krieger tar skade, oppdateres ikke HP baren hans oppe til venstre. 
+
+
+
+
+
+
+
+
+
+
+
 # Ideer
 - [x] Pil og bue, med egen hotkey
 - [x] Spells - med spelleffekts
