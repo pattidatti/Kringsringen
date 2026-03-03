@@ -360,7 +360,12 @@ export class NetworkPacketHandler {
         if (this.scene.networkManager.role === 'host') {
             this.handleHostTick(now);
         } else {
-            this.scene.networkManager.broadcast(BinaryPacker.packPlayer(this.localPackedPlayer, now));
+            // Delta-sync optimization for clients
+            const stateStr = `${this.localPackedPlayer[1]},${this.localPackedPlayer[2]},${this.localPackedPlayer[3]},${this.localPackedPlayer[4]},${this.localPackedPlayer[5]},${this.localPackedPlayer[6]}`;
+            if (this.lastSentPlayerStates.get(myId) !== stateStr) {
+                this.lastSentPlayerStates.set(myId, stateStr);
+                this.scene.networkManager.broadcast(BinaryPacker.packPlayer(this.localPackedPlayer, now));
+            }
         }
     }
 
@@ -368,6 +373,14 @@ export class NetworkPacketHandler {
         this.networkTickCount++;
         const forceFullSync = this.networkTickCount % 20 === 0;
         const playersToSync: PackedPlayer[] = [];
+        const myId = this.scene.networkManager?.peerId || 'unknown';
+
+        // Party State & Death Check
+        const partyState = [{
+            id: myId,
+            name: this.scene.registry.get('nickname') || 'Host',
+            isDead: this.scene.registry.get('playerHP') <= 0
+        }];
 
         const processPlayer = (p: PackedPlayer) => {
             const id = p[0];
@@ -378,12 +391,33 @@ export class NetworkPacketHandler {
                 this.lastSentPlayerStates.set(id, stateStr);
                 playersToSync.push(p);
             }
+
+            if (id !== myId) {
+                partyState.push({
+                    id: id,
+                    name: p[7] || 'Spiller',
+                    isDead: p[5] <= 0
+                });
+            }
         };
 
         // Local player
         processPlayer(this.localPackedPlayer);
-        // Remote players (stored in MainScene)
+        // Remote players
         (this.scene as any).remotePlayerPackets.forEach((p: PackedPlayer) => processPlayer(p));
+
+        this.scene.registry.set('partyState', partyState);
+
+        // Global Game Over (Party Wipe) logic
+        if (partyState.every(p => p.isDead) && partyState.length > 0 && !this.scene.registry.get('partyDead')) {
+            this.scene.registry.set('partyDead', true);
+            this.scene.events.emit('party_dead');
+            this.scene.networkManager?.broadcast({
+                t: PacketType.GAME_EVENT,
+                ev: { type: 'party_dead', data: {} },
+                ts: now
+            });
+        }
 
         if (playersToSync.length > 0) {
             this.scene.networkManager?.broadcast(BinaryPacker.packPlayers(playersToSync, now));

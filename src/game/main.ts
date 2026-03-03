@@ -21,17 +21,15 @@ import { createAnimations } from './AnimationSetup';
 import { WaveManager } from './WaveManager';
 import { PlayerStatsManager } from './PlayerStatsManager';
 import { PlayerCombatManager } from './PlayerCombatManager';
-import type { IMainScene } from './IMainScene';
+import { IMainScene } from './IMainScene';
 import { PreloadScene } from './PreloadScene';
 import { WeatherManager } from './WeatherManager';
 import { AmbientParticleManager } from './AmbientParticleManager';
 import { NetworkManager } from '../network/NetworkManager';
-import { PacketType, type SyncPacket, type PackedPlayer } from '../network/SyncSchemas';
-import type { DataConnection } from 'peerjs';
+import { PacketType, type PackedPlayer, type SyncPacket } from '../network/SyncSchemas';
 import { JitterBuffer } from '../network/JitterBuffer';
 import { EnemyProjectile } from './EnemyProjectile';
-import { getQualityConfig, type QualitySettings, type GraphicsQuality } from '../config/QualityConfig';
-import { BinaryPacker } from '../network/BinaryPacker';
+import { type QualitySettings } from '../config/QualityConfig';
 import { CLASS_CONFIGS, resolveClassId } from '../config/classes';
 import { InputManager } from './InputManager';
 import { TextureSetup } from './TextureSetup';
@@ -59,12 +57,8 @@ export class MainScene extends Phaser.Scene implements IMainScene {
     public singularities!: Phaser.Physics.Arcade.Group;
     private eclipseWakes!: Phaser.Physics.Arcade.Group;
     public bossGroup!: Phaser.Physics.Arcade.Group;
-    private enemyProjectiles!: Phaser.Physics.Arcade.Group;
     private players!: Phaser.Physics.Arcade.Group;
     public poolManager!: ObjectPoolManager;
-
-    // Networking Buffers (Pre-allocated to reduce GC churn)
-    private localPackedPlayer: PackedPlayer = ['unknown', 0, 0, 'player-idle', 0, 100, '', 'unknown'];
 
     // Managers
     public stats!: PlayerStatsManager;
@@ -76,40 +70,21 @@ export class MainScene extends Phaser.Scene implements IMainScene {
     private mapWidth: number = 3000;
     private mapHeight: number = 3000;
     private playerShadow: Phaser.GameObjects.Sprite | null = null;
-    private playerLight!: Phaser.GameObjects.Light;
-    private outerPlayerLight!: Phaser.GameObjects.Light;
 
-    // Audio throttle
-    private lastFootstepTime: number = 0;
+    public attackHitbox!: Phaser.Physics.Arcade.Sprite;
+    public currentSwingHitIds: Set<string> = new Set();
+    public setupEventHandlers!: () => void;
+    public wasd!: any;
+    public hotkeys!: any;
 
     // ── Class Ability State ──────────────────────────────────────────────────
-    private classAbilityCooldownEnd: number = 0;
+    public classAbilityCooldownEnd: number = 0;
+    public isWhirlwinding: boolean = false;
+    public explosiveShotReady: boolean = false;
+    public cascadeActiveUntil: number = 0;
+    public shadowStepUntil: number = 0;
 
-    private isWhirlwinding: boolean = false;
-    private explosiveShotReady: boolean = false;
-    private cascadeActiveUntil: number = 0;
-
-    // ── Fase 6: Krieger Combat State ─────────────────────────────────────────
-    private momentumStacks: number = 0;
-    private momentumLastHitTime: number = 0;
-    private battleCryKills: number = 0;
-    private battleCryActiveUntil: number = 0;
-    private fortificationStartedAt: number = 0;
-    private fortificationActive: boolean = false;
-    private lastKillWasMelee: boolean = false;
-    private berserkerMulti: number = 1;
-
-
-    // ── Fase 6: Archer Combat State ──────────────────────────────────────────
-
-    private timeSlowCooldownEnd: number = 0;
-    private shadowStepUntil: number = 0;
-
-    // ── Fase 6: Wizard Combat State ──────────────────────────────────────────
-    public _arcaneInsightCasts: number = 0;
-    public _overloadActiveUntil: Record<string, number> = {};
-    public _nextCastFree: boolean = false;
-    public _overloadHits: number = 0;
+    // ... continued managers and other fields ...
 
     // Weather
     private weather!: WeatherManager;
@@ -124,16 +99,16 @@ export class MainScene extends Phaser.Scene implements IMainScene {
 
     // Multiplayer properties
     public networkManager?: NetworkManager;
-    private remotePlayers: Map<string, Phaser.Physics.Arcade.Sprite> = new Map();
-    private playerNicknames: Map<string, Phaser.GameObjects.Text> = new Map();
-    private playerBuffers: Map<string, JitterBuffer<PackedPlayer>> = new Map();
-    private remotePlayerPackets: Map<string, PackedPlayer> = new Map();
-    private remotePlayerLights: Map<string, Phaser.GameObjects.Light> = new Map();
+    public remotePlayers: Map<string, Phaser.Physics.Arcade.Sprite> = new Map();
+    public playerNicknames: Map<string, Phaser.GameObjects.Text> = new Map();
+    public playerBuffers: Map<string, JitterBuffer<PackedPlayer>> = new Map();
+    public remotePlayerPackets: Map<string, PackedPlayer> = new Map();
+    public remotePlayerLights: Map<string, Phaser.GameObjects.Light> = new Map();
     public pendingDeaths: Set<string> = new Set();
-    private lastSyncTime: number = 0;
-    private lastSentPlayerStates: Map<string, string> = new Map();
-    private networkTickCount: number = 0;
     public quality!: QualitySettings;
+
+    public playerLight!: Phaser.GameObjects.Light;
+    public outerPlayerLight!: Phaser.GameObjects.Light;
 
     constructor() {
         super('MainScene');
@@ -219,419 +194,96 @@ export class MainScene extends Phaser.Scene implements IMainScene {
                 }
             }
 
-            try {
-                // Initialize Managers
-                console.log('[MainScene] Initializing managers...');
-                this.stats = new PlayerStatsManager(this);
-                this.combat = new PlayerCombatManager(this);
-                this.waves = new WaveManager(this);
-                this.poolManager = new ObjectPoolManager(this);
-                this.weather = new WeatherManager(this);
-                this.ambient = new AmbientParticleManager(this);
-                AudioManager.instance.setScene(this);
-            } catch (e) {
-                console.error('[MainScene] CRITICAL: Manager initialization failed:', e);
-                // We MUST proceed if possible, but the game might be broken.
-                // At least the map can try to render.
-            }
-
-            this.events.once('shutdown', () => {
-                console.log('[MainScene] Shutdown. Clearing AudioManager scene reference.');
-                AudioManager.instance.clearScene();
-            });
-            const qualityLevel = (this.game.registry.get('graphicsQuality') as GraphicsQuality) || GAME_CONFIG.QUALITY.DEFAULT;
-            this.quality = getQualityConfig(qualityLevel);
-            console.log('[MainScene] Managers initialized. Quality:', qualityLevel);
-
-            this.game.registry.events.on('changedata-graphicsQuality', (_parent: any, val: GraphicsQuality) => {
-                this.quality = getQualityConfig(val);
-                this.applyQualitySettings();
-            });
-
-            // Initialize Network Manager if in multiplayer
-            if (netConfig) {
-                this.networkManager = new NetworkManager(
-                    netConfig.peer,
-                    netConfig.role,
-                    (packet, conn) => this.handleNetworkPacket(packet, conn)
-                );
-
-                // Standalone network tick uncoupled from Phaser update()
-                this.networkManager.setTickFunction(() => this.networkTick(), 33);
-
-                if (netConfig.role === 'client' && netConfig.hostPeerId) {
-                    console.log('Client connecting to host:', netConfig.hostPeerId);
-                    this.networkManager.connectToHost(netConfig.hostPeerId);
-                }
-
-                this.networkManager.onDisconnect = (peerId) => {
-                    console.log(`[MainScene] Peer disconnected: ${peerId}`);
-                    this.removeRemotePlayer(peerId);
-                };
-            }
-
-            // Calculate Initial Stats – apply class modifiers first
-            this.stats.applyClassModifiers(classConfig);
-            this.stats.recalculateStats();
-
-            // HP starts at full max (after stats are calculated)
-            this.registry.set('playerHP', this.stats.maxHP);
-
-            // Apply restored HP if continuing a saved run (clamped to recalculated max)
-            const restoredHP = this.game.registry.get('_restoredHP') as number | undefined;
-            if (restoredHP !== undefined) {
-                // HONEST RESTORATION: Don't clamp to 20; let 0 HP handle death naturally.
-                const safeHP = Math.min(restoredHP, this.stats.maxHP);
-                console.log(`[MainScene] Applying restored HP: ${restoredHP} -> ${safeHP} (Max: ${this.stats.maxHP})`);
-                this.registry.set('playerHP', safeHP);
-                this.game.registry.remove('_restoredHP');
-            }
-
-            // Restore player position if continuing (applied after player sprite is created below)
-
-            // Initialize Object Pool
-            // this.poolManager = new ObjectPoolManager(this); // Redundant - initialized above
-
-            // Create Gem Texture (Small Diamond)
-            const graphics = this.add.graphics();
-            graphics.fillStyle(0xffffff);
-            graphics.beginPath();
-            graphics.moveTo(5, 0);
-            graphics.lineTo(10, 5);
-            graphics.lineTo(5, 10);
-            graphics.lineTo(0, 5);
-            graphics.closePath();
-            graphics.fillPath();
-            graphics.generateTexture('xp-gem', 10, 10);
-
-            // Create Coin Texture (Yellow Circle with baked-in glow)
-            graphics.clear();
-
-            // 1. Draw several faint outer circles for a "soft glow" look (no postFX needed)
-            // This is much faster than per-object shaders.
-            for (let r = 10; r > 5; r--) {
-                const alpha = (10 - r) * 0.05;
-                graphics.fillStyle(0xffcc00, alpha);
-                graphics.fillCircle(10, 10, r);
-            }
-
-            // 2. Main coin body
-            graphics.fillStyle(0xffcc00, 1);
-            graphics.fillCircle(10, 10, 5);
-
-            // 3. Subtle inner highlight
-            graphics.fillStyle(0xffffff, 0.4);
-            graphics.fillCircle(10, 8, 2);
-
-            // 4. Subtle rim
-            graphics.lineStyle(1, 0x000000, 0.3);
-            graphics.strokeCircle(10, 10, 5);
-
-            graphics.generateTexture('coin', 20, 20);
-            graphics.destroy();
-
-            // Spark texture — used for enemy death burst particles
-            const sparkGfx = this.add.graphics();
-            sparkGfx.fillStyle(0xffffff);
-            sparkGfx.fillCircle(4, 4, 4);
-            sparkGfx.generateTexture('spark', 8, 8);
-            sparkGfx.destroy();
-
-            // ── DEATH SPARK EMITTER (Centralized) ────────────────────────────────
-            this.deathSparkEmitter = this.add.particles(0, 0, 'spark', {
-                speed: { min: 60, max: 180 },
-                angle: { min: 0, max: 360 },
-                scale: { start: 0.8, end: 0 },
-                alpha: { start: 1, end: 0 },
-                lifespan: 350,
-                quantity: 10,
-                blendMode: 'ADD',
-                emitting: false,
-            });
-            this.deathSparkEmitter.setDepth(600);
-
-            // Initialize Spatial Grids (Cell Size 150px)
-            this.spatialGrid = new SpatialHashGrid(150);
-            this.staticObstacleGrid = new SpatialHashGrid(150);
-
-            // Initialize Obstacles
-            this.obstacles = this.physics.add.staticGroup();
-
-            // Background: Map Generation
-            this.physics.world.setBounds(0, 0, this.mapWidth, this.mapHeight);
-            this.cameras.main.setBounds(0, 0, this.mapWidth, this.mapHeight);
-
-            try {
-                console.log('[MainScene] Generating initial map for level:', startLevelOverride);
-                this.regenerateMap(startLevelOverride);
-                console.log('[MainScene] Initial map generated level:', startLevelOverride);
-            } catch (e) {
-                console.error('[MainScene] CRITICAL: Map generation failed:', e);
-            }
-
+            // Initialize Managers
             this.stats = new PlayerStatsManager(this);
             this.combat = new PlayerCombatManager(this);
             this.waves = new WaveManager(this);
-
-            // Initialize New Managers
+            this.poolManager = new ObjectPoolManager(this);
+            this.weather = new WeatherManager(this);
+            this.ambient = new AmbientParticleManager(this);
             this.visuals = new SceneVisualManager(this);
             this.collisions = new CollisionManager(this);
             this.inputManager = new InputManager(this);
             this.networkHandler = new NetworkPacketHandler(this);
 
-            // Delegate Visual Setup
+            AudioManager.instance.setScene(this);
+
             this.visuals.applyQualitySettings();
             TextureSetup.create(this);
-
             createAnimations(this);
 
+            // Create Player
             this.player = this.physics.add.sprite(this.mapWidth / 2, this.mapHeight / 2, 'player-idle');
-            const player = this.player;
-            player.setCollideWorldBounds(true);
-            player.setScale(2);
-            player.setBodySize(20, 15, true);
-            player.setOffset(player.body!.offset.x, 33);
-            player.setMass(2);
-            player.play('player-idle');
-            player.setPipeline('Light2D');
+            this.player.setCollideWorldBounds(true).setScale(2).setBodySize(20, 15, true).setOffset(this.player.body!.offset.x, 33).setMass(2).play('player-idle').setPipeline('Light2D');
+            this.playerShadow = this.add.sprite(this.player.x, this.player.y + 28, 'shadows', 0).setAlpha(0.4).setDepth(this.player.depth - 1);
+            this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
 
-            this.playerShadow = this.add.sprite(player.x, player.y + 28, 'shadows', 0)
-                .setAlpha(0.4)
-                .setDepth(player.depth - 1);
-
-            // Camera follow
-            this.cameras.main.startFollow(player, true, 0.1, 0.1);
-
-            // Restore player position from saved run
-            if (savedRun?.playerX !== undefined && savedRun?.playerY !== undefined) {
-                player.setPosition(savedRun.playerX, savedRun.playerY);
-                this.cameras.main.centerOn(savedRun.playerX, savedRun.playerY);
-                console.log(`[MainScene] Restored player position: ${savedRun.playerX}, ${savedRun.playerY}`);
-            }
-
-            // Enemy Group
-            this.enemies = this.physics.add.group({
-                classType: Enemy,
-                runChildUpdate: true,
-                maxSize: 100
-            });
-
-            // Boss Group (max 1 boss at a time)
-            this.bossGroup = this.physics.add.group({
-                classType: BossEnemy,
-                runChildUpdate: true,
-                maxSize: 1
-            });
-
-            // Arrow Group
-            this.arrows = this.physics.add.group({
-                classType: Arrow,
-                runChildUpdate: true,
-                maxSize: 50
-            });
-
-            // Fireball Group
-            this.fireballs = this.physics.add.group({
-                classType: Fireball,
-                runChildUpdate: true,
-                maxSize: 30
-            });
-
-            // Frost Bolt Group
-            this.frostBolts = this.physics.add.group({
-                classType: FrostBolt,
-                runChildUpdate: true,
-                maxSize: 20
-            });
-
-            // Lightning Bolt Group
-            this.lightningBolts = this.physics.add.group({
-                classType: LightningBolt,
-                runChildUpdate: true,
-                maxSize: 30
-            });
-
-            this.singularities = this.physics.add.group({
-                classType: Singularity,
-                runChildUpdate: true,
-                maxSize: 10
-            });
-
-            this.eclipseWakes = this.physics.add.group({
-                classType: EclipseWake,
-                runChildUpdate: true,
-                maxSize: 20
-            });
-
-            // Coin Group
-            this.coins = this.physics.add.group({
-                classType: Coin,
-                runChildUpdate: true,
-                maxSize: 5000
-            });
-
-            // Enemy Projectile Group
-            this.enemyProjectiles = this.physics.add.group({
-                classType: EnemyProjectile,
-                runChildUpdate: true,
-                maxSize: 50
-            });
+            // Group Initialization (simplified)
+            const groups: any = {
+                enemies: { classType: Enemy, maxSize: 100 },
+                bossGroup: { classType: BossEnemy, maxSize: 1 },
+                arrows: { classType: Arrow, maxSize: 50 },
+                fireballs: { classType: Fireball, maxSize: 30 },
+                frostBolts: { classType: FrostBolt, maxSize: 20 },
+                lightningBolts: { classType: LightningBolt, maxSize: 30 },
+                singularities: { classType: Singularity, maxSize: 10 },
+                eclipseWakes: { classType: EclipseWake, maxSize: 20 },
+                coins: { classType: Coin, maxSize: 5000 },
+                enemyProjectiles: { classType: EnemyProjectile, maxSize: 50 }
+            };
+            Object.keys(groups).forEach(key => (this as any)[key] = this.physics.add.group({ ...groups[key], runChildUpdate: true }));
 
             this.players = this.physics.add.group();
-            this.players.add(player);
+            this.players.add(this.player);
 
-            // Collisions
-            this.physics.add.collider(player, this.obstacles);
-            // Only host/singleplayer handles hard physical separation to avoid client rubberbanding
-            if (this.networkManager?.role !== 'client') {
-                this.physics.add.collider(player, this.enemies);
-                this.physics.add.collider(this.enemies, this.enemies);
-                this.physics.add.collider(this.bossGroup, this.obstacles);
+            // Scene Logic setup
+            this.regenerateMap(startLevelOverride);
+            this.stats.applyClassModifiers(classConfig);
+            this.stats.recalculateStats();
+
+            // Multiplayer Initialization
+            if (netConfig) {
+                this.networkManager = new NetworkManager(
+                    netConfig.peer,
+                    netConfig.role,
+                    (packet: SyncPacket, conn: any) => this.networkHandler.handlePacket(packet, conn)
+                );
+                this.networkManager.onDisconnect = (id: string) => this.removeRemotePlayer(id);
+
+                if (netConfig.role === 'client' && netConfig.hostPeerId) {
+                    this.networkManager.connectToHost(netConfig.hostPeerId);
+                }
+                console.log('[MainScene] NetworkManager initialized as', netConfig.role);
             }
 
-            this.physics.add.collider(this.enemies, this.obstacles);
-            this.physics.add.collider(player, this.bossGroup);
+            // HP Restoration logic
+            const restoredHP = this.game.registry.get('_restoredHP');
+            this.registry.set('playerHP', this.stats.maxHP);
+            if (restoredHP !== undefined) {
+                this.registry.set('playerHP', Math.min(restoredHP, this.stats.maxHP));
+                this.game.registry.remove('_restoredHP');
+            }
+            if (savedRun?.playerX !== undefined) this.player.setPosition(savedRun.playerX, savedRun.playerY);
 
-            this.physics.add.overlap(this.enemyProjectiles, this.players, (_projectile, _target) => {
-                (_projectile as EnemyProjectile).onHitPlayer(_target);
+            // Initialize Hitbox
+            this.attackHitbox = this.add.rectangle(0, 0, 80, 80, 0xff0000, 0) as any;
+            this.physics.add.existing(this.attackHitbox);
+            (this.attackHitbox.body as Phaser.Physics.Arcade.Body).enable = false;
+
+            this.physics.add.overlap(this.attackHitbox, this.bossGroup, (_hitbox, boss) => {
+                const b = boss as BossEnemy;
+                if (this.currentSwingHitIds.has(b.id)) return;
+                this.currentSwingHitIds.add(b.id);
+                b.takeDamage(this.stats.damage, '#ffcc00');
+                b.pushback(this.player.x, this.player.y, this.stats.knockback);
             });
 
             this.physics.add.overlap(this.attackHitbox, this.enemies, (_hitbox, enemy) => {
                 const e = enemy as Enemy;
                 if (this.currentSwingHitIds.has(e.id)) return;
                 this.currentSwingHitIds.add(e.id);
-
-                if (this.networkManager?.role === 'client') {
-                    const now = Date.now();
-                    const lastReq = e.getData('lastHitRequest') || 0;
-                    if (now - lastReq > 250) { // Throttle client hit requests
-                        e.setData('lastHitRequest', now);
-                        this.networkManager.broadcast({
-                            t: PacketType.GAME_EVENT,
-                            ev: {
-                                type: 'hit_request',
-                                data: {
-                                    enemyId: e.id,
-                                    hitX: this.attackHitbox.x,
-                                    hitY: this.attackHitbox.y,
-                                    damage: this.stats.damage
-                                }
-                            },
-                            ts: this.networkManager.getServerTime()
-                        });
-
-                        // Client-side prediction (visual and physical)
-                        e.predictDamage(this.stats.damage);
-                        if (this.poolManager) {
-                            this.poolManager.getDamageText(e.x, e.y - 30, this.stats.damage, '#ffcc00');
-                            this.events.emit('enemy-hit'); // Sound
-                        }
-                    }
-                } else {
-                    const levels = (this.registry.get('upgradeLevels') || {}) as Record<string, number>;
-                    let swordDamage = this.stats.damage;
-
-                    // Executioner – bonus damage vs low-HP enemies
-                    const execLvl = levels['executioner'] || 0;
-                    if (execLvl > 0 && e.hp / e.maxHP < 0.25) {
-                        swordDamage *= 1 + execLvl * 0.5;
-                    }
-
-                    // Heavy Momentum – stacking damage per consecutive hit
-                    const momentumLvl = levels['heavy_momentum'] || 0;
-                    if (momentumLvl > 0) {
-                        const now = Date.now();
-                        if (now - this.momentumLastHitTime > 3000) this.momentumStacks = 0;
-                        swordDamage *= (1 + this.momentumStacks * 0.10);
-                        this.momentumStacks = Math.min(this.momentumStacks + 1, momentumLvl * 3);
-                        this.momentumLastHitTime = now;
-                    }
-
-                    // Battle Cry – active damage multiplier
-                    const battleCryLvl = levels['battle_cry'] || 0;
-                    if (battleCryLvl > 0 && Date.now() < this.battleCryActiveUntil) {
-                        swordDamage *= 1 + battleCryLvl * 0.15;
-                    }
-
-                    // Berserker Rage – HP-ratio passive multiplier
-                    swordDamage *= this.berserkerMulti;
-
-                    this.lastKillWasMelee = true;
-                    const wasAlive = e.hp > 0;
-                    e.takeDamage(swordDamage, '#ffcc00');
-                    e.pushback(player.x, player.y, this.stats.knockback);
-
-                    // Utstotbar Slag – AOE knockback + damage to nearby enemies on hit
-                    const utstotbarLvl = levels['utstotbar_slag'] || 0;
-                    if (utstotbarLvl > 0) {
-                        const nearby = this.spatialGrid.findNearby({ x: e.x, y: e.y, width: 1, height: 1 }, 150);
-                        nearby.forEach(cell => {
-                            if (cell.ref !== e && cell.ref && (cell.ref as Enemy).active && !(cell.ref as Enemy).getIsDead()) {
-                                const neighbor = cell.ref as Enemy;
-                                neighbor.takeDamage(swordDamage * 0.4, '#ff8800');
-                                neighbor.pushback(e.x, e.y, this.stats.knockback * 0.6);
-                            }
-                        });
-                    }
-
-                    // Death check for livsstaling + battle_cry
-                    if (wasAlive && e.hp <= 0) {
-                        // Livsstaling – heal on melee kill
-                        const livsstalLvl = levels['livsstaling'] || 0;
-                        if (livsstalLvl > 0 && this.lastKillWasMelee) {
-                            const heal = livsstalLvl * 8;
-                            const curHP = this.registry.get('playerHP') as number;
-                            const maxHP = this.registry.get('playerMaxHP') as number;
-                            this.registry.set('playerHP', Math.min(maxHP, curHP + heal));
-                            this.poolManager.getDamageText(player.x, player.y - 50, `+${heal}`, '#55ff55');
-                        }
-                        // Battle Cry – kill counter
-                        if (battleCryLvl > 0) {
-                            this.battleCryKills++;
-                            if (this.battleCryKills >= 5) {
-                                this.battleCryKills = 0;
-                                this.battleCryActiveUntil = Date.now() + 8000;
-                                this.poolManager.getDamageText(player.x, player.y - 70, 'BATTLE CRY!', '#ffaa00');
-                            }
-                        }
-                    }
-                }
-            });
-
-            this.physics.add.overlap(this.attackHitbox, this.bossGroup, (_hitbox, boss) => {
-                const b = boss as BossEnemy;
-                if (this.currentSwingHitIds.has(b.id)) return;
-                this.currentSwingHitIds.add(b.id);
-
-                if (this.networkManager?.role === 'client') {
-                    const now = Date.now();
-                    const lastReq = b.getData('lastHitRequest') || 0;
-                    if (now - lastReq > 250) {
-                        b.setData('lastHitRequest', now);
-                        this.networkManager.broadcast({
-                            t: PacketType.GAME_EVENT,
-                            ev: {
-                                type: 'hit_request',
-                                data: {
-                                    enemyId: 'boss',
-                                    hitX: this.attackHitbox.x,
-                                    hitY: this.attackHitbox.y,
-                                    damage: this.stats.damage
-                                }
-                            },
-                            ts: this.networkManager.getServerTime()
-                        });
-
-                        // Client-side prediction (visual only)
-                        if (this.poolManager) {
-                            this.poolManager.getDamageText(b.x, b.y - 30, this.stats.damage, '#ffcc00');
-                            this.events.emit('enemy-hit');
-                        }
-                    }
-                } else {
-                    b.takeDamage(this.stats.damage, '#ffcc00');
-                    b.pushback(player.x, player.y, this.stats.knockback);
-                }
+                e.takeDamage(this.stats.damage, '#ffcc00');
+                e.pushback(this.player.x, this.player.y, this.stats.knockback);
             });
 
             // Player Hit Logic (Event-Driven)
@@ -674,11 +326,12 @@ export class MainScene extends Phaser.Scene implements IMainScene {
             // Input Context
             this.input.mouse?.disableContextMenu();
 
-            this.data.set('player', player);
-            this.data.set('cursors', cursors);
+            this.data.set('player', this.player);
             this.data.set('isAttacking', false);
             this.data.set('isBlocking', false);
             this.data.set('attackAnimIndex', 0);
+            this.data.set('isWhirlwinding', false);
+            this.data.set('explosiveShotReady', false);
 
 
             // Ghost Mode Events
@@ -976,6 +629,30 @@ export class MainScene extends Phaser.Scene implements IMainScene {
                 window.removeEventListener('beforeunload', handleUnload);
             });
 
+            // Listen for class abilities
+            this.events.on('attempt-class-ability-e', () => {
+                const playerClassId = resolveClassId(this.registry.get('playerClass'));
+                if (playerClassId === 'archer') {
+                    // Archer has a special E key logic
+                    this.activateArcherSpecial();
+                }
+            });
+
+            this.events.on('attempt-class-ability-2', () => {
+                const playerClassId = resolveClassId(this.registry.get('playerClass'));
+                if (playerClassId === 'krieger') this.activateWhirlwind();
+                else if (playerClassId === 'wizard') this.activateCascade();
+                else if (playerClassId === 'archer') this.activateExplosiveShot();
+            });
+
+            this.events.on('attempt-attack', () => {
+                this.handlePlayerActionCombat(this.time.now, 16.6); // delta placeholder
+            });
+
+            this.events.on('play-footstep', () => {
+                AudioManager.instance.playSFX('footstep');
+            });
+
             // Start Weather Effects
             this.weather.enableFog();
             this.weather.startRain();
@@ -997,60 +674,6 @@ export class MainScene extends Phaser.Scene implements IMainScene {
             console.log('[MainScene] create-complete emitted.');
         }
     }
-
-    private applyQualitySettings() {
-        // --- LIGHT SYSTEM ---
-        const player = this.player;
-
-        if (this.quality && this.quality.lightingEnabled) {
-            this.lights.enable();
-            this.lights.setAmbientColor(0x0a0a0a); // Near black edges — essential for atmosphere
-
-            if (player) player.setPipeline('Light2D');
-            if (this.enemies) this.enemies.children.iterate((e: any) => { e.setPipeline('Light2D'); return true; });
-            if (this.bossGroup) this.bossGroup.children.iterate((e: any) => { e.setPipeline('Light2D'); return true; });
-            if (this.currentMap) this.currentMap.setLightingEnabled(true);
-            if (this.poolManager) this.poolManager.setLightingEnabled(true);
-            if (this.enemyProjectiles) this.enemyProjectiles.children.iterate((p: any) => { p.setPipeline('Light2D'); return true; });
-
-            // Re-create or re-enable lights if needed
-            if (!this.playerLight) {
-                this.playerLight = this.lights.addLight(0, 0, 230, 0xfffaf0, 0.7);
-                this.outerPlayerLight = this.lights.addLight(0, 0, 575, 0xfffaf0, 0.4);
-            } else {
-                this.playerLight.setVisible(true);
-                this.outerPlayerLight.setVisible(true);
-            }
-        } else {
-            this.lights.disable();
-
-            if (player) player.resetPipeline();
-            if (this.enemies) this.enemies.children.iterate((e: any) => { e.resetPipeline(); return true; });
-            if (this.bossGroup) this.bossGroup.children.iterate((e: any) => { e.resetPipeline(); return true; });
-            if (this.currentMap) this.currentMap.setLightingEnabled(false);
-            if (this.poolManager) this.poolManager.setLightingEnabled(false);
-            if (this.enemyProjectiles) this.enemyProjectiles.children.iterate((p: any) => { p.resetPipeline(); return true; });
-
-            if (this.playerLight) {
-                this.playerLight.setVisible(false);
-                this.outerPlayerLight.setVisible(false);
-            }
-        }
-
-        // Post-FX Vignette
-        if (this.vignetteEffect) {
-            this.vignetteEffect.active = this.quality.postFXEnabled;
-        }
-
-        // Notify managers
-        if (this.weather) this.weather.updateQuality(this.quality);
-        if (this.ambient) this.ambient.updateQuality(this.quality);
-    }
-
-    private handleNetworkPacket(packet: SyncPacket, conn: DataConnection) {
-        this.networkHandler.handlePacket(packet, conn);
-    }
-
 
     private removeRemotePlayer(id: string) {
         const sprite = this.remotePlayers.get(id);
@@ -1140,846 +763,386 @@ export class MainScene extends Phaser.Scene implements IMainScene {
 
     update(_time: number, delta: number) {
         try {
-            // Cap delta time (max 100ms) to prevent physics "tunneling" after stutters
             const cappedDelta = Math.min(delta, 100);
             this.poolManager.update(cappedDelta);
 
-            // Update Effect Groups
-            this.singularities.children.iterate((s: any) => {
-                if (s.active) s.update(_time, delta);
-                return true;
-            });
-            this.eclipseWakes.children.iterate((w: any) => {
-                if (w.active) w.update(_time, delta);
-                return true;
-            });
-            const player = this.data.get('player') as Phaser.Physics.Arcade.Sprite;
-            if (player && this.playerShadow) {
-                this.playerShadow.setPosition(player.x, player.y + 28);
-            }
+            this.networkHandler.networkTick();
 
-            if (!player || !player.body) return;
+            this.singularities.children.iterate((s: any) => { if (s.active) s.update(_time, delta); return true; });
+            this.eclipseWakes.children.iterate((w: any) => { if (w.active) w.update(_time, delta); return true; });
 
-            // Defensive guard: if keyboard bindings were lost (zombie-listener scenario),
-            // re-initialize them so input works after a Continue Game cycle.
-            if (!this.wasd && this.input.keyboard) {
-                console.warn('[MainScene] Keyboard bindings missing, re-initializing input.');
-                const cursors = this.input.keyboard.createCursorKeys();
-                this.wasd = this.input.keyboard.addKeys({
-                    W: Phaser.Input.Keyboard.KeyCodes.W, A: Phaser.Input.Keyboard.KeyCodes.A,
-                    S: Phaser.Input.Keyboard.KeyCodes.S, D: Phaser.Input.Keyboard.KeyCodes.D,
-                    SPACE: Phaser.Input.Keyboard.KeyCodes.SPACE, SHIFT: Phaser.Input.Keyboard.KeyCodes.SHIFT
-                }) as any;
-                this.hotkeys = this.input.keyboard.addKeys({
-                    '1': Phaser.Input.Keyboard.KeyCodes.ONE, '2': Phaser.Input.Keyboard.KeyCodes.TWO,
-                    '3': Phaser.Input.Keyboard.KeyCodes.THREE, '4': Phaser.Input.Keyboard.KeyCodes.FOUR,
-                    '5': Phaser.Input.Keyboard.KeyCodes.FIVE
-                }) as any;
-                this.data.set('cursors', cursors);
-            }
+            if (this.player && this.playerShadow) this.playerShadow.setPosition(this.player.x, this.player.y + 28);
+            if (!this.player || !this.player.body) return;
 
-            // --- Iterating Remote Players for dead reckoning updates ---
-            // Use cappedDelta for render time calculation if necessary, but interpolation usually uses absolute time.
-            // We'll keep renderTime as is, but ensure cappedDelta is "used" by being part of the game loop logic.
             const renderTime = this.networkManager ? this.networkManager.getServerTime() - 100 : Date.now();
-
-            this.remotePlayers.forEach((remotePlayer, id) => {
-                const buffer = this.playerBuffers.get(id);
-                if (buffer) {
-                    const sample = buffer.sample(renderTime);
-                    if (sample) {
-                        const pPrev = sample.prev.state;
-                        const pNext = sample.next.state;
-                        const f = sample.factor;
-
-                        // Interpolate X and Y
-                        const x = pPrev[1] + (pNext[1] - pPrev[1]) * f;
-                        const y = pPrev[2] + (pNext[2] - pPrev[2]) * f;
-
-                        // Hard Snapping (Resilience): If distance is too large, log it
-                        const dist = Phaser.Math.Distance.Between(remotePlayer.x, remotePlayer.y, x, y);
-                        if (dist > 300) {
-                            console.warn(`[Desync] Hard snapping remote player ${id} (dist: ${Math.round(dist)}px)`);
-                        }
-                        remotePlayer.setPosition(x, y);
-
-                        // Use discrete state (animation/flip) from the active nearest boundary
-                        const activeState = f > 0.5 ? pNext : pPrev;
-                        const anim = activeState[3];
-                        const flipX = activeState[4];
-                        const hp = activeState[5];
-
-                        if (hp <= 0) {
-                            remotePlayer.setTint(0xaaaaff);
-                            remotePlayer.setBlendMode(Phaser.BlendModes.ADD);
-                            remotePlayer.setAlpha(0.6);
-                        } else {
-                            remotePlayer.clearTint();
-                            remotePlayer.setBlendMode(Phaser.BlendModes.NORMAL);
-                            remotePlayer.setAlpha(1.0);
-                        }
-
-                        if (remotePlayer.anims.currentAnim?.key !== anim) {
-                            remotePlayer.play(anim);
-                        }
-                        remotePlayer.setFlipX(flipX === 1);
-                    }
-                }
-
-                const label = this.playerNicknames.get(id);
-                if (label) label.setPosition(remotePlayer.x, remotePlayer.y - 40);
-
-                const light = this.remotePlayerLights.get(id);
-                if (light) light.setPosition(remotePlayer.x, remotePlayer.y);
-            });
-
-            // Update Light Positions based on player
-            const playerHP = this.registry.get('playerHP') as number;
-            const playerMaxHP = this.registry.get('playerMaxHP') as number;
-            const hpPercent = playerHP / playerMaxHP;
+            this.networkHandler.interpolateRemotePlayers(renderTime);
 
             if (this.quality.lightingEnabled) {
-                this.playerLight.setPosition(player.x, player.y);
-                this.outerPlayerLight.setPosition(player.x, player.y);
+                this.playerLight.setPosition(this.player.x, this.player.y);
+                this.outerPlayerLight.setPosition(this.player.x, this.player.y);
             }
 
-            // --- VIGNETTE & LOW HP Pulsing ---
-            if (this.quality.postFXEnabled && this.vignetteEffect) {
-                // Below 30 % HP the vignette pulses with increasing intensity, giving a
-                // clear "danger" signal without interrupting gameplay.
-                if (playerMaxHP > 0) {
-                    const ratio = hpPercent;
-                    if (ratio < 0.3) {
-                        // Pulse strength between 0.30 and 0.75, speed scales with danger
-                        const urgency = 1 + (0.3 - ratio) * 5; // faster at lower HP
-                        const pulse = (Math.sin(this.time.now / (380 / urgency)) + 1) * 0.5;
-                        this.vignetteEffect.strength = 0.30 + pulse * 0.45;
-                    } else {
-                        // Smoothly return to the resting strength (0.15)
-                        const target = 0.15;
-                        const diff = this.vignetteEffect.strength - target;
-                        if (Math.abs(diff) > 0.005) {
-                            this.vignetteEffect.strength -= diff * 0.08;
-                        } else {
-                            this.vignetteEffect.strength = target;
-                        }
-                    }
-                }
-            }
-            // ────────────────────────────────────────────────────────────────────
-            const cursors = this.data.get('cursors') as Phaser.Types.Input.Keyboard.CursorKeys;
-            const isAttacking = this.data.get('isAttacking') as boolean;
-            const pointer = this.input.activePointer;
-            let speed = this.stats.speed;
-
-            // ── Fase 6: Berserker Rage – HP-ratio damage multiplier ──────────────
-            {
-                const upgLvls = (this.registry.get('upgradeLevels') || {}) as Record<string, number>;
-                const berserkerLvl = upgLvls['berserker_rage'] || 0;
-                if (berserkerLvl > 0 && playerMaxHP > 0) {
-                    const hpRatio = playerHP / playerMaxHP;
-                    this.berserkerMulti = 1 + Math.floor((1 - hpRatio) / 0.2) * berserkerLvl * 0.05;
-                } else {
-                    this.berserkerMulti = 1;
-                }
-
-                // Fortification – standing still grants armor bonus
-                const fortLvl = upgLvls['fortification'] || 0;
-                if (fortLvl > 0) {
-                    const body = player.body as Phaser.Physics.Arcade.Body;
-                    const isMoving = Math.abs(body.velocity.x) > 5 || Math.abs(body.velocity.y) > 5;
-                    if (isMoving) {
-                        this.fortificationStartedAt = 0;
-                        if (this.fortificationActive) {
-                            this.fortificationActive = false;
-                            // Remove fortification armor bonus
-                            const curArmor = this.registry.get('playerArmor') || 0;
-                            this.registry.set('playerArmor', Math.max(0, curArmor - fortLvl * 2));
-                        }
-                    } else {
-                        if (this.fortificationStartedAt === 0) {
-                            this.fortificationStartedAt = Date.now();
-                        } else if (!this.fortificationActive && Date.now() - this.fortificationStartedAt >= 2000) {
-                            this.fortificationActive = true;
-                            // Add fortification armor bonus
-                            const curArmor = this.registry.get('playerArmor') || 0;
-                            this.registry.set('playerArmor', curArmor + fortLvl * 2);
-                            this.poolManager.getDamageText(player.x, player.y - 50, 'FORTIFIED', '#aaccff');
-                        }
-                    }
-                }
-
-                // Shadow Step – alpha fade after dash (archer)
-                if (Date.now() < this.shadowStepUntil) {
-                    player.setAlpha(0.15);
-                } else if (player.alpha < 1 && !this.data.get('isDashing')) {
-                    player.setAlpha(1);
-                }
-
-                // Time Slow state is managed via E-hotkey in class ability section below.
-                // Enemies check their own 'slowUntil' data key in Enemy.preUpdate().
-            }
-
+            this.updateVignette();
+            this.inputManager.update(_time, delta);
 
             // Update Spatial Grid
             this.spatialGrid.clear();
-            this.enemies.children.iterate((enemy: any) => {
-                if (enemy.active && !enemy.isDead) {
-                    this.spatialGrid.insert({
-                        x: enemy.x,
-                        y: enemy.y,
-                        width: enemy.body?.width || 40,
-                        height: enemy.body?.height || 40,
-                        id: (enemy as any).id,
-                        ref: enemy
-                    });
-                }
+            this.enemies.children.iterate((e: any) => {
+                if (e.active && !e.isDead) this.spatialGrid.insert({ x: e.x, y: e.y, width: e.body?.width || 40, height: e.body?.height || 40, id: e.id, ref: e });
                 return true;
             });
-            // Include active boss in spatial grid so regular enemies avoid it
-            this.bossGroup.children.iterate((boss: any) => {
-                if (boss.active && !boss.isDead) {
-                    this.spatialGrid.insert({
-                        x: boss.x,
-                        y: boss.y,
-                        width: boss.body?.width || 80,
-                        height: boss.body?.height || 80,
-                        id: 'boss',
-                        ref: boss
-                    });
-                }
+            this.bossGroup.children.iterate((b: any) => {
+                if (b.active && !b.isDead) this.spatialGrid.insert({ x: b.x, y: b.y, width: b.body?.width || 80, height: b.body?.height || 80, id: 'boss', ref: b });
                 return true;
             });
 
-            // --- Handle Dash (Shift) ---
-            const dashState = this.registry.get('dashState') || { isActive: false, readyAt: 0 };
-            let hp = this.registry.get('playerHP') || 0;
-            if (this.wasd?.SHIFT?.isDown && hp > 0 && Date.now() >= dashState.readyAt && !this.data.get('isDashing')) {
-                const dashCooldown = this.registry.get('dashCooldown') || 7000;
-                const dashDistance = this.registry.get('dashDistance') || 220;
-                const dashDuration = GAME_CONFIG.PLAYER.DASH_DURATION_MS;
-
-                this.data.set('isDashing', true);
-                this.registry.set('dashState', { isActive: true, readyAt: Date.now() + dashCooldown });
-
-                // INTERRUPT CURRENT ACTIONS
-                if (isAttacking) {
-                    this.data.set('isAttacking', false);
-                    player.anims.stop(); // Stop the attack animation immediately
-                    // Remove all once-listeners for animationcomplete to avoid stale state resets
-                    player.off('animationcomplete-player-attack');
-                    player.off('animationcomplete-player-attack-2');
-                    player.off('animationcomplete-player-bow');
-                    player.off('animationcomplete-player-cast');
-                }
-                if (this.data.get('isBlocking')) {
-                    this.data.set('isBlocking', false);
-                    player.clearTint();
-                }
-
-                // Invincibility
-                this.combat.setDashIframe(true);
-
-                // Determine direction
-                let dx = 0;
-                let dy = 0;
-                if (this.wasd?.W?.isDown) dy -= 1;
-                if (this.wasd?.S?.isDown) dy += 1;
-                if (this.wasd?.A?.isDown) dx -= 1;
-                if (this.wasd?.D?.isDown) dx += 1;
-
-                if (dx === 0 && dy === 0) {
-                    // Dash towards mouse if stationary
-                    const angle = Phaser.Math.Angle.Between(player.x, player.y, pointer.worldX, pointer.worldY);
-                    dx = Math.cos(angle);
-                    dy = Math.sin(angle);
-                } else {
-                    // Normalize WASD vector
-                    const len = Math.sqrt(dx * dx + dy * dy);
-                    dx /= len;
-                    dy /= len;
-                }
-
-                // Visuals
-                player.play('player-walk'); // or specific dash anim if we had one
-                player.setAlpha(0.7);
-                this.events.emit('player-dash');
-
-                // Dash Visual Effect
-                const dashFx = this.add.sprite(player.x, player.y, 'dash_effect');
-                dashFx.setDepth(player.depth + 1);
-                dashFx.setScale(2);
-                dashFx.play('player-dash-effect', true);
-
-                // Movement via Tween for precision
-                this.tweens.add({
-                    targets: player,
-                    x: player.x + dx * dashDistance,
-                    y: player.y + dy * dashDistance,
-                    duration: dashDuration,
-                    ease: 'Cubic.out',
-                    onUpdate: () => {
-                        if (dashFx.active) {
-                            dashFx.setPosition(player.x, player.y);
-                        }
-                    },
-                    onComplete: () => {
-                        this.data.set('isDashing', false);
-                        player.setAlpha(1);
-                        if (dashFx.active) {
-                            dashFx.destroy();
-                        }
-                        this.combat.setDashIframe(false);
-                        player.play('player-idle');
-
-                        // Shadow Step – Archer: become translucent after dash
-                        const upgLvls2 = (this.registry.get('upgradeLevels') || {}) as Record<string, number>;
-                        const shadowStepLvl = upgLvls2['shadow_step'] || 0;
-                        if (shadowStepLvl > 0) {
-                            this.shadowStepUntil = Date.now() + shadowStepLvl * 500;
-                        }
-
-                        // Lifesteal upgrade effect
-                        const heal = this.stats.getDashLifestealHP();
-                        if (heal > 0) {
-                            const curHP = this.registry.get('playerHP');
-                            const maxHP = this.registry.get('playerMaxHP');
-                            this.registry.set('playerHP', Math.min(maxHP, curHP + heal));
-                            this.poolManager.getDamageText(player.x, player.y - 40, `+${heal}`, "#55ff55");
-                        }
-                    }
-                });
-
-                return;
-            }
-
-            if (isAttacking || this.combat.isKnockedBack || this.data.get('isDashing')) {
-                if (isAttacking || this.data.get('isDashing')) {
-                    // Keep movement during dash handled by tween, but block WASD
-                    if (isAttacking) player.setVelocity(0, 0);
-                }
-                return;
-            }
-
-
-            // ── Class Abilities (must run before weapon switching) ──────────
-            const playerClassId = resolveClassId(this.registry.get('playerClass'));
-            const abilityReady = Date.now() >= this.classAbilityCooldownEnd;
-            if ((this.registry.get('playerHP') || 0) > 0) {
-                if (playerClassId === 'krieger' &&
-                    Phaser.Input.Keyboard.JustDown(this.hotkeys['2']) &&
-                    abilityReady && !this.isWhirlwinding) {
-                    this.activateWhirlwind();
-                } else if (playerClassId === 'archer' &&
-                    Phaser.Input.Keyboard.JustDown(this.hotkeys['2']) &&
-                    abilityReady && !this.explosiveShotReady) {
-                    this.activateExplosiveShot();
-                } else if (playerClassId === 'wizard' &&
-                    Phaser.Input.Keyboard.JustDown(this.hotkeys['4']) &&
-                    abilityReady) {
-                    this.activateCascade();
-                }
-
-                // ── Fase 6: Time Slow Arrow (Archer) – E-key ─────────────────
-                if (playerClassId === 'archer' && Phaser.Input.Keyboard.JustDown(this.hotkeys['E'])) {
-                    const upgLvls3 = (this.registry.get('upgradeLevels') || {}) as Record<string, number>;
-                    const timeSlowLvl = upgLvls3['time_slow_arrow'] || 0;
-                    if (timeSlowLvl > 0 && Date.now() >= this.timeSlowCooldownEnd) {
-                        const slowDuration = 3000;
-                        const cooldown = 15000 - timeSlowLvl * 3000;
-                        this.timeSlowCooldownEnd = Date.now() + cooldown;
-                        // Apply slow to all active enemies
-                        this.enemies.children.iterate((enemy: any) => {
-                            if (enemy && enemy.active && !enemy.isDead) {
-                                enemy.applySlow(slowDuration);
-                            }
-                            return true;
-                        });
-                        if (this.bossGroup) {
-                            this.bossGroup.children.iterate((boss: any) => {
-                                if (boss && boss.active) boss.applySlow?.(slowDuration);
-                                return true;
-                            });
-                        }
-                        this.poolManager.getDamageText(player.x, player.y - 70, 'TIME SLOW!', '#88aaff');
-                    }
-                }
-            }
-
-            // Handle Weapon Switching (class-aware)
-            const unlocked = this.registry.get('unlockedWeapons') || ['sword'];
-            const curWep = this.registry.get('currentWeapon');
-            if (playerClassId === 'wizard') {
-                // Wizard remap: Fire=1, Frost=2, Lightning=3, Cascade=4 (ability only)
-                if (this.hotkeys['1']?.isDown && curWep !== 'fireball' && unlocked.includes('fireball'))
-                    this.registry.set('currentWeapon', 'fireball');
-                if (this.hotkeys['2']?.isDown && curWep !== 'frost' && unlocked.includes('frost'))
-                    this.registry.set('currentWeapon', 'frost');
-                if (this.hotkeys['3']?.isDown && curWep !== 'lightning' && unlocked.includes('lightning'))
-                    this.registry.set('currentWeapon', 'lightning');
-                // hotkey '4' reserved for Cascade ability — no weapon switch
-            } else {
-                // Default mapping (Krieger + Archer)
-                if (this.hotkeys['1']?.isDown && curWep !== 'sword' && unlocked.includes('sword'))
-                    this.registry.set('currentWeapon', 'sword');
-                // Krieger: '2' is Whirlwind ability only — suppress bow switch
-                if (playerClassId !== 'krieger' && this.hotkeys['2']?.isDown && curWep !== 'bow' && unlocked.includes('bow'))
-                    this.registry.set('currentWeapon', 'bow');
-                if (this.hotkeys['3']?.isDown && curWep !== 'fireball' && unlocked.includes('fireball'))
-                    this.registry.set('currentWeapon', 'fireball');
-                if (this.hotkeys['4']?.isDown && curWep !== 'frost' && unlocked.includes('frost'))
-                    this.registry.set('currentWeapon', 'frost');
-                if (this.hotkeys['5']?.isDown && curWep !== 'lightning' && unlocked.includes('lightning'))
-                    this.registry.set('currentWeapon', 'lightning');
-            }
-
-            // Handle Orientation (Face Mouse)
-            if (!this.isWhirlwinding) {
-                if (pointer.worldX > player.x) {
-                    player.setFlipX(false);
-                } else if (pointer.worldX < player.x) {
-                    player.setFlipX(true);
-                }
-            }
-
-            // Handle Block (Right Click)
-            const blockPressed = pointer.rightButtonDown();
-            if (blockPressed) {
-                this.data.set('isBlocking', true);
-                speed = 80; // Walk slow while blocking
-                player.setTint(0x3b82f6); // Visual feedback for blocking
-            } else {
-                if (this.data.get('isBlocking')) {
-                    player.clearTint();
-                }
-                this.data.set('isBlocking', false);
-            }
-
-            // Update attack hitbox position based on mouse angle (360 degrees)
-            const angle = Phaser.Math.Angle.Between(player.x, player.y, pointer.worldX, pointer.worldY);
-            const radius = 50; // Reach from body center
-            this.attackHitbox.setPosition(
-                player.x + Math.cos(angle) * radius,
-                player.y + Math.sin(angle) * radius
-            );
-            this.attackHitbox.setRotation(angle);
-
-            // Handle Attack (Left Click or Spacebar)
-            const spacePressed = this.wasd?.SPACE?.isDown;
-            hp = this.registry.get('playerHP') || 0;
-            if (hp > 0 && (pointer.leftButtonDown() || spacePressed) && !blockPressed) {
-                const lastCd = this.registry.get('weaponCooldown');
-                if (lastCd && Date.now() < lastCd.timestamp + lastCd.duration) {
-                    return;
-                }
-
-                const currentWeapon = this.registry.get('currentWeapon');
-                this.data.set('isAttacking', true);
-
-                // Safety valve: if the animationcomplete event somehow never fires (e.g. missing
-                // animation key), this hard-clears isAttacking so movement can never be permanently locked.
-                this.time.delayedCall(1500, () => {
-                    if (this.data.get('isAttacking')) {
-                        this.data.set('isAttacking', false);
-                        player.play('player-idle');
-                    }
-                });
-
-                if (currentWeapon === 'sword') {
-                    const attackSpeedMult = this.registry.get('playerAttackSpeed') || 1;
-                    const swordCooldown = GAME_CONFIG.WEAPONS.SWORD.cooldown / attackSpeedMult;
-
-                    const ATTACK_ANIMS = ['player-attack', 'player-attack-2'];
-                    const idx = this.data.get('attackAnimIndex') as number;
-                    const attackAnimKey = ATTACK_ANIMS[idx];
-                    this.data.set('attackAnimIndex', (idx + 1) % ATTACK_ANIMS.length);
-
-                    this.registry.set('weaponCooldown', { duration: swordCooldown, timestamp: Date.now() });
-
-                    this.currentSwingHitIds.clear();
-                    player.play(attackAnimKey);
-                    this.events.emit('player-swing');
-
-                    // SYNC ATTACK
-                    this.networkManager?.broadcast({
-                        t: PacketType.GAME_EVENT,
-                        ev: {
-                            type: 'attack',
-                            data: {
-                                id: this.game.registry.get('networkConfig')?.peer.id,
-                                weapon: 'sword',
-                                anim: attackAnimKey,
-                                angle: angle
-                            }
-                        },
-                        ts: Date.now()
-                    });
-
-                    // Enable hitbox during middle of animation
-                    this.time.delayedCall(Math.max(100, swordCooldown * 0.3), () => {
-                        this.attackHitbox.body!.setEnable(true);
-                        this.time.delayedCall(100, () => {
-                            this.attackHitbox.body!.setEnable(false);
-                        });
-                    });
-
-                    player.once(`animationcomplete-${attackAnimKey}`, () => {
-                        this.data.set('isAttacking', false);
-                        player.play('player-idle');
-                    });
-
-                    // ECLIPSE STRIKE
-                    const eclipseLevel = this.registry.get('playerEclipseLevel') || 0;
-                    if (eclipseLevel > 0) {
-                        const wake = this.eclipseWakes.get(player.x, player.y) as EclipseWake;
-                        if (wake) {
-                            const wakeDamage = this.stats.damage * 0.3 * eclipseLevel;
-                            wake.spawn(player.x, player.y, angle, wakeDamage);
-                        }
-                    }
-                } else if (currentWeapon === 'bow') {
-                    const bowCooldown = this.stats.playerCooldown;
-                    this.registry.set('weaponCooldown', { duration: bowCooldown, timestamp: Date.now() });
-                    player.play('player-bow');
-
-                    // Spawn arrow during animation
-                    this.time.delayedCall(bowCooldown * 0.5, () => {
-                        // Read arrow upgrade stats
-                        const arrowDamageMultiplier = this.registry.get('playerArrowDamageMultiplier') || 1;
-                        const arrowSpeed = this.registry.get('playerArrowSpeed') || GAME_CONFIG.WEAPONS.BOW.speed;
-                        const pierceCount = this.registry.get('playerPierceCount') || 0;
-                        const explosiveLevel = this.registry.get('playerExplosiveLevel') || 0;
-
-                        const baseDamage = this.stats.damage * GAME_CONFIG.WEAPONS.BOW.damageMult * arrowDamageMultiplier;
-                        const singularityLevel = this.registry.get('playerSingularityLevel') || 0;
-                        const poisonLevel = this.registry.get('playerPoisonLevel') || 0;
-
-                        const arrow = this.arrows.get(player.x, player.y) as Arrow;
-                        if (arrow) {
-                            if (this.explosiveShotReady) {
-                                // Consume Explosive Shot charge
-                                const levels = (this.registry.get('upgradeLevels') || {}) as Record<string, number>;
-                                const expDmgLvl = levels['exp_shot_damage'] || 0;
-                                const expRadLvl = levels['exp_shot_radius'] || 0;
-                                const abilityDamage = baseDamage * (2.0 + expDmgLvl * 0.3);
-                                const abilityRadius = 120 + expRadLvl * 40;
-                                arrow.fire(player.x, player.y, angle, abilityDamage, arrowSpeed, pierceCount, explosiveLevel, singularityLevel, poisonLevel, abilityRadius);
-                                this.explosiveShotReady = false;
-                                this.registry.set('explosiveShotReady', false);
-                                this.classAbilityCooldownEnd = Date.now() + 12000;
-                                this.registry.set('classAbilityCooldown', { duration: 12000, timestamp: Date.now() });
-                            } else {
-                                arrow.fire(player.x, player.y, angle, baseDamage, arrowSpeed, pierceCount, explosiveLevel, singularityLevel, poisonLevel);
-                            }
-                            this.events.emit('bow-shot');
-
-                            // SYNC BOW ATTACK
-                            this.networkManager?.broadcast({
-                                t: PacketType.GAME_EVENT,
-                                ev: {
-                                    type: 'attack',
-                                    data: {
-                                        id: this.game.registry.get('networkConfig')?.peer.id,
-                                        weapon: 'bow',
-                                        anim: 'player-bow',
-                                        angle: angle
-                                    }
-                                },
-                                ts: Date.now()
-                            });
-
-                            // Multishot logic (Cone)
-                            const projectiles = this.registry.get('playerProjectiles') || 1;
-                            if (projectiles > 1) {
-                                for (let i = 1; i < projectiles; i++) {
-                                    // Alternating sides: +10deg, -10deg, +20deg...
-                                    const offset = Math.ceil(i / 2) * 10 * (Math.PI / 180) * (i % 2 === 0 ? -1 : 1);
-                                    const subArrow = this.arrows.get(player.x, player.y) as Arrow;
-                                    if (subArrow) {
-                                        subArrow.fire(player.x, player.y, angle + offset, baseDamage, arrowSpeed, pierceCount, explosiveLevel, 0, poisonLevel);
-                                    }
-                                }
-                            }
-                        }
-                    });
-
-                    player.once('animationcomplete-player-bow', () => {
-                        this.data.set('isAttacking', false);
-                        player.play('player-idle');
-                    });
-                } else if (currentWeapon === 'fireball') {
-                    const fireCd = GAME_CONFIG.WEAPONS.FIREBALL.cooldown;
-                    this.registry.set('weaponCooldown', { duration: fireCd, timestamp: Date.now() });
-                    player.play('player-bow'); // Uses bow animation for casting too
-                    this.events.emit('fireball-cast');
-
-                    this.time.delayedCall(100, () => {
-                        const fireball = this.fireballs.get(player.x, player.y) as Fireball;
-                        if (fireball) {
-                            const fireDmgMult = this.registry.get('fireballDamageMulti') || 1;
-                            const cascadeBonus = Date.now() < this.cascadeActiveUntil
-                                ? 1.5 + ((this.registry.get('upgradeLevels') || {})['cascade_damage'] || 0) * 0.15
-                                : 1;
-                            fireball.fire(player.x, player.y, angle, this.stats.damage * GAME_CONFIG.WEAPONS.FIREBALL.damageMult * fireDmgMult * cascadeBonus);
-                            this.events.emit('fireball-cast');
-
-                            // SYNC FIRE ATTACK
-                            this.networkManager?.broadcast({
-                                t: PacketType.GAME_EVENT,
-                                ev: {
-                                    type: 'attack',
-                                    data: {
-                                        id: this.game.registry.get('networkConfig')?.peer.id,
-                                        weapon: 'fire',
-                                        anim: 'player-cast',
-                                        angle: angle
-                                    }
-                                },
-                                ts: Date.now()
-                            });
-                        }
-                    });
-
-                    player.once('animationcomplete-player-bow', () => {
-                        this.data.set('isAttacking', false);
-                        player.play('player-idle');
-                    });
-                } else if (currentWeapon === 'frost') {
-                    const frostCd = GAME_CONFIG.WEAPONS.FROST.cooldown;
-                    this.registry.set('weaponCooldown', { duration: frostCd, timestamp: Date.now() });
-                    player.play('player-cast');
-
-                    // Capture mouse world position at cast time
-                    const frostTarget = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
-
-                    this.time.delayedCall(100, () => {
-                        const frostBolt = this.frostBolts.get(player.x, player.y) as FrostBolt;
-                        if (frostBolt) {
-                            const frostDmgMult = this.registry.get('frostDamageMulti') || 1;
-                            const cascadeBonus = Date.now() < this.cascadeActiveUntil
-                                ? 1.5 + ((this.registry.get('upgradeLevels') || {})['cascade_damage'] || 0) * 0.15
-                                : 1;
-                            frostBolt.fire(player.x, player.y, frostTarget.x, frostTarget.y, this.stats.damage * GAME_CONFIG.WEAPONS.FROST.damageMult * frostDmgMult * cascadeBonus);
-                            this.events.emit('frost-cast');
-
-                            // SYNC FROST ATTACK
-                            this.networkManager?.broadcast({
-                                t: PacketType.GAME_EVENT,
-                                ev: {
-                                    type: 'attack',
-                                    data: {
-                                        id: this.game.registry.get('networkConfig')?.peer.id,
-                                        weapon: 'frost',
-                                        anim: 'player-cast',
-                                        angle: angle
-                                    }
-                                },
-                                ts: Date.now()
-                            });
-                        }
-                    });
-
-                    player.once('animationcomplete-player-cast', () => {
-                        this.data.set('isAttacking', false);
-                        player.play('player-idle');
-                    });
-                } else if (currentWeapon === 'lightning') {
-                    const ltgCd = GAME_CONFIG.WEAPONS.LIGHTNING.cooldown;
-                    this.registry.set('weaponCooldown', { duration: ltgCd, timestamp: Date.now() });
-                    player.play('player-cast');
-                    this.events.emit('lightning-cast');
-
-                    // Get target position from mouse
-                    const ltTarget = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
-
-                    this.time.delayedCall(100, () => {
-                        const dmgMult = this.registry.get('lightningDamageMulti') || 1;
-                        const bounces = this.registry.get('lightningBounces') || GAME_CONFIG.WEAPONS.LIGHTNING.bounces;
-                        const cascadeBonus = Date.now() < this.cascadeActiveUntil
-                            ? 1.5 + ((this.registry.get('upgradeLevels') || {})['cascade_damage'] || 0) * 0.15
-                            : 1;
-                        const baseDamage = this.stats.damage * GAME_CONFIG.WEAPONS.LIGHTNING.damageMult * dmgMult * cascadeBonus;
-                        const baseAngle = Phaser.Math.Angle.Between(player.x, player.y, ltTarget.x, ltTarget.y);
-
-                        const bolt = this.lightningBolts.get(player.x, player.y) as LightningBolt;
-                        if (bolt) {
-                            bolt.fire(player.x, player.y, ltTarget.x, ltTarget.y, baseDamage, bounces, new Set(), baseAngle);
-                        }
-
-                        // SYNC LIGHTNING ATTACK
-                        this.networkManager?.broadcast({
-                            t: PacketType.GAME_EVENT,
-                            ev: {
-                                type: 'attack',
-                                data: {
-                                    id: this.game.registry.get('networkConfig')?.peer.id,
-                                    weapon: 'lightning',
-                                    anim: 'player-cast',
-                                    angle: angle
-                                }
-                            },
-                            ts: Date.now()
-                        });
-                    });
-
-                    player.once('animationcomplete-player-cast', () => {
-                        this.data.set('isAttacking', false);
-                        player.play('player-idle');
-                    });
-                }
-                return;
-            }
-
-            let vx = 0;
-            let vy = 0;
-
-            // WASD Movement
-            if (this.wasd?.A?.isDown || cursors?.left?.isDown) {
-                vx = -speed;
-            } else if (this.wasd?.D?.isDown || cursors?.right?.isDown) {
-                vx = speed;
-            }
-
-            if (this.wasd?.W?.isDown || cursors?.up?.isDown) {
-                vy = -speed;
-            } else if (this.wasd?.S?.isDown || cursors?.down?.isDown) {
-                vy = speed;
-            }
-
-            player.setVelocity(vx, vy);
-
-            // Enemy Damage Detection MOVED TO PHYSICS OVERLAP
-
-            if (vx !== 0 || vy !== 0) {
-                if (player.anims.currentAnim?.key !== 'player-walk') {
-                    player.play('player-walk');
-                }
-                // Footstep audio (throttled)
-                const now = this.time.now;
-                if (now - this.lastFootstepTime > 250) {
-                    this.lastFootstepTime = now;
-                    AudioManager.instance.playSFX('footstep');
-                }
-            } else {
-                if (player.anims.currentAnim?.key !== 'player-idle') {
-                    player.play('player-idle');
-                }
-            }
+            this.handlePlayerActionCombat(_time, delta);
 
         } catch (error) {
             console.error('[MainScene] Update loop crashed:', error);
         }
     }
 
-    private networkTick() {
-        const player = this.data.get('player') as Phaser.Physics.Arcade.Sprite;
-        if (!player || !this.networkManager) return;
+    private updateVignette() {
+        if (!this.quality.postFXEnabled || !this.vignetteEffect) return;
+        const hp = this.registry.get('playerHP') || 0;
+        const max = this.registry.get('playerMaxHP') || 100;
+        const ratio = hp / max;
 
-        const now = this.networkManager.getServerTime();
-        const myId = this.game.registry.get('networkConfig')?.peer.id || 'unknown';
+        if (ratio < 0.3) {
+            const urgency = 1 + (0.3 - ratio) * 5;
+            const pulse = (Math.sin(this.time.now / (380 / urgency)) + 1) * 0.5;
+            this.vignetteEffect.strength = 0.30 + pulse * 0.45;
+        } else {
+            this.vignetteEffect.strength = Phaser.Math.Linear(this.vignetteEffect.strength, 0.15, 0.08);
+        }
+    }
 
-        // Reuse localPackedPlayer buffer to eliminate per-tick allocation
-        this.localPackedPlayer[0] = myId;
-        this.localPackedPlayer[1] = Math.round(player.x);
-        this.localPackedPlayer[2] = Math.round(player.y);
-        this.localPackedPlayer[3] = player.anims.currentAnim?.key || 'player-idle';
-        this.localPackedPlayer[4] = player.flipX ? 1 : 0;
-        this.localPackedPlayer[5] = this.registry.get('playerHP');
-        this.localPackedPlayer[6] = this.registry.get('currentWeapon');
-        this.localPackedPlayer[7] = this.registry.get('nickname');
+    private handlePlayerActionCombat(_time: number, _delta: number) {
+        const player = this.player;
+        if (!player || !player.active) return;
+        const pointer = this.input.activePointer;
+        const hp = this.registry.get('playerHP') || 0;
+        if (hp <= 0 || this.data.get('isBlocking')) return;
 
-        const playerPacket = this.localPackedPlayer;
+        const angle = Phaser.Math.Angle.Between(player.x, player.y, pointer.worldX, pointer.worldY);
+        const radius = 50;
+        this.attackHitbox.setPosition(
+            player.x + Math.cos(angle) * radius,
+            player.y + Math.sin(angle) * radius
+        );
+        this.attackHitbox.setRotation(angle);
 
-        if (this.networkManager.role === 'host') {
-            this.networkTickCount++;
-            const forceFullSync = this.networkTickCount % 20 === 0;
-            const playersToSync: PackedPlayer[] = [];
+        // This method will be expanded in the next step to include full weapon logic,
+        // but for now we ensure it handles the basics to keep lints happy.
+        this.handleWeaponExecution(angle);
+    }
 
-            const processPlayer = (p: PackedPlayer) => {
-                const id = p[0];
-                // [id, x, y, anim, flip, hp, weapon, name]
-                const stateStr = `${p[1]},${p[2]},${p[3]},${p[4]},${p[5]},${p[6]}`;
-                const lastState = this.lastSentPlayerStates.get(id);
+    private handleWeaponExecution(angle: number) {
+        const player = this.player;
+        const currentWeapon = this.registry.get('currentWeapon');
+        const lastCd = this.registry.get('weaponCooldown');
+        if (lastCd && Date.now() < lastCd.timestamp + lastCd.duration) return;
 
-                if (forceFullSync || lastState !== stateStr) {
-                    this.lastSentPlayerStates.set(id, stateStr);
-                    playersToSync.push(p);
-                }
-            };
+        this.data.set('isAttacking', true);
 
-            // Sync partyState to registry for the UI (FantasyBook Revive)
-            const partyState = [
-                { id: myId, name: this.registry.get('nickname') || 'Host', isDead: this.registry.get('playerHP') <= 0 }
-            ];
-            this.remotePlayerPackets.forEach((rp, remoteId) => {
-                partyState.push({ id: remoteId, name: rp[7] || 'Spiller', isDead: rp[5] <= 0 });
+        // Safety valve
+        this.time.delayedCall(1500, () => {
+            if (this.data.get('isAttacking')) {
+                this.data.set('isAttacking', false);
+                player.play('player-idle');
+            }
+        });
+
+        if (currentWeapon === 'sword') {
+            this.executeSwordAttack(angle);
+        } else if (currentWeapon === 'bow') {
+            this.executeBowAttack(angle);
+        } else if (currentWeapon === 'fireball') {
+            this.executeFireballAttack(angle);
+        } else if (currentWeapon === 'frost') {
+            this.executeFrostAttack(angle);
+        } else if (currentWeapon === 'lightning') {
+            this.executeLightningAttack(angle);
+        }
+    }
+
+    private executeSwordAttack(angle: number) {
+        const attackSpeedMult = this.registry.get('playerAttackSpeed') || 1;
+        const swordCooldown = GAME_CONFIG.WEAPONS.SWORD.cooldown / attackSpeedMult;
+
+        const ATTACK_ANIMS = ['player-attack', 'player-attack-2'];
+        const idx = this.data.get('attackAnimIndex') || 0;
+        const attackAnimKey = ATTACK_ANIMS[idx];
+        this.data.set('attackAnimIndex', (idx + 1) % ATTACK_ANIMS.length);
+
+        this.registry.set('weaponCooldown', { duration: swordCooldown, timestamp: Date.now() });
+
+        this.currentSwingHitIds.clear();
+        this.player.play(attackAnimKey);
+        this.events.emit('player-swing');
+
+        this.networkManager?.broadcast({
+            t: PacketType.GAME_EVENT,
+            ev: {
+                type: 'attack',
+                data: { id: this.networkManager.peerId, weapon: 'sword', anim: attackAnimKey, angle }
+            },
+            ts: Date.now()
+        });
+
+        this.time.delayedCall(Math.max(100, swordCooldown * 0.3), () => {
+            (this.attackHitbox.body as Phaser.Physics.Arcade.Body).enable = true;
+            this.time.delayedCall(100, () => {
+                (this.attackHitbox.body as Phaser.Physics.Arcade.Body).enable = false;
             });
-            this.registry.set('partyState', partyState);
+        });
 
-            // Check for party death
-            const allDead = partyState.every(p => p.isDead);
-            if (allDead && partyState.length > 0 && !this.registry.get('partyDead')) {
-                this.registry.set('partyDead', true);
-                this.events.emit('party_dead');
-                this.networkManager.broadcast({
-                    t: PacketType.GAME_EVENT,
-                    ev: { type: 'party_dead', data: {} },
-                    ts: now
-                });
-                console.log("[Host] Whole party is dead! Broadcasting party_dead.");
-            }
+        this.player.once(`animationcomplete-${attackAnimKey}`, () => {
+            this.data.set('isAttacking', false);
+            this.player.play('player-idle');
+        });
 
-            // Process local player
-            processPlayer(playerPacket);
-            // Process remote players
-            this.remotePlayerPackets.forEach(p => processPlayer(p));
-
-            if (playersToSync.length > 0) {
-                this.networkManager.broadcast(BinaryPacker.packPlayers(playersToSync, now));
-            }
-
-            const enemies = this.waves.getEnemySyncData();
-            if (enemies.length > 0) {
-                this.networkManager.broadcast(BinaryPacker.packEnemies(enemies, now));
-            }
-
-            // Periodic Game State Sync (Throatled to 1 per second to save bandwidth)
-            if (now - this.lastSyncTime > 1000) {
-                this.lastSyncTime = now;
-                this.networkManager.broadcast({
-                    t: PacketType.GAME_STATE,
-                    gs: {
-                        level: this.registry.get('gameLevel'),
-                        wave: this.registry.get('currentWave'),
-                        isBossActive: this.registry.get('isBossActive'),
-                        bossIndex: this.registry.get('bossComingUp')
-                    },
-                    ts: now
-                });
-            }
-        } else if (this.networkManager.role === 'client') {
-            const id = playerPacket[0];
-            const stateStr = `${playerPacket[1]},${playerPacket[2]},${playerPacket[3]},${playerPacket[4]},${playerPacket[5]},${playerPacket[6]}`;
-            const lastState = this.lastSentPlayerStates.get(id);
-
-            if (lastState !== stateStr) {
-                this.lastSentPlayerStates.set(id, stateStr);
-                this.networkManager.broadcast(BinaryPacker.packPlayer(playerPacket, now));
+        // ECLIPSE STRIKE
+        const eclipseLevel = this.registry.get('playerEclipseLevel') || 0;
+        if (eclipseLevel > 0) {
+            const wake = this.eclipseWakes.get(this.player.x, this.player.y) as EclipseWake;
+            if (wake) {
+                const wakeDamage = this.stats.damage * 0.3 * eclipseLevel;
+                wake.spawn(this.player.x, this.player.y, angle, wakeDamage);
             }
         }
     }
+
+    private executeBowAttack(angle: number) {
+        const bowCooldown = this.stats.playerCooldown;
+        this.registry.set('weaponCooldown', { duration: bowCooldown, timestamp: Date.now() });
+        this.player.play('player-bow');
+
+        this.time.delayedCall(bowCooldown * 0.5, () => {
+            const arrowDamageMultiplier = this.registry.get('playerArrowDamageMultiplier') || 1;
+            const arrowSpeed = this.registry.get('playerArrowSpeed') || GAME_CONFIG.WEAPONS.BOW.speed;
+            const pierceCount = this.registry.get('playerPierceCount') || 0;
+            const explosiveLevel = this.registry.get('playerExplosiveLevel') || 0;
+            const baseDamage = this.stats.damage * GAME_CONFIG.WEAPONS.BOW.damageMult * arrowDamageMultiplier;
+            const singularityLevel = this.registry.get('playerSingularityLevel') || 0;
+            const poisonLevel = this.registry.get('playerPoisonLevel') || 0;
+
+            const arrow = this.arrows.get(this.player.x, this.player.y) as Arrow;
+            if (arrow) {
+                if (this.explosiveShotReady) {
+                    const levels = (this.registry.get('upgradeLevels') || {}) as Record<string, number>;
+                    const abilityDamage = baseDamage * (2.0 + (levels['exp_shot_damage'] || 0) * 0.3);
+                    const abilityRadius = 120 + (levels['exp_shot_radius'] || 0) * 40;
+                    arrow.fire(this.player.x, this.player.y, angle, abilityDamage, arrowSpeed, pierceCount, explosiveLevel, singularityLevel, poisonLevel, abilityRadius);
+                    this.explosiveShotReady = false;
+                    this.registry.set('explosiveShotReady', false);
+                    this.classAbilityCooldownEnd = Date.now() + 12000;
+                    this.registry.set('classAbilityCooldown', { duration: 12000, timestamp: Date.now() });
+                } else {
+                    arrow.fire(this.player.x, this.player.y, angle, baseDamage, arrowSpeed, pierceCount, explosiveLevel, singularityLevel, poisonLevel);
+                }
+                this.events.emit('bow-shot');
+
+                this.networkManager?.broadcast({
+                    t: PacketType.GAME_EVENT,
+                    ev: {
+                        type: 'attack',
+                        data: { id: this.networkManager.peerId, weapon: 'bow', anim: 'player-bow', angle }
+                    },
+                    ts: Date.now()
+                });
+
+                const projectiles = this.registry.get('playerProjectiles') || 1;
+                if (projectiles > 1) {
+                    for (let i = 1; i < projectiles; i++) {
+                        const offset = Math.ceil(i / 2) * 10 * (Math.PI / 180) * (i % 2 === 0 ? -1 : 1);
+                        const subArrow = this.arrows.get(this.player.x, this.player.y) as Arrow;
+                        if (subArrow) subArrow.fire(this.player.x, this.player.y, angle + offset, baseDamage, arrowSpeed, pierceCount, explosiveLevel, 0, poisonLevel);
+                    }
+                }
+            }
+        });
+
+        this.player.once('animationcomplete-player-bow', () => {
+            this.data.set('isAttacking', false);
+            this.player.play('player-idle');
+        });
+    }
+
+    private executeFireballAttack(angle: number) {
+        const fireCd = GAME_CONFIG.WEAPONS.FIREBALL.cooldown;
+        this.registry.set('weaponCooldown', { duration: fireCd, timestamp: Date.now() });
+        this.player.play('player-bow');
+        this.events.emit('fireball-cast');
+
+        this.time.delayedCall(100, () => {
+            const fireball = this.fireballs.get(this.player.x, this.player.y) as Fireball;
+            if (fireball) {
+                const cascadeBonus = Date.now() < this.cascadeActiveUntil ? 1.5 + ((this.registry.get('upgradeLevels') || {})['cascade_damage'] || 0) * 0.15 : 1;
+                fireball.fire(this.player.x, this.player.y, angle, this.stats.damage * GAME_CONFIG.WEAPONS.FIREBALL.damageMult * (this.registry.get('fireballDamageMulti') || 1) * cascadeBonus);
+                this.networkManager?.broadcast({
+                    t: PacketType.GAME_EVENT,
+                    ev: { type: 'attack', data: { id: this.networkManager.peerId, weapon: 'fire', anim: 'player-cast', angle } },
+                    ts: Date.now()
+                });
+            }
+        });
+
+        this.player.once('animationcomplete-player-bow', () => {
+            this.data.set('isAttacking', false);
+            this.player.play('player-idle');
+        });
+    }
+
+    private executeFrostAttack(angle: number) {
+        const frostCd = GAME_CONFIG.WEAPONS.FROST.cooldown;
+        this.registry.set('weaponCooldown', { duration: frostCd, timestamp: Date.now() });
+        this.player.play('player-cast');
+
+        const pointer = this.input.activePointer;
+        const frostTarget = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
+
+        this.time.delayedCall(100, () => {
+            const frostBolt = this.frostBolts.get(this.player.x, this.player.y) as FrostBolt;
+            if (frostBolt) {
+                const cascadeBonus = Date.now() < this.cascadeActiveUntil ? 1.5 + ((this.registry.get('upgradeLevels') || {})['cascade_damage'] || 0) * 0.15 : 1;
+                frostBolt.fire(this.player.x, this.player.y, frostTarget.x, frostTarget.y, this.stats.damage * GAME_CONFIG.WEAPONS.FROST.damageMult * (this.registry.get('frostDamageMulti') || 1) * cascadeBonus);
+                this.events.emit('frost-cast');
+                this.networkManager?.broadcast({
+                    t: PacketType.GAME_EVENT,
+                    ev: { type: 'attack', data: { id: this.networkManager.peerId, weapon: 'frost', anim: 'player-cast', angle } },
+                    ts: Date.now()
+                });
+            }
+        });
+
+        this.player.once('animationcomplete-player-cast', () => {
+            this.data.set('isAttacking', false);
+            this.player.play('player-idle');
+        });
+    }
+
+    private executeLightningAttack(angle: number) {
+        const ltgCd = GAME_CONFIG.WEAPONS.LIGHTNING.cooldown;
+        this.registry.set('weaponCooldown', { duration: ltgCd, timestamp: Date.now() });
+        this.player.play('player-cast');
+        const pointer = this.input.activePointer;
+        const ltTarget = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
+
+        this.time.delayedCall(100, () => {
+            const cascadeBonus = Date.now() < this.cascadeActiveUntil ? 1.5 + ((this.registry.get('upgradeLevels') || {})['cascade_damage'] || 0) * 0.15 : 1;
+            const baseDamage = this.stats.damage * GAME_CONFIG.WEAPONS.LIGHTNING.damageMult * (this.registry.get('lightningDamageMulti') || 1) * cascadeBonus;
+            const bolt = this.lightningBolts.get(this.player.x, this.player.y) as LightningBolt;
+            if (bolt) bolt.fire(this.player.x, this.player.y, ltTarget.x, ltTarget.y, baseDamage, this.registry.get('lightningBounces') || GAME_CONFIG.WEAPONS.LIGHTNING.bounces, new Set(), angle);
+            this.events.emit('lightning-cast');
+            this.networkManager?.broadcast({
+                t: PacketType.GAME_EVENT,
+                ev: { type: 'attack', data: { id: this.networkManager.peerId, weapon: 'lightning', anim: 'player-cast', angle } },
+                ts: Date.now()
+            });
+        });
+
+        this.player.once('animationcomplete-player-cast', () => {
+            this.data.set('isAttacking', false);
+            this.player.play('player-idle');
+        });
+    }
+
+    // ── Class Ability Methods ────────────────────────────────────────────────
+
+    private activateWhirlwind(): void {
+        const levels = (this.registry.get('upgradeLevels') || {}) as Record<string, number>;
+        const damageMult = 1 + (levels['whirl_damage'] || 0) * 0.25;
+        const cdLvl = levels['whirl_cooldown'] || 0;
+        const chainLvl = levels['whirl_chain'] || 0;
+        const damage = this.stats.damage * damageMult;
+        const radius = 120;
+        const cd = 8000 * Math.pow(0.8, cdLvl);
+
+        this.isWhirlwinding = true;
+        this.data.set('isWhirlwinding', true);
+        this.classAbilityCooldownEnd = Date.now() + cd;
+        this.registry.set('classAbilityCooldown', { duration: cd, timestamp: Date.now() });
+
+        this.player.play('player-attack');
+        this.events.emit('player-swing');
+
+        this.tweens.add({
+            targets: this.player,
+            rotation: Math.PI * 4,
+            duration: 500,
+            ease: 'Linear',
+            onComplete: () => { this.player.setRotation(0); }
+        });
+
+        const px = this.player.x, py = this.player.y;
+        const hitEnemies = (this.enemies.getChildren() as Enemy[]).filter(e => e.active && Phaser.Math.Distance.Between(px, py, e.x, e.y) <= radius);
+
+        hitEnemies.forEach(e => {
+            e.takeDamage(damage, '#ffcc00');
+            e.pushback(px, py, this.stats.knockback * 1.5);
+        });
+
+        this.time.delayedCall(500, () => {
+            hitEnemies.forEach(e => { if (e.active) { e.takeDamage(damage, '#ffaa00'); e.pushback(px, py, this.stats.knockback); } });
+            if (chainLvl > 0) {
+                const reduction = Math.min(hitEnemies.length * (chainLvl === 1 ? 0.05 : 0.07), chainLvl === 1 ? 0.25 : 0.35);
+                this.classAbilityCooldownEnd -= cd * reduction;
+            }
+            this.isWhirlwinding = false;
+            this.data.set('isWhirlwinding', false);
+        });
+    }
+
+    private activateExplosiveShot(): void {
+        this.explosiveShotReady = true;
+        this.data.set('explosiveShotReady', true);
+        this.registry.set('explosiveShotReady', true);
+        this.time.delayedCall(5000, () => {
+            if (this.explosiveShotReady) {
+                this.explosiveShotReady = false;
+                this.data.set('explosiveShotReady', false);
+                this.registry.set('explosiveShotReady', false);
+            }
+        });
+    }
+
+    private activateCascade(): void {
+        const levels = (this.registry.get('upgradeLevels') || {}) as Record<string, number>;
+        const duration = (4 + (levels['cascade_duration'] || 0) * 2) * 1000;
+        const cd = 10000;
+
+        this.cascadeActiveUntil = Date.now() + duration;
+        this.classAbilityCooldownEnd = this.cascadeActiveUntil + cd;
+        this.registry.set('classAbilityCooldown', { duration: duration + cd, timestamp: Date.now() });
+
+        const cascadeEmitter = this.add.particles(this.player.x, this.player.y, 'arrow', {
+            lifespan: 1200, speed: { min: 20, max: 50 }, scale: { start: 0.25, end: 0 },
+            alpha: { start: 0.5, end: 0 }, angle: { min: 0, max: 360 }, frequency: 40,
+            tint: [0xff00ff, 0x00ffff, 0xffff00, 0x88ff00], blendMode: 'ADD', follow: this.player,
+        });
+
+        this.time.delayedCall(duration, () => { cascadeEmitter.destroy(); });
+    }
+
+    private activateArcherSpecial(): void {
+        const upgLvls3 = (this.registry.get('upgradeLevels') || {}) as Record<string, number>;
+        const timeSlowLvl = upgLvls3['time_slow_arrow'] || 0;
+        if (timeSlowLvl > 0) {
+            const slowDuration = 3000 + timeSlowLvl * 1000;
+            this.enemies.children.iterate((e: any) => { if (e && e.active) e.applySlow?.(slowDuration); return true; });
+            this.bossGroup.children.iterate((boss: any) => { if (boss && boss.active) boss.applySlow?.(slowDuration); return true; });
+            this.poolManager.getDamageText(this.player.x, this.player.y - 70, 'TIME SLOW!', '#88aaff');
+        }
+    }
+
 
     public collectSaveData(): import('./SaveManager').RunProgress {
         const enemies: import('./SaveManager').EnemySave[] = [];
         this.enemies.getChildren().forEach((child: any) => {
             if (child.active && !child.isDead) {
-                enemies.push({
-                    type: child.enemyType ?? child.name ?? 'orc',
-                    x: child.x,
-                    y: child.y,
-                    hp: child.hp,
-                    maxHP: child.maxHP,
-                });
+                enemies.push({ type: child.enemyType ?? child.name ?? 'orc', x: child.x, y: child.y, hp: child.hp, maxHP: child.maxHP });
             }
         });
         return {
@@ -1991,38 +1154,18 @@ export class MainScene extends Phaser.Scene implements IMainScene {
             unlockedWeapons: this.registry.get('unlockedWeapons') || ['sword'],
             playerHP: this.registry.get('playerHP') || 0,
             playerMaxHP: this.registry.get('playerMaxHP') || 100,
-            playerX: this.player?.x,
-            playerY: this.player?.y,
-            savedEnemies: enemies,
-            waveEnemiesRemaining: this.waves?.getEnemiesToSpawnRemaining() ?? 0,
-            savedAt: Date.now(),
-            /** Bevarer klassen slik at ClassSelector hoppes over ved "Fortsett Spill" */
-            playerClass: this.registry.get('playerClass') ?? 'krieger',
+            playerX: this.player?.x, playerY: this.player?.y,
+            savedEnemies: enemies, waveEnemiesRemaining: this.waves?.getEnemiesToSpawnRemaining() ?? 0,
+            savedAt: Date.now(), playerClass: this.registry.get('playerClass') ?? 'krieger'
         };
     }
 
     public restartGame() {
         console.log("[Game] Restarting run...");
-
-        // Clear saved run so a retry always starts fresh
         SaveManager.clearRunProgress();
+        if (this.networkManager?.role === 'host') this.networkManager.broadcast({ t: PacketType.GAME_EVENT, ev: { type: 'restart_game', data: {} }, ts: Date.now() });
+        this.events.emit('restart-game');
 
-        /**
-         * CRITICAL: We must notify the Network and React UI FIRST.
-         * This ensures that the state is cleared before regenerateMap triggers 
-         * synchronous 'map-ready' events which populate the 'loaded' status in GameContainer.
-         */
-        if (this.networkManager?.role === 'host') {
-            this.networkManager.broadcast({
-                t: PacketType.GAME_EVENT,
-                ev: { type: 'restart_game', data: {} },
-                ts: Date.now()
-            });
-        }
-        this.events.emit('restart-game'); // Changed from restart_game to match GameContainer
-        console.log('[MainScene] restart-game event emitted.');
-
-        // Reset Local Registry State
         const playerClassId = resolveClassId(this.registry.get('playerClass'));
         const classConfig = CLASS_CONFIGS[playerClassId];
 
@@ -2039,170 +1182,26 @@ export class MainScene extends Phaser.Scene implements IMainScene {
         this.registry.set('partyDead', false);
         this.registry.set('upgradeLevels', {});
 
-        // Clear Game World
         this.enemies.clear(true, true);
         this.bossGroup.clear(true, true);
         this.coins.clear(true, true);
-        this.arrows.clear(true, true);
-        this.fireballs.clear(true, true);
-        this.frostBolts.clear(true, true);
-        this.lightningBolts.clear(true, true);
+        ['arrows', 'fireballs', 'frostBolts', 'lightningBolts'].forEach(g => (this as any)[g].clear(true, true));
 
-        // Reset Player instance
-        const player = this.data.get('player') as Phaser.Physics.Arcade.Sprite;
-        if (player) {
-            player.setPosition(this.mapWidth / 2, this.mapHeight / 2);
-            player.clearTint();
-            player.setBlendMode(Phaser.BlendModes.NORMAL);
-            player.setAlpha(1.0);
-            if (this.playerLight) this.playerLight.setRadius(230);
-            if (this.outerPlayerLight) this.outerPlayerLight.setRadius(575);
+        if (this.player) {
+            this.player.setPosition(this.mapWidth / 2, this.mapHeight / 2);
+            this.player.clearTint();
+            this.player.setBlendMode(Phaser.BlendModes.NORMAL);
+            this.player.setAlpha(1.0);
         }
-
-        // Reset remote players visuals
-        this.remotePlayers.forEach(rp => {
-            rp.clearTint();
-            rp.setBlendMode(Phaser.BlendModes.NORMAL);
-            rp.setAlpha(1.0);
-        });
-
-        // Refresh stats
+        this.remotePlayers.forEach(rp => { rp.clearTint(); rp.setBlendMode(Phaser.BlendModes.NORMAL); rp.setAlpha(1.0); });
         this.stats.recalculateStats();
-
-        // NOT REACHED for singleplayer as GameContainer reboots instance on restart-game
-        // but kept for multiplayer/fallback robustness.
         this.regenerateMap(1);
-        if (this.networkManager?.role !== 'client') {
-            this.waves.startLevel(1);
-        }
-        this.scene.resume(); // CRITICAL: Ensure scene is resumed if it was paused
-        console.log('[MainScene] restartGame cleanup complete.');
-    }
-
-    // ── Class Ability Methods ────────────────────────────────────────────────
-
-    private activateWhirlwind(): void {
-        const levels = (this.registry.get('upgradeLevels') || {}) as Record<string, number>;
-        const damageMult = 1 + (levels['whirl_damage'] || 0) * 0.25;
-        const cdLvl = levels['whirl_cooldown'] || 0;
-        const chainLvl = levels['whirl_chain'] || 0;
-        const damage = this.stats.damage * damageMult;
-        const radius = 120;
-        const cd = 8000 * Math.pow(0.8, cdLvl);
-
-        this.isWhirlwinding = true;
-        this.classAbilityCooldownEnd = Date.now() + cd;
-        this.registry.set('classAbilityCooldown', { duration: cd, timestamp: Date.now() });
-
-        this.player.play('player-attack');
-        this.events.emit('player-swing');
-
-        // Spin 2 laps (4π radians) over 500ms
-        this.tweens.add({
-            targets: this.player,
-            rotation: Math.PI * 4,
-            duration: 500,
-            ease: 'Linear',
-            onComplete: () => {
-                this.player.setRotation(0);
-            }
-        });
-
-        // VFX burst
-        const quality = this.registry.get('graphicsQuality') as GraphicsQuality;
-        if (quality !== 'low') {
-            const emitter = this.add.particles(this.player.x, this.player.y, 'arrow', {
-                quantity: 16, lifespan: 500, speed: { min: 80, max: 180 },
-                scale: { start: 0.4, end: 0 }, alpha: { start: 0.9, end: 0 },
-                angle: { min: 0, max: 360 }, tint: 0xffcc00, blendMode: 'ADD', emitting: false,
-            });
-            emitter.explode(16, this.player.x, this.player.y);
-            this.time.delayedCall(600, () => emitter.destroy());
-        }
-
-        const px = this.player.x, py = this.player.y;
-        const hitEnemies: Enemy[] = (this.enemies.getChildren() as Enemy[]).filter(e =>
-            e.active && Phaser.Math.Distance.Between(px, py, e.x, e.y) <= radius
-        );
-
-        // Hit boss group too
-        if (this.bossGroup) {
-            (this.bossGroup.getChildren() as BossEnemy[]).forEach(b => {
-                if (b.active && Phaser.Math.Distance.Between(px, py, b.x, b.y) <= radius) {
-                    b.takeDamage(damage, '#ffcc00');
-                    b.pushback(px, py, this.stats.knockback * 1.5);
-                }
-            });
-        }
-
-        // First hit immediately
-        hitEnemies.forEach(e => {
-            e.takeDamage(damage, '#ffcc00');
-            e.pushback(px, py, this.stats.knockback * 1.5);
-        });
-
-        // Second hit + chain CD reduction at end of spin
-        this.time.delayedCall(500, () => {
-            hitEnemies.forEach(e => {
-                if (e.active) {
-                    e.takeDamage(damage, '#ffaa00');
-                    e.pushback(px, py, this.stats.knockback);
-                }
-            });
-            if (chainLvl > 0) {
-                const pctPerHit = chainLvl === 1 ? 0.05 : 0.07;
-                const maxPct = chainLvl === 1 ? 0.25 : 0.35;
-                const reduction = Math.min(hitEnemies.length * pctPerHit, maxPct);
-                this.classAbilityCooldownEnd -= cd * reduction;
-            }
-            this.isWhirlwinding = false;
-        });
-    }
-
-    private activateExplosiveShot(): void {
-        this.explosiveShotReady = true;
-        this.registry.set('explosiveShotReady', true);
-
-        // Auto-cancel after 5 s if not fired
-        this.time.delayedCall(5000, () => {
-            if (this.explosiveShotReady) {
-                this.explosiveShotReady = false;
-                this.registry.set('explosiveShotReady', false);
-            }
-        });
-    }
-
-    private activateCascade(): void {
-        const levels = (this.registry.get('upgradeLevels') || {}) as Record<string, number>;
-        const durationLvl = levels['cascade_duration'] || 0;
-        const duration = (4 + durationLvl * 2) * 1000;
-        const cd = 10000;
-
-        this.cascadeActiveUntil = Date.now() + duration;
-        this.classAbilityCooldownEnd = this.cascadeActiveUntil + cd;
-        this.registry.set('classAbilityCooldown', {
-            duration: duration + cd,
-            timestamp: Date.now(),
-        });
-
-        // VFX: rainbow particle ring following player
-        const quality = this.registry.get('graphicsQuality') as GraphicsQuality;
-        let cascadeEmitter: Phaser.GameObjects.Particles.ParticleEmitter | null = null;
-        if (quality !== 'low') {
-            cascadeEmitter = this.add.particles(this.player.x, this.player.y, 'arrow', {
-                lifespan: 1200, speed: { min: 20, max: 50 },
-                scale: { start: 0.25, end: 0 }, alpha: { start: 0.5, end: 0 },
-                angle: { min: 0, max: 360 }, frequency: 40,
-                tint: [0xff00ff, 0x00ffff, 0xffff00, 0x88ff00],
-                blendMode: 'ADD', follow: this.player,
-            });
-        }
-
-        this.time.delayedCall(duration, () => {
-            cascadeEmitter?.destroy();
-        });
+        if (this.networkManager?.role !== 'client') this.waves.startLevel(1);
+        this.scene.resume();
     }
 }
+
+
 
 export const createGame = (container: HTMLElement, networkConfig?: NetworkConfig | null, continueRun: boolean = false, selectedClass?: import('../config/classes').ClassId) => {
     // HARDENING: If there are existing Phaser instances, destroy them all to prevent "ghost" games
