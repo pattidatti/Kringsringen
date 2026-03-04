@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import type { IMainScene } from './IMainScene';
 import { resolveClassId } from '../config/classes';
 import { Enemy } from './Enemy';
+import { Arrow } from './Arrow';
 
 /**
  * Manages active class abilities like Whirlwind, Explosive Shot, and Cascade.
@@ -548,9 +549,10 @@ export class ClassAbilityManager {
         // Volley: Fire 5 arrows in a fan
         for (let i = -2; i <= 2; i++) {
             const arrowAngle = angle + (i * 0.15);
-            const arrow = (this.scene as any).arrows.get(player.x, player.y);
+            const arrow = (this.scene as any).arrows.get(player.x, player.y) as Arrow;
             if (arrow) {
-                arrow.fire(player.x, player.y, arrowAngle, this.scene.stats.damage * 0.7);
+                // Ability 3 optimization: Only the middle arrow (i=0) has light to prevent FPS drops
+                arrow.fire(player.x, player.y, arrowAngle, this.scene.stats.damage * 0.7, 700, 0, 0, 0, 0, 0, i === 0);
             }
         }
     }

@@ -200,7 +200,7 @@ export class Fireball extends Phaser.Physics.Arcade.Sprite {
             AudioManager.instance.playSFX('ice_freeze');
 
             // Screen shake for massive impact
-            this.scene.cameras.main.shake(150, 0.015);
+            this.scene.cameras.main.shake(150, 0.008);
         }
         AudioManager.instance.playSFX('fireball_hit');
 

@@ -167,7 +167,7 @@ export class Arrow extends Phaser.Physics.Arcade.Sprite {
         }
     }
 
-    fire(x: number, y: number, angle: number, damage: number, speed: number = 700, pierceCount: number = 0, explosiveLevel: number = 0, singularityLevel: number = 0, poisonLevel: number = 0, abilityExplosiveRadius: number = 0) {
+    fire(x: number, y: number, angle: number, damage: number, speed: number = 700, pierceCount: number = 0, explosiveLevel: number = 0, singularityLevel: number = 0, poisonLevel: number = 0, abilityExplosiveRadius: number = 0, withLight: boolean = true) {
         this.startX = x;
         this.startY = y;
         this.damage = damage;
@@ -184,11 +184,13 @@ export class Arrow extends Phaser.Physics.Arcade.Sprite {
         this.setVisible(true);
         this.setPosition(x, y);
         this.setRotation(angle);
-        if (this.scene.lights.active) this.setPipeline('Light2D');
 
         // Add glow post-FX (reuse on pool recycle)
-        if (!this.glowEffect) {
+        if (withLight && !this.glowEffect) {
             this.glowEffect = this.postFX.addGlow(0xffdd88, 3, 0, false, 0.1, 8);
+        } else if (!withLight && this.glowEffect) {
+            this.postFX.remove(this.glowEffect);
+            this.glowEffect = null;
         }
 
         // Add dynamic light
@@ -197,7 +199,13 @@ export class Arrow extends Phaser.Physics.Arcade.Sprite {
                 this.scene.lights.removeLight(this.light);
                 this.light = null;
             }
-            this.light = this.scene.lights.addLight(x, y, 150, 0xffdd88, 0.8);
+
+            if (withLight) {
+                this.setPipeline('Light2D');
+                this.light = this.scene.lights.addLight(x, y, 150, 0xffdd88, 0.8);
+            } else {
+                this.resetPipeline();
+            }
         }
 
         if (this.trail) {
