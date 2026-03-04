@@ -141,9 +141,34 @@ export class InputManager {
     private handleDash(): void {
         const isDashing = this.scene.data.get('isDashing');
         const isWhirlwinding = this.scene.data.get('isWhirlwinding');
-        const dashState = this.scene.registry.get('dashState') || { isActive: false, readyAt: 0 };
 
-        if (this.wasd.SHIFT.isDown && !isDashing && !isWhirlwinding && Date.now() >= dashState.readyAt) {
+        const maxCharges = this.scene.registry.get('dashCharges') || 1;
+        let dashState = this.scene.registry.get('dashState');
+
+        // Initialize or migrate dashState
+        if (!dashState || typeof dashState.charges !== 'number') {
+            dashState = {
+                isActive: dashState?.isActive || false,
+                readyAt: dashState?.readyAt || 0,
+                charges: maxCharges
+            };
+            this.scene.registry.set('dashState', dashState);
+        }
+
+        const now = Date.now();
+
+        // Replenish charges if time has passed
+        if (dashState.charges < maxCharges && now >= dashState.readyAt) {
+            dashState.charges++;
+            if (dashState.charges < maxCharges) {
+                // If we still need more charges, set the next interval timer
+                const dashCooldown = this.scene.registry.get('dashCooldown') || 7000;
+                dashState.readyAt = now + dashCooldown;
+            }
+            this.scene.registry.set('dashState', dashState);
+        }
+
+        if (this.wasd.SHIFT.isDown && !isDashing && !isWhirlwinding && dashState.charges > 0) {
             this.executeDash();
         }
     }
@@ -154,8 +179,20 @@ export class InputManager {
         const dashDistance = this.scene.registry.get('dashDistance') || 220;
         const dashDuration = 250; // GAME_CONFIG.PLAYER.DASH_DURATION_MS
 
+        const maxCharges = this.scene.registry.get('dashCharges') || 1;
+        let dashState = this.scene.registry.get('dashState') || { isActive: false, readyAt: 0, charges: maxCharges };
+
         this.scene.data.set('isDashing', true);
-        this.scene.registry.set('dashState', { isActive: true, readyAt: Date.now() + dashCooldown });
+
+        dashState.isActive = true;
+        dashState.charges--;
+
+        // If we were at max charges (meaning the timer wasn't running), or timer is somehow dead, start it now
+        if (dashState.charges === maxCharges - 1 || Date.now() >= dashState.readyAt) {
+            dashState.readyAt = Date.now() + dashCooldown;
+        }
+
+        this.scene.registry.set('dashState', dashState);
 
         // Interrupt attack
         if (this.scene.data.get('isAttacking')) {

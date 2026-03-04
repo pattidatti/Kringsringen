@@ -143,20 +143,8 @@ export class WeaponManager {
 
             const arrow = this.scene.arrows.get(player.x, player.y) as Arrow;
             if (arrow) {
-                if (this.scene.abilityManager.explosiveShotReady) {
-                    const levels = (this.scene.registry.get('upgradeLevels') || {}) as Record<string, number>;
-                    const abilityDamage = baseDamage * (2.0 + (levels['exp_shot_damage'] || 0) * 0.3);
-                    const abilityRadius = 120 + (levels['exp_shot_radius'] || 0) * 40;
-                    arrow.fire(player.x, player.y, angle, abilityDamage, arrowSpeed, pierceCount, explosiveLevel, singularityLevel, poisonLevel, abilityRadius);
+                arrow.fire(player.x, player.y, angle, baseDamage, arrowSpeed, pierceCount, explosiveLevel, singularityLevel, poisonLevel);
 
-                    // Reset through manager
-                    this.scene.abilityManager.explosiveShotReady = false;
-                    this.scene.registry.set('explosiveShotReady', false);
-                    this.scene.abilityManager.classAbilityCooldownEnd = Date.now() + 12000;
-                    this.scene.registry.set('classAbilityCooldown', { duration: 12000, timestamp: Date.now() });
-                } else {
-                    arrow.fire(player.x, player.y, angle, baseDamage, arrowSpeed, pierceCount, explosiveLevel, singularityLevel, poisonLevel);
-                }
                 this.scene.events.emit('bow-shot');
 
                 this.scene.networkManager?.broadcast({

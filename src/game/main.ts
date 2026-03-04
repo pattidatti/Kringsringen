@@ -357,7 +357,7 @@ export class MainScene extends Phaser.Scene implements IMainScene {
             this.poolManager.update(cappedDelta);
             this.networkPacketHandler.networkTick();
             this.stats.flushEconomy();
-            this.combat.flushHP();
+            this.combat.update(_time, cappedDelta);
 
             this.singularities.children.iterate((s: any) => { if (s.active) (s as import('./Singularity').Singularity).update(_time, delta); return true; });
             this.eclipseWakes.children.iterate((w: any) => { if (w.active) (w as import('./EclipseWake').EclipseWake).update(_time, delta); return true; });

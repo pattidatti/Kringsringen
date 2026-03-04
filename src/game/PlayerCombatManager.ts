@@ -11,6 +11,7 @@ export class PlayerCombatManager {
     private _knockbackEndTime: number = 0;
     private invincibilityDuration: number = 1000;
     private pendingHPChange: number = 0;
+    private regenAccumulator: number = 0;
 
     /** Active camera blur FX reference – removed after the hit-impact fades. */
     private hitBlurFX: any = null;
@@ -216,13 +217,32 @@ export class PlayerCombatManager {
     }
 
     /**
+     * Periodically called to accumulate health regeneration and apply pending HP changes.
+     */
+    public update(_time: number, delta: number) {
+        this.regenAccumulator += delta;
+        if (this.regenAccumulator >= 1000) {
+            this.regenAccumulator -= 1000;
+            const regenAmount = this.scene.registry.get('playerRegen') || 0;
+            const currentHP = this.scene.registry.get('playerHP') || 0;
+            if (regenAmount > 0 && currentHP > 0) {
+                // Apply healing through pendingHPChange so it flows naturally through flushHP
+                this.pendingHPChange += regenAmount;
+            }
+        }
+
+        this.flushHP();
+    }
+
+    /**
      * Periodically called to apply pending HP changes and notify React (UI).
      * This avoids excessive re-renders when many enemies hit at once.
      */
     public flushHP() {
         if (this.pendingHPChange !== 0) {
             let currentHP = this.scene.registry.get('playerHP');
-            currentHP = Math.max(0, currentHP + this.pendingHPChange);
+            const maxHP = this.scene.registry.get('playerMaxHP') || 100;
+            currentHP = Math.max(0, Math.min(maxHP, currentHP + this.pendingHPChange));
             this.scene.registry.set('playerHP', currentHP);
             this.pendingHPChange = 0;
         }
