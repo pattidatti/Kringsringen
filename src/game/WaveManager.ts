@@ -131,7 +131,8 @@ export class WaveManager {
         const mapHeight = 3000;
         const centerX = mapWidth / 2;
         const centerY = mapHeight / 2;
-        const radius = 800;
+        // Spawn enemies slightly closer to center to avoid spawning directly on top of dense forest tree static colliders (clearingRadius = 800)
+        const radius = 700;
 
         const angle = Math.random() * Math.PI * 2;
         const x = centerX + Math.cos(angle) * radius;

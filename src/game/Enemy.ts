@@ -649,6 +649,26 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         this.lastX = this.x;
         this.lastY = this.y;
 
+        // --- ULTRATHINK ANTI-SOFTLOCK ---
+        // If the enemy has been stuck for an accumulated 3 seconds (completely surrounded by colliders
+        // preventing the recovery angle from working, or if spawned out of bounds):
+        if (this.stuckTimer > 3000) {
+            console.warn(`[Enemy] ${this.id} stuck for ${this.stuckTimer}ms, teleporting to valid tracking area`);
+            const target = this.getNearestTarget();
+            if (target) {
+                // Keep some distance from player (around 500px) towards the map center
+                const targetAngleX = Phaser.Math.Angle.Between(target.x, target.y, this.x, this.y);
+                this.setPosition(target.x + Math.cos(targetAngleX) * 500, target.y + Math.sin(targetAngleX) * 500);
+            } else {
+                // If no target is returned, the wave could entirely stall, so we take lethal damage
+                this.takeDamage(this.hp + 999);
+                return;
+            }
+            this.stuckTimer = 0;
+            this.recoveryTimer = 0;
+            return;
+        }
+
         // Trigger recovery if stuck for 0.15s (Bosses) or 0.25s (Normals).
         // Magic numbers removed in favor of uniform dynamic handling
         const stuckDurationLimit = GAME_CONFIG.ENEMIES[this.enemyType.toUpperCase() as EnemyType]?.scale >= 1.5 ? 150 : 250;
