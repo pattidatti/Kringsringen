@@ -553,6 +553,16 @@ export const GameContainer: React.FC<GameContainerProps> = React.memo(({ network
         }
     }, []);
 
+    const handleCheatGold = useCallback(() => {
+        if (!gameInstanceRef.current) return;
+        const currentCoins = gameInstanceRef.current.registry.get('playerCoins') || 0;
+        gameInstanceRef.current.registry.set('playerCoins', currentCoins + 30000);
+
+        import('../game/AudioManager').then(({ AudioManager }) => {
+            AudioManager.instance.playSFX('upgrade_buy');
+        });
+    }, []);
+
     const handleContinue = useCallback(() => {
         if (!gameInstanceRef.current) return;
         const mainScene = gameInstanceRef.current.scene.getScene('MainScene');
@@ -684,8 +694,9 @@ export const GameContainer: React.FC<GameContainerProps> = React.memo(({ network
     const bookActions = useMemo(() => ({
         onSelectPerk: () => { },
         onBuyUpgrade: applyShopUpgrade,
-        onBuyRevive: applyRevive
-    }), [applyShopUpgrade, applyRevive]);
+        onBuyRevive: applyRevive,
+        onCheatGold: handleCheatGold
+    }), [applyShopUpgrade, applyRevive, handleCheatGold]);
 
     return (
         <div

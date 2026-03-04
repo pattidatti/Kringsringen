@@ -46,7 +46,7 @@ const BuffItem: React.FC<{ buff: ActiveBuff }> = ({ buff }) => {
     return (
         <motion.div
             layout
-            initial={{ opacity: 0, x: 20, scale: 0.8 }}
+            initial={{ opacity: 0, x: -20, scale: 0.8 }}
             animate={{ opacity: 1, x: 0, scale: 1 }}
             exit={{ opacity: 0, scale: 0.5, transition: { duration: 0.2 } }}
             className="relative flex items-center gap-3 p-2 mb-2 bg-black/40 backdrop-blur-md border border-white/10 rounded-xl"
@@ -104,7 +104,7 @@ export const BuffHUD: React.FC = () => {
     const activeBuffs = useGameRegistry<ActiveBuff[]>('activeBuffs', []);
 
     return (
-        <div className="fixed bottom-32 right-6 flex flex-col items-end pointer-events-none z-50">
+        <div className="fixed top-[5rem] left-4 flex flex-col items-start pointer-events-none z-50">
             <AnimatePresence mode="popLayout">
                 {activeBuffs.map((buff) => (
                     <BuffItem key={buff.id} buff={buff} />

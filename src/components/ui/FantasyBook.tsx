@@ -29,6 +29,7 @@ interface FantasyBookProps {
         onSelectPerk: (id: string) => void;
         onBuyUpgrade: (id: string, cost: number) => void;
         onBuyRevive?: (targetId: string, cost: number) => void;
+        onCheatGold?: () => void;
     }
 
     // Multiplayer State
@@ -262,10 +263,24 @@ export const FantasyBook: React.FC<FantasyBookProps> = React.memo(({
                         </div>
 
                         {/* Amount */}
-                        <div className="flex flex-col items-start pr-4">
+                        <div className="flex flex-col items-start pr-4 relative">
                             <span className="text-4xl font-black text-amber-950/90 font-cinzel leading-none tabular-nums tracking-tighter drop-shadow-sm">
                                 {coins}
                             </span>
+
+                            {/* Cheat Sparkle (The Blossom of Prosperity) */}
+                            <motion.button
+                                whileHover={{ scale: 1.5, rotate: 90 }}
+                                whileTap={{ scale: 0.8 }}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    actions.onCheatGold?.();
+                                }}
+                                className="absolute -top-1 -right-2 w-4 h-4 flex items-center justify-center opacity-0 group-hover:opacity-40 hover:!opacity-100 transition-opacity cursor-help"
+                                title="Divine Blessing"
+                            >
+                                <span className="text-amber-400 text-xs">✦</span>
+                            </motion.button>
                         </div>
                     </div>
 

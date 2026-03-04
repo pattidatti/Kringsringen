@@ -115,10 +115,14 @@ export class WeaponManager {
         // ECLIPSE STRIKE (Krieger/General upgrade)
         const eclipseLevel = this.scene.registry.get('playerEclipseLevel') || 0;
         if (eclipseLevel > 0) {
-            const wake = this.scene.eclipseWakes.get(player.x, player.y) as EclipseWake;
+            const offset = GAME_CONFIG.WEAPONS.ECLIPSE.spawnOffset;
+            const vx = player.x + Math.cos(angle) * offset;
+            const vy = player.y + Math.sin(angle) * offset;
+
+            const wake = this.scene.eclipseWakes.get(vx, vy) as EclipseWake;
             if (wake) {
                 const wakeDamage = this.scene.stats.damage * 0.3 * eclipseLevel;
-                wake.spawn(player.x, player.y, angle, wakeDamage);
+                wake.spawn(vx, vy, angle, wakeDamage);
             }
         }
     }

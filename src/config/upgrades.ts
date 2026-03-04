@@ -407,7 +407,7 @@ export const UPGRADES: UpgradeConfig[] = [
         maxLevel: 3,
         basePrice: 1200,
         priceScale: 2.2,
-        description: (lvl) => `Sverd-svinger etterlater en mørk sti (Nå: ${30 * lvl}% skade)`
+        description: (lvl) => `Sverd-svinger vrenger virkeligheten og etterlater et mørkt ekko som fortærer fiender (Nå: ${30 * lvl}% skade)`
     },
 
     // --- SYNERGIER (Wizard-eksklusiv) ---

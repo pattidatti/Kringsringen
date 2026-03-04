@@ -248,6 +248,19 @@ export const GAME_CONFIG = {
             tickIntervals: [1000, 1000, 750] as const, // ms between ticks per level
             totalTicks: [4, 6, 8] as const,             // total ticks per level
             color: 0x00cc44
+        },
+        ECLIPSE: {
+            baseRadius: 65,
+            spawnOffset: 45,    // Shift vortex forward towards strike point
+            tickRate: 150,      // Faster ticks for "devouring" feel
+            duration: 1200,    // Slightly longer for presence
+            color: 0xff00ff,   // Magenta rim
+            voidColor: 0x000000,
+            particles: {
+                quantity: 4,
+                lifespan: 600,
+                speed: { min: -100, max: -40 } // Negative speed for "implosion"
+            }
         }
     },
     LIGHTING: {

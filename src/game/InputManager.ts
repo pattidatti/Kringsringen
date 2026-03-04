@@ -89,7 +89,7 @@ export class InputManager {
         }
     }
 
-    private handleOrientation(player: Phaser.Physics.Arcade.Sprite): void {
+    public handleOrientation(player: Phaser.Physics.Arcade.Sprite): void {
         const isWhirlwinding = this.scene.data.get('isWhirlwinding');
         if (!isWhirlwinding) {
             const pointer = this.scene.input.activePointer;

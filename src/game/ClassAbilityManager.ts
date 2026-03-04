@@ -14,7 +14,6 @@ export class ClassAbilityManager {
     public classAbilityCooldownEnd: number = 0;
     public classAbility3CooldownEnd: number = 0;
     public classAbility4CooldownEnd: number = 0;
-
     private bulwarkGraphics: Phaser.GameObjects.Graphics | null = null;
     private bulwarkAlpha: number = 0;
     private bulwarkRotation: number = 0;
@@ -89,6 +88,16 @@ export class ClassAbilityManager {
         const graphics = this.scene.add.graphics();
         graphics.setDepth(player.depth + 10);
 
+        const triggerHit = (color: string) => {
+            const px = player.x, py = player.y;
+            const hitEnemies = (this.scene.enemies.getChildren() as Enemy[]).filter(e => e.active && Phaser.Math.Distance.Between(px, py, e.x, e.y) <= radius);
+            hitEnemies.forEach(e => {
+                e.takeDamage(damage, color);
+                e.pushback(px, py, this.scene.stats.knockback);
+            });
+            return hitEnemies;
+        };
+
         this.scene.tweens.add({
             targets: player,
             rotation: Math.PI * 24, // 12 full rotations over 3000ms (maintains visual speed)
@@ -129,24 +138,27 @@ export class ClassAbilityManager {
                 }
             },
             onComplete: () => {
+                this.isWhirlwinding = false;
+                this.scene.data.set('isWhirlwinding', false);
                 player.setRotation(0);
                 slash.destroy();
                 graphics.destroy();
-                if (this.scene.data.get('isWhirlwinding')) {
-                    player.play('player-idle');
+
+                // Final hit logic at the end of the 3s spin
+                const finalHit = triggerHit('#ffaa00');
+                if (chainLvl > 0) {
+                    const reduction = Math.min(finalHit.length * (chainLvl === 1 ? 0.05 : 0.07), chainLvl === 1 ? 0.25 : 0.35);
+                    this.classAbilityCooldownEnd -= cd * reduction;
+                    this.scene.registry.set('classAbilityCooldown', {
+                        duration: cd,
+                        timestamp: this.classAbilityCooldownEnd - cd
+                    });
                 }
+
+                // Force immediate orientation update
+                this.scene.inputManager.handleOrientation(player);
             }
         });
-
-        const triggerHit = (color: string) => {
-            const px = player.x, py = player.y;
-            const hitEnemies = (this.scene.enemies.getChildren() as Enemy[]).filter(e => e.active && Phaser.Math.Distance.Between(px, py, e.x, e.y) <= radius);
-            hitEnemies.forEach(e => {
-                e.takeDamage(damage, color);
-                e.pushback(px, py, this.scene.stats.knockback);
-            });
-            return hitEnemies;
-        };
 
         // Periodic damage ticks every 200ms
         // Ticks at: 0ms, 200ms, 400ms, ..., 2800ms (15 total ticks)
@@ -163,22 +175,6 @@ export class ClassAbilityManager {
                 }
             });
         }
-
-        // Final hit and end (3000ms)
-        this.scene.time.delayedCall(3000, () => {
-            if (!this.isWhirlwinding) return;
-            const finalHit = triggerHit('#ffaa00');
-            if (chainLvl > 0) {
-                const reduction = Math.min(finalHit.length * (chainLvl === 1 ? 0.05 : 0.07), chainLvl === 1 ? 0.25 : 0.35);
-                this.classAbilityCooldownEnd -= cd * reduction;
-                this.scene.registry.set('classAbilityCooldown', {
-                    duration: cd,
-                    timestamp: this.classAbilityCooldownEnd - cd
-                });
-            }
-            this.isWhirlwinding = false;
-            this.scene.data.set('isWhirlwinding', false);
-        });
     }
 
     private activateExplosiveShot(): void {

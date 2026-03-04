@@ -60,6 +60,25 @@ export class TextureSetup {
         graphics.strokePath();
         graphics.generateTexture('whirlwind_slash', 128, 128);
 
+        // --- ECLIPSE VORTEX (Void center, Magenta glowing rim) ---
+        graphics.clear();
+
+        // Outer glow
+        graphics.fillStyle(0xff00ff, 0.1);
+        graphics.fillCircle(40, 40, 40);
+        graphics.fillStyle(0xff00ff, 0.2);
+        graphics.fillCircle(40, 40, 30);
+
+        // Sharp colored rim
+        graphics.lineStyle(4, 0xff00ff, 0.8);
+        graphics.strokeCircle(40, 40, 20);
+
+        // The Void center
+        graphics.fillStyle(0x000000, 1.0);
+        graphics.fillCircle(40, 40, 18);
+
+        graphics.generateTexture('eclipse_vortex', 80, 80);
+
         graphics.destroy();
     }
 }
