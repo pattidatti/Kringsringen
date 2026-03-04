@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import type { IMainScene } from './IMainScene';
-import { PacketType, type SyncPacket, type PackedPlayer, type PackedEnemy, type GameEventPacket } from '../network/SyncSchemas';
+import { PacketType, type SyncPacket, type PackedPlayer, type GameEventPacket } from '../network/SyncSchemas';
 import { BinaryPacker } from '../network/BinaryPacker';
 import type { DataConnection } from 'peerjs';
 import { JitterBuffer } from '../network/JitterBuffer';
@@ -29,7 +29,7 @@ interface ProjectileHitRequestData {
 export class NetworkPacketHandler {
     private scene: IMainScene;
     private lastSentPlayerStates: Map<string, string> = new Map();
-    private localPackedPlayer: PackedPlayer = ['', 0, 0, '', 0, 0, '', ''] as any;
+    private localPackedPlayer: PackedPlayer = ['', 0, 0, 'player-idle', 0, 100, 'sword', ''] as any;
     private networkTickCount: number = 0;
     private lastSyncTime: number = 0;
 
@@ -118,13 +118,66 @@ export class NetworkPacketHandler {
 
     private pushToBuffer(p: PackedPlayer, ts: number): void {
         const id = p[0];
+        if (!id) return;
+
         const myId = this.scene.game.registry.get('networkConfig')?.peer.id;
         if (id === myId) return;
+
+        // Auto-spawn if we haven't seen this player before
+        if (!this.remotePlayers.has(id)) {
+            this.spawnRemotePlayer(id, p);
+        }
 
         const buffer = this.playerBuffers.get(id);
         if (buffer) {
             buffer.push(ts, p);
         }
+
+        // Store latest raw packet for reference
+        this.remotePlayerPackets.set(id, p);
+    }
+
+    private spawnRemotePlayer(id: string, initialData: PackedPlayer): void {
+        console.log(`[Network] Spawning remote player: ${id}`);
+
+        // Use initial coordinates or default to map center if invalid
+        const x = initialData[1] || 1500;
+        const y = initialData[2] || 1500;
+
+        const sprite = this.scene.physics.add.sprite(x, y, 'player-idle');
+        sprite.setScale(2).setBodySize(20, 15, true);
+        const offsetY = (sprite.height * 0.5) - (15 * 0.5); // bodySize.height = 15
+        sprite.setOffset(sprite.body!.offset.x, offsetY + 10);
+
+        if ((this.scene as any).quality?.lightingEnabled) {
+            sprite.setPipeline('Light2D');
+        }
+
+        this.remotePlayers.set(id, sprite);
+
+        // Setup Jitter Buffer
+        const buffer = new JitterBuffer<PackedPlayer>(30);
+        this.playerBuffers.set(id, buffer);
+
+        // Setup Nickname Label
+        const name = initialData[7] || 'Spiller';
+        const label = this.scene.add.text(x, y - 40, name, {
+            fontSize: '14px',
+            color: '#ffffff',
+            stroke: '#000000',
+            strokeThickness: 3,
+            fontFamily: 'Inter, sans-serif'
+        }).setOrigin(0.5);
+        this.playerNicknames.set(id, label);
+
+        // Add to main scene group for collisions/sorting
+        if (this.scene.players) {
+            this.scene.players.add(sprite);
+        }
+
+        // Remote Player Light
+        const light = this.scene.lights.addLight(x, y, 150, 0xffffff, 0.4);
+        this.remotePlayerLights.set(id, light);
     }
 
     private handleHitRequest(event: GameEventPacket, ts: number, peerId: string): void {
