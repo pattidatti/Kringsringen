@@ -75,6 +75,16 @@ export class ClassAbilityManager {
         slash.setScale(radius / 64);
         slash.setBlendMode(Phaser.BlendModes.ADD);
 
+        // Client-side prediction
+        this.scene.buffs.addBuff({
+            key: 'whirlwind',
+            title: 'WHIRLWIND',
+            icon: 'item_sword',
+            color: 0xffaa00,
+            duration: 3000,
+            maxStacks: 1,
+            isVisible: true
+        });
         // Create duration indicator
         const graphics = this.scene.add.graphics();
         graphics.setDepth(player.depth + 10);
@@ -231,6 +241,15 @@ export class ClassAbilityManager {
         const singularity = this.scene.singularities.get(spawnX, spawnY) as import('./Singularity').Singularity | null;
         if (singularity) {
             singularity.spawn(spawnX, spawnY, duration, radiusMult, baseDamage, centerDamageMult, damageReduction);
+            this.scene.buffs.addBuff({
+                key: 'arcane_singularity',
+                title: 'SINGULARITY',
+                icon: 'item_orb_purple',
+                color: 0xcc88ff,
+                duration: duration,
+                maxStacks: 1,
+                isVisible: true
+            });
         }
     }
 
@@ -241,7 +260,16 @@ export class ClassAbilityManager {
 
         this.classAbility3CooldownEnd = Date.now() + cd;
         this.scene.registry.set('classAbility3Cooldown', { duration: cd, timestamp: Date.now() });
-        this.scene.registry.set('bulwarkActiveUntil', Date.now() + duration);
+
+        this.scene.buffs.addBuff({
+            key: 'iron_bulwark',
+            title: 'BULWARK',
+            icon: 'item_shield',
+            color: 0x00ccff,
+            duration: duration,
+            maxStacks: 1,
+            isVisible: true
+        });
 
         const player = this.scene.data.get('player') as Phaser.Physics.Arcade.Sprite;
 

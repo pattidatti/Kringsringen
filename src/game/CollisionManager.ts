@@ -160,21 +160,23 @@ export class CollisionManager {
         // Heavy Momentum
         const momentumLvl = levels['heavy_momentum'] || 0;
         if (momentumLvl > 0) {
-            const now = Date.now();
-            const momentumStacks = this.scene.data.get('momentumStacks') || 0;
-            const momentumLastTime = this.scene.data.get('momentumLastHitTime') || 0;
-
-            let currentStacks = now - momentumLastTime > 3000 ? 0 : momentumStacks;
+            const currentStacks = this.scene.buffs.getStacks('heavy_momentum');
             swordDamage *= (1 + currentStacks * 0.10);
 
-            const nextStacks = Math.min(currentStacks + 1, momentumLvl * 3);
-            this.scene.data.set('momentumStacks', nextStacks);
-            this.scene.data.set('momentumLastHitTime', now);
+            this.scene.buffs.addBuff({
+                key: 'heavy_momentum',
+                title: 'Momentum',
+                icon: 'item_lightning',
+                color: 0xffff00,
+                duration: 3000,
+                maxStacks: momentumLvl * 3,
+                isVisible: true
+            });
         }
 
         // Battle Cry
-        const battleCryActiveUntil = this.scene.data.get('battleCryActiveUntil') || 0;
-        if (Date.now() < battleCryActiveUntil) {
+        // Battle Cry (Active check)
+        if (this.scene.buffs.hasBuff('battle_cry')) {
             const battleCryLvl = levels['battle_cry'] || 0;
             swordDamage *= 1 + battleCryLvl * 0.15;
         }
@@ -217,16 +219,34 @@ export class CollisionManager {
             this.scene.poolManager.getDamageText(player.x, player.y - 50, `+${heal}`, '#55ff55');
         }
 
-        // Battle Cry (Kill counter)
+        // Battle Cry (Kill counter - we use a hidden buff for tracking)
         const battleCryLvl = levels['battle_cry'] || 0;
         if (battleCryLvl > 0) {
-            let kills = (this.scene.data.get('battleCryKills') || 0) + 1;
+            const kills = this.scene.buffs.getStacks('battle_cry_kills') + 1;
+
             if (kills >= 5) {
-                kills = 0;
-                this.scene.data.set('battleCryActiveUntil', Date.now() + 8000);
+                this.scene.buffs.removeBuff('battle_cry_kills');
+                this.scene.buffs.addBuff({
+                    key: 'battle_cry',
+                    title: 'KRIGSRUSH',
+                    icon: 'item_sword_heavy',
+                    color: 0xffaa00,
+                    duration: 8000,
+                    maxStacks: 1,
+                    isVisible: true
+                });
                 this.scene.poolManager.getDamageText(player.x, player.y - 70, 'BATTLE CRY!', '#ffaa00');
+            } else {
+                this.scene.buffs.addBuff({
+                    key: 'battle_cry_kills',
+                    title: 'BC Kills',
+                    icon: 'item_sword_heavy',
+                    color: 0xaaaaaa,
+                    duration: -1,
+                    maxStacks: 5,
+                    isVisible: false // Hidden tracking buff
+                });
             }
-            this.scene.data.set('battleCryKills', kills);
         }
     }
 

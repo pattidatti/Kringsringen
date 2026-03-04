@@ -230,8 +230,10 @@ export class Fireball extends Phaser.Physics.Arcade.Sprite {
         // Arcane Insight: every 4 casts, slice the active cooldown
         const arcaneInsightLvl = upgLvls['arcane_insight'] || 0;
         if (arcaneInsightLvl > 0) {
-            mainScene._arcaneInsightCasts = (mainScene._arcaneInsightCasts || 0) + 1;
-            if (mainScene._arcaneInsightCasts % 4 === 0) {
+            const casts = mainScene.buffs.getStacks('arcane_insight_tracker') + 1;
+
+            if (casts >= 4) {
+                mainScene.buffs.removeBuff('arcane_insight_tracker');
                 const weaponCd = mainScene.registry.get('weaponCooldown') as { duration: number; timestamp: number } | undefined;
                 if (weaponCd) {
                     const reduction = arcaneInsightLvl === 1 ? 0.30 : 0.60;
@@ -243,32 +245,90 @@ export class Fireball extends Phaser.Physics.Arcade.Sprite {
                         });
                     }
                 }
+                // Visual buff indicator for the proc
+                mainScene.buffs.addBuff({
+                    key: 'arcane_insight_proc',
+                    title: 'INSIGHT',
+                    icon: 'item_orb_purple',
+                    color: 0xcc88ff,
+                    duration: 1000,
+                    maxStacks: 1,
+                    isVisible: true
+                });
+            } else {
+                mainScene.buffs.addBuff({
+                    key: 'arcane_insight_tracker',
+                    title: 'Casts',
+                    icon: 'item_orb_purple',
+                    color: 0xaaaaaa,
+                    duration: -1,
+                    maxStacks: 4,
+                    isVisible: false
+                });
             }
         }
 
         // Overload: 3 hits → gratis neste kast (flagg leses i main.ts spell-cast)
         const overloadLvl = upgLvls['overload'] || 0;
         if (overloadLvl > 0) {
-            mainScene._overloadHits = (mainScene._overloadHits || 0) + 1;
-            if (mainScene._overloadHits >= 3) {
-                mainScene._overloadHits = 0;
+            const hits = mainScene.buffs.getStacks('overload_tracker') + 1;
+            if (hits >= 3) {
+                mainScene.buffs.removeBuff('overload_tracker');
                 mainScene._nextCastFree = true;
+                mainScene.buffs.addBuff({
+                    key: 'overload_proc',
+                    title: 'GRATISKAST',
+                    icon: 'item_flame',
+                    color: 0xcc88ff,
+                    duration: 10000,
+                    maxStacks: 1,
+                    isVisible: true
+                });
                 const p = mainScene.data?.get('player');
                 if (p && mainScene.poolManager) {
                     mainScene.poolManager.getDamageText(p.x, p.y - 70, 'OVERLOAD!', '#cc88ff');
                 }
+            } else {
+                mainScene.buffs.addBuff({
+                    key: 'overload_tracker',
+                    title: 'Hits',
+                    icon: 'item_flame',
+                    color: 0xaaaaaa,
+                    duration: -1,
+                    maxStacks: 3,
+                    isVisible: false
+                });
             }
         }
 
-        // Spell Echo: chance for free cast (no cooldown set)
+        // Spell Echo: chance for free cast
         const spellEchoLvl = upgLvls['spell_echo'] || 0;
         if (spellEchoLvl > 0 && Math.random() < spellEchoLvl * 0.15) {
             mainScene._nextCastFree = true;
+            mainScene.buffs.addBuff({
+                key: 'spell_echo_proc',
+                title: 'ECHO',
+                icon: 'item_lightning',
+                color: 0xcc88ff,
+                duration: 10000,
+                maxStacks: 1,
+                isVisible: true
+            });
         }
 
         // Elementar Overload: register fireball cross-element window
         const elemOverloadLvl = upgLvls['elementar_overfload'] || 0;
         if (elemOverloadLvl > 0) {
+            mainScene.buffs.addBuff({
+                key: 'overload_fireball',
+                title: 'FIRE WINDOW',
+                icon: 'item_synergy_rune',
+                color: 0xffaa00,
+                duration: 5000,
+                maxStacks: 1,
+                isVisible: true
+            });
+            // Legacy flag compatibility
             if (!mainScene._overloadActiveUntil) mainScene._overloadActiveUntil = {};
             mainScene._overloadActiveUntil['fireball'] = Date.now() + 5000;
         }

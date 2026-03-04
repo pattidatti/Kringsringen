@@ -29,6 +29,7 @@ import { SceneEventManager } from './SceneEventManager';
 import { NetworkManager } from '../network/NetworkManager';
 import { BOSS_CONFIGS } from '../config/bosses';
 import { FlowFieldManager } from './pathing/FlowFieldManager';
+import { BuffManager } from './BuffManager';
 
 
 export class MainScene extends Phaser.Scene implements IMainScene {
@@ -44,6 +45,7 @@ export class MainScene extends Phaser.Scene implements IMainScene {
     public eventManager!: SceneEventManager;
     public weaponManager!: WeaponManager;
     public abilityManager!: ClassAbilityManager;
+    public buffs!: BuffManager;
 
     public arrows!: Phaser.Physics.Arcade.Group;
     public fireballs!: Phaser.Physics.Arcade.Group;
@@ -195,6 +197,7 @@ export class MainScene extends Phaser.Scene implements IMainScene {
             this.eventManager = new SceneEventManager(this);
             this.weaponManager = new WeaponManager(this);
             this.abilityManager = new ClassAbilityManager(this);
+            this.buffs = new BuffManager(this);
             this.collisions = new CollisionManager(this);
             console.log('[MainScene] All managers instantiated.');
 
@@ -363,6 +366,7 @@ export class MainScene extends Phaser.Scene implements IMainScene {
             this.visuals.update();
             this.inputManager.update(_time, delta);
             this.abilityManager.update(_time, delta);
+            this.buffs.update();
 
             // Update Spatial Grid
             this.flowFieldManager.update(this.player.x, this.player.y);
@@ -447,6 +451,7 @@ export class MainScene extends Phaser.Scene implements IMainScene {
         this.registry.set('partyDead', false);
         this.registry.set('upgradeLevels', {});
         this.registry.set('classAbilityCooldown', null);
+        this.buffs.clear();
 
         this.enemies.clear(true, true);
         this.bossGroup.clear(true, true);

@@ -11,6 +11,7 @@ import { FantasyBook, type BookMode } from './ui/FantasyBook';
 import { BossSplashScreen } from './ui/BossSplashScreen';
 import { BossHUD } from './ui/BossHUD';
 import { HighscoreNotification } from './ui/HighscoreNotification';
+import { BuffHUD } from './ui/BuffHUD';
 import { PacketType } from '../network/SyncSchemas';
 
 import { setGameInstance } from '../hooks/useGameRegistry';
@@ -734,6 +735,7 @@ export const GameContainer: React.FC<GameContainerProps> = React.memo(({ network
             </div>
 
             <BossHUD />
+            <BuffHUD />
 
             {isLoadingLevel && (
                 <div className="absolute inset-0 z-[100] bg-black/80 flex items-center justify-center pointer-events-auto backdrop-blur-sm">
