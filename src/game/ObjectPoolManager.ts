@@ -184,8 +184,11 @@ export class ObjectPoolManager {
         }
     }
 
-    public spawnFireballExplosion(x: number, y: number) {
+    public spawnFireballExplosion(x: number, y: number, customRadius?: number) {
         let explosion: Phaser.GameObjects.Sprite;
+
+        const currentRadius = customRadius || (this.scene as any).registry.get('fireballRadius') || 80;
+        const finalScale = 2 * (currentRadius / 80);
 
         if (this.explosionPool.length > 0) {
             explosion = this.explosionPool.pop()!;
@@ -193,9 +196,10 @@ export class ObjectPoolManager {
             explosion.setActive(true);
             explosion.setVisible(true);
             explosion.setAlpha(1);
+            explosion.setScale(finalScale);
         } else {
             explosion = this.scene.add.sprite(x, y, 'fireball_explosion');
-            explosion.setScale(2);
+            explosion.setScale(finalScale);
             explosion.setDepth(500);
 
             if ((this.scene as any).quality?.bloomEnabled) {
@@ -217,8 +221,11 @@ export class ObjectPoolManager {
         }
     }
 
-    public spawnFrostExplosion(x: number, y: number) {
+    public spawnFrostExplosion(x: number, y: number, customRadius?: number) {
         let explosion: Phaser.GameObjects.Sprite;
+
+        const currentRadius = customRadius || (this.scene as any).registry.get('frostRadius') || 80;
+        const finalScale = 2 * (currentRadius / 80);
 
         if (this.frostExplosionPool.length > 0) {
             explosion = this.frostExplosionPool.pop()!;
@@ -226,9 +233,10 @@ export class ObjectPoolManager {
             explosion.setActive(true);
             explosion.setVisible(true);
             explosion.setAlpha(1);
+            explosion.setScale(finalScale);
         } else {
             explosion = this.scene.add.sprite(x, y, 'frost_explosion');
-            explosion.setScale(2);
+            explosion.setScale(finalScale);
             explosion.setDepth(500);
 
             if ((this.scene as any).quality?.bloomEnabled) {

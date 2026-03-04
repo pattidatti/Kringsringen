@@ -19,6 +19,16 @@ export class PlayerCombatManager {
     /** Fase 6: iron_will – can only trigger once per level/wave */
     private ironWillUsedThisLevel: boolean = false;
 
+    // Berserker Rage UX State
+    private berserkerVignette: Phaser.GameObjects.Rectangle | null = null;
+    private berserkerPulseTween: Phaser.Tweens.Tween | null = null;
+
+    // Fortification State
+    private fortificationTimer: number = 0;
+    private isFortified: boolean = false;
+    private fortificationShield: Phaser.GameObjects.Sprite | null = null;
+    private fortificationTween: Phaser.Tweens.Tween | null = null;
+
     constructor(scene: IMainScene) {
         this.scene = scene;
     }
@@ -40,8 +50,14 @@ export class PlayerCombatManager {
 
         const isBlocking = this.scene.data.get('isBlocking') as boolean;
         const player = this.scene.data.get('player') as Phaser.Physics.Arcade.Sprite;
-        const armor = this.scene.registry.get('playerArmor') || 0;
+        let armor = this.scene.registry.get('playerArmor') || 0;
         const levels = (this.scene.registry.get('upgradeLevels') || {}) as Record<string, number>;
+
+        // Fortification Buff (20% bonus armor per level if standing still)
+        const fortifyLvl = levels['fortification'] || 0;
+        if (this.isFortified && fortifyLvl > 0) {
+            armor += armor * (fortifyLvl * 0.20);
+        }
 
         // Armor Reduction: Damage - Armor (min 1)
         let damageAfterArmor = Math.max(1, amount - armor);
@@ -231,7 +247,129 @@ export class PlayerCombatManager {
             }
         }
 
+        // ── Berserker Rage Check ──
+        const levels = (this.scene.registry.get('upgradeLevels') || {}) as Record<string, number>;
+        const berserkerLvl = levels['berserker_rage'] || 0;
+        let isBerserkerActive = false;
+
+        if (berserkerLvl > 0) {
+            const curHP = this.scene.registry.get('playerHP') || 0;
+            const maxHP = this.scene.registry.get('playerMaxHP') || 100;
+            isBerserkerActive = curHP > 0 && (curHP / maxHP < 0.3);
+        }
+        this.updateBerserkerUX(isBerserkerActive);
+
+        // ── Fortification Check ──
+        const fortifyLvl = levels['fortification'] || 0;
+        if (fortifyLvl > 0) {
+            const player = this.scene.data.get('player') as Phaser.Physics.Arcade.Sprite;
+            if (player && player.active && player.body) {
+                const isStandingStill = Math.abs(player.body.velocity.x) < 5 && Math.abs(player.body.velocity.y) < 5;
+                if (isStandingStill && !this.isKnockedBack) {
+                    this.fortificationTimer += delta;
+                    if (this.fortificationTimer >= 1000 && !this.isFortified) {
+                        this.isFortified = true;
+                        this.updateFortificationUX(true);
+                    }
+                } else {
+                    this.fortificationTimer = 0;
+                    if (this.isFortified) {
+                        this.isFortified = false;
+                        this.updateFortificationUX(false);
+                    }
+                }
+            }
+        }
+
         this.flushHP();
+    }
+
+    private updateFortificationUX(isActive: boolean): void {
+        const phaserScene = this.scene as unknown as Phaser.Scene;
+        const player = this.scene.data.get('player') as Phaser.Physics.Arcade.Sprite;
+        if (!player || !player.active) return;
+
+        if (isActive) {
+            if (!this.fortificationShield) {
+                this.fortificationShield = phaserScene.add.sprite(player.x, player.y, 'item_shield')
+                    .setDepth(player.depth - 1)
+                    .setAlpha(0.5)
+                    .setScale(1.5);
+                this.fortificationShield.setTint(0x88ccff);
+                this.fortificationTween = phaserScene.tweens.add({
+                    targets: this.fortificationShield,
+                    alpha: 0.8,
+                    scale: 1.7,
+                    duration: 1000,
+                    yoyo: true,
+                    repeat: -1,
+                    ease: 'Sine.easeInOut'
+                });
+            }
+        } else {
+            if (this.fortificationShield) {
+                this.fortificationShield.destroy();
+                this.fortificationShield = null;
+            }
+            if (this.fortificationTween) {
+                this.fortificationTween.stop();
+                this.fortificationTween = null;
+            }
+        }
+    }
+
+    private updateBerserkerUX(isActive: boolean): void {
+        const phaserScene = this.scene as unknown as Phaser.Scene;
+        const player = this.scene.data.get('player') as Phaser.Physics.Arcade.Sprite;
+        if (!player || !player.active) return;
+
+        if (isActive) {
+            if (!this.berserkerVignette) {
+                const cam = phaserScene.cameras.main;
+                this.berserkerVignette = phaserScene.add.rectangle(
+                    cam.width / 2, cam.height / 2, cam.width, cam.height, 0xcc0000, 0.15
+                ).setDepth(9999).setScrollFactor(0);
+
+
+                phaserScene.tweens.add({
+                    targets: this.berserkerVignette,
+                    alpha: 0.35,
+                    duration: 400,
+                    yoyo: true,
+                    repeat: -1,
+                    ease: 'Sine.easeInOut'
+                });
+            }
+            if (!this.berserkerPulseTween) {
+                this.berserkerPulseTween = phaserScene.tweens.add({
+                    targets: player,
+                    scaleX: 1.15,
+                    scaleY: 1.15,
+                    duration: 400,
+                    yoyo: true,
+                    repeat: -1,
+                    ease: 'Sine.easeInOut'
+                });
+                player.setTint(0xff6666);
+            }
+        } else {
+            if (this.berserkerVignette) {
+                this.berserkerVignette.destroy();
+                this.berserkerVignette = null;
+            }
+            if (this.berserkerPulseTween) {
+                this.berserkerPulseTween.stop();
+                this.berserkerPulseTween = null;
+                player.setScale(1);
+                // Don't clearTint unconditionally if blocking, but it's safe enough here since it's rare to overlap perfectly and blocking clears tint after 100ms anyway.
+                player.clearTint();
+            }
+        }
+
+        // Ensure shield follows player
+        if (this.fortificationShield && this.isFortified && player && player.active) {
+            this.fortificationShield.setPosition(player.x, player.y);
+        }
     }
 
     /**

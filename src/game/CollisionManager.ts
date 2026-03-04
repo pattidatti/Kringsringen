@@ -104,6 +104,42 @@ export class CollisionManager {
                 }
             }
         );
+
+        // ── Fase 6: Wizard Nullifikasjon ──
+        const playerProjectiles = [
+            (this.scene as any).arrows,
+            (this.scene as any).fireballs,
+            (this.scene as any).frostBolts,
+            (this.scene as any).lightningBolts
+        ].filter(group => group !== undefined); // Ensure groups exist
+
+        phaserScene.physics.add.overlap(
+            playerProjectiles,
+            (this.scene as any).enemyProjectiles,
+            (pProj: any, eProj: any) => {
+                const levels = (this.scene.registry.get('upgradeLevels') || {}) as Record<string, number>;
+                const nullLvl = levels['nullifikasjon'] || 0;
+
+                if (nullLvl > 0 && pProj.active && eProj.active) {
+                    // Destroy enemy projectile
+                    if (eProj.destroy) eProj.destroy();
+
+                    // UX: Violet implosion feedback
+                    this.scene.poolManager.getDamageText(eProj.x, eProj.y - 10, 'NULLIFIED', '#cc88ff');
+
+                    const sparks = phaserScene.add.particles(eProj.x, eProj.y, 'item_orb_purple', {
+                        speed: { min: 50, max: 150 },
+                        scale: { start: 0.5, end: 0 },
+                        alpha: { start: 1, end: 0 },
+                        lifespan: 300,
+                        blendMode: 'ADD',
+                        maxParticles: 12
+                    });
+                    sparks.setDepth(100);
+                    phaserScene.time.delayedCall(400, () => sparks.destroy());
+                }
+            }
+        );
     }
 
     private handlePlayerMeleeHit(target: Enemy | BossEnemy): void {
@@ -182,8 +218,15 @@ export class CollisionManager {
         }
 
         // Berserker Rage (HP ratio passive)
-        const berserkerMulti = this.scene.data.get('berserkerMulti') || 1;
-        swordDamage *= berserkerMulti;
+        const berserkerLvl = levels['berserker_rage'] || 0;
+        if (berserkerLvl > 0) {
+            const curHP = this.scene.registry.get('playerHP') || 0;
+            const maxHP = this.scene.registry.get('playerMaxHP') || 100;
+            if (curHP / maxHP < 0.3) {
+                const bonus = [0.05, 0.10, 0.15][berserkerLvl - 1] || 0.15;
+                swordDamage *= 1 + bonus;
+            }
+        }
 
         const wasAlive = target.hp > 0;
         target.takeDamage(swordDamage, '#ffcc00');

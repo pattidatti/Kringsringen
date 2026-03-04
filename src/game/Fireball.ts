@@ -114,7 +114,9 @@ export class Fireball extends Phaser.Physics.Arcade.Sprite {
         const mainScene = this.scene as any;
         const fireballRadius = mainScene.registry.get('fireballRadius') || 80;
         const fireballDamageMulti = mainScene.registry.get('fireballDamageMulti') || 1;
-        const fireChainLvl = (mainScene.registry.get('upgradeLevels') || {})['fire_chain'] || 0;
+        const upgLvls = (mainScene.registry.get('upgradeLevels') || {}) as Record<string, number>;
+        const fireChainLvl = upgLvls['fire_chain'] || 0;
+        const blazeStormLvl = upgLvls['blaze_storm'] || 0;
         const synergyThermalShock = mainScene.registry.get('synergyThermalShock');
 
         const scaledDamage = this.damage * fireballDamageMulti;
@@ -127,6 +129,15 @@ export class Fireball extends Phaser.Physics.Arcade.Sprite {
             if (synergyThermalShock && directHit.consumeSlow()) {
                 hitDmg *= 3;
                 thermalShockTriggered = true;
+            }
+
+            if (blazeStormLvl > 0) {
+                if (directHit.getData('shockedUntil') && Date.now() < directHit.getData('shockedUntil')) {
+                    directHit.setData('shockedUntil', 0); // Consume shock
+                    this.spawnHazardArea(hitX, hitY, hitDmg * 0.6, 2000 + (blazeStormLvl * 1000));
+                } else {
+                    directHit.setData('burnedUntil', Date.now() + 3000);
+                }
             }
 
             if (mainScene.networkManager?.role === 'client') {
@@ -175,6 +186,15 @@ export class Fireball extends Phaser.Physics.Arcade.Sprite {
                     thermalShockTriggered = true;
                 }
 
+                if (blazeStormLvl > 0) {
+                    if (enemy.getData('shockedUntil') && Date.now() < enemy.getData('shockedUntil')) {
+                        enemy.setData('shockedUntil', 0); // Consume shock
+                        this.spawnHazardArea(enemy.x, enemy.y, splashDmg * 0.6, 2000 + (blazeStormLvl * 1000));
+                    } else {
+                        enemy.setData('burnedUntil', Date.now() + 3000);
+                    }
+                }
+
                 if (thermalShockTriggered) {
                     splashDmg = Math.max(splashDmg, scaledDamage); // Increase baseline splash
                 }
@@ -194,9 +214,9 @@ export class Fireball extends Phaser.Physics.Arcade.Sprite {
             mainScene.bossGroup.getChildren().forEach((e: any) => { applySplash(e); });
         }
 
-        mainScene.poolManager.spawnFireballExplosion(hitX, hitY);
+        mainScene.poolManager.spawnFireballExplosion(hitX, hitY, finalRadius);
         if (thermalShockTriggered) {
-            mainScene.poolManager.spawnFrostExplosion(hitX, hitY); // Dual explosion effect
+            mainScene.poolManager.spawnFrostExplosion(hitX, hitY, finalRadius); // Dual explosion effect
             AudioManager.instance.playSFX('ice_freeze');
 
             // Screen shake for massive impact
@@ -220,12 +240,12 @@ export class Fireball extends Phaser.Physics.Arcade.Sprite {
                         enemy.pushback(hitX, hitY, 80);
                     }
                 });
-                mainScene.poolManager.spawnFireballExplosion(hitX, hitY);
+                mainScene.poolManager.spawnFireballExplosion(hitX, hitY, fireballRadius);
             });
         }
 
         // ── Fase 6: Wizard Spell Effects ─────────────────────────────────────
-        const upgLvls = (mainScene.registry?.get('upgradeLevels') || {}) as Record<string, number>;
+        // (Using upgLvls from earlier in the function)
 
         // Arcane Insight: every 4 casts, slice the active cooldown
         const arcaneInsightLvl = upgLvls['arcane_insight'] || 0;
@@ -355,5 +375,44 @@ export class Fireball extends Phaser.Physics.Arcade.Sprite {
             this.light = null;
         }
         super.destroy(fromScene);
+    }
+
+    private spawnHazardArea(x: number, y: number, dps: number, duration: number) {
+        const phaserScene = this.scene as any;
+        if (!phaserScene.spatialGrid) return;
+
+        const radius = 100;
+        const fireAura = phaserScene.add.circle(x, y, radius, 0xff4400, 0.3).setDepth(1);
+
+        phaserScene.tweens.add({
+            targets: fireAura,
+            alpha: 0.1,
+            scale: 1.1,
+            yoyo: true,
+            repeat: -1,
+            duration: 300
+        });
+
+        const tickRate = 500;
+        let elapsed = 0;
+        const tickEvent = phaserScene.time.addEvent({
+            delay: tickRate,
+            callback: () => {
+                elapsed += tickRate;
+                if (elapsed >= duration) {
+                    tickEvent.remove();
+                    fireAura.destroy();
+                    return;
+                }
+                const nearby = phaserScene.spatialGrid.findNearby({ x, y, width: 1, height: 1 }, radius);
+                nearby.forEach((cell: any) => {
+                    const e = cell.ref;
+                    if (e && e.active && !e.getIsDead()) {
+                        e.takeDamage(dps * (tickRate / 1000), '#ff4400');
+                    }
+                });
+            },
+            loop: true
+        });
     }
 }

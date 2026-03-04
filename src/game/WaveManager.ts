@@ -29,6 +29,7 @@ export class WaveManager {
     private enemiesAlive: number = 0;
     private isLevelActive: boolean = false;
     private bgmPlaylist: string[] = [];
+    private spawnTimer: Phaser.Time.TimerEvent | null = null;
 
     constructor(scene: IMainScene) {
         this.scene = scene;
@@ -115,17 +116,28 @@ export class WaveManager {
         // START SPAWNING (Only if Host or Single Player)
         const isClient = this.scene.registry.get('networkRole') === 'client';
         if (!isClient) {
-            this.scene.time.addEvent({
+            if (this.spawnTimer) {
+                this.spawnTimer.destroy();
+            }
+            this.spawnTimer = this.scene.time.addEvent({
                 delay: GAME_CONFIG.WAVES.SPAWN_DELAY,
                 callback: this.spawnEnemyInWave,
                 callbackScope: this,
-                repeat: this.enemiesToSpawnInWave - 1
+                loop: true
             });
         }
     }
 
     private spawnEnemyInWave(): void {
-        if (!this.isLevelActive) return;
+        if (!this.isLevelActive) {
+            if (this.spawnTimer) this.spawnTimer.destroy();
+            return;
+        }
+
+        if (this.enemiesToSpawnInWave <= 0) {
+            if (this.spawnTimer) this.spawnTimer.destroy();
+            return;
+        }
 
         const mapWidth = 3000;
         const mapHeight = 3000;
@@ -535,11 +547,14 @@ export class WaveManager {
 
         // If more enemies still to spawn, resume spawn timer
         if (remainingToSpawn > 0) {
-            this.scene.time.addEvent({
+            if (this.spawnTimer) {
+                this.spawnTimer.destroy();
+            }
+            this.spawnTimer = this.scene.time.addEvent({
                 delay: GAME_CONFIG.WAVES.SPAWN_DELAY,
                 callback: this.spawnEnemyInWave,
                 callbackScope: this,
-                repeat: remainingToSpawn - 1
+                loop: true
             });
         }
     }

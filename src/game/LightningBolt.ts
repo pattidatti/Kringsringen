@@ -259,9 +259,11 @@ export class LightningBolt extends Phaser.Physics.Arcade.Sprite {
                 }
             }
 
-            // ── Fase 6: Frozen Lightning – 4x damage on frozen enemies ──────
+            // ── Fase 6: Wizard Modifiers ──────
             const upgLvls = (mainScene.registry.get('upgradeLevels') || {}) as Record<string, number>;
             const frozenLightningLvl = upgLvls['frozen_lightning'] || 0;
+            const blazeStormLvl = upgLvls['blaze_storm'] || 0;
+
             if (frozenLightningLvl > 0) {
                 // Check if enemy is frozen (has active slow)
                 const frozenUntil = hitEnemy.getData('slowUntil') || 0;
@@ -270,6 +272,15 @@ export class LightningBolt extends Phaser.Physics.Arcade.Sprite {
                     if (mainScene.poolManager) {
                         mainScene.poolManager.getDamageText(hitEnemy.x, hitEnemy.y - 50, '❄ x4!', '#00ccff');
                     }
+                }
+            }
+
+            if (blazeStormLvl > 0) {
+                if (hitEnemy.getData('burnedUntil') && Date.now() < hitEnemy.getData('burnedUntil')) {
+                    hitEnemy.setData('burnedUntil', 0); // Consume burn
+                    this.spawnHazardArea(hitX, hitY, this.damage * 0.6, 2000 + (blazeStormLvl * 1000));
+                } else {
+                    hitEnemy.setData('shockedUntil', Date.now() + 3000);
                 }
             }
         }
@@ -392,5 +403,44 @@ export class LightningBolt extends Phaser.Physics.Arcade.Sprite {
     public destroy(fromScene?: boolean) {
         this.deactivate();
         super.destroy(fromScene);
+    }
+
+    private spawnHazardArea(x: number, y: number, dps: number, duration: number) {
+        const phaserScene = this.scene as any;
+        if (!phaserScene.spatialGrid) return;
+
+        const radius = 100;
+        const fireAura = phaserScene.add.circle(x, y, radius, 0xffaa00, 0.4).setDepth(1);
+
+        phaserScene.tweens.add({
+            targets: fireAura,
+            alpha: 0.1,
+            scale: 1.1,
+            yoyo: true,
+            repeat: -1,
+            duration: 300
+        });
+
+        const tickRate = 500;
+        let elapsed = 0;
+        const tickEvent = phaserScene.time.addEvent({
+            delay: tickRate,
+            callback: () => {
+                elapsed += tickRate;
+                if (elapsed >= duration) {
+                    tickEvent.remove();
+                    fireAura.destroy();
+                    return;
+                }
+                const nearby = phaserScene.spatialGrid.findNearby({ x, y, width: 1, height: 1 }, radius);
+                nearby.forEach((cell: any) => {
+                    const e = cell.ref;
+                    if (e && e.active && !e.getIsDead()) {
+                        e.takeDamage(dps * (tickRate / 1000), '#ffaa00');
+                    }
+                });
+            },
+            loop: true
+        });
     }
 }

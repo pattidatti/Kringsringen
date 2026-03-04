@@ -97,11 +97,19 @@ export class WeaponManager {
             // Spark amount depends on graphics quality
             const sparkCount = Math.max(10, Math.floor(25 * (this.scene.quality?.particleMultiplier || 1.0)));
 
-            // Bulletproof Emission using native Phaser 3.60 API
-            this.scene.swordSparkEmitter.setEmitterAngle({ min: angleDeg - 35, max: angleDeg + 35 });
-            this.scene.swordSparkEmitter.emitParticleAt(px, py, sparkCount);
+            // Wide Swing Upgrade
+            const levels = (this.scene.registry.get('upgradeLevels') || {}) as Record<string, number>;
+            const wideSwingLvl = levels['wide_swing'] || 0;
+            const wideSwingMult = 1 + (wideSwingLvl * 0.30); // 30%, 60%, 90% increase
+            const hitRadius = 40 * wideSwingMult;
+            const swingArcAngle = 35 * wideSwingMult;
 
-            this.scene.collisions.enableAttackHitbox(this.scene.collisions.attackHitbox.x, this.scene.collisions.attackHitbox.y, 40);
+            // Bulletproof Emission using native Phaser 3.60 API
+            this.scene.swordSparkEmitter.setEmitterAngle({ min: angleDeg - swingArcAngle, max: angleDeg + swingArcAngle });
+            // Scale up spark count slightly based on width
+            this.scene.swordSparkEmitter.emitParticleAt(px, py, Math.floor(sparkCount * wideSwingMult));
+
+            this.scene.collisions.enableAttackHitbox(px, py, hitRadius);
             this.scene.time.delayedCall(100, () => {
                 this.scene.collisions.disableAttackHitbox();
             });

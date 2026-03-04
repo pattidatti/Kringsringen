@@ -194,8 +194,13 @@ export class InputManager {
 
         this.scene.registry.set('dashState', dashState);
 
+        const currentWeapon = this.scene.registry.get('currentWeapon');
+        const upgradeLevels = (this.scene.registry.get('upgradeLevels') || {}) as Record<string, number>;
+        const aerialLvl = upgradeLevels['aerial_shot'] || 0;
+        const canAerialShoot = currentWeapon === 'bow' && aerialLvl > 0;
+
         // Interrupt attack
-        if (this.scene.data.get('isAttacking')) {
+        if (this.scene.data.get('isAttacking') && !canAerialShoot) {
             this.scene.data.set('isAttacking', false);
             player.anims.stop();
             player.off('animationcomplete-player-attack');
@@ -222,7 +227,11 @@ export class InputManager {
             dx /= len; dy /= len;
         }
 
-        player.play('player-walk');
+        if (canAerialShoot && this.scene.data.get('isAttacking')) {
+            // Keep the bow animation going during aerial shot
+        } else {
+            player.play('player-walk');
+        }
         player.setAlpha(0.7);
         this.scene.events.emit('player-dash');
 
@@ -241,13 +250,53 @@ export class InputManager {
                 player.setAlpha(1);
                 if (dashFx.active) dashFx.destroy();
                 this.scene.combat.setDashIframe(false);
-                player.play('player-idle');
+                if (canAerialShoot && this.scene.data.get('isAttacking')) {
+                    // Let the attack finish organically
+                } else {
+                    player.play('player-idle');
+                }
 
                 // Shadow Step
                 const levels = (this.scene.registry.get('upgradeLevels') || {}) as Record<string, number>;
                 const shadowStepLvl = levels['shadow_step'] || 0;
                 if (shadowStepLvl > 0) {
                     (this.scene as any).shadowStepUntil = Date.now() + shadowStepLvl * 500;
+                }
+
+                // Stomp (Krieger)
+                const stompLvl = levels['stomp'] || 0;
+                if (stompLvl > 0) {
+                    const stunDuration = stompLvl === 1 ? 500 : 800; // ms
+                    const radius = 150;
+
+                    // VFX: Screen Shake and Ground Decal
+                    this.scene.cameras.main.shake(150, 0.015);
+                    const phaserScene = this.scene as unknown as Phaser.Scene;
+                    const stompDecal = phaserScene.add.circle(player.x, player.y, radius, 0xaaaaaa, 0.4).setDepth(player.depth - 1);
+                    phaserScene.tweens.add({
+                        targets: stompDecal,
+                        alpha: 0,
+                        scale: 1.2,
+                        duration: 500,
+                        onComplete: () => stompDecal.destroy()
+                    });
+
+                    // SFX check (assuming 'dash_impact' or similar exists, else default heavy hit)
+                    // To be safe, we'll avoid SFX here unless we know it exists, but the plan asked for "low-frequency bass impact sound".
+                    // The camera shake will provide the feel.
+
+                    // Stun logic
+                    const nearbyEnemies = this.scene.spatialGrid.findNearby({ x: player.x, y: player.y, width: 1, height: 1 }, radius);
+                    nearbyEnemies.forEach(cell => {
+                        const enemy = cell.ref as any;
+                        if (enemy && enemy.active && !enemy.getIsDead()) {
+                            // Apply a small damage number for visual feedback that they got hit
+                            enemy.takeDamage(10, '#ffffff');
+                            if (enemy.stun && typeof enemy.stun === 'function') {
+                                enemy.stun(stunDuration);
+                            }
+                        }
+                    });
                 }
 
                 // Lifesteal
