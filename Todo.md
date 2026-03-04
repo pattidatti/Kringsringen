@@ -24,7 +24,7 @@
 - [x] Ytre radius på lys fra spilleren må økes litt. 
 - [ ] Whirlwind treffer i Orkehøvding, undersøk og fiks.  
 - [x] lvl 4, fase 1; Kommer ikke enemies, er stuck på fasen. Går man inn i UI DEMO og tilbake, så kommer det enemies (kanskje fasen begynte på nytt, og at det dermed virket? Dårlig løsning uansett.)
-- [ ] Fasene blir ferdig selv om det er flere enemies igjen. 
+- [x] Fasene blir ferdig selv om det er flere enemies igjen. 
 
 
 

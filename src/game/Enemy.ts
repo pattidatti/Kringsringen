@@ -372,46 +372,47 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
                 if (this.config.spriteInfo.anims?.attack) {
                     this.hasHit = false;
                     this.play(this.config.spriteInfo.anims.attack);
-
-                    // No longer using .once() listeners here as they create closures every attack
                 }
             };
 
-            if (this.enemyType === 'healer_wizard') {
-                // Healer only animates when a damaged ally is actually within heal range
-                const damagedAlly = this.getNearestDamagedAlly();
-                const allyDist = damagedAlly
-                    ? Phaser.Math.Distance.Between(this.x, this.y, damagedAlly.x, damagedAlly.y)
-                    : Infinity;
-                if (hasAttackAnim && allyDist < this.attackRange && time > this.lastAttackTime + this.attackCooldown) {
-                    triggerAttackAnim();
-                }
-            } else {
-                const nearestTarget = this.getNearestTarget();
-                const distance = nearestTarget
-                    ? Phaser.Math.Distance.Between(this.x, this.y, nearestTarget.x, nearestTarget.y)
-                    : Infinity;
-                const cooldown = this.config.rangedProjectile ? this.currentAbilityCooldown : this.attackCooldown;
-                if (hasAttackAnim && nearestTarget && distance < this.attackRange && time > this.lastAttackTime + cooldown) {
-                    triggerAttackAnim();
-                }
+            const nearestTarget = this.enemyType === 'healer_wizard' ? this.getNearestDamagedAlly() : this.getNearestTarget();
+            let distanceToTarget = Infinity;
+            let bodiesTouching = false;
+
+            if (nearestTarget && (nearestTarget as any).body && this.body) {
+                // Precise AABB intersection check instead of center-point distance
+                bodiesTouching = Phaser.Geom.Intersects.RectangleToRectangle(
+                    this.body as unknown as Phaser.Geom.Rectangle,
+                    (nearestTarget as any).body as unknown as Phaser.Geom.Rectangle
+                );
+                distanceToTarget = Phaser.Math.Distance.Between(this.x, this.y, nearestTarget.x, nearestTarget.y);
             }
 
-            if (this.isAttacking || this.isWindingUp) {
+            const cooldown = this.config.rangedProjectile ? this.currentAbilityCooldown : this.attackCooldown;
+            const isCooldownActive = time <= this.lastAttackTime + cooldown;
+            const inRange = bodiesTouching || (distanceToTarget < this.attackRange);
+
+            if (hasAttackAnim && nearestTarget && inRange && !isCooldownActive) {
+                triggerAttackAnim();
+            }
+
+            if (this.isAttacking || this.isWindingUp || (inRange && isCooldownActive)) {
+                // If attacking, winding up, or waiting on cooldown while in range: STOP moving.
                 this.setVelocity(0, 0);
+
+                if (nearestTarget && this.x !== nearestTarget.x) {
+                    // Still face the target while waiting
+                    this.setFlipX(this.x > nearestTarget.x);
+                }
 
                 if (this.isAttacking) {
                     // Special Visuals for Healer Wizard during cast
-                    // Refined: We maintain the tint, and the Light2D provides the "glow"
                     if (this.config.tint !== undefined) {
                         this.setTint(this.config.tint);
                     }
 
-                    // ULTRATHINK BUGFIX: Use native Light2D for guaranteed visibility
                     if (this.config.attackGlowColor !== undefined) {
                         if (!this.attackLight) {
-                            // ADJUST HERE: (x, y, radius, color, intensity)
-                            // Lower radius and intensity to make the glow subtle.
                             this.attackLight = this.scene.lights.addLight(this.x, this.y, 60, this.config.attackGlowColor, 0.5);
                         }
                         this.attackLight.setPosition(this.x, this.y);
@@ -428,7 +429,8 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
                 if (this.config.attackGlowColor !== undefined && this.postFX.list.length > 0) {
                     this.postFX.clear();
                 }
-                // Throttled AI
+
+                // Throttled AI (We only reach here if NOT waiting on cooldown in range)
                 if (!this.isSpecialMovementActive && time > this.lastAIUpdate + this.AI_UPDATE_INTERVAL) {
                     this.lastAIUpdate = time;
                     this.updateAIPathing();
@@ -859,6 +861,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     }
 
     protected die() {
+        this.isDead = true;
         this.setDrag(1000);
 
         // Clear Soul Link
