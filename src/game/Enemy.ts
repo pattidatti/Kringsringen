@@ -55,6 +55,19 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     private static readonly NUM_RAYS = 16;
     private static readonly INTEREST_BUFFER = new Array(Enemy.NUM_RAYS).fill(0);
     private static readonly DANGER_BUFFER = new Array(Enemy.NUM_RAYS).fill(0);
+    private static readonly COS_TABLE = new Array(Enemy.NUM_RAYS);
+    private static readonly SIN_TABLE = new Array(Enemy.NUM_RAYS);
+    private static _tablesInit = false;
+
+    private static initTables() {
+        if (this._tablesInit) return;
+        for (let i = 0; i < this.NUM_RAYS; i++) {
+            const angle = (i / this.NUM_RAYS) * Math.PI * 2;
+            this.COS_TABLE[i] = Math.cos(angle);
+            this.SIN_TABLE[i] = Math.sin(angle);
+        }
+        this._tablesInit = true;
+    }
 
     protected isSpecialMovementActive: boolean = false;
 
@@ -540,6 +553,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 
     private updateAIPathing() {
         if (!this.active) return;
+        if (!Enemy._tablesInit) Enemy.initTables();
         const speed = this.movementSpeed;
         const numRays = Enemy.NUM_RAYS;
         const delta = this.scene.game.loop.delta;
@@ -584,14 +598,26 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
             }
         }
 
-        // Interest
+        const myRadius = Math.max(this.body!.width, this.body!.height) * 0.5;
+        const lookaheadMargin = myRadius + 10;
+        const flowFieldManager = (this.scene as unknown as IMainScene).flowFieldManager;
+
+        // Interest + Static Wall Danger
         for (let i = 0; i < numRays; i++) {
             const angle = (i / numRays) * Math.PI * 2;
             let dot = Math.cos(angle - targetAngle);
             interests[i] = Math.max(0, dot);
-        }
 
-        const myRadius = Math.max(this.body!.width, this.body!.height) * 0.5;
+            // ULTRATHINK Static wall avoidance
+            if (flowFieldManager) {
+                const lx = this.x + Enemy.COS_TABLE[i] * lookaheadMargin;
+                const ly = this.y + Enemy.SIN_TABLE[i] * lookaheadMargin;
+                const cost = flowFieldManager.getCost(lx, ly);
+                if (cost === 255) {
+                    dangers[i] = 1.0; // Absolute danger overrides dynamic flocking
+                }
+            }
+        }
 
         // --- Separation: Dynamic Entities (Spatial Grid Lookup) ---
         // (Static Obstacles are now handled purely by the Flow Field)
@@ -653,20 +679,28 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         // If the enemy has been stuck for an accumulated 3 seconds (completely surrounded by colliders
         // preventing the recovery angle from working, or if spawned out of bounds):
         if (this.stuckTimer > 3000) {
-            console.warn(`[Enemy] ${this.id} stuck for ${this.stuckTimer}ms, teleporting to valid tracking area`);
-            const target = this.getNearestTarget();
-            if (target) {
-                // Keep some distance from player (around 500px) towards the map center
-                const targetAngleX = Phaser.Math.Angle.Between(target.x, target.y, this.x, this.y);
-                this.setPosition(target.x + Math.cos(targetAngleX) * 500, target.y + Math.sin(targetAngleX) * 500);
-            } else {
-                // If no target is returned, the wave could entirely stall, so we take lethal damage
-                this.takeDamage(this.hp + 999);
+            const flowFieldManager = (this.scene as unknown as IMainScene).flowFieldManager;
+            const isInsideWall = flowFieldManager?.getCost(this.x, this.y) === 255;
+
+            if (isInsideWall) {
+                console.warn(`[Enemy] ${this.id} stuck inside wall for ${this.stuckTimer}ms, teleporting to valid tracking area`);
+                const target = this.getNearestTarget();
+                if (target) {
+                    // Keep some distance from player (around 500px) towards the map center
+                    const targetAngleX = Phaser.Math.Angle.Between(target.x, target.y, this.x, this.y);
+                    this.setPosition(target.x + Math.cos(targetAngleX) * 500, target.y + Math.sin(targetAngleX) * 500);
+                } else {
+                    // If no target is returned, the wave could entirely stall, so we take lethal damage
+                    this.takeDamage(this.hp + 999);
+                    return;
+                }
+                this.stuckTimer = 0;
+                this.recoveryTimer = 0;
                 return;
+            } else {
+                // Not inside wall, reset stuck timer to heavily avoid repeated false teleports
+                this.stuckTimer = 0;
             }
-            this.stuckTimer = 0;
-            this.recoveryTimer = 0;
-            return;
         }
 
         // Trigger recovery if stuck for 0.15s (Bosses) or 0.25s (Normals).
@@ -674,20 +708,49 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         const stuckDurationLimit = GAME_CONFIG.ENEMIES[this.enemyType.toUpperCase() as EnemyType]?.scale >= 1.5 ? 150 : 250;
 
         if (this.stuckTimer > stuckDurationLimit && this.recoveryTimer <= 0) {
-            let bestRecoveryIdx = -1;
-            let bestRecoveryScore = -100;
+            let escapeAngle = -1;
+            let lowestIntegrationCost = 65535;
 
-            for (let i = 0; i < numRays; i++) {
-                const recoveryScore = interests[i] * 0.5 - (dangers[i] * 2.0);
-                if (recoveryScore > bestRecoveryScore) {
-                    bestRecoveryScore = recoveryScore;
-                    bestRecoveryIdx = i;
+            // Ultrathink deterministic escaping
+            const flowFieldManager = (this.scene as unknown as IMainScene).flowFieldManager;
+            const myRadius = Math.max(this.body!.width, this.body!.height) * 0.5;
+            const lookaheadMargin = myRadius + 10;
+
+            if (flowFieldManager) {
+                for (let i = 0; i < numRays; i++) {
+                    const lx = this.x + Enemy.COS_TABLE[i] * lookaheadMargin * 2;
+                    const ly = this.y + Enemy.SIN_TABLE[i] * lookaheadMargin * 2;
+                    const tileCost = flowFieldManager.getCost(lx, ly);
+
+                    if (tileCost < 255) {
+                        const integrationCost = flowFieldManager.getIntegrationCost(lx, ly);
+                        if (integrationCost < lowestIntegrationCost) {
+                            lowestIntegrationCost = integrationCost;
+                            escapeAngle = (i / numRays) * Math.PI * 2;
+                        }
+                    }
                 }
             }
 
-            if (bestRecoveryIdx !== -1) {
-                this.recoveryAngle = (bestRecoveryIdx / numRays) * Math.PI * 2;
-                this.recoveryTimer = 800 + Math.random() * 400; // 0.8s - 1.2s of recovery
+            // Fallback if completely boxed in (all looked-ahead rays hit wall)
+            if (escapeAngle === -1) {
+                let bestFallbackIdx = -1;
+                let bestFallbackScore = -100;
+                for (let i = 0; i < numRays; i++) {
+                    const fallbackScore = interests[i] * 0.5 - (dangers[i] * 2.0);
+                    if (fallbackScore > bestFallbackScore) {
+                        bestFallbackScore = fallbackScore;
+                        bestFallbackIdx = i;
+                    }
+                }
+                if (bestFallbackIdx !== -1) {
+                    escapeAngle = (bestFallbackIdx / numRays) * Math.PI * 2;
+                }
+            }
+
+            if (escapeAngle !== -1) {
+                this.recoveryAngle = escapeAngle;
+                this.recoveryTimer = 1000; // Deterministic 1.0s recovery without RNG
                 this.stuckTimer = 0;
             }
         }

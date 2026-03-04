@@ -264,4 +264,30 @@ export class FlowFieldManager {
         // Even for costField === 255, we have a valid vector calculated (or fallback).
         return this.vectorField[idx];
     }
+
+    /**
+     * O(1) lookup for cost field
+     */
+    public getCost(worldX: number, worldY: number): number {
+        const c = Math.floor(worldX / this.grid.cellSize);
+        const r = Math.floor(worldY / this.grid.cellSize);
+
+        if (c < 0 || c >= this.grid.cols || r < 0 || r >= this.grid.rows) return 255;
+
+        const idx = r * this.grid.cols + c;
+        return this.costField[idx];
+    }
+
+    /**
+     * O(1) lookup for integration field
+     */
+    public getIntegrationCost(worldX: number, worldY: number): number {
+        const c = Math.floor(worldX / this.grid.cellSize);
+        const r = Math.floor(worldY / this.grid.cellSize);
+
+        if (c < 0 || c >= this.grid.cols || r < 0 || r >= this.grid.rows) return this.MAX_DISTANCE;
+
+        const idx = r * this.grid.cols + c;
+        return this.integrationField[idx];
+    }
 }
