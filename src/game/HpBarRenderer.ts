@@ -34,7 +34,7 @@ export class HpBarRenderer {
         this.graphics.clear();
 
         for (const target of targets) {
-            if (!target.active || !target.visible || target.hp >= target.maxHP || target.hp <= 0) {
+            if (!target.active || !target.visible || target.hp <= 0) {
                 continue;
             }
 

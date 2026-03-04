@@ -392,8 +392,21 @@ export class MainScene extends Phaser.Scene implements IMainScene {
 
             // Batched HP Bar Rendering (Final Pass)
             this.hpTargets.length = 0;
+            const px = this.player.x;
+            const py = this.player.y;
+            const lightRadiusSq = Math.pow(GAME_CONFIG.LIGHTING.PLAYER_OUTER_RADIUS, 2);
+
             this.enemies.children.iterate((e: any) => {
-                if (e.active && !e.isDead && e.hp < e.maxHP) this.hpTargets.push(e);
+                if (e.active && !e.isDead) {
+                    const dx = e.x - px;
+                    const dy = e.y - py;
+                    const distSq = dx * dx + dy * dy;
+
+                    // Show HP bar if damaged OR within light radius
+                    if (e.hp < e.maxHP || distSq < lightRadiusSq) {
+                        this.hpTargets.push(e);
+                    }
+                }
                 return true;
             });
             this.hpBarRenderer.render(this.hpTargets);
