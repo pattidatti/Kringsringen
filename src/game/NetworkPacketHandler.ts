@@ -1,13 +1,27 @@
 import Phaser from 'phaser';
 import type { IMainScene } from './IMainScene';
-import { PacketType, type SyncPacket, type PackedPlayer } from '../network/SyncSchemas';
+import { PacketType, type SyncPacket, type PackedPlayer, type PackedEnemy, type GameEventPacket } from '../network/SyncSchemas';
 import { BinaryPacker } from '../network/BinaryPacker';
 import type { DataConnection } from 'peerjs';
-
-/**
- * Handles incoming network packets, game events, and remote player interpolation.
- */
 import { JitterBuffer } from '../network/JitterBuffer';
+
+interface HitRequestData {
+    enemyId: string;
+    damage: number;
+    hitX: number;
+    hitY: number;
+}
+
+interface ProjectileHitRequestData {
+    targetId: string;
+    damage: number;
+    hitX: number;
+    hitY: number;
+    timestamp?: number;
+    projectileType?: 'fire' | 'frost' | 'lightning' | 'arrow';
+    isSlow?: boolean;
+    slowDuration?: number;
+}
 
 /**
  * Handles incoming network packets, game events, and remote player interpolation.
@@ -113,8 +127,8 @@ export class NetworkPacketHandler {
         }
     }
 
-    private handleHitRequest(event: any, ts: number, peerId: string): void {
-        const req = event.data;
+    private handleHitRequest(event: GameEventPacket, ts: number, peerId: string): void {
+        const req = event.data as HitRequestData;
         const enemy = this.scene.waves.findEnemyById(req.enemyId) || (req.enemyId === 'boss' ? this.scene.bossGroup.getFirstAlive() as any : null);
 
         if (enemy && enemy.active && !enemy.getIsDead()) {
@@ -136,8 +150,8 @@ export class NetworkPacketHandler {
         }
     }
 
-    private handleProjectileHitRequest(event: any, ts: number): void {
-        const req = event.data;
+    private handleProjectileHitRequest(event: GameEventPacket, ts: number): void {
+        const req = event.data as ProjectileHitRequestData;
         const enemy = this.scene.waves.findEnemyById(req.targetId) || (req.targetId === 'boss' ? this.scene.bossGroup.getFirstAlive() as any : null);
 
         if (enemy && enemy.active && !enemy.getIsDead()) {

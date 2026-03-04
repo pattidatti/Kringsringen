@@ -4,16 +4,13 @@ import { GAME_CONFIG, type EnemyType, type EnemyStats } from '../config/GameConf
 import type { IMainScene } from './IMainScene';
 import { JitterBuffer } from '../network/JitterBuffer';
 import type { PackedEnemy } from '../network/SyncSchemas';
+import { HistoryBuffer } from './HistoryBuffer';
 
 export class Enemy extends Phaser.Physics.Arcade.Sprite {
     private targetStart: Phaser.GameObjects.Components.Transform; // Renamed to avoid confusion with internal target
     public hp: number = 50;
     public maxHP: number = 50;
-    protected hpBar: Phaser.GameObjects.Graphics;
     protected isDead: boolean = false;
-    private lastDrawnHP: number = -1;
-    private lastDrawnMaxHP: number = -1;
-    private lastDrawnScale: number = -1;
     private attackRange: number = 60;
     private attackCooldown: number = 1500;
     private currentAbilityCooldown: number = 1500;
@@ -44,8 +41,8 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     /** When true this enemy is a client-side puppet — no AI, no damage, no physics body active. */
     private isClientMode: boolean = false;
 
-    /** History buffer for Lag Compensation (Host only). Stores [timestamp, x, y] tuples. */
-    public positionHistory: [number, number, number][] = [];
+    /** History buffer for Lag Compensation (Host only). Zero-GC circular buffer. */
+    public positionHistory: HistoryBuffer;
 
     private stuckTimer: number = 0;
     private recoveryTimer: number = 0;
@@ -79,7 +76,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 
         scene.add.existing(this);
         scene.physics.add.existing(this);
-        this.hpBar = scene.add.graphics();
+        this.positionHistory = new HistoryBuffer(120); // 2 seconds at 60fps
         this.shadow = scene.add.sprite(x, y, 'shadows', 0)
             .setAlpha(0.4)
             .setDepth(-1);
@@ -143,9 +140,6 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         this.isOnDamageFrame = false;
         this.lastAttackTime = 0;
         this.lastAIUpdate = 0;
-        this.lastDrawnHP = -1;
-        this.lastDrawnMaxHP = -1;
-        this.lastDrawnScale = -1;
 
         this.predictedDeadUntil = 0;
         this.predictedHP = this.hp;
@@ -167,7 +161,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         }
         this.isStunned = false;
         this.originalSpeed = this.movementSpeed;
-        this.positionHistory = [];
+        this.positionHistory.clear();
 
         // Animation
         this.setTexture(this.config.spriteInfo.texture);
@@ -184,8 +178,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         // but Phaser usually handles 'on' by adding. We should check if listener exists or just use internal flags)
         // Better: Define one-time listeners in constructor, but their logic needs to check current state.
 
-        // Reset HP Bar
-        this.updateHPBar();
+        // Registry updates or other reset logic
 
         // Visual Refinement: Data-driven permanent tint
         if (this.config.tint !== undefined) {
@@ -360,20 +353,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
                     this.hasHit = false;
                     this.play(this.config.spriteInfo.anims.attack);
 
-                    // Attack animation completion handler
-                    this.once(`animationcomplete-${this.config.spriteInfo.anims.attack}`, () => {
-                        if (this.active) {
-                            this.isAttacking = false;
-                            if (!this.isDead && this.config.spriteInfo.anims?.walk) {
-                                this.play(this.config.spriteInfo.anims.walk);
-                            }
-                        }
-                    });
-
-                    // Attack start handler
-                    this.once(`animationstart-${this.config.spriteInfo.anims.attack}`, () => {
-                        this.hasHit = false;
-                    });
+                    // No longer using .once() listeners here as they create closures every attack
                 }
             };
 
@@ -442,6 +422,14 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
             // Damage Frame Logic (Decoupled from Physics)
             if (this.isAttacking && hasAttackAnim && this.anims.currentAnim?.key === this.config.spriteInfo.anims?.attack) {
                 const currentFrameIndex = this.anims.currentFrame?.index || 0;
+
+                // Zero-GC Orientation & Completion Check
+                if (this.anims.currentFrame && this.anims.currentFrame.isLast) {
+                    this.isAttacking = false;
+                    if (!this.isDead && this.config.spriteInfo.anims?.walk) {
+                        this.play(this.config.spriteInfo.anims.walk, true);
+                    }
+                }
 
                 // Check for Damage Frame
                 const damageFrame = this.config.attackDamageFrame ?? this.DEFAULT_DAMAGE_FRAME;
@@ -535,16 +523,11 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         }
 
         // --- GLOBAL UPDATES (Host & Client) ---
-        this.updateHPBar();
+        // (HP Bar is now handled by batched renderer in MainScene)
 
         if (!this.isClientMode && this.active) {
             const now = (this.scene as any).networkManager ? (this.scene as any).networkManager.getServerTime() : Date.now();
-            this.positionHistory.push([now, this.x, this.y]);
-
-            // Retain up to 1000ms of history for lag compensation
-            while (this.positionHistory.length > 0 && now - this.positionHistory[0][0] > 1000) {
-                this.positionHistory.shift();
-            }
+            this.positionHistory.push(now, this.x, this.y);
         }
     }
 
@@ -690,69 +673,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     }
 
     protected updateHPBar() {
-        const quality = (this.scene as any).quality;
-
-        if (quality?.hpBarsEnabled === false) {
-            this.hpBar.clear();
-            this.lastDrawnHP = -1;
-            return;
-        }
-
-        if (this.isDead || !this.active) {
-            this.hpBar.clear();
-            this.lastDrawnHP = -1;
-            return;
-        }
-
-        // Hide health bar if enemy is outside the player's outer light radius
-        if (quality?.lightingEnabled) {
-            const outerLight = (this.scene as any).outerPlayerLight as Phaser.GameObjects.Light | undefined;
-            const player = this.scene.data?.get('player') as Phaser.Physics.Arcade.Sprite | undefined;
-            if (outerLight && player) {
-                const dx = this.x - player.x;
-                const dy = this.y - player.y;
-                const distSq = dx * dx + dy * dy;
-                const maxDist = outerLight.radius + 50; // small margin beyond outer light edge
-                if (distSq > maxDist * maxDist) {
-                    this.hpBar.clear();
-                    this.lastDrawnHP = -1;
-                    return;
-                }
-            }
-        }
-
-        // 1. Always update position of the container graphics object.
-        // We set the position to the enemy's world position, plus an offset.
-        const width = 40;
-        const height = 5;
-        const offsetY = -(this.height / 2 * this.scaleX) - 5;
-        this.hpBar.setPosition(this.x, this.y + offsetY);
-
-        // 2. Decide if we need to redraw the graphics based on health or scale changes.
-        const mode = quality?.hpBarUpdateMode || 'continuous';
-        const needsRedraw = mode === 'continuous' ||
-            this.hp !== this.lastDrawnHP ||
-            this.maxHP !== this.lastDrawnMaxHP ||
-            this.scaleX !== this.lastDrawnScale;
-
-        if (needsRedraw) {
-            this.lastDrawnHP = this.hp;
-            this.lastDrawnMaxHP = this.maxHP;
-            this.lastDrawnScale = this.scaleX;
-
-            this.hpBar.clear();
-
-            // Use relative coordinates (0 is the center of the graphics object which we positioned above)
-            const rx = -width / 2;
-            const ry = 0;
-
-            this.hpBar.fillStyle(0x000000, 0.5);
-            this.hpBar.fillRect(rx, ry, width, height);
-
-            const healthWidth = (Math.max(0, this.hp) / this.maxHP) * width;
-            this.hpBar.fillStyle(0xff0000, 1);
-            this.hpBar.fillRect(rx, ry, healthWidth, height);
-        }
+        // Zero-allocation: HP Bar is now handled by batched renderer in MainScene.
     }
 
     takeDamage(amount: number, color: string = '#ffffff', isShared: boolean = false) {
@@ -811,7 +732,6 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         this.predictedDeadUntil = Date.now() + 500;
 
         if (this.body) this.body.checkCollision.none = true;
-        this.hpBar.clear();
 
         if ((this.scene as any).poolManager) {
             (this.scene as any).poolManager.spawnBloodEffect(this.x, this.y);
@@ -839,9 +759,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     }
 
     protected die() {
-        this.isDead = true;
         this.setDrag(1000);
-        this.hpBar.clear();
 
         // Clear Soul Link
         if (this.linkedEnemy) {
@@ -907,16 +825,12 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         this.setVisible(false);
         if (this.body) this.body.enable = false;
         if (this.shadow) this.shadow.setVisible(false);
-        if (this.hpBar) this.hpBar.clear();
         if (this.attackLight) this.attackLight.setVisible(false);
         this.isClientMode = false;
         // Do NOT call destroy() — keep in pool for reuse
     }
 
     public destroy(fromScene?: boolean) {
-        if (this.hpBar) {
-            this.hpBar.destroy();
-        }
         if (this.shadow) {
             this.shadow.destroy();
         }
@@ -1115,31 +1029,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
      * Essential for Lag Compensation (Rollback Auth) on the Host.
      */
     public getHistoricalPosition(targetTime: number): { x: number, y: number } | null {
-        if (this.positionHistory.length === 0) return null;
-
-        if (targetTime <= this.positionHistory[0][0]) {
-            return { x: this.positionHistory[0][1], y: this.positionHistory[0][2] };
-        }
-
-        const newest = this.positionHistory[this.positionHistory.length - 1];
-        if (targetTime >= newest[0]) {
-            return { x: newest[1], y: newest[2] };
-        }
-
-        for (let i = this.positionHistory.length - 1; i >= 1; i--) {
-            const next = this.positionHistory[i];
-            const prev = this.positionHistory[i - 1];
-
-            if (targetTime >= prev[0] && targetTime <= next[0]) {
-                const range = next[0] - prev[0];
-                const f = range === 0 ? 0 : (targetTime - prev[0]) / range;
-                const hX = prev[1] + (next[1] - prev[1]) * f;
-                const hY = prev[2] + (next[2] - prev[2]) * f;
-                return { x: hX, y: hY };
-            }
-        }
-
-        return null;
+        return this.positionHistory.getAt(targetTime);
     }
 
     private getNearestTarget(): Phaser.GameObjects.Components.Transform | null {

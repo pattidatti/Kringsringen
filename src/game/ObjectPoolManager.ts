@@ -21,6 +21,7 @@ export class ObjectPoolManager {
     private lightningImpactPool: Phaser.GameObjects.Sprite[] = [];
     private enemyProjectilePool: EnemyProjectile[] = [];
     private activeDamageTexts: { text: Phaser.GameObjects.Text, startTime: number, x: number, y: number, driftX: number }[] = [];
+    private activeEffects: Phaser.GameObjects.Sprite[] = [];
 
     // Config
     private readonly MAX_TEXT_POOL = 100;
@@ -119,6 +120,15 @@ export class ObjectPoolManager {
                 this.activeDamageTexts.splice(i, 1);
             }
         }
+
+        // Optimized effect cleanup without listeners
+        for (let i = this.activeEffects.length - 1; i >= 0; i--) {
+            const effect = this.activeEffects[i];
+            if (!effect.active || !effect.anims.isPlaying) {
+                this.returnEffect(effect);
+                this.activeEffects.splice(i, 1);
+            }
+        }
     }
 
     private returnDamageText(text: Phaser.GameObjects.Text) {
@@ -150,9 +160,18 @@ export class ObjectPoolManager {
         }
 
         blood.play(bloodKey);
-        blood.once('animationcomplete', () => {
-            this.returnBlood(blood);
-        });
+        this.activeEffects.push(blood);
+    }
+
+    private returnEffect(sprite: Phaser.GameObjects.Sprite) {
+        const tex = sprite.texture.key;
+        if (tex.startsWith('blood')) this.returnBlood(sprite);
+        else if (tex === 'fireball_explosion') this.returnExplosion(sprite);
+        else if (tex === 'frost_explosion') this.returnFrostExplosion(sprite);
+        else if (tex === 'lightning_impact') this.returnLightningImpact(sprite);
+        else {
+            sprite.setActive(false).setVisible(false);
+        }
     }
 
     private returnBlood(blood: Phaser.GameObjects.Sprite) {
@@ -185,9 +204,7 @@ export class ObjectPoolManager {
         }
 
         explosion.play('fireball-explode');
-        explosion.once('animationcomplete', () => {
-            this.returnExplosion(explosion);
-        });
+        this.activeEffects.push(explosion);
     }
 
     private returnExplosion(explosion: Phaser.GameObjects.Sprite) {
@@ -220,9 +237,7 @@ export class ObjectPoolManager {
         }
 
         explosion.play('frost-explode');
-        explosion.once('animationcomplete', () => {
-            this.returnFrostExplosion(explosion);
-        });
+        this.activeEffects.push(explosion);
     }
 
     private returnFrostExplosion(explosion: Phaser.GameObjects.Sprite) {
@@ -252,10 +267,7 @@ export class ObjectPoolManager {
         }
 
         impact.play('lightning-impact');
-        impact.once('animationcomplete', () => {
-            this.returnLightningImpact(impact);
-        });
-
+        this.activeEffects.push(impact);
         return impact;
     }
 

@@ -30,6 +30,7 @@ import { NetworkManager } from '../network/NetworkManager';
 import { BOSS_CONFIGS } from '../config/bosses';
 import { FlowFieldManager } from './pathing/FlowFieldManager';
 import { BuffManager } from './BuffManager';
+import { HpBarRenderer, type IHpBarTarget } from './HpBarRenderer';
 
 
 export class MainScene extends Phaser.Scene implements IMainScene {
@@ -46,6 +47,8 @@ export class MainScene extends Phaser.Scene implements IMainScene {
     public weaponManager!: WeaponManager;
     public abilityManager!: ClassAbilityManager;
     public buffs!: BuffManager;
+    public hpBarRenderer!: HpBarRenderer;
+    private hpTargets: IHpBarTarget[] = [];
 
     public arrows!: Phaser.Physics.Arcade.Group;
     public fireballs!: Phaser.Physics.Arcade.Group;
@@ -143,6 +146,7 @@ export class MainScene extends Phaser.Scene implements IMainScene {
             this.spatialGrid = new SpatialHashGrid(150);
             this.staticObstacleGrid = new SpatialHashGrid(150);
             this.flowFieldManager = new FlowFieldManager(this, this.mapWidth, this.mapHeight);
+            this.hpBarRenderer = new HpBarRenderer(this);
 
             // Initialize Core Physics Groups
             console.log('[MainScene] Initializing core physics groups...');
@@ -339,6 +343,9 @@ export class MainScene extends Phaser.Scene implements IMainScene {
 
 
     private lastHeartbeat: number = 0;
+    private lastSpatialUpdate: number = 0;
+    private readonly SPATIAL_UPDATE_INTERVAL: number = 33; // ~30Hz
+
     update(_time: number, delta: number) {
         try {
             if (_time - this.lastHeartbeat > 2000) {
@@ -368,17 +375,28 @@ export class MainScene extends Phaser.Scene implements IMainScene {
             this.abilityManager.update(_time, delta);
             this.buffs.update();
 
-            // Update Spatial Grid
+            // Update Spatial Grid (Throttled for Performance)
             this.flowFieldManager.update(this.player.x, this.player.y);
-            this.spatialGrid.clear();
+            if (_time - this.lastSpatialUpdate > this.SPATIAL_UPDATE_INTERVAL) {
+                this.lastSpatialUpdate = _time;
+                this.spatialGrid.clear();
+                this.enemies.children.iterate((e: any) => {
+                    if (e.active && !e.isDead) this.spatialGrid.insert({ x: e.x, y: e.y, width: e.body?.width || 40, height: e.body?.height || 40, id: e.id, ref: e });
+                    return true;
+                });
+                this.bossGroup.children.iterate((b: any) => {
+                    if (b.active && !b.isDead) this.spatialGrid.insert({ x: b.x, y: b.y, width: b.body?.width || 80, height: b.body?.height || 80, id: 'boss', ref: b });
+                    return true;
+                });
+            }
+
+            // Batched HP Bar Rendering (Final Pass)
+            this.hpTargets.length = 0;
             this.enemies.children.iterate((e: any) => {
-                if (e.active && !e.isDead) this.spatialGrid.insert({ x: e.x, y: e.y, width: e.body?.width || 40, height: e.body?.height || 40, id: e.id, ref: e });
+                if (e.active && !e.isDead && e.hp < e.maxHP) this.hpTargets.push(e);
                 return true;
             });
-            this.bossGroup.children.iterate((b: any) => {
-                if (b.active && !b.isDead) this.spatialGrid.insert({ x: b.x, y: b.y, width: b.body?.width || 80, height: b.body?.height || 80, id: 'boss', ref: b });
-                return true;
-            });
+            this.hpBarRenderer.render(this.hpTargets);
 
         } catch (error) {
             console.error('[MainScene] Update loop crashed:', error);
