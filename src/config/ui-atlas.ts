@@ -75,6 +75,8 @@ export const UI_ATLAS = {
         item_synergy_rune: { x: 448, y: 160, w: 32, h: 32 }, // col=14 row=5
 
         item_gold_coin: { x: 224, y: 384, w: 32, h: 32 }, // col=7 row=12 ✓ (Large Gold Coin)
+        item_hook_chain: { x: 352, y: 320, w: 32, h: 32 }, // col=11 row=10 ✓
+        item_shadow_orb: { x: 352, y: 640, w: 32, h: 32 }, // col=11 row=20 ✓
     }
 } as const;
 

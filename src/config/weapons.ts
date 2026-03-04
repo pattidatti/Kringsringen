@@ -11,7 +11,7 @@ export const KRIEGER_WEAPON_SLOTS: WeaponUIConfig[] = [
     { id: 'sword', label: 'SVERD', hotkey: '1', icon: 'item_sword' },
     { id: 'ability_whirlwind', label: 'WHIRLWIND', hotkey: '2', icon: 'item_swords_crossed' },
     { id: 'ability_bulwark', label: 'BULWARK', hotkey: '3', icon: 'item_shield' },
-    { id: 'ability_grapple', label: 'GRAPPLE', hotkey: '4', icon: 'item_chain' },
+    { id: 'ability_grapple', label: 'GRAPPLE', hotkey: '4', icon: 'item_hook_chain' },
 ];
 
 export const ARCHER_WEAPON_SLOTS: WeaponUIConfig[] = [
