@@ -11,7 +11,6 @@ export class ClassAbilityManager {
     private scene: IMainScene;
 
     public isWhirlwinding: boolean = false;
-    public explosiveShotReady: boolean = false;
     public whirlwindActiveUntil: number = 0;
     public cascadeActiveUntil: number = 0;
     public shadowDecoyActiveUntil: number = 0;
@@ -30,7 +29,7 @@ export class ClassAbilityManager {
         const playerClassId = resolveClassId(this.scene.registry.get('playerClass'));
         if (playerClassId === 'krieger') this.activateWhirlwind();
         else if (playerClassId === 'wizard') this.activateCascade();
-        else if (playerClassId === 'archer') this.activateExplosiveShot();
+        else if (playerClassId === 'archer') this.activatePhantomVolley();
     }
 
     public attemptAbility3(): void {
@@ -185,32 +184,78 @@ export class ClassAbilityManager {
         }
     }
 
-    private activateExplosiveShot(): void {
-        this.explosiveShotReady = true;
-        this.scene.data.set('explosiveShotReady', true);
-        this.scene.registry.set('explosiveShotReady', true);
+    private activatePhantomVolley(): void {
+        const cd = 12000;
+        if (Date.now() < this.classAbilityCooldownEnd) return;
 
-        // Ensure bow is equipped for the ability
-        this.scene.registry.set('currentWeapon', 'bow');
+        this.classAbilityCooldownEnd = Date.now() + cd;
+        this.scene.registry.set('classAbilityCooldown', { duration: cd, timestamp: Date.now() });
 
-        // Reset cooldown to allow immediate firing
-        this.scene.registry.set('weaponCooldown', { duration: 0, timestamp: 0 });
-
-        // Trigger immediate attack
         const player = this.scene.data.get('player') as Phaser.Physics.Arcade.Sprite;
         const pointer = this.scene.input.activePointer;
 
-        this.scene.time.delayedCall(500, () => {
-            if (!this.scene.data.get('isAttacking')) return; // Could have been interrupted
-            const newAngle = Phaser.Math.Angle.Between(player.x, player.y, pointer.worldX, pointer.worldY);
-            this.scene.weaponManager.handleWeaponExecution(newAngle);
+        const levels = (this.scene.registry.get('upgradeLevels') || {}) as Record<string, number>;
+
+        // Upgrades
+        const countLvl = levels['volley_count'] || 0;
+        const damageLvl = levels['volley_damage'] || 0;
+        const pierceLvl = levels['volley_pierce'] || 0;
+
+        const totalArrows = 15 + countLvl * 5;
+        const damageMult = 1.0 + damageLvl * 0.2;
+        const pierceCount = pierceLvl;
+
+        // Base damage is lower per arrow because of the sheer quantity
+        const baseDamage = this.scene.stats.damage * damageMult * 0.35;
+
+        this.scene.buffs.addBuff({
+            key: 'phantom_volley',
+            title: 'FANTOMBYGE',
+            icon: 'item_bow',
+            color: 0xff6600,
+            duration: 1500,
+            maxStacks: 1,
+            isVisible: true
         });
 
-        this.scene.time.delayedCall(5000, () => {
-            if (this.explosiveShotReady) {
-                this.explosiveShotReady = false;
-                this.scene.data.set('explosiveShotReady', false);
-                this.scene.registry.set('explosiveShotReady', false);
+        // Fire loop
+        const fireInterval = 1500 / totalArrows;
+
+        const fireTimer = this.scene.time.addEvent({
+            delay: fireInterval,
+            repeat: totalArrows - 1,
+            callback: () => {
+                if (!player || !player.active || player.getData('isDead')) {
+                    fireTimer.destroy();
+                    return;
+                }
+
+                // Recalculate angle towards pointer to allow tracking while firing
+                const currentAngle = Phaser.Math.Angle.Between(player.x, player.y, pointer.worldX, pointer.worldY);
+
+                // Add a small randomized spread to simulate machine-gun inaccuracies
+                const spread = (Math.random() - 0.5) * 0.25; // +/- 0.125 rads
+                const finalAngle = currentAngle + spread;
+
+                const arrow = (this.scene as any).arrows.get(player.x, player.y) as Arrow;
+                if (arrow) {
+                    const poisonLvl = levels['poison_arrow'] || 0;
+
+                    // Fast arrows, pierce applied
+                    arrow.fire(player.x, player.y, finalAngle, baseDamage, 900, pierceCount, 0, 0, poisonLvl, 0, true);
+
+                    // Recoil (Push player slightly backwards)
+                    const recoilDist = 20;
+                    if (player.body) {
+                        player.setVelocity(
+                            player.body.velocity.x - Math.cos(currentAngle) * recoilDist,
+                            player.body.velocity.y - Math.sin(currentAngle) * recoilDist
+                        );
+                    }
+
+                    // Juice: minor screen shake per arrow
+                    this.scene.cameras.main.shake(40, 0.002);
+                }
             }
         });
     }

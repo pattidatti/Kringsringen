@@ -133,7 +133,7 @@ const ARCHER: ClassConfig = {
     description:
         'Eksperten på avstandskontroll og mobilitet. Archer er skjør, men lynrask — ' +
         'to dash-ladinger lar henne holde avstand mens pilene hagler. ' +
-        'Explosive Shot forvandler én pil til et inferno og kan chain-spawne ytterligere piler mot overlevende.',
+        'Fantombyge (Phantom Volley) utløser en nådeløs, maskingeveær-lignende sverm av piler som knuser alt i sin vei.',
     color: '#27ae60',
     accentColor: '#f1c40f',
     particleColor: '#88ff00',
@@ -146,7 +146,7 @@ const ARCHER: ClassConfig = {
         dashCharges: 2,      // 2 dash-ladinger base
     },
     startingWeapons: ['bow'],
-    classAbilityId: 'explosive_shot',
+    classAbilityId: 'phantom_volley',
     classAbilityHotkey: '2',
     traits: ['Lynrask', 'Presise skudd', 'Høy mobilitet'],
     portrait: 'assets/ui/portraits/archer_portrait.png',
@@ -159,7 +159,7 @@ const ARCHER: ClassConfig = {
     ],
     exclusiveUpgradeIds: [
         // DRIVKRAFT
-        'exp_shot_radius', 'exp_shot_damage', 'kaskade_fyring',
+        'volley_count', 'volley_damage', 'volley_pierce',
         'rikosjett', 'fokusert_skudd', 'shadeskudd',
         // MASTRING (klasse-spesifikk)
         'bow_cooldown', 'multishot', 'pierce', 'arrow_damage', 'arrow_speed',

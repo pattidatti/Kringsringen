@@ -80,7 +80,6 @@ export const Hotbar: React.FC = React.memo(() => {
     const classAbilityCooldown = useGameRegistry('classAbilityCooldown', null) as { duration: number, timestamp: number } | null;
     const classAbility3Cooldown = useGameRegistry('classAbility3Cooldown', null) as { duration: number, timestamp: number } | null;
     const classAbility4Cooldown = useGameRegistry('classAbility4Cooldown', null) as { duration: number, timestamp: number } | null;
-    const explosiveShotReady = useGameRegistry('explosiveShotReady', false) as boolean;
 
     const classId = resolveClassId(playerClass);
     const activeSlots = classId === 'wizard' ? WIZARD_WEAPON_SLOTS : (classId === 'archer' ? ARCHER_WEAPON_SLOTS : KRIEGER_WEAPON_SLOTS);
@@ -124,7 +123,6 @@ export const Hotbar: React.FC = React.memo(() => {
                         const unlocked = unlockedWeapons || [];
                         const isUnlocked = isAbilitySlot || (isRealWeapon && unlocked.includes(slot.id));
                         const isActive = isAbilitySlot ? false : currentWeapon === slot.id;
-                        const isExplosiveBow = slot.id === 'bow' && classId === 'archer' && explosiveShotReady;
 
                         return (
                             <div
@@ -192,11 +190,6 @@ export const Hotbar: React.FC = React.memo(() => {
                                         {slot.label}
                                     </span>
                                 ) : null}
-
-                                {/* Explosive Shot ready glow (Archer) */}
-                                {isExplosiveBow && (
-                                    <div className="absolute inset-0 rounded-md animate-pulse bg-orange-500/40 z-10 pointer-events-none" />
-                                )}
 
                                 {/* Cooldown Sweep Overlay — weapon slots use weaponCooldown, ability slot uses classAbilityCooldown */}
                                 {isUnlocked && !isAbilitySlot && weaponCooldown && (
