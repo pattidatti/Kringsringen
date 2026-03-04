@@ -212,15 +212,15 @@ export class PlayerStatsManager {
             this.scene.registry.set('dashCharges', baseDashCharges + luftLvl);
         }
 
-        // Wizard: Massiv Eksplosjon – larger fireball radius
-        const massivEksLvl = levels['massiv_eksplosjon'] || 0;
-        if (massivEksLvl > 0) {
-            const currentRadius = this.scene.registry.get('fireballRadius') || GAME_CONFIG.WEAPONS.FIREBALL.splashRadius;
-            this.scene.registry.set('fireballRadius', currentRadius + massivEksLvl * 40);
-        }
+        // Wizard: Cascade Updates
+        const cascadeDurLvl = levels['cascade_duration'] || 0;
+        this.scene.registry.set('cascadeDuration', 3000 + cascadeDurLvl * 500);
 
-        // Wizard: Manaring – Damage Reduction bonus (used in PlayerCombatManager)
+        const cascadeRadLvl = levels['cascade_radius'] || 0;
+        this.scene.registry.set('cascadeRadiusMult', 1 + cascadeRadLvl * 0.25);
+
         const manaringLvl = levels['manaring'] || 0;
+        this.scene.registry.set('globalDamageReductionLevel', manaringLvl === 1 ? 25 : (manaringLvl >= 2 ? 40 : 0));
         this.scene.registry.set('manaringDRBonus', manaringLvl === 1 ? 0.25 : manaringLvl === 2 ? 0.40 : 0);
 
         // Warrior: Skadeskalering – armor-scaled damage

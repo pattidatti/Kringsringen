@@ -50,10 +50,10 @@ export class EclipseWake extends Phaser.GameObjects.Sprite {
         if (this.particles) {
             this.particles.setPosition(x, y);
             // Spawn particles on a ring and have them move towards center
-            this.particles.addEmitZone({
-                type: 'random',
-                source: new Phaser.Geom.Circle(0, 0, 45)
-            });
+            const circle = new Phaser.Geom.Circle(0, 0, 45);
+            this.particles.setEmitZone(new (Phaser.GameObjects.Particles.Zones.RandomZone as any)({
+                getRandomPoint: (point: any) => circle.getRandomPoint(point)
+            }));
             this.particles.start();
         }
 

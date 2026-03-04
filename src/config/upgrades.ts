@@ -3,15 +3,23 @@ import type { ClassId } from './classes';
 
 export type UpgradeCategory = 'Karakter' | 'Sverd' | 'Bue' | 'Magi' | 'Synergi';
 
+export interface UpgradeValue {
+    prefix?: string;
+    suffix?: string;
+    getValue: (level: number) => number | string;
+    isReduction?: boolean;
+}
+
 export interface UpgradeConfig {
     id: string;
     title: string;
     icon: string;
     category: UpgradeCategory;
+    summary: string; // Brief one-liner description of the effect
+    value: UpgradeValue; // Structured value for Now -> Next transitions
     maxLevel: number;
     basePrice: number;
     priceScale: number; // Cost = basePrice * (currentLevel ^ priceScale)
-    description: (level: number) => string;
     iconTint?: string; // Optional CSS filter or color for the icon
     requires?: Record<string, number>; // Record<upgradeId, requiredLevel>
     /** undefined = shared (alle klasser ser den). Satt = kun den klassen. */
@@ -27,40 +35,44 @@ export const UPGRADES: UpgradeConfig[] = [
         title: 'Vitalitet',
         icon: 'item_heart_status',
         category: 'Karakter',
+        summary: 'Øker maksimal helse',
+        value: { suffix: ' HP', getValue: (lvl) => GAME_CONFIG.PLAYER.BASE_MAX_HP + lvl * 20 },
         maxLevel: 20,
         basePrice: 40,
         priceScale: 1.5,
-        description: (lvl) => `+20 Maks HP (Nå: ${GAME_CONFIG.PLAYER.BASE_MAX_HP + (lvl) * 20})`
     },
     {
         id: 'speed',
         title: 'Lynrask',
         icon: 'item_lightning',
         category: 'Karakter',
+        summary: 'Øker løpehastighet',
+        value: { getValue: (lvl) => GAME_CONFIG.PLAYER.BASE_SPEED + lvl * 10 },
         maxLevel: 10,
         basePrice: 50,
         priceScale: 1.6,
-        description: (lvl) => `+10 Fart (Nå: ${GAME_CONFIG.PLAYER.BASE_SPEED + (lvl) * 10})`
     },
     {
         id: 'regen',
         title: 'Trollblod',
         icon: 'item_potion_red',
         category: 'Karakter',
+        summary: 'Gjenoppretter helse over tid',
+        value: { suffix: ' HP/s', getValue: (lvl) => lvl },
         maxLevel: 10,
         basePrice: 100,
         priceScale: 1.8,
-        description: (lvl) => `+1 HP/sek (Nå: ${lvl} HP/s)`
     },
     {
         id: 'armor',
         title: 'Jernhud',
         icon: 'item_shield',
         category: 'Karakter',
+        summary: 'Reduserer mottatt skade',
+        value: { getValue: (lvl) => lvl },
         maxLevel: 10,
         basePrice: 75,
         priceScale: 1.7,
-        description: (lvl) => `+1 Rustning (Nå: ${lvl})`
     },
     // --- DASH ---
     {
@@ -68,34 +80,37 @@ export const UPGRADES: UpgradeConfig[] = [
         title: 'Vindstøt',
         icon: 'item_lightning',
         category: 'Karakter',
+        summary: 'Reduserer ventetid på dash',
+        value: {
+            suffix: ' sek',
+            isReduction: true,
+            getValue: (lvl) => (GAME_CONFIG.PLAYER.DASH_COOLDOWN_MS / 1000 / (1 + lvl * 0.2)).toFixed(1)
+        },
         maxLevel: 6,
         basePrice: 80,
         priceScale: 1.7,
-        description: (lvl) => {
-            const base = GAME_CONFIG.PLAYER.DASH_COOLDOWN_MS / 1000;
-            const current = base / (1 + lvl * 0.2);
-            return `-20% dash-cooldown (Nå: ${current.toFixed(1)} sek)`;
-        }
     },
     {
         id: 'dash_distance',
         title: 'Lynskritt',
         icon: 'item_lightning',
         category: 'Karakter',
+        summary: 'Øker lengden på dash',
+        value: { suffix: 'px', getValue: (lvl) => GAME_CONFIG.PLAYER.DASH_DISTANCE + lvl * 50 },
         maxLevel: 5,
         basePrice: 100,
         priceScale: 1.8,
-        description: (lvl) => `+50px dash-distanse (Nå: ${GAME_CONFIG.PLAYER.DASH_DISTANCE + lvl * 50}px)`
     },
     {
         id: 'dash_lifesteal',
         title: 'Blodsug',
         icon: 'item_potion_red',
         category: 'Karakter',
+        summary: 'Gjenoppretter helse ved hver dash',
+        value: { prefix: '+', suffix: ' HP', getValue: (lvl) => lvl * 5 },
         maxLevel: 3,
         basePrice: 180,
         priceScale: 2.0,
-        description: (lvl) => `+${lvl * 5} HP ved dash`
     },
 
     // --- SVERD (Krieger-eksklusiv) ---
@@ -106,10 +121,11 @@ export const UPGRADES: UpgradeConfig[] = [
         category: 'Sverd',
         classRestriction: 'krieger',
         shopCategoryId: 'krieger_mastring',
+        summary: 'Øker all nærkampskade',
+        value: { prefix: '+', suffix: '%', getValue: (lvl) => lvl * 10 },
         maxLevel: 20,
         basePrice: 60,
         priceScale: 1.5,
-        description: (lvl) => `+10% Skade (Nå: +${lvl * 10}%)`
     },
     {
         id: 'knockback',
@@ -118,10 +134,11 @@ export const UPGRADES: UpgradeConfig[] = [
         category: 'Sverd',
         classRestriction: 'krieger',
         shopCategoryId: 'krieger_mastring',
+        summary: 'Slår fiender lenger bakover',
+        value: { prefix: '+', suffix: '%', getValue: (lvl) => lvl * 15 },
         maxLevel: 10,
         basePrice: 50,
         priceScale: 1.4,
-        description: (lvl) => `+15% Knockback (Nå: +${lvl * 15}%)`
     },
     {
         id: 'attack_speed',
@@ -130,10 +147,11 @@ export const UPGRADES: UpgradeConfig[] = [
         category: 'Sverd',
         classRestriction: 'krieger',
         shopCategoryId: 'krieger_mastring',
+        summary: 'Øker angrepshastighet',
+        value: { prefix: '+', suffix: '%', getValue: (lvl) => lvl * 10 },
         maxLevel: 10,
         basePrice: 80,
         priceScale: 1.6,
-        description: (lvl) => `+10% Angrepsfart (Nå: +${lvl * 10}%)`
     },
 
     // --- BUE (Archer-eksklusiv) ---
@@ -144,10 +162,11 @@ export const UPGRADES: UpgradeConfig[] = [
         category: 'Bue',
         classRestriction: 'archer',
         shopCategoryId: 'archer_mastring',
+        summary: 'Reduserer ladetid for bue',
+        value: { prefix: '-', suffix: '%', isReduction: true, getValue: (lvl) => lvl * 10 },
         maxLevel: 10,
         basePrice: 60,
         priceScale: 1.5,
-        description: (lvl) => `-10% Ladetid (Nå: -${lvl * 10}%)`
     },
     {
         id: 'multishot',
@@ -156,10 +175,11 @@ export const UPGRADES: UpgradeConfig[] = [
         category: 'Bue',
         classRestriction: 'archer',
         shopCategoryId: 'archer_mastring',
+        summary: 'Skyter flere piler samtidig',
+        value: { suffix: ' piler', getValue: (lvl) => 1 + lvl },
         maxLevel: 5,
         basePrice: 250,
         priceScale: 2.5,
-        description: (lvl) => `+1 Pil (Nå: ${1 + lvl} piler)`
     },
     {
         id: 'pierce',
@@ -168,10 +188,11 @@ export const UPGRADES: UpgradeConfig[] = [
         category: 'Bue',
         classRestriction: 'archer',
         shopCategoryId: 'archer_mastring',
+        summary: 'Piler går gjennom fiender',
+        value: { prefix: '+', getValue: (lvl) => lvl },
         maxLevel: 3,
         basePrice: 300,
         priceScale: 3.0,
-        description: (lvl) => `Går gjennom +1 fiende (Nå: ${lvl})`
     },
     {
         id: 'arrow_damage',
@@ -180,10 +201,11 @@ export const UPGRADES: UpgradeConfig[] = [
         category: 'Bue',
         classRestriction: 'archer',
         shopCategoryId: 'archer_mastring',
+        summary: 'Øker pilskade',
+        value: { prefix: '+', suffix: '%', getValue: (lvl) => lvl * 15 },
         maxLevel: 8,
         basePrice: 80,
         priceScale: 1.8,
-        description: (lvl) => `+15% Pilskade (Nå: +${lvl * 15}%)`
     },
     {
         id: 'arrow_speed',
@@ -192,10 +214,11 @@ export const UPGRADES: UpgradeConfig[] = [
         category: 'Bue',
         classRestriction: 'archer',
         shopCategoryId: 'archer_mastring',
+        summary: 'Øker pilhastighet',
+        value: { prefix: '+', suffix: '%', getValue: (lvl) => lvl * 20 },
         maxLevel: 5,
         basePrice: 70,
         priceScale: 1.6,
-        description: (lvl) => `+20% Pilhastighet (Nå: +${lvl * 20}%)`
     },
     {
         id: 'explosive_arrow',
@@ -204,10 +227,24 @@ export const UPGRADES: UpgradeConfig[] = [
         category: 'Bue',
         classRestriction: 'archer',
         shopCategoryId: 'archer_mastring',
+        summary: 'Piler eksploderer ved treff',
+        value: { suffix: 'px radius', getValue: (lvl) => lvl > 0 ? 80 + (lvl - 1) * 50 : 0 },
         maxLevel: 3,
         basePrice: 400,
         priceScale: 2.5,
-        description: (lvl) => lvl > 0 ? `Eksplosjon ved treff (Radius: ${80 + (lvl - 1) * 50}px)` : 'Piler eksploderer ved treff'
+    },
+    {
+        id: 'bow_singularity',
+        title: 'Singularitetspil',
+        icon: 'item_bow',
+        category: 'Bue',
+        classRestriction: 'archer',
+        shopCategoryId: 'archer_mastring',
+        summary: 'Piler skaper et kaskade-felt',
+        value: { suffix: 'px radius', getValue: (lvl: number) => 150 + lvl * 30 },
+        maxLevel: 3,
+        basePrice: 1000,
+        priceScale: 2.5,
     },
 
     // --- MAGI (Fireball – Wizard-eksklusiv) ---
@@ -218,10 +255,11 @@ export const UPGRADES: UpgradeConfig[] = [
         category: 'Magi',
         classRestriction: 'wizard',
         shopCategoryId: 'wizard_mastring',
+        summary: 'Øker skade fra ildstav',
+        value: { prefix: '+', suffix: '%', getValue: (lvl) => lvl * 15 },
         maxLevel: 10,
         basePrice: 70,
         priceScale: 1.6,
-        description: (lvl) => `+15% Ildstav-skade (Nå: +${lvl * 15}%)`
     },
     {
         id: 'fire_radius',
@@ -230,10 +268,11 @@ export const UPGRADES: UpgradeConfig[] = [
         category: 'Magi',
         classRestriction: 'wizard',
         shopCategoryId: 'wizard_mastring',
+        summary: 'Øker eksplosjonsradius',
+        value: { suffix: 'px', getValue: (lvl) => GAME_CONFIG.WEAPONS.FIREBALL.splashRadius + lvl * 30 },
         maxLevel: 5,
         basePrice: 120,
         priceScale: 1.8,
-        description: (lvl) => `+30px eksplosjonsradius (Nå: ${GAME_CONFIG.WEAPONS.FIREBALL.splashRadius + lvl * 30}px)`
     },
     {
         id: 'fire_speed',
@@ -242,10 +281,11 @@ export const UPGRADES: UpgradeConfig[] = [
         category: 'Magi',
         classRestriction: 'wizard',
         shopCategoryId: 'wizard_mastring',
+        summary: 'Øker farten på ildkuler',
+        value: { prefix: '+', suffix: '%', getValue: (lvl) => lvl * 15 },
         maxLevel: 8,
         basePrice: 80,
         priceScale: 1.5,
-        description: (lvl) => `+15% prosjektilhastighet (Nå: +${lvl * 15}%)`
     },
     {
         id: 'fire_chain',
@@ -254,10 +294,11 @@ export const UPGRADES: UpgradeConfig[] = [
         category: 'Magi',
         classRestriction: 'wizard',
         shopCategoryId: 'wizard_mastring',
+        summary: 'Eksplosjoner sprer seg til andre fiender',
+        value: { getValue: (lvl) => lvl > 0 ? 'Aktiv' : 'Låst' },
         maxLevel: 3,
         basePrice: 300,
         priceScale: 2.5,
-        description: (lvl) => lvl > 0 ? 'Eksplosjon setter fyr på fiender nær dem' : 'Lås opp kjedereaksjoner'
     },
 
     // --- MAGI (Frost – Wizard-eksklusiv) ---
@@ -268,10 +309,11 @@ export const UPGRADES: UpgradeConfig[] = [
         category: 'Magi',
         classRestriction: 'wizard',
         shopCategoryId: 'wizard_mastring',
+        summary: 'Øker skade fra froststav',
+        value: { prefix: '+', suffix: '%', getValue: (lvl) => lvl * 15 },
         maxLevel: 10,
         basePrice: 70,
         priceScale: 1.6,
-        description: (lvl) => `+15% Froststav-skade (Nå: +${lvl * 15}%)`
     },
     {
         id: 'frost_radius',
@@ -280,10 +322,11 @@ export const UPGRADES: UpgradeConfig[] = [
         category: 'Magi',
         classRestriction: 'wizard',
         shopCategoryId: 'wizard_mastring',
+        summary: 'Øker rekkevidden på frost',
+        value: { suffix: 'px', getValue: (lvl) => GAME_CONFIG.WEAPONS.FROST.radius + lvl * 20 },
         maxLevel: 5,
         basePrice: 120,
         priceScale: 1.8,
-        description: (lvl) => `+20px frysningsradius (Nå: ${GAME_CONFIG.WEAPONS.FROST.radius + lvl * 20}px)`
     },
     {
         id: 'frost_slow',
@@ -292,10 +335,11 @@ export const UPGRADES: UpgradeConfig[] = [
         category: 'Magi',
         classRestriction: 'wizard',
         shopCategoryId: 'wizard_mastring',
+        summary: 'Forlenger frysetiden',
+        value: { suffix: ' sek', getValue: (lvl) => (1000 + lvl * 800) / 1000 },
         maxLevel: 5,
         basePrice: 150,
         priceScale: 2.0,
-        description: (lvl) => `+0.8s frys-tid (Nå: ${(1000 + lvl * 800) / 1000}s)`
     },
     {
         id: 'frost_shatter',
@@ -304,10 +348,11 @@ export const UPGRADES: UpgradeConfig[] = [
         category: 'Magi',
         classRestriction: 'wizard',
         shopCategoryId: 'wizard_mastring',
+        summary: 'Frosne fiender tar mer skade',
+        value: { getValue: (lvl) => lvl > 0 ? 'Aktiv' : 'Låst' },
         maxLevel: 3,
         basePrice: 350,
         priceScale: 2.8,
-        description: (lvl) => lvl > 0 ? 'Frosne fiender tar +50% skade og splintrer' : 'Lås opp isknusing'
     },
 
     // --- MAGI (Lightning – Wizard-eksklusiv) ---
@@ -318,10 +363,11 @@ export const UPGRADES: UpgradeConfig[] = [
         category: 'Magi',
         classRestriction: 'wizard',
         shopCategoryId: 'wizard_mastring',
+        summary: 'Øker skade fra lynstav',
+        value: { prefix: '+', suffix: '%', getValue: (lvl) => lvl * 15 },
         maxLevel: 10,
         basePrice: 70,
         priceScale: 1.6,
-        description: (lvl) => `+15% Lynstav-skade (Nå: +${lvl * 15}%)`
     },
     {
         id: 'lightning_bounces',
@@ -330,10 +376,11 @@ export const UPGRADES: UpgradeConfig[] = [
         category: 'Magi',
         classRestriction: 'wizard',
         shopCategoryId: 'wizard_mastring',
+        summary: 'Lyn spretter til flere mål',
+        value: { suffix: ' mål', getValue: (lvl) => 1 + lvl },
         maxLevel: 5,
         basePrice: 200,
         priceScale: 2.0,
-        description: (lvl) => `+1 ekstra mål (Nå: ${1 + lvl} ekstra mål)`
     },
     {
         id: 'lightning_stun',
@@ -342,10 +389,11 @@ export const UPGRADES: UpgradeConfig[] = [
         category: 'Magi',
         classRestriction: 'wizard',
         shopCategoryId: 'wizard_mastring',
+        summary: 'Lyn har sjanse til å stumme fiender',
+        value: { suffix: '% sjanse', getValue: (lvl) => lvl * 10 },
         maxLevel: 5,
         basePrice: 150,
         priceScale: 1.8,
-        description: (lvl) => `${lvl * 10}% sjanse til å stunne fiender (Nå: ${lvl * 10}%)`
     },
     {
         id: 'lightning_voltage',
@@ -354,22 +402,11 @@ export const UPGRADES: UpgradeConfig[] = [
         category: 'Magi',
         classRestriction: 'wizard',
         shopCategoryId: 'wizard_mastring',
+        summary: 'Øker skade per sprett',
+        value: { prefix: '+', suffix: '%', getValue: (lvl) => lvl * 15 },
         maxLevel: 3,
         basePrice: 200,
         priceScale: 2.2,
-        description: (lvl) => `+${lvl * 15}% skade per bounce (Nå: +${lvl * 15}%)`
-    },
-    {
-        id: 'bow_singularity',
-        title: 'Singularitetspil',
-        icon: 'item_bow',
-        category: 'Bue',
-        classRestriction: 'archer',
-        shopCategoryId: 'archer_mastring',
-        maxLevel: 3,
-        basePrice: 1000,
-        priceScale: 2.5,
-        description: (lvl) => `Piler skaper et gravitasjonsfelt (Nå: ${150 + lvl * 30}px radius)`
     },
     {
         id: 'poison_arrow',
@@ -378,10 +415,11 @@ export const UPGRADES: UpgradeConfig[] = [
         category: 'Bue',
         classRestriction: 'archer',
         shopCategoryId: 'archer_mastring',
+        summary: 'Piler forgifter fiender',
+        value: { suffix: ' tikk', getValue: (lvl) => lvl > 0 ? [4, 6, 8][lvl - 1] : 0 },
         maxLevel: 3,
         basePrice: 500,
         priceScale: 2.5,
-        description: (lvl) => `Piler forgifter fiender (8% pilskade/tikk i ${[4, 6, 8][lvl - 1]} tikk)`,
         iconTint: 'hue-rotate(80deg) brightness(1.1) drop-shadow(0 0 2px #00cc44)'
     },
     {
@@ -391,10 +429,11 @@ export const UPGRADES: UpgradeConfig[] = [
         category: 'Magi',
         classRestriction: 'wizard',
         shopCategoryId: 'wizard_mastring',
+        summary: 'Kobler fiender sammen så de deler skade',
+        value: { getValue: (lvl) => lvl > 0 ? 'Aktiv' : 'Låst' },
         maxLevel: 1,
         basePrice: 1500,
         priceScale: 1,
-        description: () => 'Koble fiender sammen! Delte fiender deler 40% skade.',
         iconTint: 'hue-rotate(140deg) brightness(1.2) drop-shadow(0 0 2px #ff00ff)'
     },
     {
@@ -404,10 +443,11 @@ export const UPGRADES: UpgradeConfig[] = [
         category: 'Sverd',
         classRestriction: 'krieger',
         shopCategoryId: 'krieger_mastring',
+        summary: 'Etterlater en mørk sti som skader fiender',
+        value: { suffix: '% skade', getValue: (lvl) => 30 * lvl },
         maxLevel: 3,
         basePrice: 1200,
         priceScale: 2.2,
-        description: (lvl) => `Sverd-svinger vrenger virkeligheten og etterlater et mørkt ekko som fortærer fiender (Nå: ${30 * lvl}% skade)`
     },
 
     // --- SYNERGIER (Wizard-eksklusiv) ---
@@ -418,10 +458,11 @@ export const UPGRADES: UpgradeConfig[] = [
         category: 'Synergi',
         classRestriction: 'wizard',
         shopCategoryId: 'wizard_synergi',
+        summary: 'Konsumerer frys for å utløse eksplosivt sjokk',
+        value: { getValue: (lvl) => lvl > 0 ? 'Aktiv' : 'Låst' },
         maxLevel: 1,
         basePrice: 500,
         priceScale: 1,
-        description: () => 'Konsumerer frys-effekt for å utløse et 3x skade eksplosivt sjokk!',
         iconTint: 'drop-shadow(0 0 4px #ff5500) hue-rotate(45deg)',
         requires: {
             'fire_damage': 3,
@@ -435,20 +476,22 @@ export const UPGRADES: UpgradeConfig[] = [
         title: 'Gullmagneten',
         icon: 'item_coin',
         category: 'Karakter',
+        summary: 'Øker rekkevidden for å plukke opp gull',
+        value: { prefix: '+', suffix: 'px', getValue: (lvl) => lvl * 50 },
         maxLevel: 5,
         basePrice: 90,
         priceScale: 1.6,
-        description: (lvl) => `+${lvl * 50}px myntoppsamlingsradius`
     },
     {
         id: 'crit_chance',
         title: 'Skarpeskytte',
         icon: 'item_swords_crossed',
         category: 'Karakter',
+        summary: 'Øker sjanse for kritiske treff',
+        value: { prefix: '+', suffix: '%', getValue: (lvl) => lvl * 5 },
         maxLevel: 6,
         basePrice: 120,
         priceScale: 1.9,
-        description: (lvl) => `+${lvl * 5}% kritisk-sjanse`
     },
     {
         id: 'frost_trap',
@@ -457,10 +500,11 @@ export const UPGRADES: UpgradeConfig[] = [
         category: 'Bue',
         classRestriction: 'archer',
         shopCategoryId: 'archer_talenter',
+        summary: 'Legger ut feller som fryser fiender',
+        value: { suffix: ' sek', getValue: (lvl) => 1.5 + lvl * 0.5 },
         maxLevel: 5,
         basePrice: 200,
         priceScale: 1.8,
-        description: (lvl) => `Legg ut en felle som stunter fiender i ${1.5 + lvl * 0.5}s.`
     },
 ];
 

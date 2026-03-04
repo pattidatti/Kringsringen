@@ -475,7 +475,7 @@ export const FantasyBook: React.FC<FantasyBookProps> = React.memo(({
                                                 <div className={`text-lg pl-1 leading-snug font-crimson mt-2
                                                     ${!reqMet ? 'text-slate-600' : `${theme.text} opacity-90`}
                                                 `}>
-                                                    {item.description(lvl + 1)}
+                                                    {item.summary} ({item.value.prefix || ''}{item.value.getValue(lvl + 1)}{item.value.suffix || ''})
                                                 </div>
                                                 {!reqMet && (
                                                     <div className="text-sm text-red-800 font-bold mt-3 p-2 bg-red-100/60 rounded border border-red-900/20 flex items-center gap-2">

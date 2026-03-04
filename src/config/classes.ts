@@ -190,7 +190,7 @@ const WIZARD: ClassConfig = {
         attackSpeed: 1.10,  // +10% Angrepsfart (raskere kasting)
     },
     startingWeapons: ['fireball', 'frost', 'lightning'],
-    classAbilityId: 'arcane_singularity',
+    classAbilityId: 'cascade',
     classAbilityHotkey: '4',
     traits: ['Elementær kraft', 'Områdekontroll', 'Mektige spells'],
     portrait: 'assets/ui/portraits/wizard_portrait.png',
@@ -203,7 +203,7 @@ const WIZARD: ClassConfig = {
     ],
     exclusiveUpgradeIds: [
         // DRIVKRAFT
-        'cascade_duration', 'cascade_damage', 'cascade_chain',
+        'cascade_duration', 'cascade_radius', 'cascade_damage',
         'manaring', 'elementar_overfload', 'nullifikasjon',
         // MASTRING (alle spell-upgrades)
         'fire_damage', 'fire_radius', 'fire_speed', 'fire_chain',

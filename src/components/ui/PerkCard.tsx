@@ -88,8 +88,18 @@ export const PerkCard: React.FC<PerkCardProps> = ({ perk, level, onClick, index 
                 </div>
 
                 <p className={`text-sm opacity-80 mb-2 leading-snug font-crimson ${styles.text}`}>
-                    {perk.description(level)}
+                    {perk.summary} ({perk.value.prefix || ''}{perk.value.getValue(level)}{perk.value.suffix || ''})
                 </p>
+
+                <div className="flex items-center gap-1.5 mb-2">
+                    <span className="text-xs font-bold px-1.5 py-0.5 rounded bg-black/5 border border-black/5">
+                        {perk.value.prefix}{perk.value.getValue(level)}{perk.value.suffix}
+                    </span>
+                    <span className="text-[10px] opacity-40">➔</span>
+                    <span className="text-xs font-black px-1.5 py-0.5 rounded bg-amber-400/20 border border-amber-600/20 text-amber-900">
+                        {perk.value.prefix}{perk.value.getValue(level + 1)}{perk.value.suffix}
+                    </span>
+                </div>
 
                 <div className="flex items-center justify-between">
                     <span className={`text-xs font-bold opacity-60 ${styles.text}`}>

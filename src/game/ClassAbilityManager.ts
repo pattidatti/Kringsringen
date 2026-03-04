@@ -11,6 +11,9 @@ export class ClassAbilityManager {
 
     public isWhirlwinding: boolean = false;
     public explosiveShotReady: boolean = false;
+    public whirlwindActiveUntil: number = 0;
+    public cascadeActiveUntil: number = 0;
+    public shadowDecoyActiveUntil: number = 0;
     public classAbilityCooldownEnd: number = 0;
     public classAbility3CooldownEnd: number = 0;
     public classAbility4CooldownEnd: number = 0;
@@ -25,7 +28,7 @@ export class ClassAbilityManager {
     public attemptAbility2(): void {
         const playerClassId = resolveClassId(this.scene.registry.get('playerClass'));
         if (playerClassId === 'krieger') this.activateWhirlwind();
-        else if (playerClassId === 'wizard') this.activateArcaneSingularity();
+        else if (playerClassId === 'wizard') this.activateCascade();
         else if (playerClassId === 'archer') this.activateExplosiveShot();
     }
 
@@ -207,18 +210,18 @@ export class ClassAbilityManager {
         });
     }
 
-    private activateArcaneSingularity(): void {
+    private activateCascade(): void {
         const levels = (this.scene.registry.get('upgradeLevels') || {}) as Record<string, number>;
 
         // Duration: Base 3s, +0.5s per upg
-        const duration = (3 + (levels['singularity_duration'] || 0) * 0.5) * 1000;
+        const duration = (3 + (levels['cascade_duration'] || 0) * 0.5) * 1000;
 
         // Radius: Base 1, +0.25 per upg
-        const radiusMult = 1 + (levels['singularity_radius'] || 0) * 0.25;
+        const radiusMult = 1 + (levels['cascade_radius'] || 0) * 0.25;
 
         // Damage calculation
         const baseDamage = this.scene.stats.damage * 3; // Huge base damage
-        const centerDamageMult = 1 + (levels['singularity_damage'] || 0) * 0.5; // +50% or +100%
+        const centerDamageMult = 1 + (levels['cascade_damage'] || 0) * 0.5; // +50% or +100%
 
         // Damage Reduction (Manaring)
         const manaRingLvl = levels['manaring'] || 0;
@@ -230,7 +233,7 @@ export class ClassAbilityManager {
         const spawnX = pointer.worldX;
         const spawnY = pointer.worldY;
 
-        this.classAbility3CooldownEnd = Date.now() + duration; // keeping variable name for state consistency if needed
+        this.cascadeActiveUntil = Date.now() + duration;
         this.classAbilityCooldownEnd = Date.now() + cd;
         this.scene.registry.set('classAbilityCooldown', { duration: cd, timestamp: Date.now() });
 
@@ -238,8 +241,8 @@ export class ClassAbilityManager {
         if (singularity) {
             singularity.spawn(spawnX, spawnY, duration, radiusMult, baseDamage, centerDamageMult, damageReduction);
             this.scene.buffs.addBuff({
-                key: 'arcane_singularity',
-                title: 'SINGULARITY',
+                key: 'cascade',
+                title: 'CASCADE',
                 icon: 'item_orb_purple',
                 color: 0xcc88ff,
                 duration: duration,
