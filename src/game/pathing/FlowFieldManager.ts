@@ -140,8 +140,61 @@ export class FlowFieldManager {
                 const idx = r * this.grid.cols + c;
 
                 if (this.costField[idx] === 255) {
-                    this.vectorField[idx].x = 0;
-                    this.vectorField[idx].y = 0;
+                    // Start of Ejection Field Logic
+                    let bestEscapeDirX = 0;
+                    let bestEscapeDirY = 0;
+                    let minEscapeCost = this.MAX_DISTANCE;
+                    let validEscapeFound = false;
+
+                    const neighbors = [
+                        { dx: 0, dy: -1 }, // N
+                        { dx: 0, dy: 1 }, // S
+                        { dx: 1, dy: 0 }, // E
+                        { dx: -1, dy: 0 }, // W
+                        { dx: 1, dy: -1 }, // NE
+                        { dx: -1, dy: -1 }, // NW
+                        { dx: 1, dy: 1 }, // SE
+                        { dx: -1, dy: 1 }  // SW
+                    ];
+
+                    for (const offset of neighbors) {
+                        const nc = c + offset.dx;
+                        const nr = r + offset.dy;
+                        if (nc < 0 || nc >= this.grid.cols || nr < 0 || nr >= this.grid.rows) continue;
+
+                        const nIdx = nr * this.grid.cols + nc;
+                        // Only consider neighbors that are NOT walls themselves
+                        if (this.costField[nIdx] < 255) {
+                            const nCost = this.integrationField[nIdx];
+                            if (nCost < minEscapeCost) {
+                                minEscapeCost = nCost;
+                                bestEscapeDirX = offset.dx;
+                                bestEscapeDirY = offset.dy;
+                                validEscapeFound = true;
+                            }
+                        }
+                    }
+
+                    if (validEscapeFound && (bestEscapeDirX !== 0 || bestEscapeDirY !== 0)) {
+                        const len = Math.sqrt(bestEscapeDirX * bestEscapeDirX + bestEscapeDirY * bestEscapeDirY);
+                        this.vectorField[idx].x = bestEscapeDirX / len;
+                        this.vectorField[idx].y = bestEscapeDirY / len;
+                    } else if (this.targetCell) {
+                        // Fallback: If completely surrounded by walls, push directly towards target.
+                        const dx = this.targetCell.col - c;
+                        const dy = this.targetCell.row - r;
+                        if (dx !== 0 || dy !== 0) {
+                            const len = Math.sqrt(dx * dx + dy * dy);
+                            this.vectorField[idx].x = dx / len;
+                            this.vectorField[idx].y = dy / len;
+                        } else {
+                            this.vectorField[idx].x = 0;
+                            this.vectorField[idx].y = 0;
+                        }
+                    } else {
+                        this.vectorField[idx].x = 0;
+                        this.vectorField[idx].y = 0;
+                    }
                     continue;
                 }
 
@@ -206,12 +259,9 @@ export class FlowFieldManager {
         if (c < 0 || c >= this.grid.cols || r < 0 || r >= this.grid.rows) return null;
 
         const idx = r * this.grid.cols + c;
-        if (this.costField[idx] === 255) {
-            // If the enemy is somehow inside a wall, try to push them towards the target directly
-            // or return a vector pointing out.
-            return null;
-        }
 
+        // Ejection vectors are now handled during `updateVectorField()`.
+        // Even for costField === 255, we have a valid vector calculated (or fallback).
         return this.vectorField[idx];
     }
 }

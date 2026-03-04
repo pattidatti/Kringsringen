@@ -66,9 +66,9 @@
 -[x] Orkehøvding har noe feil med hitbox, får ikke til å skade den. Bare lighting med seeking greier å treffe, alt annen bommer totalt, går rett gjennom. 
 -[x] Orkehøvding virker til å bli svært lett stuck, og kan ikke bevege seg; blir dermed ingen stor trussel. 
 -[x] Multiplayer orkehøvding; spiller B får hitbaren over hodet, men den er gigalang, og  den er "tom" i HP baren på toppen. 
-- [ ] Orkeboss blir fremdeles litt for mye stuck. 
-- [ ] Orkehøvdings dash er for kort, og han blir lett stuck etter dash. 
-- [ ] Bossene blir veldig lett stuck, kanskje de bør ha mye mindre footprint eller noe, som som gjør at de ikke kolliderer med alt mulig konstant og sitter seg fast. 
+- [ ] Orkeboss blir fremdeles litt for mye stuck. (Løst vha. Ejection Fields og Sann posisjons-Stuck-detection)
+- [ ] Orkehøvdings dash er for kort, og han blir lett stuck etter dash. (Løst: Stuck-detection bruker nå ekte koordinat-delta).
+- [ ] Bossene blir veldig lett stuck, kanskje de bør ha mye mindre footprint eller noe, som som gjør at de ikke kolliderer med alt mulig konstant og sitter seg fast. (Løst: FlowField Ejection Vectors dytter dem ut av hindringer)
 -[x] Usikker på om det er coindrops fra bosser, men de bør uansett automatisk plukkes opp, ettersom spillet pauser med en gang den dør, og en ikke får muligheten til å hente dem selv. 
 - [ ] Alle bosser må droppe mye mer gull. 
 - [ ] Trollmester Grak må ha en nockback resist, slik at han ikke blir stoppet av alt mulig. 
@@ -124,7 +124,7 @@
 - [x] Man må kunne gjenopplive folk etter et level er over, via boken og det koster masse gull . Øker i kostnad for hver gang man gjør det. 
 - [x] Når spillere dør, skal de bli spøkelser, som kan plukke opp gull, men de kan ikke skade fiender. De er spectating (hvit glow og tint og mindre lysradius enn levende spillere). Monstere skal ikke angripe døde spillere. 
 - [x] Når man skriver navn på death screen, får man ikke bruke alle bokstaver; WASD er blokket. 
-- [x] Generell dårlig pathing på fiender, de setter seg fast i alt mulig. 
+- [x] Generell dårlig pathing på fiender, de setter seg fast i alt mulig. (Løst vha Bug Audit under FlowField Ejection)
 - [] Det er ikke regn på hele skjermen, det mangler litt på høyre side.
 - [?] Spillet crasher når man skyter bue og treffer noe med (ihvertfall med eksplosjon ulocked )
 - [x] Virker som gull forsvinner etter en stund, det må bli liggende. 

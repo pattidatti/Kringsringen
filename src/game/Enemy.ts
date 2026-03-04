@@ -63,6 +63,10 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     private lastBurstTime: number = 0;
     private isWindingUp: boolean = false;
 
+    // True positional tracking for stuck detection
+    private lastX: number = 0;
+    private lastY: number = 0;
+
     public get damage(): number {
         return this.config.baseDamage; // Will be updated in reset
     }
@@ -150,6 +154,9 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         this.lastMultiShotTime = 0;
         this.lastBurstTime = 0;
         this.isWindingUp = false;
+
+        this.lastX = x;
+        this.lastY = y;
 
         // Clear Soul Link
         this.linkedEnemy = null;
@@ -625,17 +632,27 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         }
 
         // --- Stuck Detection & Recovery ---
-        // Retained for dynamic body traffic jams (e.g., swarms pinning an enemy)
-        const currentSpeed = (this.body as Phaser.Physics.Arcade.Body).speed;
-        const stuckThreshold = this.id.includes('boss') ? speed * 0.4 : speed * 0.2;
+        // Ultrathink Fix: Check ACTUAL positional delta instead of body.speed
+        const realDist = Phaser.Math.Distance.Between(this.x, this.y, this.lastX, this.lastY);
+        // Expected distance if moving at full speed over delta (ms): speed * (delta/1000)
+        const expectedDist = speed * (delta / 1000);
+        // We consider it stuck if it moves less than 20% of expected distance AND intends to move.
+        const isStuckThisFrame = maxScore > 0.3 && realDist < (expectedDist * 0.2);
 
-        if (maxScore > 0.3 && currentSpeed < stuckThreshold) {
+        if (isStuckThisFrame) {
             this.stuckTimer += delta;
         } else {
             this.stuckTimer = Math.max(0, this.stuckTimer - delta * 2);
         }
 
-        const stuckDurationLimit = this.id.includes('boss') ? 150 : 250;
+        // Update true positions
+        this.lastX = this.x;
+        this.lastY = this.y;
+
+        // Trigger recovery if stuck for 0.15s (Bosses) or 0.25s (Normals).
+        // Magic numbers removed in favor of uniform dynamic handling
+        const stuckDurationLimit = GAME_CONFIG.ENEMIES[this.enemyType.toUpperCase() as EnemyType]?.scale >= 1.5 ? 150 : 250;
+
         if (this.stuckTimer > stuckDurationLimit && this.recoveryTimer <= 0) {
             let bestRecoveryIdx = -1;
             let bestRecoveryScore = -100;

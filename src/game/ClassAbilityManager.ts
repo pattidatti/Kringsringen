@@ -94,7 +94,11 @@ export class ClassAbilityManager {
 
         const triggerHit = (color: string) => {
             const px = player.x, py = player.y;
-            const hitEnemies = (this.scene.enemies.getChildren() as Enemy[]).filter(e => e.active && Phaser.Math.Distance.Between(px, py, e.x, e.y) <= radius);
+            const targets = [
+                ...this.scene.enemies.getChildren() as Enemy[],
+                ...this.scene.bossGroup.getChildren() as any[]
+            ];
+            const hitEnemies = targets.filter(e => e.active && Phaser.Math.Distance.Between(px, py, e.x, e.y) <= radius);
             hitEnemies.forEach(e => {
                 e.takeDamage(damage, color);
                 e.pushback(px, py, this.scene.stats.knockback);
