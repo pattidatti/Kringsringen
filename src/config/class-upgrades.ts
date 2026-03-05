@@ -23,7 +23,7 @@ export interface ClassUpgradeConfig extends UpgradeConfig {
 
 // ─── KRIEGER ─────────────────────────────────────────────────────────────────
 
-/** Krieger DRIVKRAFT: Whirlwind Slash ability-nivåer + legendaries */
+/** Krieger SVERD: Whirlwind Slash ability-nivåer + legendaries */
 const KRIEGER_DRIVKRAFT: ClassUpgradeConfig[] = [
     {
         id: 'whirl_damage',
@@ -31,7 +31,8 @@ const KRIEGER_DRIVKRAFT: ClassUpgradeConfig[] = [
         icon: 'item_sword',
         category: 'Sverd',
         classRestriction: 'krieger',
-        shopCategoryId: 'krieger_drivkraft',
+        shopCategoryId: 'krieger_sverd',
+        displayGroup: 'Virvelvind',
         isAbilityUpgrade: true,
         summary: 'Øker skaden til virvelvind',
         value: { suffix: '%', getValue: (lvl) => 100 + lvl * 25 },
@@ -46,7 +47,8 @@ const KRIEGER_DRIVKRAFT: ClassUpgradeConfig[] = [
         icon: 'item_swords_crossed',
         category: 'Sverd',
         classRestriction: 'krieger',
-        shopCategoryId: 'krieger_drivkraft',
+        shopCategoryId: 'krieger_sverd',
+        displayGroup: 'Virvelvind',
         isAbilityUpgrade: true,
         summary: 'Reduserer ventetid på virvelvind',
         value: { suffix: 's', isReduction: true, getValue: (lvl) => [6.4, 5.1, 4.1][lvl - 1] ?? 8 },
@@ -62,7 +64,8 @@ const KRIEGER_DRIVKRAFT: ClassUpgradeConfig[] = [
         icon: 'item_swords_crossed',
         category: 'Sverd',
         classRestriction: 'krieger',
-        shopCategoryId: 'krieger_drivkraft',
+        shopCategoryId: 'krieger_sverd',
+        displayGroup: 'Virvelvind',
         isAbilityUpgrade: true,
         summary: 'Treff med virvelvind reduserer ventetid ytterligere',
         value: { prefix: '-', suffix: '% CD', getValue: (lvl) => lvl === 1 ? 25 : 35 },
@@ -78,7 +81,8 @@ const KRIEGER_DRIVKRAFT: ClassUpgradeConfig[] = [
         icon: 'item_sword_heavy',
         category: 'Sverd',
         classRestriction: 'krieger',
-        shopCategoryId: 'krieger_drivkraft',
+        shopCategoryId: 'krieger_sverd',
+        displayGroup: 'Kampstil',
         summary: 'Gjør mer skade når du har lav helse',
         value: { prefix: '+', suffix: '% skade', getValue: (lvl) => lvl * 5 },
         maxLevel: 3,
@@ -92,7 +96,8 @@ const KRIEGER_DRIVKRAFT: ClassUpgradeConfig[] = [
         icon: 'item_potion_red',
         category: 'Sverd',
         classRestriction: 'krieger',
-        shopCategoryId: 'krieger_drivkraft',
+        shopCategoryId: 'krieger_sverd',
+        displayGroup: 'Kampstil',
         summary: 'Gjenoppretter helse ved fiendedrap i nærkamp',
         value: { prefix: '+', suffix: ' HP', getValue: (lvl) => lvl * 8 },
         maxLevel: 4,
@@ -105,7 +110,8 @@ const KRIEGER_DRIVKRAFT: ClassUpgradeConfig[] = [
         icon: 'item_shield',
         category: 'Sverd',
         classRestriction: 'krieger',
-        shopCategoryId: 'krieger_drivkraft',
+        shopCategoryId: 'krieger_sverd',
+        displayGroup: 'Kampstil',
         summary: 'Returnerer deler av skaden til fienden',
         value: { suffix: '% retur', getValue: (lvl) => lvl * 15 },
         maxLevel: 3,
@@ -115,7 +121,7 @@ const KRIEGER_DRIVKRAFT: ClassUpgradeConfig[] = [
     },
 ];
 
-/** Krieger MASTRING – Sverd-fokus (ekstra nye) */
+/** Krieger SVERD – Grunnlag (ekstra) */
 const KRIEGER_MASTRING_NYE: ClassUpgradeConfig[] = [
     {
         id: 'wide_swing',
@@ -123,7 +129,8 @@ const KRIEGER_MASTRING_NYE: ClassUpgradeConfig[] = [
         icon: 'item_sword',
         category: 'Sverd',
         classRestriction: 'krieger',
-        shopCategoryId: 'krieger_mastring',
+        shopCategoryId: 'krieger_sverd',
+        displayGroup: 'Grunnlag',
         summary: 'Øker rekkevidden på sverdangrep',
         value: { prefix: '+', suffix: '% bue', getValue: (lvl) => lvl * 30 },
         maxLevel: 3,
@@ -136,7 +143,8 @@ const KRIEGER_MASTRING_NYE: ClassUpgradeConfig[] = [
         icon: 'item_sword_heavy',
         category: 'Sverd',
         classRestriction: 'krieger',
-        shopCategoryId: 'krieger_mastring',
+        shopCategoryId: 'krieger_sverd',
+        displayGroup: 'Grunnlag',
         summary: 'Hvert treff øker skaden på neste slag',
         value: { prefix: '+', suffix: '% skade', getValue: (lvl) => lvl * 10 },
         maxLevel: 3,
@@ -145,7 +153,7 @@ const KRIEGER_MASTRING_NYE: ClassUpgradeConfig[] = [
     },
 ];
 
-/** Krieger KAMPTALENT – Battle-teknikker */
+/** Krieger SVERD – Kampstil */
 const KRIEGER_KAMPTALENT: ClassUpgradeConfig[] = [
     {
         id: 'counter_strike',
@@ -153,7 +161,8 @@ const KRIEGER_KAMPTALENT: ClassUpgradeConfig[] = [
         icon: 'item_swords_crossed',
         category: 'Sverd',
         classRestriction: 'krieger',
-        shopCategoryId: 'krieger_kamptalent',
+        shopCategoryId: 'krieger_sverd',
+        displayGroup: 'Kampstil',
         summary: 'Sjanse for å returnere skade ved treff',
         value: { prefix: '+', suffix: '% sjanse', getValue: (lvl) => lvl * 20 },
         maxLevel: 3,
@@ -167,7 +176,8 @@ const KRIEGER_KAMPTALENT: ClassUpgradeConfig[] = [
         icon: 'item_sword_heavy',
         category: 'Sverd',
         classRestriction: 'krieger',
-        shopCategoryId: 'krieger_kamptalent',
+        shopCategoryId: 'krieger_sverd',
+        displayGroup: 'Kampstil',
         summary: 'Etter dash: mini-AoE stun rundt spilleren',
         value: { suffix: ' sek', getValue: (lvl) => lvl === 1 ? 0.5 : 0.8 },
         maxLevel: 2,
@@ -181,7 +191,8 @@ const KRIEGER_KAMPTALENT: ClassUpgradeConfig[] = [
         icon: 'item_swords_crossed',
         category: 'Sverd',
         classRestriction: 'krieger',
-        shopCategoryId: 'krieger_kamptalent',
+        shopCategoryId: 'krieger_sverd',
+        displayGroup: 'Kampstil',
         summary: 'Drap trigger midlertidig skadebonus',
         value: { prefix: '+', suffix: '% skade', getValue: (lvl) => lvl * 15 },
         maxLevel: 3,
@@ -194,7 +205,8 @@ const KRIEGER_KAMPTALENT: ClassUpgradeConfig[] = [
         icon: 'item_sword',
         category: 'Sverd',
         classRestriction: 'krieger',
-        shopCategoryId: 'krieger_kamptalent',
+        shopCategoryId: 'krieger_sverd',
+        displayGroup: 'Kampstil',
         summary: 'Økt skade mot fiender med lav helse',
         value: { prefix: '+', suffix: '% skade', getValue: (lvl) => lvl * 50 },
         maxLevel: 2,
@@ -266,7 +278,7 @@ const KRIEGER_RUSTNING: ClassUpgradeConfig[] = [
 
 // ─── ARCHER ──────────────────────────────────────────────────────────────────
 
-/** Archer DRIVKRAFT: Phantom Volley ability-nivåer + legendaries */
+/** Archer BUE: Phantom Volley ability-nivåer + presisjon */
 const ARCHER_DRIVKRAFT: ClassUpgradeConfig[] = [
     {
         id: 'volley_count',
@@ -274,7 +286,8 @@ const ARCHER_DRIVKRAFT: ClassUpgradeConfig[] = [
         icon: 'item_bow',
         category: 'Bue',
         classRestriction: 'archer',
-        shopCategoryId: 'archer_drivkraft',
+        shopCategoryId: 'archer_bue',
+        displayGroup: 'Fantombyge',
         isAbilityUpgrade: true,
         summary: 'Øker antall piler i Fantombyge',
         value: { prefix: '+', suffix: ' piler', getValue: (lvl) => lvl * 5 },
@@ -289,7 +302,8 @@ const ARCHER_DRIVKRAFT: ClassUpgradeConfig[] = [
         icon: 'item_spear',
         category: 'Bue',
         classRestriction: 'archer',
-        shopCategoryId: 'archer_drivkraft',
+        shopCategoryId: 'archer_bue',
+        displayGroup: 'Fantombyge',
         isAbilityUpgrade: true,
         summary: 'Øker skaden til hver pil i Fantombyge',
         value: { suffix: 'x skade', getValue: (lvl) => (1.0 + lvl * 0.2).toFixed(1) },
@@ -305,7 +319,8 @@ const ARCHER_DRIVKRAFT: ClassUpgradeConfig[] = [
         icon: 'item_spear',
         category: 'Bue',
         classRestriction: 'archer',
-        shopCategoryId: 'archer_drivkraft',
+        shopCategoryId: 'archer_bue',
+        displayGroup: 'Fantombyge',
         isAbilityUpgrade: true,
         summary: 'Piler fra Fantombyge går gjennom flere fiender',
         value: { prefix: '+', suffix: ' pierce', getValue: (lvl) => lvl },
@@ -321,7 +336,8 @@ const ARCHER_DRIVKRAFT: ClassUpgradeConfig[] = [
         icon: 'item_bow',
         category: 'Bue',
         classRestriction: 'archer',
-        shopCategoryId: 'archer_drivkraft',
+        shopCategoryId: 'archer_bue',
+        displayGroup: 'Presisjon',
         summary: 'Piler spretter til nye mål',
         value: { suffix: ' mål', getValue: (lvl) => lvl },
         maxLevel: 3,
@@ -334,7 +350,8 @@ const ARCHER_DRIVKRAFT: ClassUpgradeConfig[] = [
         icon: 'item_bow',
         category: 'Bue',
         classRestriction: 'archer',
-        shopCategoryId: 'archer_drivkraft',
+        shopCategoryId: 'archer_bue',
+        displayGroup: 'Presisjon',
         summary: 'Lad bue for kraftigere piercende skudd',
         value: { suffix: 'x skade', getValue: (lvl) => lvl === 1 ? 2.0 : 2.5 },
         maxLevel: 2,
@@ -348,7 +365,8 @@ const ARCHER_DRIVKRAFT: ClassUpgradeConfig[] = [
         icon: 'item_bow',
         category: 'Bue',
         classRestriction: 'archer',
-        shopCategoryId: 'archer_drivkraft',
+        shopCategoryId: 'archer_bue',
+        displayGroup: 'Presisjon',
         summary: 'Eksplosjons-drap genererer ekstra piler',
         value: { suffix: ' piler', getValue: (lvl) => lvl },
         maxLevel: 3,
@@ -358,7 +376,7 @@ const ARCHER_DRIVKRAFT: ClassUpgradeConfig[] = [
     },
 ];
 
-/** Archer TALENTER – Presisjon */
+/** Archer BUE – Presisjon (talenter) */
 const ARCHER_TALENTER: ClassUpgradeConfig[] = [
     {
         id: 'headshot',
@@ -366,7 +384,8 @@ const ARCHER_TALENTER: ClassUpgradeConfig[] = [
         icon: 'item_bow',
         category: 'Bue',
         classRestriction: 'archer',
-        shopCategoryId: 'archer_talenter',
+        shopCategoryId: 'archer_bue',
+        displayGroup: 'Presisjon',
         summary: 'Økt sjanse for kritiske treff med piler',
         value: { prefix: '+', suffix: '% sjanse', getValue: (lvl) => lvl * 15 },
         maxLevel: 3,
@@ -380,7 +399,8 @@ const ARCHER_TALENTER: ClassUpgradeConfig[] = [
         icon: 'item_bow',
         category: 'Bue',
         classRestriction: 'archer',
-        shopCategoryId: 'archer_talenter',
+        shopCategoryId: 'archer_bue',
+        displayGroup: 'Presisjon',
         summary: 'Øker pilhastighet og rekkevidde',
         value: { prefix: '+', suffix: '% fart', getValue: (lvl) => lvl * 30 },
         maxLevel: 3,
@@ -394,7 +414,8 @@ const ARCHER_TALENTER: ClassUpgradeConfig[] = [
         icon: 'item_spear',
         category: 'Bue',
         classRestriction: 'archer',
-        shopCategoryId: 'archer_talenter',
+        shopCategoryId: 'archer_bue',
+        displayGroup: 'Presisjon',
         summary: 'Sjanse for at piler stopper fiender',
         value: { suffix: ' sek', getValue: (lvl) => 0.5 + lvl },
         maxLevel: 3,
@@ -408,7 +429,8 @@ const ARCHER_TALENTER: ClassUpgradeConfig[] = [
         icon: 'item_bow',
         category: 'Bue',
         classRestriction: 'archer',
-        shopCategoryId: 'archer_talenter',
+        shopCategoryId: 'archer_bue',
+        displayGroup: 'Presisjon',
         summary: 'Spesialpil som bremser alle fiender',
         value: { getValue: (lvl) => lvl > 0 ? 'Aktiv' : 'Låst' },
         maxLevel: 1,
@@ -477,7 +499,7 @@ const ARCHER_SMIDIGHET: ClassUpgradeConfig[] = [
 
 // ─── WIZARD ──────────────────────────────────────────────────────────────────
 
-/** Wizard DRIVKRAFT: Arcane Cascade ability-nivåer + legendaries */
+/** Wizard EVNER: Arcane Cascade ability-nivåer + legendaries */
 const WIZARD_DRIVKRAFT: ClassUpgradeConfig[] = [
     {
         id: 'cascade_duration',
@@ -485,7 +507,7 @@ const WIZARD_DRIVKRAFT: ClassUpgradeConfig[] = [
         icon: 'item_magic_staff',
         category: 'Magi',
         classRestriction: 'wizard',
-        shopCategoryId: 'wizard_drivkraft',
+        shopCategoryId: 'wizard_evner',
         isAbilityUpgrade: true,
         summary: 'Øker varigheten på Arcane Cascade',
         value: { suffix: ' sek', getValue: (lvl: number) => 3 + lvl * 0.5 },
@@ -500,7 +522,7 @@ const WIZARD_DRIVKRAFT: ClassUpgradeConfig[] = [
         icon: 'item_magic_staff',
         category: 'Magi',
         classRestriction: 'wizard',
-        shopCategoryId: 'wizard_drivkraft',
+        shopCategoryId: 'wizard_evner',
         isAbilityUpgrade: true,
         summary: 'Øker draradius til Arcane Cascade',
         value: { prefix: '+', suffix: '%', getValue: (lvl: number) => lvl * 25 },
@@ -516,7 +538,7 @@ const WIZARD_DRIVKRAFT: ClassUpgradeConfig[] = [
         icon: 'item_lightning_staff',
         category: 'Magi',
         classRestriction: 'wizard',
-        shopCategoryId: 'wizard_drivkraft',
+        shopCategoryId: 'wizard_evner',
         isAbilityUpgrade: true,
         summary: 'Eksplosjonen gjør mer skade i sentrum',
         value: { prefix: '+', suffix: '%', getValue: (lvl: number) => lvl * 50 },
@@ -532,7 +554,7 @@ const WIZARD_DRIVKRAFT: ClassUpgradeConfig[] = [
         icon: 'item_frost_orb',
         category: 'Magi',
         classRestriction: 'wizard',
-        shopCategoryId: 'wizard_drivkraft',
+        shopCategoryId: 'wizard_evner',
         summary: 'Aktiv Kaskade gir skadereduksjon',
         value: { suffix: '%', getValue: (lvl: number) => lvl === 1 ? 25 : 40 },
         maxLevel: 2,
@@ -546,7 +568,7 @@ const WIZARD_DRIVKRAFT: ClassUpgradeConfig[] = [
         icon: 'item_magic_staff',
         category: 'Magi',
         classRestriction: 'wizard',
-        shopCategoryId: 'wizard_drivkraft',
+        shopCategoryId: 'wizard_evner',
         summary: 'Bruk av trolldom øker skaden til andre trolldommer',
         value: { prefix: '+', suffix: '% skade', getValue: (lvl) => lvl * 10 },
         maxLevel: 3,
@@ -559,7 +581,7 @@ const WIZARD_DRIVKRAFT: ClassUpgradeConfig[] = [
         icon: 'item_frost_orb',
         category: 'Magi',
         classRestriction: 'wizard',
-        shopCategoryId: 'wizard_drivkraft',
+        shopCategoryId: 'wizard_evner',
         summary: 'Egen trolldom kan ødelegge innkommende bolter',
         value: { getValue: (lvl) => lvl > 0 ? 'Aktiv' : 'Låst' },
         maxLevel: 1,
@@ -619,7 +641,7 @@ const WIZARD_SYNERGI: ClassUpgradeConfig[] = [
     },
 ];
 
-/** Wizard MASTRING – Ekstra massiv eksplosjon */
+/** Wizard ILDMAGI – Ekstra massiv eksplosjon */
 const WIZARD_MASTRING_NYE: ClassUpgradeConfig[] = [
     {
         id: 'massiv_eksplosjon',
@@ -627,7 +649,7 @@ const WIZARD_MASTRING_NYE: ClassUpgradeConfig[] = [
         icon: 'item_magic_staff',
         category: 'Magi',
         classRestriction: 'wizard',
-        shopCategoryId: 'wizard_mastring',
+        shopCategoryId: 'wizard_ild',
         summary: 'Større rekkevidde på ildkuler',
         value: { prefix: '+', suffix: 'px radius', getValue: (lvl) => lvl * 40 },
         maxLevel: 2,
@@ -636,7 +658,7 @@ const WIZARD_MASTRING_NYE: ClassUpgradeConfig[] = [
     },
 ];
 
-/** Wizard ARKAN KUNNSKAP – Avanserte trolldomsteknikker */
+/** Wizard EVNER – Avanserte trolldomsteknikker */
 const WIZARD_ARKAN: ClassUpgradeConfig[] = [
     {
         id: 'spell_echo',
@@ -644,7 +666,7 @@ const WIZARD_ARKAN: ClassUpgradeConfig[] = [
         icon: 'item_magic_staff',
         category: 'Magi',
         classRestriction: 'wizard',
-        shopCategoryId: 'wizard_arkan',
+        shopCategoryId: 'wizard_evner',
         summary: 'Sjanse for å kaste trolldom uten ventetid',
         value: { suffix: '% sjanse', getValue: (lvl) => lvl * 15 },
         maxLevel: 3,
@@ -657,7 +679,7 @@ const WIZARD_ARKAN: ClassUpgradeConfig[] = [
         icon: 'item_lightning_staff',
         category: 'Magi',
         classRestriction: 'wizard',
-        shopCategoryId: 'wizard_arkan',
+        shopCategoryId: 'wizard_evner',
         summary: 'Treffer 3 fiender gir gratis neste kast',
         value: { getValue: (lvl) => lvl > 0 ? 'Aktiv' : 'Låst' },
         maxLevel: 2,
@@ -671,7 +693,7 @@ const WIZARD_ARKAN: ClassUpgradeConfig[] = [
         icon: 'item_magic_staff',
         category: 'Magi',
         classRestriction: 'wizard',
-        shopCategoryId: 'wizard_arkan',
+        shopCategoryId: 'wizard_evner',
         summary: 'Hvert 4. kast reduserer ventetid på trolldom',
         value: { prefix: '-', suffix: '% CD', getValue: (lvl) => lvl * 30 },
         maxLevel: 3,
@@ -684,7 +706,7 @@ const WIZARD_ARKAN: ClassUpgradeConfig[] = [
         icon: 'item_frost_orb',
         category: 'Magi',
         classRestriction: 'wizard',
-        shopCategoryId: 'wizard_arkan',
+        shopCategoryId: 'wizard_evner',
         summary: 'Sjanse for å absorbere skade med ventetid-reduksjon',
         value: { prefix: '+', suffix: '% sjanse', getValue: (lvl) => lvl * 30 },
         maxLevel: 2,
