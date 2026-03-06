@@ -60,21 +60,68 @@ const CATEGORY_THEMES: Record<string, { primary: string; secondary: string; bord
     'Magi': { primary: '#3730a3', secondary: '#6366f1', border: 'border-indigo-900/40', bg: 'bg-indigo-100/40', text: 'text-indigo-950' },
     'Synergi': { primary: '#9a3412', secondary: '#ea580c', border: 'border-orange-900/40', bg: 'bg-orange-100/40', text: 'text-orange-950' },
     // Krieger (rød)
+    'krieger_sverd':     { primary: '#7f1d1d', secondary: '#c0392b', border: 'border-red-900/30', bg: 'bg-red-200/30', text: 'text-red-950' },
+    'krieger_rustning':  { primary: '#7f1d1d', secondary: '#c0392b', border: 'border-red-900/30', bg: 'bg-red-200/30', text: 'text-red-950' },
+    // Legacy krieger ids (kept for safety)
     'krieger_drivkraft': { primary: '#7f1d1d', secondary: '#c0392b', border: 'border-red-900/30', bg: 'bg-red-200/30', text: 'text-red-950' },
-    'krieger_mastring': { primary: '#7f1d1d', secondary: '#c0392b', border: 'border-red-900/30', bg: 'bg-red-200/30', text: 'text-red-950' },
-    'krieger_kamptalent': { primary: '#7f1d1d', secondary: '#c0392b', border: 'border-red-900/30', bg: 'bg-red-200/30', text: 'text-red-950' },
-    'krieger_rustning': { primary: '#7f1d1d', secondary: '#c0392b', border: 'border-red-900/30', bg: 'bg-red-200/30', text: 'text-red-950' },
+    'krieger_mastring':  { primary: '#7f1d1d', secondary: '#c0392b', border: 'border-red-900/30', bg: 'bg-red-200/30', text: 'text-red-950' },
+    'krieger_kamptalent':{ primary: '#7f1d1d', secondary: '#c0392b', border: 'border-red-900/30', bg: 'bg-red-200/30', text: 'text-red-950' },
     // Archer (grønn)
-    'archer_drivkraft': { primary: '#14532d', secondary: '#27ae60', border: 'border-emerald-900/30', bg: 'bg-emerald-200/30', text: 'text-emerald-950' },
-    'archer_mastring': { primary: '#14532d', secondary: '#27ae60', border: 'border-emerald-900/30', bg: 'bg-emerald-200/30', text: 'text-emerald-950' },
-    'archer_talenter': { primary: '#14532d', secondary: '#27ae60', border: 'border-emerald-900/30', bg: 'bg-emerald-200/30', text: 'text-emerald-950' },
-    'archer_smidighet': { primary: '#14532d', secondary: '#27ae60', border: 'border-emerald-900/30', bg: 'bg-emerald-200/30', text: 'text-emerald-950' },
+    'archer_bue':        { primary: '#14532d', secondary: '#27ae60', border: 'border-emerald-900/30', bg: 'bg-emerald-200/30', text: 'text-emerald-950' },
+    'archer_smidighet':  { primary: '#14532d', secondary: '#27ae60', border: 'border-emerald-900/30', bg: 'bg-emerald-200/30', text: 'text-emerald-950' },
+    // Legacy archer ids
+    'archer_drivkraft':  { primary: '#14532d', secondary: '#27ae60', border: 'border-emerald-900/30', bg: 'bg-emerald-200/30', text: 'text-emerald-950' },
+    'archer_mastring':   { primary: '#14532d', secondary: '#27ae60', border: 'border-emerald-900/30', bg: 'bg-emerald-200/30', text: 'text-emerald-950' },
+    'archer_talenter':   { primary: '#14532d', secondary: '#27ae60', border: 'border-emerald-900/30', bg: 'bg-emerald-200/30', text: 'text-emerald-950' },
     // Wizard (lilla)
-    'wizard_drivkraft': { primary: '#4c1d95', secondary: '#8e44ad', border: 'border-purple-900/30', bg: 'bg-purple-200/30', text: 'text-purple-950' },
-    'wizard_mastring': { primary: '#4c1d95', secondary: '#8e44ad', border: 'border-purple-900/30', bg: 'bg-purple-200/30', text: 'text-purple-950' },
-    'wizard_synergi': { primary: '#4c1d95', secondary: '#8e44ad', border: 'border-purple-900/30', bg: 'bg-purple-200/30', text: 'text-purple-950' },
-    'wizard_arkan': { primary: '#4c1d95', secondary: '#8e44ad', border: 'border-purple-900/30', bg: 'bg-purple-200/30', text: 'text-purple-950' },
+    'wizard_ild':        { primary: '#7c2d12', secondary: '#ea580c', border: 'border-orange-900/30', bg: 'bg-orange-200/30', text: 'text-orange-950' },
+    'wizard_frost':      { primary: '#1e3a5f', secondary: '#3b82f6', border: 'border-blue-900/30', bg: 'bg-blue-200/30', text: 'text-blue-950' },
+    'wizard_torden':     { primary: '#4a1d96', secondary: '#7c3aed', border: 'border-violet-900/30', bg: 'bg-violet-200/30', text: 'text-violet-950' },
+    'wizard_evner':      { primary: '#4c1d95', secondary: '#8e44ad', border: 'border-purple-900/30', bg: 'bg-purple-200/30', text: 'text-purple-950' },
+    'wizard_synergi':    { primary: '#4c1d95', secondary: '#8e44ad', border: 'border-purple-900/30', bg: 'bg-purple-200/30', text: 'text-purple-950' },
+    // Legacy wizard ids
+    'wizard_drivkraft':  { primary: '#4c1d95', secondary: '#8e44ad', border: 'border-purple-900/30', bg: 'bg-purple-200/30', text: 'text-purple-950' },
+    'wizard_mastring':   { primary: '#4c1d95', secondary: '#8e44ad', border: 'border-purple-900/30', bg: 'bg-purple-200/30', text: 'text-purple-950' },
+    'wizard_arkan':      { primary: '#4c1d95', secondary: '#8e44ad', border: 'border-purple-900/30', bg: 'bg-purple-200/30', text: 'text-purple-950' },
 };
+
+function topoSort(items: UpgradeConfig[]): UpgradeConfig[] {
+    const sorted: UpgradeConfig[] = [];
+    const remaining = [...items];
+    const inSorted = new Set<string>();
+    const itemIds = new Set(items.map(i => i.id));
+
+    while (remaining.length > 0) {
+        const idx = remaining.findIndex(item =>
+            !item.requires ||
+            Object.keys(item.requires).every(id => inSorted.has(id) || !itemIds.has(id))
+        );
+        if (idx === -1) { sorted.push(...remaining); break; }
+        const item = remaining.splice(idx, 1)[0];
+        sorted.push(item);
+        inSorted.add(item.id);
+    }
+    return sorted;
+}
+
+function groupByDisplayGroup(items: UpgradeConfig[]): { label: string | undefined; items: UpgradeConfig[] }[] {
+    const groups: { label: string | undefined; items: UpgradeConfig[] }[] = [];
+    let currentLabel: string | undefined = undefined;
+    let currentGroup: UpgradeConfig[] = [];
+
+    for (const item of items) {
+        const g = (item as UpgradeConfig & { displayGroup?: string }).displayGroup;
+        if (g !== currentLabel) {
+            if (currentGroup.length > 0) groups.push({ label: currentLabel, items: currentGroup });
+            currentLabel = g;
+            currentGroup = [item];
+        } else {
+            currentGroup.push(item);
+        }
+    }
+    if (currentGroup.length > 0) groups.push({ label: currentLabel, items: currentGroup });
+    return groups;
+}
 
 const StatRow = ({ label, value, icon }: { label: string, value: string | number, icon: string }) => (
     <div className="flex items-center justify-between py-1 border-b border-dotted border-slate-300">
@@ -416,7 +463,16 @@ export const FantasyBook: React.FC<FantasyBookProps> = React.memo(({
                                 animate={{ opacity: 1 }}
                                 exit={{ opacity: 0 }}
                             >
-                                {shopItems.map(item => {
+                                {groupByDisplayGroup(topoSort(shopItems)).map(({ label: groupLabel, items: groupItems }) => (
+                                    <React.Fragment key={groupLabel ?? '__ungrouped'}>
+                                        {groupLabel && (
+                                            <div className={`flex items-center gap-2 mt-1 mb-0.5 px-1`}>
+                                                <div className="h-px flex-1 opacity-30" style={{ backgroundColor: theme.primary }} />
+                                                <span className={`text-[10px] font-cinzel uppercase tracking-[0.2em] font-bold opacity-50 ${theme.text}`}>{groupLabel}</span>
+                                                <div className="h-px flex-1 opacity-30" style={{ backgroundColor: theme.primary }} />
+                                            </div>
+                                        )}
+                                        {groupItems.map(item => {
                                     const lvl = upgradeLevels[item.id] || 0;
                                     const cost = Math.floor(item.basePrice * Math.pow(item.priceScale, lvl));
                                     const canAfford = coins >= cost;
@@ -513,6 +569,8 @@ export const FantasyBook: React.FC<FantasyBookProps> = React.memo(({
                                         </motion.div>
                                     )
                                 })}
+                                    </React.Fragment>
+                                ))}
                             </motion.div>
                         )}
                     </AnimatePresence>

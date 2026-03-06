@@ -107,19 +107,15 @@ const KRIEGER: ClassConfig = {
     traits: ['Solid rustning', 'Høy styrke', 'Tungt sverd'],
     portrait: 'assets/ui/portraits/krieger_portrait.png',
     shopCategories: [
-        { id: 'krieger_drivkraft', label: 'DRIVKRAFT', icon: 'item_swords_crossed', isExclusive: true },
-        { id: 'karakter', label: 'KARAKTER', icon: 'item_heart_status', isExclusive: false },
-        { id: 'krieger_mastring', label: 'MASTRING', icon: 'item_sword', isExclusive: true },
-        { id: 'krieger_kamptalent', label: 'KAMPTALENT', icon: 'item_swords_crossed', isExclusive: true },
-        { id: 'krieger_rustning', label: 'RUSTNING', icon: 'item_shield', isExclusive: true },
+        { id: 'krieger_sverd',    label: 'SVERD',    icon: 'item_sword',        isExclusive: true },
+        { id: 'krieger_rustning', label: 'RUSTNING', icon: 'item_shield',       isExclusive: true },
+        { id: 'karakter',         label: 'KARAKTER', icon: 'item_heart_status', isExclusive: false },
     ],
     exclusiveUpgradeIds: [
-        // DRIVKRAFT
+        // SVERD
         'whirl_damage', 'whirl_cooldown', 'whirl_chain',
         'berserker_rage', 'livsstaling', 'blodust',
-        // MASTRING (klasse-spesifikk + nye)
         'damage', 'knockback', 'attack_speed', 'sword_eclipse', 'wide_swing', 'heavy_momentum',
-        // KAMPTALENT
         'counter_strike', 'stomp', 'battle_cry', 'executioner',
         // RUSTNING
         'skadeskalering', 'utstotbar_slag', 'iron_will', 'fortification',
@@ -151,20 +147,16 @@ const ARCHER: ClassConfig = {
     traits: ['Lynrask', 'Presise skudd', 'Høy mobilitet'],
     portrait: 'assets/ui/portraits/archer_portrait.png',
     shopCategories: [
-        { id: 'archer_drivkraft', label: 'DRIVKRAFT', icon: 'item_bow', isExclusive: true },
-        { id: 'karakter', label: 'KARAKTER', icon: 'item_heart_status', isExclusive: false },
-        { id: 'archer_mastring', label: 'MASTRING', icon: 'item_bow', isExclusive: true },
-        { id: 'archer_talenter', label: 'TALENTER', icon: 'item_spear', isExclusive: true },
-        { id: 'archer_smidighet', label: 'SMIDIGHET', icon: 'item_lightning', isExclusive: true },
+        { id: 'archer_bue',       label: 'BUE',      icon: 'item_bow',          isExclusive: true },
+        { id: 'archer_smidighet', label: 'SMIDIGHET', icon: 'item_lightning',   isExclusive: true },
+        { id: 'karakter',         label: 'KARAKTER', icon: 'item_heart_status', isExclusive: false },
     ],
     exclusiveUpgradeIds: [
-        // DRIVKRAFT
+        // BUE
         'volley_count', 'volley_damage', 'volley_pierce',
         'rikosjett', 'fokusert_skudd', 'shadeskudd',
-        // MASTRING (klasse-spesifikk)
         'bow_cooldown', 'multishot', 'pierce', 'arrow_damage', 'arrow_speed',
-        'explosive_arrow', 'bow_singularity', 'poison_arrow',
-        // TALENTER
+        'explosive_arrow', 'bow_singularity', 'poison_arrow', 'frost_trap',
         'headshot', 'eagle_eye', 'pindown', 'time_slow_arrow',
         // SMIDIGHET
         'luftmobilitet', 'aerial_shot', 'shadow_step', 'kite_mastery',
@@ -195,25 +187,26 @@ const WIZARD: ClassConfig = {
     traits: ['Elementær kraft', 'Områdekontroll', 'Mektige spells'],
     portrait: 'assets/ui/portraits/wizard_portrait.png',
     shopCategories: [
-        { id: 'wizard_drivkraft', label: 'DRIVKRAFT', icon: 'item_magic_staff', isExclusive: true },
-        { id: 'karakter', label: 'KARAKTER', icon: 'item_heart_status', isExclusive: false },
-        { id: 'wizard_mastring', label: 'MASTRING', icon: 'item_frost_orb', isExclusive: true },
-        { id: 'wizard_synergi', label: 'SYNERGI', icon: 'item_synergy_rune', isExclusive: true },
-        { id: 'wizard_arkan', label: 'ARKAN KUNNSKAP', icon: 'item_magic_staff', isExclusive: true },
+        { id: 'wizard_ild',     label: 'ILDMAGI',    icon: 'item_magic_staff',     isExclusive: true },
+        { id: 'wizard_frost',   label: 'FROSTMAGI',  icon: 'item_frost_orb',       isExclusive: true },
+        { id: 'wizard_torden',  label: 'TORDENMAGI', icon: 'item_lightning_staff', isExclusive: true },
+        { id: 'wizard_evner',   label: 'EVNER',      icon: 'item_magic_staff',     isExclusive: true },
+        { id: 'wizard_synergi', label: 'SYNERGI',    icon: 'item_synergy_rune',    isExclusive: true },
+        { id: 'karakter',       label: 'KARAKTER',   icon: 'item_heart_status',    isExclusive: false },
     ],
     exclusiveUpgradeIds: [
-        // DRIVKRAFT
+        // ILDMAGI
+        'fire_damage', 'fire_radius', 'fire_speed', 'fire_chain', 'massiv_eksplosjon',
+        // FROSTMAGI
+        'frost_damage', 'frost_radius', 'frost_slow', 'frost_shatter',
+        // TORDENMAGI
+        'lightning_damage', 'lightning_bounces', 'lightning_stun', 'lightning_voltage',
+        // EVNER
         'cascade_duration', 'cascade_radius', 'cascade_damage',
         'manaring', 'elementar_overfload', 'nullifikasjon',
-        // MASTRING (alle spell-upgrades)
-        'fire_damage', 'fire_radius', 'fire_speed', 'fire_chain',
-        'frost_damage', 'frost_radius', 'frost_slow', 'frost_shatter',
-        'lightning_damage', 'lightning_bounces', 'lightning_stun', 'lightning_voltage',
-        'magic_soul_link', 'massiv_eksplosjon',
-        // SYNERGI
-        'thermal_shock', 'frozen_lightning', 'blaze_storm', 'absolute_zero',
-        // ARKAN KUNNSKAP
         'spell_echo', 'overload', 'arcane_insight', 'mana_shield',
+        // SYNERGI
+        'thermal_shock', 'frozen_lightning', 'blaze_storm', 'absolute_zero', 'magic_soul_link',
     ],
 };
 
