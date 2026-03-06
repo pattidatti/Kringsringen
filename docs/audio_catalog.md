@@ -26,7 +26,7 @@
 | `bow_attack` | `bow_attack_1-2.wav` | 2 | 0.4 | ±0.1 | `WeaponManager.ts` → `executeBowAttack()` |
 | `bow_impact` | `bow_impact_1-3.wav` | 3 | 0.45 | — | `Arrow.ts` → `hit()` |
 | `footstep` | `dirt_run_1-5.wav` | 5 | 0.25 | ±0.15 | `main.ts` → player walk |
-| `coin_collect` | `coin_collect_1-2.wav, pop_1-3.wav` | 5 | 0.25 | ±0.08 | `WaveManager.ts` → coin pickup |
+| `coin_collect` | `pop_1-3.wav, glass_ping_small.wav` | 4 | 0.25 | ±0.08 | `WaveManager.ts` → coin pickup |
 | `ui_click` | `ui_click.wav` | 1 | 0.3 | — | `FantasyButton.tsx` → click |
 | `weapon_pick_up` | `weapon_pick_up.wav`| 1 | 0.4 | — | `main.ts` → weapon switch |
 | `fireball_cast` | `fireball_cast.wav` | 1 | 0.5 | — | `WeaponManager.ts` → `executeFireballAttack()` |
@@ -59,7 +59,7 @@ All SFX files are in `public/assets/audio/sfx/`.
 
 | ID | File | Volume | Loop |
 |:---|:---|:---|:---|
-| `forest_ambience` | `assets/audio/bgs/forest_day.ogg` | 0.3 | ✅ |
+| `forest_ambience` | `assets/audio/bgs/forest_day.ogg` | 0.5 | ✅ |
 | `rain` | `assets/audio/bgs/rain.ogg` | 0.6 | ✅ |
 
 BGS plays independently of BGM via `AudioManager.playBGS()`.

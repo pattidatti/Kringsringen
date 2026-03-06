@@ -502,16 +502,21 @@ Spilleren velger én av **fire klasser** ved start av en ny run. Hver klasse har
 - **Start-stats:** +10% HP, +5% Damage, +10% Speed, +1 Armor.
 - **Startvåpen:** Harpe-boltprosjektil (Slot 1, `harp_bolt`).
 - **Shop-kategorier:** KVAD, RYTME, KARAKTER.
-- **Ressurs:** **Vers** – fire ladinger (♦♦♦♦). Bygges opp ved Vers Bolt-angrep (hotkey `2`). Passive bonuser: 1 Vers → +SPD, 2 → +ATK, 3 → +DMG, 4 → +CRIT. Vises i `VersIndicator`-komponenten over Hotbar.
+- **Ressurs:** **Vers** – fem ladinger (♦♦♦♦♦). Bygges opp ved Resonanspuls-angrep (hotkey `2`). Passive bonuser: 1 Vers → +15% SPD, 2 → +15% ATK, 3 → +20% DMG, 4 → +20% CRIT. Vises i `VersIndicator`-komponenten over Hotbar.
 
 | Hotkey | Evne | Kost | Beskrivelse |
 | :--- | :--- | :--- | :--- |
 | **1** | **Harp Bolt** | — | Sølv-blå SonicBolt. Rask spam-attack (400ms CD, 0.6× dmg). Baseline DPS-våpen. |
-| **2** | **Vers Bolt** (Ability) | — | Gull SonicBolt-prosjektil. Bygger +1 Vers per cast (maks 4). CD: 1200ms (skaleres med attack speed). Høyere skade (1.1×) enn Harp Bolt. Strategisk ressurs-builder. |
-| **3** | **Inspirerende Kvad** | 2 Vers | Healer 30–50 HP + gull aura i 5–8s. CD: 8s. |
-| **4** | **Seierskvad** | 4 Vers | Massiv AoE-burst (2.5× skade, 200px+ radius) + stun + opptil 4 ekko-tikk (m/ `ekko`-oppgradering). CD: 20s. |
+| **2** | **Resonanspuls** (Ability) | — | Gull SonicBolt-prosjektil. Bygger +1 Vers per cast (maks 5). CD: 1200ms (skaleres med attack speed). Høyere skade (1.1×) enn Harp Bolt. Strategisk ressurs-builder. Hver Vers gir passive bonuser. |
+| **3** | **Inspirerende Kvad** | 2 Vers | Healer 30–50 HP + gir **+25% skade og +25% fart** i 5–8s (oppgraderbar varighet). CD: 8s. Kombinerer healing med kraftig combat-buff. |
+| **4** | **Seierskvad** | 5 Vers | Massiv AoE-burst (2.5× skade, 200px+ radius) + stun + opptil 4 ekko-tikk (m/ `ekko`-oppgradering). CD: 20s. Koster 4 Vers med `krigsbarde`-oppgradering. Kan gi lifesteal med `blodkvad` og damage buff med `anthem_of_fury`. |
 
-> **SonicBolt** (`src/game/SonicBolt.ts`): Musikalsk prosjektil med Add-blandmodus, pulserende skala-animasjon og prosedyralt musikknotegrafik. Visuelt differensiert: Harp Bolt (sølv-blå, lett trail) vs Vers Bolt (gull, tett trail). Kan piercer og påføre slow (via `stridssang_slow`-oppgradering). ✅
+> **SonicBolt** (`src/game/SonicBolt.ts`): Musikalsk prosjektil med Add-blandmodus, pulserende skala-animasjon og prosedyralt musikknotegrafik. Visuelt differensiert: Harp Bolt (sølv-blå, lett trail) vs Resonanspuls (gull, tett trail). Kan piercer og påføre slow (via `stridssang_slow`-oppgradering). ✅
+
+**Skald Upgrades:**
+- **KVAD-kategorien:** Harpe damage/speed/pierce, Resonanspuls damage/pierce, Seierskvad radius/ekko, Inspirerende Kvad varighet, Vers-scaling (`vers_damage`), Blodkvad (Seierskvad lifesteal), Krigsbarde (reduserer Seierskvad-kost til 4 Vers)
+- **RYTME-kategorien:** Stridssang slow, Harpe lifesteal, Resonansskjold (damage reduction ved maks Vers), Crescendo (attack speed per Vers), Anthem of Fury (Seierskvad gir damage buff)
+- Se `src/config/class-upgrades.ts` for fullstendig liste og balanseverdier. ✅
 
 ---
 

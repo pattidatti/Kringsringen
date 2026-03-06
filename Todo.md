@@ -28,7 +28,7 @@
 - [] Bytte ut hotkey 2 spell for Skald med noe bedre, er unikt.
 - [x] Vers-indikatoren bør være større og ha noter ikke enkle dots. Vi bør samtidig finne en mer elegant løsning og framheve Dash, spesielt når man kan ha flere Dash
 - [x] Buffs SKald får må synliggjøres på en mye bedre måte. Umulig egentlig å vite hvilke effekter som er applied og hva de er nå. 
-- [] Oppdateres Upgrades til Skald i henhold til de abilities vi nå faktisk har. Gjenspeiler upgrades base-abilities med kule uppgrades?
+- [x] Oppdateres Upgrades til Skald i henhold til de abilities vi nå faktisk har. Gjenspeiler upgrades base-abilities med kule uppgrades?
 
 
 

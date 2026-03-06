@@ -24,6 +24,9 @@ Teknisk referanse for to-lags lagringsarkitektur: RunProgress-interface, sjekkpu
 ### [Lydkatalog](./audio_catalog.md)
 Oversikt over lydeffekter og bakgrunnsmusikk brukt i spillet.
 
+### [Buff & Debuff System](./buff-system.md)
+Teknisk referanse for BuffManager, buff-kategorier, stat-modifikatorer og UI-komponenter.
+
 ### [Synergier & Spesialer](./synergies.md)
 Liste over våpen-synergier (f.eks. Thermal Shock) og unike gjenstander.
 
@@ -63,4 +66,4 @@ Se [`docs/save_system.md`](./save_system.md) for full teknisk dokumentasjon av l
 - [ ] Class Upgrade Effects (Fase 6 – se `class-system-phase6-plan.md`)
 
 ---
-*Sist oppdatert: 6. mars 2026*
+*Sist oppdatert: 6. mars 2026 (Doc Audit)*
