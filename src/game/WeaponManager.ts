@@ -278,21 +278,52 @@ export class WeaponManager {
     // ─── SKALD ────────────────────────────────────────────────────────────────
 
     private executeHarpBoltAttack(player: Phaser.Physics.Arcade.Sprite, angle: number): void {
-        const attackSpeedMult = this.scene.registry.get('playerAttackSpeed') || 1;
+        const levels = (this.scene.registry.get('upgradeLevels') || {}) as Record<string, number>;
+
+        // Harpe upgrade scaling
+        const harpeSpeedLvl = levels['harpe_speed'] || 0;
+        const attackSpeedMult = (this.scene.registry.get('playerAttackSpeed') || 1) * (1 + harpeSpeedLvl * 0.15);
         const harpCooldown = GAME_CONFIG.WEAPONS.HARP_BOLT.cooldown / attackSpeedMult;
 
         this.scene.registry.set('weaponCooldown', { duration: harpCooldown, timestamp: Date.now() });
         player.play('player-cast');
 
         this.scene.time.delayedCall(harpCooldown * 0.3, () => {
-            const baseDamage = this.scene.stats.damage * GAME_CONFIG.WEAPONS.HARP_BOLT.damageMult;
+            const harpeDamageLvl = levels['harpe_damage'] || 0;
+            const harpePierceLvl = levels['harpe_pierce'] || 0;
+            const harpeLifestealLvl = levels['harpe_lifesteal'] || 0;
+
+            const baseDamage = this.scene.stats.damage * GAME_CONFIG.WEAPONS.HARP_BOLT.damageMult * (1 + harpeDamageLvl * 0.20);
 
             // Fire blue/silver harp bolt
             const bolt = this.scene.sonicBolts.get(player.x, player.y) as SonicBolt;
             if (bolt) {
-                bolt.fire(player.x, player.y, angle, baseDamage, 0, 0, 'harp');
+                bolt.fire(player.x, player.y, angle, baseDamage, harpePierceLvl, 0, 'harp');
                 AudioManager.instance.playSFX('harp_cast');
                 this.scene.events.emit('harp-cast');
+            }
+
+            // Harpe Lifesteal
+            if (harpeLifestealLvl > 0) {
+                const healAmount = harpeLifestealLvl * 3;
+                const curHP = this.scene.registry.get('playerHP') || 0;
+                const maxHP = this.scene.registry.get('playerMaxHP') || 100;
+                this.scene.registry.set('playerHP', Math.min(maxHP, curHP + healAmount));
+                this.scene.poolManager.getDamageText(player.x, player.y - 30, `+${healAmount}`, '#55ff55');
+            }
+
+            // BUILD +1 VERS on each harp_bolt cast
+            const currentVers = (this.scene.registry.get('skaldVers') || 0) as number;
+            if (currentVers < 5) {
+                const newVers = currentVers + 1;
+                this.scene.registry.set('skaldVers', newVers);
+                if (newVers >= 5) {
+                    this.scene.registry.set('skaldKvadReady', true);
+                    (this.scene as any).cameras.main.flash(150, 255, 215, 0, false);
+                    this.scene.poolManager.getDamageText(player.x, player.y - 70, 'KVAD KLAR!', '#ffed4e');
+                }
+                this.scene.events.emit('vers-gained', newVers);
+                this.scene.stats.recalculateStats();
             }
         });
 
@@ -300,10 +331,8 @@ export class WeaponManager {
             this.scene.data.set('isAttacking', false);
             player.play('player-idle');
         });
-
-        // NO Vers building — fast baseline attack
     }
 
-    // NOTE: Vers Bolt (Skald ability 2) is now handled by ClassAbilityManager.activateVersBolt()
+    // NOTE: Resonanspuls (Skald ability 2) is handled by ClassAbilityManager.activateResonanspuls()
 
 }

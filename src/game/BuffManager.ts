@@ -2,6 +2,14 @@ import Phaser from 'phaser';
 import type { IMainScene } from './IMainScene';
 import type { ItemIconKey } from '../components/ui/ItemIcon';
 
+export type BuffCategory = 'combat' | 'passive' | 'ultimate' | 'vers';
+
+export interface BuffStat {
+    type: 'damage' | 'speed' | 'attackSpeed' | 'damageReduction' | 'crit' | 'lifesteal' | 'heal';
+    value: number;               // Absolute or percentage value
+    displayFormat: 'percent' | 'flat' | 'multiplier';
+}
+
 export interface Buff {
     id: string;      // Unique instance ID (e.g. 'momentum_123')
     key: string;     // Logic ID (e.g. 'heavy_momentum')
@@ -14,6 +22,12 @@ export interface Buff {
     maxStacks: number;
     isVisible: boolean;
     data?: any;
+
+    // Enhanced metadata for better UI
+    description?: string;        // Human-readable description for tooltips
+    statModifiers?: BuffStat[];  // Machine-readable stat changes
+    category?: BuffCategory;     // Categorization for UI sorting/grouping
+    priority?: number;           // Display order (higher = shown first, default: 0)
 }
 
 export class BuffManager {
@@ -72,6 +86,21 @@ export class BuffManager {
         if (changed) this.syncToRegistry();
     }
 
+    /**
+     * Update an existing buff's properties (primarily for stat modifiers).
+     * Used for dynamic buffs like Crescendo that change value based on Vers count.
+     */
+    public updateBuff(key: string, updates: Partial<Omit<Buff, 'id' | 'key' | 'startTime'>>): void {
+        const existing = Array.from(this.buffs.values()).find(b => b.key === key);
+        if (!existing) return;
+
+        Object.assign(existing, updates);
+
+        if (existing.isVisible) {
+            this.syncToRegistry();
+        }
+    }
+
     public hasBuff(key: string): boolean {
         return Array.from(this.buffs.values()).some(b => b.key === key);
     }
@@ -101,6 +130,7 @@ export class BuffManager {
         // Only sync if visible buffs changed
         const visibleBuffs = Array.from(this.buffs.values())
             .filter(b => b.isVisible)
+            .sort((a, b) => (b.priority || 0) - (a.priority || 0)) // Sort by priority
             .map(b => ({
                 id: b.id,
                 key: b.key,
@@ -109,7 +139,11 @@ export class BuffManager {
                 startTime: b.startTime,
                 duration: b.duration,
                 stacks: b.stacks,
-                maxStacks: b.maxStacks
+                maxStacks: b.maxStacks,
+                description: b.description,
+                statModifiers: b.statModifiers,
+                category: b.category,
+                priority: b.priority
             }));
 
         this.scene.registry.set('activeBuffs', visibleBuffs);

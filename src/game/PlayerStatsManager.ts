@@ -299,6 +299,11 @@ export class PlayerStatsManager {
             this.scene.registry.set('skaldDamageReduction', 0);
         }
 
+        // Sync Skald-specific passive buffs to BuffManager
+        if (playerClassId === 'skald') {
+            this.syncSkaldPassiveBuffs();
+        }
+
         // Dash stats (Previously fixed, using current values but verifying formula)
         const dashCdLvl = levels['dash_cooldown'] || 0;
         const dashDistLvl = levels['dash_distance'] || 0;
@@ -368,6 +373,92 @@ export class PlayerStatsManager {
             }
 
             this.pendingEconomy.coins = 0;
+        }
+    }
+
+    /**
+     * Sync Skald passive buffs to BuffManager (Resonans Shield, Crescendo).
+     * Called from recalculateStats() after Vers-based stat calculations.
+     */
+    private syncSkaldPassiveBuffs(): void {
+        if (!this.scene.buffs) return;
+
+        const levels = this.scene.registry.get('upgradeLevels') || {};
+        const versCount = (this.scene.registry.get('skaldVers') || 0) as number;
+
+        // 1. Resonans Shield — Active at 4 Vers
+        const resonansLvl = levels['resonans_shield'] || 0;
+        if (resonansLvl > 0 && versCount >= 4) {
+            const reductionPercent = resonansLvl * 15;
+            if (!this.scene.buffs.hasBuff('resonans_shield')) {
+                this.scene.buffs.addBuff({
+                    key: 'resonans_shield',
+                    title: 'RESONANSSKJOLD',
+                    icon: 'item_shield',
+                    color: 0xffd700,
+                    duration: -1, // Passive (infinite while 4 Vers)
+                    maxStacks: 1,
+                    isVisible: true,
+                    description: `Reduserer skade med ${reductionPercent}%`,
+                    statModifiers: [{
+                        type: 'damageReduction',
+                        value: reductionPercent,
+                        displayFormat: 'percent'
+                    }],
+                    category: 'vers',
+                    priority: 10 // High priority (show prominently)
+                });
+            } else {
+                // Update description if level changed
+                this.scene.buffs.updateBuff('resonans_shield', {
+                    description: `Reduserer skade med ${reductionPercent}%`,
+                    statModifiers: [{
+                        type: 'damageReduction',
+                        value: reductionPercent,
+                        displayFormat: 'percent'
+                    }]
+                });
+            }
+        } else {
+            // Remove if Vers drops below 4 or upgrade not purchased
+            this.scene.buffs.removeBuff('resonans_shield');
+        }
+
+        // 2. Crescendo — Attack speed per Vers
+        const crescendoLvl = levels['crescendo'] || 0;
+        if (crescendoLvl > 0 && versCount > 0) {
+            const bonusPercent = crescendoLvl * 8 * versCount;
+            if (!this.scene.buffs.hasBuff('crescendo')) {
+                this.scene.buffs.addBuff({
+                    key: 'crescendo',
+                    title: 'CRESCENDO',
+                    icon: 'item_lute',
+                    color: 0xffed4e,
+                    duration: -1, // Passive (dynamic based on Vers)
+                    maxStacks: 1,
+                    isVisible: true,
+                    description: `+${bonusPercent}% angrepsfart`,
+                    statModifiers: [{
+                        type: 'attackSpeed',
+                        value: bonusPercent,
+                        displayFormat: 'percent'
+                    }],
+                    category: 'vers',
+                    priority: 9
+                });
+            } else {
+                // Update value dynamically as Vers changes
+                this.scene.buffs.updateBuff('crescendo', {
+                    description: `+${bonusPercent}% angrepsfart`,
+                    statModifiers: [{
+                        type: 'attackSpeed',
+                        value: bonusPercent,
+                        displayFormat: 'percent'
+                    }]
+                });
+            }
+        } else {
+            this.scene.buffs.removeBuff('crescendo');
         }
     }
 }

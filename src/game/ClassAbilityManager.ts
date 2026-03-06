@@ -31,7 +31,7 @@ export class ClassAbilityManager {
         if (playerClassId === 'krieger') this.activateWhirlwind();
         else if (playerClassId === 'wizard') this.activateCascade();
         else if (playerClassId === 'archer') this.activatePhantomVolley();
-        else if (playerClassId === 'skald') this.activateVersBolt();
+        else if (playerClassId === 'skald') this.activateResonanspuls();
     }
 
     public attemptAbility3(): void {
@@ -90,7 +90,10 @@ export class ClassAbilityManager {
             color: 0xffaa00,
             duration: 3000,
             maxStacks: 1,
-            isVisible: true
+            isVisible: true,
+            description: 'Roterer og gjør skade',
+            category: 'combat',
+            priority: 12
         });
         // Create duration indicator
         const graphics = this.scene.add.graphics();
@@ -227,7 +230,10 @@ export class ClassAbilityManager {
             color: 0xff6600,
             duration: 1500,
             maxStacks: 1,
-            isVisible: true
+            isVisible: true,
+            description: 'Skyter flere piler',
+            category: 'combat',
+            priority: 12
         });
 
         // Fire loop
@@ -309,7 +315,10 @@ export class ClassAbilityManager {
                 color: 0xcc88ff,
                 duration: duration,
                 maxStacks: 1,
-                isVisible: true
+                isVisible: true,
+                description: 'Tyngdefelt aktiv',
+                category: 'ultimate',
+                priority: 13
             });
         }
     }
@@ -324,12 +333,15 @@ export class ClassAbilityManager {
 
         this.scene.buffs.addBuff({
             key: 'iron_bulwark',
-            title: 'BULWARK',
+            title: 'JERNBOLVERK',
             icon: 'item_shield',
             color: 0x00ccff,
             duration: duration,
             maxStacks: 1,
-            isVisible: true
+            isVisible: true,
+            description: 'Skjold aktivert',
+            category: 'combat',
+            priority: 11
         });
 
         const player = this.scene.data.get('player') as Phaser.Physics.Arcade.Sprite;
@@ -692,12 +704,19 @@ export class ClassAbilityManager {
 
         this.scene.buffs.addBuff({
             key: 'inspirerende_kvad',
-            title: 'KVAD',
+            title: 'INSPIRERENDE KVAD',
             icon: 'item_lightning',
             color: 0xffd700,
             duration: duration,
             maxStacks: 1,
-            isVisible: true
+            isVisible: true,
+            description: '+25% skade og fart',
+            statModifiers: [
+                { type: 'damage', value: 25, displayFormat: 'percent' },
+                { type: 'speed', value: 25, displayFormat: 'percent' }
+            ],
+            category: 'ultimate',
+            priority: 15
         });
 
         // Enhanced visual: Glorious healing aura
@@ -798,19 +817,20 @@ export class ClassAbilityManager {
 
     private activateSeierskvad(): void {
         const vers = (this.scene.registry.get('skaldVers') || 0) as number;
+        const levels = (this.scene.registry.get('upgradeLevels') || {}) as Record<string, number>;
+        const krigsbardeActive = (levels['krigsbarde'] || 0) > 0;
+        const requiredVers = krigsbardeActive ? 4 : 5;
 
-        if (vers < 4) {
+        if (vers < requiredVers) {
             // Feedback: not enough Vers
             const player = this.scene.data.get('player') as Phaser.Physics.Arcade.Sprite;
             if (player) {
-                this.scene.poolManager.getDamageText(player.x, player.y - 50, 'TRENGER 4 VERS', '#ff4444');
+                this.scene.poolManager.getDamageText(player.x, player.y - 50, `TRENGER ${requiredVers} VERS`, '#ff4444');
             }
             return;
         }
 
         if (Date.now() < this.classAbility4CooldownEnd) return;
-
-        const levels = (this.scene.registry.get('upgradeLevels') || {}) as Record<string, number>;
 
         const cd = 20000;
         const kvadRadiusLvl = levels['kvad_radius'] || 0;
@@ -901,14 +921,23 @@ export class ClassAbilityManager {
 
         // Anthem of Fury buff
         if (anthemLvl > 0) {
+            const damageBonus = anthemLvl * 20;
             this.scene.buffs.addBuff({
                 key: 'anthem_of_fury',
-                title: 'RASERI',
+                title: 'RASERIETS HYMNE',
                 icon: 'item_sword_heavy',
                 color: 0xff4400,
                 duration: 8000,
                 maxStacks: 1,
                 isVisible: true,
+                description: `+${damageBonus}% skade`,
+                statModifiers: [{
+                    type: 'damage',
+                    value: damageBonus,
+                    displayFormat: 'percent'
+                }],
+                category: 'ultimate',
+                priority: 14,
                 data: { level: anthemLvl }
             });
         }
@@ -976,21 +1005,17 @@ export class ClassAbilityManager {
         this.scene.stats.recalculateStats();
     }
 
-    private activateVersBolt(): void {
+    private activateResonanspuls(): void {
         const player = this.scene.data.get('player') as Phaser.Physics.Arcade.Sprite;
         if (!player || !player.active) return;
 
-        const versCooldown = 1200; // Strategic cooldown (increased from 700ms for identity)
-        const attackSpeedMult = this.scene.registry.get('playerAttackSpeed') || 1;
-        const cd = versCooldown / attackSpeedMult;
+        if (Date.now() < this.classAbilityCooldownEnd) return;
 
-        // Check weapon cooldown (not class ability cooldown)
-        const lastCd = this.scene.registry.get('weaponCooldown');
-        if (lastCd && Date.now() < lastCd.timestamp + lastCd.duration) return;
+        const cd = 2000;
+        this.classAbilityCooldownEnd = Date.now() + cd;
+        this.scene.registry.set('classAbilityCooldown', { duration: cd, timestamp: Date.now() });
 
-        this.scene.registry.set('weaponCooldown', { duration: cd, timestamp: Date.now() });
         this.scene.data.set('isAttacking', true);
-
         player.play('player-cast');
 
         // Safety valve
@@ -1001,70 +1026,46 @@ export class ClassAbilityManager {
             }
         });
 
-        this.scene.time.delayedCall(cd * 0.5, () => {
+        this.scene.time.delayedCall(cd * 0.3, () => {
             const levels = (this.scene.registry.get('upgradeLevels') || {}) as Record<string, number>;
             const versDmgLvl = levels['sonic_damage'] || 0;
             const pierceLvl = levels['sonic_pierce'] || 0;
             const slowLvl = levels['stridssang_slow'] || 0;
 
-            const baseDamage = this.scene.stats.damage * 1.1 * (1 + versDmgLvl * 0.20); // VERS_BOLT.damageMult = 1.1
+            const vers = (this.scene.registry.get('skaldVers') || 0) as number;
+            const boltCount = 1 + vers;
+            const baseDamage = this.scene.stats.damage * 1.0 * (1 + versDmgLvl * 0.20);
             const slowDuration = slowLvl > 0 ? (500 + slowLvl * 500) : 0;
 
             const pointer = this.scene.input.activePointer;
             const angle = Phaser.Math.Angle.Between(player.x, player.y, pointer.worldX, pointer.worldY);
 
-            const bolt = (this.scene as any).sonicBolts.get(player.x, player.y) as import('./SonicBolt').SonicBolt;
-            if (bolt) {
-                bolt.fire(player.x, player.y, angle, baseDamage, pierceLvl, slowDuration, 'vers');
-                AudioManager.instance.playSFX('vers_cast');
-                this.scene.events.emit('vers-cast');
+            // Fan spread: total arc scales with Vers (0° at 0 Vers, 40° at 4 Vers)
+            const totalArcRad = Phaser.Math.DegToRad(vers * 10);
+
+            for (let i = 0; i < boltCount; i++) {
+                let offsetAngle = 0;
+                if (boltCount > 1) {
+                    offsetAngle = -totalArcRad / 2 + (i / (boltCount - 1)) * totalArcRad;
+                }
+                const bolt = (this.scene as any).sonicBolts.get(player.x, player.y) as import('./SonicBolt').SonicBolt;
+                if (bolt) {
+                    bolt.fire(player.x, player.y, angle + offsetAngle, baseDamage, pierceLvl, slowDuration, 'vers');
+                }
             }
 
-            // BUILD VERS on cast
-            const currentVers = this.scene.registry.get('skaldVers') || 0;
-            if (currentVers < 4) {
-                const newVers = currentVers + 1;
-                this.scene.registry.set('skaldVers', newVers);
+            AudioManager.instance.playSFX('vers_cast');
+            this.scene.events.emit('vers-cast');
 
-                // Enhanced visual feedback: Expanding golden ring
-                const ring = (this.scene as any).add.circle(player.x, player.y, 20, 0xffd700, 0);
-                ring.setStrokeStyle(3, 0xffd700, 0.9);
-                ring.setDepth(player.depth - 1);
-                (this.scene as any).tweens.add({
-                    targets: ring,
-                    radius: 80,
-                    alpha: 0,
-                    duration: 600,
-                    ease: 'Cubic.out',
-                    onComplete: () => ring.destroy()
-                });
+            // Visual feedback scales with bolt count
+            const flashIntensity = 80 + vers * 25;
+            (this.scene as any).cameras.main.flash(flashIntensity, 255, 215, 0, false);
+            (this.scene as any).cameras.main.shake(80 + vers * 20, 0.003 + vers * 0.001);
 
-                // Particle burst
-                const particleCount = Math.max(5, Math.floor(12 * (this.scene.quality?.particleMultiplier || 1.0)));
-                if ((this.scene as any).swordSparkEmitter) {
-                    (this.scene as any).swordSparkEmitter.setEmitterAngle({ min: 0, max: 360 });
-                    (this.scene as any).swordSparkEmitter.emitParticleAt(player.x, player.y - 15, particleCount);
-                }
-
-                // Visual feedback text
-                this.scene.poolManager.getDamageText(player.x, player.y - 50, '+1 VERS', '#ffd700');
-
-                // Musical flash
-                const flashIntensity = 80 + newVers * 20;
-                (this.scene as any).cameras.main.flash(flashIntensity, 255, 215, 0, false);
-                (this.scene as any).cameras.main.shake(80 + newVers * 20, 0.003);
-
-                // Audio feedback
-                this.scene.events.emit('vers-gained', newVers);
-
-                // Check if Kvad is ready (4 Vers)
-                if (newVers >= 4) {
-                    this.scene.registry.set('skaldKvadReady', true);
-                    (this.scene as any).cameras.main.flash(200, 255, 215, 0, false);
-                    this.scene.poolManager.getDamageText(player.x, player.y - 70, 'KVAD KLAR!', '#ffed4e');
-                }
-
-                // Trigger stat recalculation
+            // Consume all Vers
+            if (vers > 0) {
+                this.scene.registry.set('skaldVers', 0);
+                this.scene.registry.set('skaldKvadReady', false);
                 this.scene.stats.recalculateStats();
             }
         });

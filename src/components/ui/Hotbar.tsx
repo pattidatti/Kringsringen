@@ -8,6 +8,8 @@ import { FantasyPanel } from './FantasyPanel';
 import uiSelectors from '../../assets/ui/fantasy/UI_Selectors.png';
 import { ItemIcon, type ItemIconKey } from './ItemIcon';
 import { isItemSpriteIcon } from '../../config/upgrades';
+import { AbilityTooltip } from './AbilityTooltip';
+import { getAbilityTooltipData } from '../../utils/tooltipDataBuilder';
 
 /**
  * Selector sprite constants.
@@ -80,6 +82,12 @@ export const Hotbar: React.FC = React.memo(() => {
     const classAbilityCooldown = useGameRegistry('classAbilityCooldown', null) as { duration: number, timestamp: number } | null;
     const classAbility3Cooldown = useGameRegistry('classAbility3Cooldown', null) as { duration: number, timestamp: number } | null;
     const classAbility4Cooldown = useGameRegistry('classAbility4Cooldown', null) as { duration: number, timestamp: number } | null;
+    const upgradeLevels = useGameRegistry('upgradeLevels', {}) as Record<string, number>;
+    const skaldVers = useGameRegistry('skaldVers', 0) as number;
+
+    // Tooltip state
+    const [hoveredSlot, setHoveredSlot] = useState<{ id: WeaponId; element: HTMLElement } | null>(null);
+    const hoverTimeoutRef = useRef<number | null>(null);
 
     const classId = resolveClassId(playerClass);
     const activeSlots = classId === 'wizard' ? WIZARD_WEAPON_SLOTS
@@ -92,6 +100,26 @@ export const Hotbar: React.FC = React.memo(() => {
         if (game) {
             game.registry.set('currentWeapon', weaponId);
         }
+    }, []);
+
+    // Tooltip hover handlers (debounced to prevent spam)
+    const handleMouseEnter = useCallback((slotId: WeaponId, element: HTMLElement) => {
+        if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
+        hoverTimeoutRef.current = window.setTimeout(() => {
+            setHoveredSlot({ id: slotId, element });
+        }, 100); // 100ms debounce
+    }, []);
+
+    const handleMouseLeave = useCallback(() => {
+        if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
+        setHoveredSlot(null);
+    }, []);
+
+    // Cleanup timeout on unmount
+    useEffect(() => {
+        return () => {
+            if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
+        };
     }, []);
 
     // Keyboard Listeners (class-aware)
@@ -110,6 +138,11 @@ export const Hotbar: React.FC = React.memo(() => {
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [activeSlots, unlockedWeapons, handleSelectWeapon]);
+
+    // Compute tooltip data for the hovered slot
+    const tooltipData = hoveredSlot
+        ? getAbilityTooltipData(hoveredSlot.id, upgradeLevels, skaldVers)
+        : null;
 
     return (
         <div className="flex items-end justify-center pb-2">
@@ -134,6 +167,11 @@ export const Hotbar: React.FC = React.memo(() => {
                                 aria-selected={isActive}
                                 aria-keyshortcuts={slot.hotkey}
                                 onClick={() => isUnlocked && handleSelectWeapon(slot.id)}
+                                onMouseEnter={(e) => isUnlocked && handleMouseEnter(slot.id, e.currentTarget)}
+                                onMouseLeave={handleMouseLeave}
+                                onFocus={(e) => isUnlocked && handleMouseEnter(slot.id, e.currentTarget)}
+                                onBlur={handleMouseLeave}
+                                tabIndex={isUnlocked ? 0 : -1}
                                 className={clsx(
                                     "relative w-20 h-20 flex items-center justify-center transition-all duration-200",
                                     isUnlocked
@@ -198,12 +236,8 @@ export const Hotbar: React.FC = React.memo(() => {
                                 {isUnlocked && !isAbilitySlot && weaponCooldown && (
                                     <RadialCooldown duration={weaponCooldown.duration} timestamp={weaponCooldown.timestamp} />
                                 )}
-                                {/* Special case: Skald Vers Bolt (ability_vers_bolt) uses weaponCooldown, not classAbilityCooldown */}
-                                {isAbilitySlot && slot.id === 'ability_vers_bolt' && weaponCooldown && (
-                                    <RadialCooldown duration={weaponCooldown.duration} timestamp={weaponCooldown.timestamp} />
-                                )}
-                                {/* Standard class abilities use class-specific cooldowns */}
-                                {isAbilitySlot && slot.id !== 'ability_vers_bolt' && slot.hotkey === '2' && classAbilityCooldown && (
+                                {/* Class ability slot 2 cooldown */}
+                                {isAbilitySlot && slot.hotkey === '2' && classAbilityCooldown && (
                                     <RadialCooldown duration={classAbilityCooldown.duration} timestamp={classAbilityCooldown.timestamp} />
                                 )}
                                 {isAbilitySlot && slot.hotkey === '3' && classAbility3Cooldown && (
@@ -222,6 +256,15 @@ export const Hotbar: React.FC = React.memo(() => {
                     })}
                 </div>
             </FantasyPanel>
+
+            {/* Tooltip */}
+            {tooltipData && hoveredSlot && (
+                <AbilityTooltip
+                    data={tooltipData}
+                    anchorEl={hoveredSlot.element}
+                    isVisible={true}
+                />
+            )}
         </div>
     );
 });
