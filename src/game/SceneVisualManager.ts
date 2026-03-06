@@ -13,7 +13,6 @@ export class SceneVisualManager {
     private playerLight: Phaser.GameObjects.Light | null = null;
     private outerPlayerLight: Phaser.GameObjects.Light | null = null;
     private vignetteEffect: any = null;
-    private remotePlayerLights: Map<string, Phaser.GameObjects.Light> = new Map();
     private currentQuality!: QualitySettings;
 
     // Map Management
@@ -137,31 +136,6 @@ export class SceneVisualManager {
         }
     }
 
-    public addRemotePlayerLight(id: string, x: number, y: number): void {
-        if (this.currentQuality.lightingEnabled && !this.remotePlayerLights.has(id)) {
-            const light = this.scene.lights.addLight(
-                x, y,
-                GAME_CONFIG.LIGHTING.PLAYER_OUTER_RADIUS,
-                GAME_CONFIG.LIGHTING.PLAYER_COLOR,
-                GAME_CONFIG.LIGHTING.PLAYER_INTENSITY_OUTER
-            );
-            this.remotePlayerLights.set(id, light);
-        }
-    }
-
-    public updateRemotePlayerLight(id: string, x: number, y: number): void {
-        const light = this.remotePlayerLights.get(id);
-        if (light) light.setPosition(x, y);
-    }
-
-    public removeRemotePlayerLight(id: string): void {
-        const light = this.remotePlayerLights.get(id);
-        if (light) {
-            this.scene.lights.removeLight(light);
-            this.remotePlayerLights.delete(id);
-        }
-    }
-
     /** Load the static map for a given level. */
     public regenerateMap(level: number) {
         // Safety: Ensure level is at least 1 and within bounds
@@ -209,7 +183,5 @@ export class SceneVisualManager {
 
     public destroy(): void {
         this.scene.game.registry.events.off('changedata-graphicsQuality');
-        this.remotePlayerLights.forEach(l => this.scene.lights.removeLight(l));
-        this.remotePlayerLights.clear();
     }
 }

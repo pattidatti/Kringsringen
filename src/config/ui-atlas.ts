@@ -67,6 +67,7 @@ export const UI_ATLAS = {
         item_orb_purple: { x: 96, y: 640, w: 32, h: 32 }, // TODO: verifiser
 
         item_frost_orb: { x: 256, y: 192, w: 32, h: 32 }, // col=8 row=6 ✓
+        item_crossbow: { x: 128, y: 192, w: 32, h: 32 }, // col=4 row=6 ✓ (for Archer explosive shot)
 
         item_magic_staff: { x: 288, y: 192, w: 32, h: 32 }, // col=9 row=6 ✓
 
@@ -76,7 +77,14 @@ export const UI_ATLAS = {
 
         item_gold_coin: { x: 224, y: 384, w: 32, h: 32 }, // col=7 row=12 ✓ (Large Gold Coin)
         item_hook_chain: { x: 192, y: 320, w: 32, h: 32 }, // col=6 row=10 ✓
+        item_phantom: { x: 448, y: 320, w: 32, h: 32 }, // col=14 row=10 ✓ (ghost/phantom for Archer decoy)
         item_shadow_orb: { x: 352, y: 640, w: 32, h: 32 }, // col=11 row=20 ✓
+
+        // Musical instruments (Bard/Skald class)
+        item_harp: { x: 96, y: 352, w: 32, h: 32 }, // col=3 row=11 ✓ (Golden harp)
+        item_lute: { x: 128, y: 352, w: 32, h: 32 }, // col=4 row=11 ✓ (Lute/violin)
+        item_panflute: { x: 224, y: 352, w: 32, h: 32 }, // col=7 row=11 ✓ (Pan flute)
+        item_moon_crescent: { x: 256, y: 352, w: 32, h: 32 }, // col=8 row=11 ✓ (Moon crescent)
     }
 } as const;
 

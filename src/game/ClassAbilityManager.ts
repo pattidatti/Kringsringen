@@ -980,7 +980,7 @@ export class ClassAbilityManager {
         const player = this.scene.data.get('player') as Phaser.Physics.Arcade.Sprite;
         if (!player || !player.active) return;
 
-        const versCooldown = 700; // Base cooldown from GAME_CONFIG.WEAPONS.VERS_BOLT
+        const versCooldown = 1200; // Strategic cooldown (increased from 700ms for identity)
         const attackSpeedMult = this.scene.registry.get('playerAttackSpeed') || 1;
         const cd = versCooldown / attackSpeedMult;
 
@@ -1007,7 +1007,7 @@ export class ClassAbilityManager {
             const pierceLvl = levels['sonic_pierce'] || 0;
             const slowLvl = levels['stridssang_slow'] || 0;
 
-            const baseDamage = this.scene.stats.damage * 1.0 * (1 + versDmgLvl * 0.20); // VERS_BOLT.damageMult = 1.0
+            const baseDamage = this.scene.stats.damage * 1.1 * (1 + versDmgLvl * 0.20); // VERS_BOLT.damageMult = 1.1
             const slowDuration = slowLvl > 0 ? (500 + slowLvl * 500) : 0;
 
             const pointer = this.scene.input.activePointer;
@@ -1015,8 +1015,7 @@ export class ClassAbilityManager {
 
             const bolt = (this.scene as any).sonicBolts.get(player.x, player.y) as import('./SonicBolt').SonicBolt;
             if (bolt) {
-                bolt.fire(player.x, player.y, angle, baseDamage, pierceLvl, slowDuration);
-                bolt.setTint(0xffd700); // Gold tint
+                bolt.fire(player.x, player.y, angle, baseDamage, pierceLvl, slowDuration, 'vers');
                 AudioManager.instance.playSFX('vers_cast');
                 this.scene.events.emit('vers-cast');
             }

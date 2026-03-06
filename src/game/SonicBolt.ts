@@ -15,6 +15,7 @@ export class SonicBolt extends Phaser.Physics.Arcade.Sprite {
     private slowDuration: number = 0;
     private pulseDirection: number = 1; // For size pulsing animation
     private noteGraphics: Phaser.GameObjects.Graphics | null = null; // Musical note shape
+    private weaponType: 'harp' | 'vers' = 'vers'; // Current weapon type for visual theming
 
     constructor(scene: Phaser.Scene, x: number, y: number) {
         super(scene, x, y, 'arrow'); // Placeholder texture — tinted gold
@@ -68,14 +69,6 @@ export class SonicBolt extends Phaser.Physics.Arcade.Sprite {
         e.takeDamage(this.damage, '#ffd700');
         e.pushback(this.startX, this.startY, 150);
 
-        // Enhanced hit feedback
-        // Musical note symbol above enemy
-        const noteSymbols = ['♪', '♫', '♬'];
-        const noteSymbol = noteSymbols[this.hitCount % 3];
-        if (mainScene.poolManager) {
-            mainScene.poolManager.getDamageText(e.x, e.y - 30, noteSymbol, '#ffd700');
-        }
-
         // Spark burst at impact point
         if (mainScene.swordSparkEmitter) {
             mainScene.swordSparkEmitter.setEmitterAngle({ min: 0, max: 360 });
@@ -98,12 +91,13 @@ export class SonicBolt extends Phaser.Physics.Arcade.Sprite {
         }
     }
 
-    fire(x: number, y: number, angle: number, damage: number, pierceCount: number = 0, slowDuration: number = 0): void {
+    fire(x: number, y: number, angle: number, damage: number, pierceCount: number = 0, slowDuration: number = 0, weaponType: 'harp' | 'vers' = 'vers'): void {
         this.startX = x;
         this.startY = y;
         this.damage = damage;
         this.pierceCount = pierceCount;
         this.slowDuration = slowDuration;
+        this.weaponType = weaponType;
         this.hitEnemies = new WeakSet();
         this.hitCount = 0;
         this.pulseDirection = 1;
@@ -112,6 +106,31 @@ export class SonicBolt extends Phaser.Physics.Arcade.Sprite {
         this.setVisible(true);
         this.setPosition(x, y);
         this.setRotation(angle);
+
+        // Visual differentiation based on weapon type
+        if (weaponType === 'harp') {
+            // Harp Bolt: Silver-blue, lighter trail, smaller scale
+            this.setTint(0x88ccff);
+            this.setScale(1.6);
+            if (this.trail) {
+                this.trail.setConfig({
+                    lifespan: 200, // Shorter trail
+                    alpha: { start: 0.6, end: 0 }, // Lighter
+                    tint: [0x88ccff, 0xaaddff, 0x66aaee]
+                });
+            }
+        } else {
+            // Vers Bolt: Gold, denser trail, larger scale
+            this.setTint(0xffd700);
+            this.setScale(2.5);
+            if (this.trail) {
+                this.trail.setConfig({
+                    lifespan: 400, // Longer trail
+                    alpha: { start: 0.8, end: 0 }, // Brighter
+                    tint: [0xffd700, 0xffed4e, 0xffc700]
+                });
+            }
+        }
 
         if (this.trail) {
             this.trail.start();
@@ -127,11 +146,12 @@ export class SonicBolt extends Phaser.Physics.Arcade.Sprite {
             this.scene.physics.velocityFromRotation(angle, this.speed, this.body.velocity);
         }
 
-        // Spawn ripple effect for visual "oomph"
+        // Spawn ripple effect for visual "oomph" (color based on weapon type)
         const mainScene = this.scene as any;
         if (mainScene.add && mainScene.tweens) {
-            const ripple = mainScene.add.circle(x, y, 15, 0xffd700, 0);
-            ripple.setStrokeStyle(3, 0xffd700, 0.9);
+            const rippleColor = weaponType === 'harp' ? 0x88ccff : 0xffd700;
+            const ripple = mainScene.add.circle(x, y, 15, rippleColor, 0);
+            ripple.setStrokeStyle(3, rippleColor, 0.9);
             ripple.setDepth(this.depth - 2);
             mainScene.tweens.add({
                 targets: ripple,
@@ -173,14 +193,18 @@ export class SonicBolt extends Phaser.Physics.Arcade.Sprite {
         // Rotate sprite for "tumbling note" effect
         this.rotation += 0.08;
 
-        // Draw procedural musical note overlay (enhanced visibility)
+        // Draw procedural musical note overlay (color based on weapon type)
         if (this.noteGraphics) {
             this.noteGraphics.clear();
 
+            // Color theming based on weapon type
+            const primaryColor = this.weaponType === 'harp' ? 0x88ccff : 0xffd700;
+            const secondaryColor = this.weaponType === 'harp' ? 0xaaddff : 0xffed4e;
+
             // Pulsing glow effect
             const glowAlpha = 0.6 + Math.sin(Date.now() * 0.01) * 0.2;
-            this.noteGraphics.lineStyle(4, 0xffd700, glowAlpha); // Thicker stroke
-            this.noteGraphics.fillStyle(0xffd700, 0.8); // Brighter fill
+            this.noteGraphics.lineStyle(4, primaryColor, glowAlpha); // Thicker stroke
+            this.noteGraphics.fillStyle(primaryColor, 0.8); // Brighter fill
 
             // Simple eighth note shape at bolt position (scaled up)
             const noteX = this.x;
@@ -190,11 +214,11 @@ export class SonicBolt extends Phaser.Physics.Arcade.Sprite {
             this.noteGraphics.fillCircle(noteX, noteY, 10); // Increased from 6
 
             // Outer glow ring
-            this.noteGraphics.lineStyle(2, 0xffed4e, 0.4);
+            this.noteGraphics.lineStyle(2, secondaryColor, 0.4);
             this.noteGraphics.strokeCircle(noteX, noteY, 14);
 
             // Note stem (thicker line)
-            this.noteGraphics.lineStyle(4, 0xffd700, glowAlpha);
+            this.noteGraphics.lineStyle(4, primaryColor, glowAlpha);
             this.noteGraphics.beginPath();
             this.noteGraphics.moveTo(noteX + 8, noteY);
             this.noteGraphics.lineTo(noteX + 8, noteY - 24); // Taller stem

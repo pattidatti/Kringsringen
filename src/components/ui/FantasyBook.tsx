@@ -39,7 +39,7 @@ interface FantasyBookProps {
     expectedPlayersCount?: number;
     readyReason?: 'unpause' | 'next_level' | 'retry' | null;
 
-    // Exit to main menu (singleplayer only)
+    // Exit to main menu
     onExitGame?: () => void;
 }
 
@@ -735,8 +735,8 @@ export const FantasyBook: React.FC<FantasyBookProps> = React.memo(({
                             className="flex items-center justify-between"
                             style={{ width: 'var(--book-width, 1000px)' }}
                         >
-                            {/* LEFT: Exit to menu (singleplayer only) */}
-                            {!isMultiplayer && onExitGame ? (
+                            {/* LEFT: Exit to menu */}
+                            {onExitGame ? (
                                 <FantasyButton
                                     variant="secondary"
                                     onClick={onExitGame}

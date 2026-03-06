@@ -287,12 +287,10 @@ export class WeaponManager {
         this.scene.time.delayedCall(harpCooldown * 0.3, () => {
             const baseDamage = this.scene.stats.damage * GAME_CONFIG.WEAPONS.HARP_BOLT.damageMult;
 
-            // Fire blue/silver harp bolt (reuse SonicBolt with different visual)
+            // Fire blue/silver harp bolt
             const bolt = this.scene.sonicBolts.get(player.x, player.y) as SonicBolt;
             if (bolt) {
-                bolt.fire(player.x, player.y, angle, baseDamage, 0, 0);
-                // Override tint to blue/silver for visual distinction
-                bolt.setTint(0x88ccff);
+                bolt.fire(player.x, player.y, angle, baseDamage, 0, 0, 'harp');
                 AudioManager.instance.playSFX('harp_cast');
                 this.scene.events.emit('harp-cast');
             }

@@ -25,6 +25,11 @@
 - [ ] Whirlwind treffer i Orkehøvding, undersøk og fiks.  
 - [x] lvl 4, fase 1; Kommer ikke enemies, er stuck på fasen. Går man inn i UI DEMO og tilbake, så kommer det enemies (kanskje fasen begynte på nytt, og at det dermed virket? Dårlig løsning uansett.)
 - [x] Fasene blir ferdig selv om det er flere enemies igjen. 
+- [] Bytte ut hotkey 2 spell for Skald med noe bedre, er unikt. 
+- [] Vers-indikatoren bør være større og ha noter ikke enkle dots. 
+- [] Buffs SKald får må synliggjøres på en mye bedre måte. Umulig egentlig å vite hvilke effekter som er applied og hva de er nå. 
+- [] Oppdateres Upgrades til Skald i henhold til de abilities vi nå faktisk har. Gjenspeiler upgrades base-abilities med kule uppgrades?
+
 
 
 

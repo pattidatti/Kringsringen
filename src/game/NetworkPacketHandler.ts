@@ -176,8 +176,10 @@ export class NetworkPacketHandler {
         }
 
         // Remote Player Light
-        const light = this.scene.lights.addLight(x, y, 150, 0xffffff, 0.4);
-        this.remotePlayerLights.set(id, light);
+        if ((this.scene as any).quality?.lightingEnabled) {
+            const light = this.scene.lights.addLight(x, y, 150, 0xffffff, 0.4);
+            this.remotePlayerLights.set(id, light);
+        }
     }
 
     private handleHitRequest(event: GameEventPacket, ts: number, peerId: string): void {
@@ -564,6 +566,9 @@ export class NetworkPacketHandler {
                         pPrev[1] + (pNext[1] - pPrev[1]) * f,
                         pPrev[2] + (pNext[2] - pPrev[2]) * f
                     );
+
+                    const light = this.remotePlayerLights.get(id);
+                    if (light) light.setPosition(remotePlayer.x, remotePlayer.y);
 
                     const activeState = f > 0.5 ? pNext : pPrev;
                     this.applyRemoteVitals(remotePlayer, activeState);

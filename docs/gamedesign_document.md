@@ -506,11 +506,12 @@ Spilleren velger én av **fire klasser** ved start av en ny run. Hver klasse har
 
 | Hotkey | Evne | Kost | Beskrivelse |
 | :--- | :--- | :--- | :--- |
-| **2** | **Vers Bolt** (Ability) | — | Gull SonicBolt-prosjektil. Bygger +1 Vers per cast (maks 4). CD: 700ms (skaleres med attack speed). |
+| **1** | **Harp Bolt** | — | Sølv-blå SonicBolt. Rask spam-attack (400ms CD, 0.6× dmg). Baseline DPS-våpen. |
+| **2** | **Vers Bolt** (Ability) | — | Gull SonicBolt-prosjektil. Bygger +1 Vers per cast (maks 4). CD: 1200ms (skaleres med attack speed). Høyere skade (1.1×) enn Harp Bolt. Strategisk ressurs-builder. |
 | **3** | **Inspirerende Kvad** | 2 Vers | Healer 30–50 HP + gull aura i 5–8s. CD: 8s. |
 | **4** | **Seierskvad** | 4 Vers | Massiv AoE-burst (2.5× skade, 200px+ radius) + stun + opptil 4 ekko-tikk (m/ `ekko`-oppgradering). CD: 20s. |
 
-> **SonicBolt** (`src/game/SonicBolt.ts`): Vers-bolt-prosjektil med gull Add-blandmodus, pulserende skala-animasjon og prosedyralt musikknotegrafik. Kan piercer og påføre slow (via `stridssang_slow`-oppgradering). ✅
+> **SonicBolt** (`src/game/SonicBolt.ts`): Musikalsk prosjektil med Add-blandmodus, pulserende skala-animasjon og prosedyralt musikknotegrafik. Visuelt differensiert: Harp Bolt (sølv-blå, lett trail) vs Vers Bolt (gull, tett trail). Kan piercer og påføre slow (via `stridssang_slow`-oppgradering). ✅
 
 ---
 

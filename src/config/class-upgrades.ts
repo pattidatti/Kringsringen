@@ -272,7 +272,7 @@ const KRIEGER_RUSTNING: ClassUpgradeConfig[] = [
         classRestriction: 'krieger',
         shopCategoryId: 'krieger_rustning',
         chapterId: 'combat_style',
-        summary: 'Stå stille for å øke rustning',
+        summary: 'Stå stille for rustningsbonus (avtar over tid)',
         value: { prefix: '+', suffix: '% rustning', getValue: (lvl) => lvl * 20 },
         maxLevel: 3,
         basePrice: 200,
@@ -727,7 +727,7 @@ const SKALD_KVAD: ClassUpgradeConfig[] = [
     {
         id: 'vers_damage',
         title: 'Versets Kraft',
-        icon: 'item_magic_staff',
+        icon: 'item_lute',
         category: 'Kvad',
         classRestriction: 'skald',
         shopCategoryId: 'skald_kvad',
@@ -741,7 +741,7 @@ const SKALD_KVAD: ClassUpgradeConfig[] = [
     {
         id: 'sonic_damage',
         title: 'Stridssangens Kraft',
-        icon: 'item_magic_staff',
+        icon: 'item_harp',
         category: 'Kvad',
         classRestriction: 'skald',
         shopCategoryId: 'skald_kvad',
@@ -770,7 +770,7 @@ const SKALD_KVAD: ClassUpgradeConfig[] = [
     {
         id: 'kvad_radius',
         title: 'Kvasets Rekkevidde',
-        icon: 'item_magic_staff',
+        icon: 'item_panflute',
         category: 'Kvad',
         classRestriction: 'skald',
         shopCategoryId: 'skald_kvad',
@@ -786,7 +786,7 @@ const SKALD_KVAD: ClassUpgradeConfig[] = [
     {
         id: 'kvad_duration',
         title: 'Langvarig Kvad',
-        icon: 'item_magic_staff',
+        icon: 'item_harp',
         category: 'Kvad',
         classRestriction: 'skald',
         shopCategoryId: 'skald_kvad',
@@ -802,7 +802,7 @@ const SKALD_KVAD: ClassUpgradeConfig[] = [
     {
         id: 'poetisk_lisens',
         title: 'Poetisk Lisens',
-        icon: 'item_magic_staff',
+        icon: 'item_lute',
         category: 'Kvad',
         classRestriction: 'skald',
         shopCategoryId: 'skald_kvad',
@@ -848,7 +848,7 @@ const SKALD_KVAD: ClassUpgradeConfig[] = [
     {
         id: 'ekko',
         title: 'Ekko av Kvad',
-        icon: 'item_lightning_staff',
+        icon: 'item_panflute',
         category: 'Kvad',
         classRestriction: 'skald',
         shopCategoryId: 'skald_kvad',
@@ -868,7 +868,7 @@ const SKALD_RYTME: ClassUpgradeConfig[] = [
     {
         id: 'stridssang_slow',
         title: 'Tung Sang',
-        icon: 'item_frost_orb',
+        icon: 'item_harp',
         category: 'Rytme',
         classRestriction: 'skald',
         shopCategoryId: 'skald_rytme',
@@ -908,7 +908,7 @@ const SKALD_RYTME: ClassUpgradeConfig[] = [
     {
         id: 'crescendo',
         title: 'Crescendo',
-        icon: 'item_lightning',
+        icon: 'item_lute',
         category: 'Rytme',
         classRestriction: 'skald',
         shopCategoryId: 'skald_rytme',

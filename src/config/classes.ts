@@ -350,7 +350,7 @@ const SKALD: ClassConfig = {
         {
             id: 'skald_kvad',
             label: 'KVAD',
-            icon: 'item_magic_staff',
+            icon: 'item_lute',
             isExclusive: true,
             chapterLabels: {
                 foundation: 'Stridssang',
@@ -361,7 +361,7 @@ const SKALD: ClassConfig = {
         {
             id: 'skald_rytme',
             label: 'RYTME',
-            icon: 'item_lightning',
+            icon: 'item_harp',
             isExclusive: true,
             chapterLabels: {
                 foundation: 'Rytme',

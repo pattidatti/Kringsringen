@@ -288,11 +288,29 @@ const FantasyDemo: React.FC = () => {
     const [isBookOpen, setIsBookOpen] = useState(false);
 
     return (
-        <div className="min-h-screen bg-slate-900 text-white" style={{ fontFamily: 'sans-serif' }}>
+        <div
+            className="h-screen overflow-y-auto bg-slate-900 text-white fantasy-demo-scroll"
+            style={{ fontFamily: 'sans-serif', scrollbarWidth: 'thin', scrollbarColor: '#92400e #0f172a' }}
+        >
+            <style>{`
+                .fantasy-demo-scroll::-webkit-scrollbar { width: 8px; }
+                .fantasy-demo-scroll::-webkit-scrollbar-track { background: #0f172a; }
+                .fantasy-demo-scroll::-webkit-scrollbar-thumb { background: #92400e; border-radius: 4px; }
+                .fantasy-demo-scroll::-webkit-scrollbar-thumb:hover { background: #b45309; }
+            `}</style>
+
+            {/* ── Sticky nav ── */}
+            <div className="sticky top-0 z-20 bg-slate-900/95 backdrop-blur-sm border-b border-slate-700 px-8 py-3 flex items-center gap-8">
+                <span className="text-amber-400 font-fantasy text-lg">Fantasy UI Demo</span>
+                <nav className="flex gap-6 text-sm">
+                    <a href="#components" className="text-slate-300 hover:text-amber-400 transition-colors">Komponenter</a>
+                    <a href="#item-icons" className="text-slate-300 hover:text-amber-400 transition-colors">Item Icons</a>
+                    <a href="#sprite-grid" className="text-slate-300 hover:text-amber-400 transition-colors">Sprite Grid</a>
+                </nav>
+            </div>
 
             {/* ── Existing demo content ── */}
-            <div className="p-8 flex flex-col items-center gap-8 max-w-5xl mx-auto">
-                <h1 className="text-4xl text-amber-400 drop-shadow-lg font-fantasy">Cute Fantasy UI Demo</h1>
+            <div id="components" className="p-8 flex flex-col items-center gap-8 max-w-5xl mx-auto">
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8 w-full">
                     <section className="flex flex-col gap-4">
@@ -340,7 +358,7 @@ const FantasyDemo: React.FC = () => {
             </div>
 
             {/* ── Item Icons: named ── */}
-            <div className="border-t border-slate-700 p-8">
+            <div id="item-icons" className="border-t border-slate-700 p-8">
                 <div className="max-w-5xl mx-auto flex flex-col gap-4">
                     <div>
                         <h2 className="text-2xl text-amber-200 mb-1">Item Icons – namngjeve</h2>
@@ -353,7 +371,7 @@ const FantasyDemo: React.FC = () => {
             </div>
 
             {/* ── Item Icons: full grid ── */}
-            <div className="border-t border-slate-700 p-8">
+            <div id="sprite-grid" className="border-t border-slate-700 p-8">
                 <div className="flex flex-col gap-4">
                     <div className="max-w-5xl mx-auto">
                         <h2 className="text-2xl text-amber-200 mb-1">Item Icons – sprite-debug rutenett</h2>

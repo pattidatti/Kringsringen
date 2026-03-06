@@ -252,13 +252,13 @@ export const GAME_CONFIG = {
         HARP_BOLT: {
             damageMult: 0.6,     // Fast, low damage baseline
             speed: 600,
-            cooldown: 400,       // Faster than Vers Bolt
+            cooldown: 400,       // Fast spam weapon
             range: 500
         },
         VERS_BOLT: {
-            damageMult: 0.9,     // Slower, higher damage, builds Vers
+            damageMult: 1.1,     // Strategic power builder (increased from 0.9)
             speed: 500,
-            cooldown: 800,       // Slower than Harp Bolt
+            cooldown: 1200,      // Deliberate, slower (increased from 800ms for strategic identity)
             range: 500
         },
         ECLIPSE: {

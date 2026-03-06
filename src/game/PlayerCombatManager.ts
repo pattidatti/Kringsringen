@@ -26,6 +26,7 @@ export class PlayerCombatManager {
     // Fortification State
     private fortificationTimer: number = 0;
     private isFortified: boolean = false;
+    private fortificationActiveTime: number = 0;
     private fortificationShield: Phaser.GameObjects.Sprite | null = null;
     private fortificationTween: Phaser.Tweens.Tween | null = null;
 
@@ -41,6 +42,18 @@ export class PlayerCombatManager {
         this.ironWillUsedThisLevel = false;
     }
 
+    /** Returns 1.0 at full strength, decaying to MIN after grace period */
+    private getFortificationStrength(): number {
+        if (!this.isFortified) return 0;
+        const GRACE = 3000;  // ms at full strength
+        const DECAY = 4000;  // ms decay duration
+        const MIN = 0.5;     // minimum multiplier at floor
+        if (this.fortificationActiveTime <= GRACE) return 1.0;
+        const elapsed = this.fortificationActiveTime - GRACE;
+        const progress = Math.min(1.0, elapsed / DECAY);
+        return 1.0 - (1.0 - MIN) * progress;
+    }
+
     /** Handle incoming damage to the player */
     takePlayerDamage(amount: number, srcX?: number, srcY?: number): void {
         if (this.isInvincible) return;
@@ -53,10 +66,11 @@ export class PlayerCombatManager {
         let armor = this.scene.registry.get('playerArmor') || 0;
         const levels = (this.scene.registry.get('upgradeLevels') || {}) as Record<string, number>;
 
-        // Fortification Buff (20% bonus armor per level if standing still)
+        // Fortification Buff (20% bonus armor per level if standing still, decays over time)
         const fortifyLvl = levels['fortification'] || 0;
         if (this.isFortified && fortifyLvl > 0) {
-            armor += armor * (fortifyLvl * 0.20);
+            const strength = this.getFortificationStrength();
+            armor += armor * (fortifyLvl * 0.20) * strength;
         }
 
         // Armor Reduction: Damage - Armor (min 1)
@@ -269,10 +283,16 @@ export class PlayerCombatManager {
                     this.fortificationTimer += delta;
                     if (this.fortificationTimer >= 1000 && !this.isFortified) {
                         this.isFortified = true;
+                        this.fortificationActiveTime = 0;
                         this.updateFortificationUX(true);
+                    }
+                    if (this.isFortified) {
+                        this.fortificationActiveTime += delta;
+                        this.updateFortificationDecayUX();
                     }
                 } else {
                     this.fortificationTimer = 0;
+                    this.fortificationActiveTime = 0;
                     if (this.isFortified) {
                         this.isFortified = false;
                         this.updateFortificationUX(false);
@@ -316,6 +336,39 @@ export class PlayerCombatManager {
                 this.fortificationTween = null;
             }
         }
+    }
+
+    /** Update shield visuals based on fortification decay strength */
+    private updateFortificationDecayUX(): void {
+        if (!this.fortificationShield || !this.isFortified) return;
+        const strength = this.getFortificationStrength();
+
+        // Interpolate tint from blue (0x88ccff) → grey (0x888888)
+        const blueR = 0x88, blueG = 0xcc, blueB = 0xff;
+        const greyR = 0x88, greyG = 0x88, greyB = 0x88;
+        const r = Math.floor(blueR + (greyR - blueR) * (1 - strength));
+        const g = Math.floor(blueG + (greyG - blueG) * (1 - strength));
+        const b = Math.floor(blueB + (greyB - blueB) * (1 - strength));
+        this.fortificationShield.setTint((r << 16) | (g << 8) | b);
+
+        // Reduce alpha: full strength [0.5–0.8] → decayed [0.3–0.5]
+        // The pulsing tween handles the range, so we scale the base alpha
+        const baseAlpha = 0.3 + 0.2 * strength;
+        const peakAlpha = 0.5 + 0.3 * strength;
+        if (this.fortificationTween) {
+            this.fortificationTween.stop();
+        }
+        const phaserScene = this.scene as unknown as Phaser.Scene;
+        this.fortificationShield.setAlpha(baseAlpha);
+        this.fortificationTween = phaserScene.tweens.add({
+            targets: this.fortificationShield,
+            alpha: peakAlpha,
+            scale: 1.5 + 0.2 * strength,
+            duration: 1000,
+            yoyo: true,
+            repeat: -1,
+            ease: 'Sine.easeInOut'
+        });
     }
 
     private updateBerserkerUX(isActive: boolean): void {
