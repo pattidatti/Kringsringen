@@ -52,7 +52,11 @@ export class LightningBolt extends Phaser.Physics.Arcade.Sprite {
     fire(x: number, y: number, targetX: number, targetY: number, damage: number, bouncesLeft: number, hitEnemies?: Set<Enemy>, initialAngle?: number, colorVariant?: 'white' | 'blue') {
         this.damage = damage;
         this.bouncesLeft = bouncesLeft;
-        this.hitEnemies = hitEnemies || new Set();
+        if (hitEnemies) {
+            this.hitEnemies = hitEnemies; // Reuse from bounce chain
+        } else {
+            this.hitEnemies.clear(); // First cast — reuse own Set
+        }
         this.lifespan = 2500; // Reset lifespan ved hver ny bounce / firing
         this.flashTimer = 0;
 

@@ -14,6 +14,17 @@ export class WeatherManager {
     constructor(scene: Phaser.Scene) {
         this.scene = scene;
         this.createTextures();
+
+        this.scene.events.once('shutdown', () => {
+            if (this.rainEmitter) {
+                this.rainEmitter.destroy();
+                this.rainEmitter = null;
+            }
+            if (this.fogParticles) {
+                this.fogParticles.destroy();
+                this.fogParticles = null;
+            }
+        });
     }
 
     private createTextures() {

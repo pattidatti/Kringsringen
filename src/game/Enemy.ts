@@ -6,12 +6,16 @@ import { JitterBuffer } from '../network/JitterBuffer';
 import type { PackedEnemy } from '../network/SyncSchemas';
 import { HistoryBuffer } from './HistoryBuffer';
 import { AudioManager } from './AudioManager';
+import type { GridClient } from './SpatialGrid';
 
 export class Enemy extends Phaser.Physics.Arcade.Sprite {
     private targetStart: Phaser.GameObjects.Components.Transform; // Renamed to avoid confusion with internal target
     public hp: number = 50;
     public maxHP: number = 50;
     protected isDead: boolean = false;
+
+    /** Reusable GridClient object for spatial hash insertion — avoids per-frame allocation. */
+    public _gridClient: GridClient = { x: 0, y: 0, width: 40, height: 40, id: '', ref: this };
     private attackRange: number = 60;
     private attackCooldown: number = 1500;
     private currentAbilityCooldown: number = 1500;

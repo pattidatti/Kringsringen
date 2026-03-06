@@ -14,7 +14,7 @@ interface ActiveBuff {
     maxStacks: number;
 }
 
-const BuffItem: React.FC<{ buff: ActiveBuff }> = ({ buff }) => {
+const BuffItem: React.FC<{ buff: ActiveBuff }> = React.memo(({ buff }) => {
     const [progress, setProgress] = useState(1);
 
     useEffect(() => {
@@ -98,9 +98,9 @@ const BuffItem: React.FC<{ buff: ActiveBuff }> = ({ buff }) => {
             </div>
         </motion.div>
     );
-};
+});
 
-export const BuffHUD: React.FC = () => {
+export const BuffHUD: React.FC = React.memo(() => {
     const activeBuffs = useGameRegistry<ActiveBuff[]>('activeBuffs', []);
 
     return (
@@ -112,4 +112,4 @@ export const BuffHUD: React.FC = () => {
             </AnimatePresence>
         </div>
     );
-};
+});

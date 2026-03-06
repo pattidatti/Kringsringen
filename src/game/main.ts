@@ -382,11 +382,25 @@ export class MainScene extends Phaser.Scene implements IMainScene {
                 this.lastSpatialUpdate = _time;
                 this.spatialGrid.clear();
                 this.enemies.children.iterate((e: any) => {
-                    if (e.active && !e.isDead) this.spatialGrid.insert({ x: e.x, y: e.y, width: e.body?.width || 40, height: e.body?.height || 40, id: e.id, ref: e });
+                    if (e.active && !e.isDead) {
+                        e._gridClient.x = e.x;
+                        e._gridClient.y = e.y;
+                        e._gridClient.width = e.body?.width || 40;
+                        e._gridClient.height = e.body?.height || 40;
+                        e._gridClient.id = e.id;
+                        this.spatialGrid.insert(e._gridClient);
+                    }
                     return true;
                 });
                 this.bossGroup.children.iterate((b: any) => {
-                    if (b.active && !b.isDead) this.spatialGrid.insert({ x: b.x, y: b.y, width: b.body?.width || 80, height: b.body?.height || 80, id: 'boss', ref: b });
+                    if (b.active && !b.isDead) {
+                        b._gridClient.x = b.x;
+                        b._gridClient.y = b.y;
+                        b._gridClient.width = b.body?.width || 80;
+                        b._gridClient.height = b.body?.height || 80;
+                        b._gridClient.id = 'boss';
+                        this.spatialGrid.insert(b._gridClient);
+                    }
                     return true;
                 });
             }

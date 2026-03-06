@@ -98,16 +98,19 @@ export class ClassAbilityManager {
 
         const triggerHit = (color: string) => {
             const px = player.x, py = player.y;
-            const targets = [
-                ...this.scene.enemies.getChildren() as Enemy[],
-                ...this.scene.bossGroup.getChildren() as any[]
-            ];
-            const hitEnemies = targets.filter(e => e.active && Phaser.Math.Distance.Between(px, py, e.x, e.y) <= radius);
-            hitEnemies.forEach(e => {
-                e.takeDamage(damage, color);
-                e.pushback(px, py, this.scene.stats.knockback);
-            });
-            return hitEnemies;
+            const nearby = this.scene.spatialGrid.findNearby(
+                { x: px, y: py, width: 1, height: 1 }, radius
+            );
+            let hitCount = 0;
+            for (const entry of nearby) {
+                const e = entry.ref as Enemy;
+                if (e && e.active && !e.getIsDead()) {
+                    e.takeDamage(damage, color);
+                    e.pushback(px, py, this.scene.stats.knockback);
+                    hitCount++;
+                }
+            }
+            return hitCount;
         };
 
         this.scene.tweens.add({
@@ -157,9 +160,9 @@ export class ClassAbilityManager {
                 graphics.destroy();
 
                 // Final hit logic at the end of the 3s spin
-                const finalHit = triggerHit('#ffaa00');
+                const finalHitCount = triggerHit('#ffaa00');
                 if (chainLvl > 0) {
-                    const reduction = Math.min(finalHit.length * (chainLvl === 1 ? 0.05 : 0.07), chainLvl === 1 ? 0.25 : 0.35);
+                    const reduction = Math.min(finalHitCount * (chainLvl === 1 ? 0.05 : 0.07), chainLvl === 1 ? 0.25 : 0.35);
                     this.classAbilityCooldownEnd -= cd * reduction;
                     this.scene.registry.set('classAbilityCooldown', {
                         duration: cd,
@@ -177,13 +180,13 @@ export class ClassAbilityManager {
         for (let i = 0; i < 15; i++) {
             this.scene.time.delayedCall(i * 200, () => {
                 if (this.isWhirlwinding) {
-                    const hitEnemies = triggerHit(i === 0 ? '#ffcc00' : '#ffaa00');
+                    const hitCount = triggerHit(i === 0 ? '#ffcc00' : '#ffaa00');
 
                     // Blade spin sound — every tick
                     AudioManager.instance.playSFX('whirl_activate');
 
                     // Avant-Garde Juice: Visual feedback on every tick that hits something
-                    if (hitEnemies.length > 0) {
+                    if (hitCount > 0) {
                         this.scene.swordSparkEmitter.emitParticleAt(player.x, player.y - 15, 3);
                         this.scene.cameras.main.shake(50, 0.005);
                         AudioManager.instance.playSFX('whirl_hit');

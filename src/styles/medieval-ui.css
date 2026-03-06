@@ -475,3 +475,12 @@
     background: radial-gradient(circle at center, rgba(251, 191, 36, 0.08) 0%, transparent 70%);
     pointer-events: none;
 }
+
+/* Boss HUD Phase 2 pulse — CSS animation replaces Framer Motion JS loop */
+@keyframes boss-phase2-pulse {
+    0%, 100% { opacity: 0; }
+    50% { opacity: 0.3; }
+}
+.animate-boss-phase2-pulse {
+    animation: boss-phase2-pulse 1.2s ease-in-out infinite;
+}

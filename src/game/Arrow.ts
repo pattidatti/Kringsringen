@@ -13,7 +13,8 @@ export class Arrow extends Phaser.Physics.Arcade.Sprite {
     private glowEffect: Phaser.FX.Glow | null = null;
     private speed: number = 700;
     private pierceCount: number = 0;
-    private hitEnemies: WeakSet<any> = new WeakSet();
+    private hitEnemies = new Set<any>();
+    private hitExplosionEnemies = new Set<any>();
     private hitCount: number = 0;
     private explosiveLevel: number = 0;
     private singularityLevel: number = 0;
@@ -177,7 +178,7 @@ export class Arrow extends Phaser.Physics.Arcade.Sprite {
         this.singularityLevel = singularityLevel;
         this.poisonLevel = poisonLevel;
         this.abilityExplosiveRadius = abilityExplosiveRadius;
-        this.hitEnemies = new WeakSet();
+        this.hitEnemies.clear();
         this.hitCount = 0;
 
         this.setActive(true);
@@ -265,12 +266,12 @@ export class Arrow extends Phaser.Physics.Arcade.Sprite {
 
         // Damage all enemies in radius
         const nearby = mainScene.spatialGrid?.findNearby({ x, y, width: 0, height: 0 }, radius) || [];
-        const hitExplosionEnemies = new WeakSet<any>();
+        this.hitExplosionEnemies.clear();
 
         for (const entry of nearby) {
             const e = entry.ref as Enemy;
-            if (e && e.active && !e.getIsDead() && !hitExplosionEnemies.has(e)) {
-                hitExplosionEnemies.add(e);
+            if (e && e.active && !e.getIsDead() && !this.hitExplosionEnemies.has(e)) {
+                this.hitExplosionEnemies.add(e);
 
                 if (mainScene.networkManager?.role === 'client') {
                     e.predictDamage(explosionDamage);

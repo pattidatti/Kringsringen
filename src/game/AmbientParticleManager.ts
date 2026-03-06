@@ -16,6 +16,13 @@ export class AmbientParticleManager {
     constructor(scene: Phaser.Scene) {
         this.scene = scene;
         this.createTextures();
+
+        this.scene.events.once('shutdown', () => {
+            for (const emitter of this.emitters) {
+                if (emitter.scene) emitter.destroy();
+            }
+            this.emitters = [];
+        });
     }
 
     // ─── Runtime texture creation ──────────────────────────────────────────────

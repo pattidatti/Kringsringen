@@ -10,6 +10,8 @@ export interface GridClient {
 export class SpatialHashGrid {
     private cells: Map<string, GridClient[]> = new Map();
     private cellSize: number;
+    private readonly _resultSet = new Set<GridClient>();
+    private readonly _resultArray: GridClient[] = [];
 
     constructor(cellSize: number) {
         this.cellSize = cellSize;
@@ -48,13 +50,8 @@ export class SpatialHashGrid {
         }
     }
 
-    public findNearby(client: GridClient, range: number = 0): GridClient[] {
-        const results = new Set<GridClient>();
-
-        // Check cells within range
-        // If range is 0, we check the client's own cells.
-        // If range > 0, we might need to check adjacent cells too.
-        // For simplicity, we'll check the cells the client+range *would* occupy.
+    public findNearby(client: GridClient, range: number = 0): readonly GridClient[] {
+        this._resultSet.clear();
 
         const searchClient = {
             x: client.x,
@@ -70,13 +67,17 @@ export class SpatialHashGrid {
             if (cell) {
                 for (const potential of cell) {
                     if (potential !== client) {
-                        results.add(potential);
+                        this._resultSet.add(potential);
                     }
                 }
             }
         }
 
-        return Array.from(results);
+        this._resultArray.length = 0;
+        for (const item of this._resultSet) {
+            this._resultArray.push(item);
+        }
+        return this._resultArray;
     }
 
     public clear() {

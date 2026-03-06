@@ -109,10 +109,8 @@ export const BossHUD: React.FC = React.memo(() => {
 
                         {/* Phase 2 pulse overlay */}
                         {isPhase2 && (
-                            <motion.div
-                                animate={{ opacity: [0, 0.3, 0] }}
-                                transition={{ duration: 1.2, repeat: Infinity }}
-                                className="absolute inset-0 rounded"
+                            <div
+                                className="absolute inset-0 rounded animate-boss-phase2-pulse"
                                 style={{ background: 'rgba(255,50,50,0.3)' }}
                             />
                         )}
