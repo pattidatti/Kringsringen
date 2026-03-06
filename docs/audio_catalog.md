@@ -23,23 +23,35 @@
 |:---|:---|:---|:---|:---|:---|
 | `swing` | `sword_attack_1-3.wav` | 3 | 0.4 | ±0.1 | `main.ts` → `player-swing` event |
 | `hit` | `sword_impact_1-3.wav` | 3 | 0.5 | — | `main.ts` → `enemy-hit` event |
-| `bow_attack` | `bow_attack_1-2.wav` | 2 | 0.4 | ±0.1 | `main.ts` → `bow-shot` event |
+| `bow_attack` | `bow_attack_1-2.wav` | 2 | 0.4 | ±0.1 | `WeaponManager.ts` → `executeBowAttack()` |
 | `bow_impact` | `bow_impact_1-3.wav` | 3 | 0.45 | — | `Arrow.ts` → `hit()` |
 | `footstep` | `dirt_run_1-5.wav` | 5 | 0.25 | ±0.15 | `main.ts` → player walk |
 | `coin_collect` | `coin_collect_1-2.wav, pop_1-3.wav` | 5 | 0.25 | ±0.08 | `WaveManager.ts` → coin pickup |
 | `ui_click` | `ui_click.wav` | 1 | 0.3 | — | `FantasyButton.tsx` → click |
 | `weapon_pick_up` | `weapon_pick_up.wav`| 1 | 0.4 | — | `main.ts` → weapon switch |
-| `fireball_cast` | `fireball_cast.wav` | 1 | 0.5 | — | `main.ts` → `fireball-cast` |
-| `ice_throw` | `ice_throw.wav` | 1 | 0.5 | — | `main.ts` → `frost-cast` |
-| `frost_impact` | `frost_impact.wav` | 1 | 0.5 | — | `FrostBolt.ts` → impact |
+| `fireball_cast` | `fireball_cast.wav` | 1 | 0.5 | — | `WeaponManager.ts` → `executeFireballAttack()` |
+| `fireball_hit` | `fireball_hit.wav` | 1 | 0.5 | — | `Fireball.ts` → impact |
+| `ice_throw` | `ice_throw.wav` | 1 | 0.5 | — | `WeaponManager.ts` → `executeFrostAttack()` |
+| `ice_freeze` | `ice_freeze.wav` | 1 | 0.5 | — | `FrostBolt.ts` → status effect |
+| `frost_impact` | `frost_impact.wav` | 1 | 0.55 | — | `FrostBolt.ts` → impact |
 | `dash` | `whoosh_1.wav` | 1 | 1.0 | ±0.1 | `main.ts` → `player-dash` |
 | `upgrade_buy` | `coins_gather_quick.wav`| 1 | 0.5 | — | `Merchant` → purchase |
 | `page_turn` | `page_turn.wav` | 1 | 0.5 | — | `Merchant` → navigation |
-| `paper_move` | `paper_move.wav` | 1 | 0.4 | — | `FantasyBook` → open |
-| `paper_move_rev`| `paper_move_reverse.wav`| 1 | 0.4 | — | `FantasyBook` → close |
-| `fireball_hit` | `fireball_hit.wav` | 1 | 0.5 | — | `Fireball.ts` → impact |
+| `paper_open` | `paper_move.wav` | 1 | 0.8 | — | `FantasyBook` → open |
+| `paper_close` | `paper_move_reverse.wav` | 1 | 0.8 | — | `FantasyBook` → close |
+| `lightning_cast` | `ice_throw.wav` (temp) | 1 | 0.5 | ±0.2 | `WeaponManager.ts` → `executeLightningAttack()` |
+| `lightning_impact` | `ice_freeze.wav` (temp) | 1 | 0.55 | — | `LightningBolt.ts` → impact |
+| `harp_cast` | `whoosh_1.wav` (temp) | 1 | 0.4 | ±0.15 | `WeaponManager.ts` → `executeHarpBoltAttack()` |
+| `vers_cast` | `whoosh_1.wav` (temp) | 1 | 0.5 | ±0.20 | `ClassAbilityManager.ts` → `activateVersBolt()` |
 | `ping` | `glass_ping_small.wav` | 1 | 0.3 | — | `NetworkManager` → latency check |
-| `ice_freeze` | `ice_freeze.wav` | 1 | 0.5 | — | `FrostBolt.ts` → status effect |
+| `punch` | `punch.wav` | 1 | 0.45 | ±0.2 | Melee impact fallback |
+
+#### Krieger Class Abilities
+
+| ID | Files | Variants | Volume | Pitch Variance | Used By |
+|:---|:---|:---|:---|:---|:---|
+| `whirl_activate` | `sword_slice.wav` | 1 | 0.6 | ±0.12 | `ClassAbilityManager` → Whirlwind tick |
+| `whirl_hit` | `sword_clash.wav`, `sword_clash_2.wav` | 2 | 0.5 | ±0.10 | `ClassAbilityManager` → Whirlwind on-hit |
 
 All SFX files are in `public/assets/audio/sfx/`.
 
@@ -48,7 +60,7 @@ All SFX files are in `public/assets/audio/sfx/`.
 | ID | File | Volume | Loop |
 |:---|:---|:---|:---|
 | `forest_ambience` | `assets/audio/bgs/forest_day.ogg` | 0.3 | ✅ |
-| `rain_ambience` | `assets/audio/bgs/rain.ogg` | 0.4 | ✅ |
+| `rain` | `assets/audio/bgs/rain.ogg` | 0.6 | ✅ |
 
 BGS plays independently of BGM via `AudioManager.playBGS()`.
 

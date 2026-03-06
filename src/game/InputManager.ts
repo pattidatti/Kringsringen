@@ -135,6 +135,10 @@ export class InputManager {
         } else if (playerClassId === 'krieger') {
             if (this.hotkeys['1']?.isDown && curWep !== 'sword' && unlocked.includes('sword'))
                 this.scene.registry.set('currentWeapon', 'sword');
+        } else if (playerClassId === 'skald') {
+            // Skald has 1 weapon: harp_bolt (1). Vers Bolt (2) is an ability.
+            if (this.hotkeys['1']?.isDown && curWep !== 'harp_bolt' && unlocked.includes('harp_bolt'))
+                this.scene.registry.set('currentWeapon', 'harp_bolt');
         }
     }
 

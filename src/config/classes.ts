@@ -10,7 +10,7 @@
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-export type ClassId = 'krieger' | 'archer' | 'wizard';
+export type ClassId = 'krieger' | 'archer' | 'wizard' | 'skald';
 
 export interface ClassStats {
     /** Multiplikator på BASE_MAX_HP (1.30 = +30%) */
@@ -36,6 +36,8 @@ export interface ShopCategoryDef {
     icon: string;
     /** true = kun denne klassen ser kategorien */
     isExclusive: boolean;
+    /** Valgfri overstyring av kapittel-titler for denne kategorien */
+    chapterLabels?: Partial<Record<import('./upgrades').ChapterId, string>>;
 }
 
 export interface ClassConfig {
@@ -71,7 +73,7 @@ export interface ClassConfig {
 
 // ─── Helper: validation guard ─────────────────────────────────────────────────
 
-const VALID_CLASS_IDS: readonly ClassId[] = ['krieger', 'archer', 'wizard'] as const;
+const VALID_CLASS_IDS: readonly ClassId[] = ['krieger', 'archer', 'wizard', 'skald'] as const;
 
 export function isValidClassId(value: unknown): value is ClassId {
     return typeof value === 'string' && (VALID_CLASS_IDS as readonly string[]).includes(value);
@@ -107,9 +109,39 @@ const KRIEGER: ClassConfig = {
     traits: ['Solid rustning', 'Høy styrke', 'Tungt sverd'],
     portrait: 'assets/ui/portraits/krieger_portrait.png',
     shopCategories: [
-        { id: 'krieger_sverd',    label: 'SVERD',    icon: 'item_sword',        isExclusive: true },
-        { id: 'krieger_rustning', label: 'RUSTNING', icon: 'item_shield',       isExclusive: true },
-        { id: 'karakter',         label: 'KARAKTER', icon: 'item_heart_status', isExclusive: false },
+        {
+            id: 'krieger_sverd',
+            label: 'SVERD',
+            icon: 'item_sword',
+            isExclusive: true,
+            chapterLabels: {
+                foundation: 'Sverd',
+                ability: 'Virvelvind',
+                combat_style: 'Villskap',
+                synergy: 'Sverdets Magi'
+            }
+        },
+        {
+            id: 'krieger_rustning',
+            label: 'RUSTNING',
+            icon: 'item_shield',
+            isExclusive: true,
+            chapterLabels: {
+                foundation: 'Rustning',
+                combat_style: 'Forsvarsteknikk'
+            }
+        },
+        {
+            id: 'karakter',
+            label: 'KARAKTER',
+            icon: 'item_heart_status',
+            isExclusive: false,
+            chapterLabels: {
+                foundation: 'Helse',
+                ability: 'Dash',
+                combat_style: 'Egenskaper'
+            }
+        },
     ],
     exclusiveUpgradeIds: [
         // SVERD
@@ -118,7 +150,7 @@ const KRIEGER: ClassConfig = {
         'damage', 'knockback', 'attack_speed', 'sword_eclipse', 'wide_swing', 'heavy_momentum',
         'counter_strike', 'stomp', 'battle_cry', 'executioner',
         // RUSTNING
-        'skadeskalering', 'utstotbar_slag', 'iron_will', 'fortification',
+        'skadeskalering', 'utstotbar_slag', 'iron_will', 'fortification', 'armor',
     ],
 };
 
@@ -147,9 +179,40 @@ const ARCHER: ClassConfig = {
     traits: ['Lynrask', 'Presise skudd', 'Høy mobilitet'],
     portrait: 'assets/ui/portraits/archer_portrait.png',
     shopCategories: [
-        { id: 'archer_bue',       label: 'BUE',      icon: 'item_bow',          isExclusive: true },
-        { id: 'archer_smidighet', label: 'SMIDIGHET', icon: 'item_lightning',   isExclusive: true },
-        { id: 'karakter',         label: 'KARAKTER', icon: 'item_heart_status', isExclusive: false },
+        {
+            id: 'archer_bue',
+            label: 'BUE',
+            icon: 'item_bow',
+            isExclusive: true,
+            chapterLabels: {
+                foundation: 'Bue',
+                ability: 'Fantombyge',
+                combat_style: 'Presisjon',
+                synergy: 'Feller'
+            }
+        },
+        {
+            id: 'archer_smidighet',
+            label: 'SMIDIGHET',
+            icon: 'item_lightning',
+            isExclusive: true,
+            chapterLabels: {
+                foundation: 'Smidighet',
+                ability: 'Akrobatikk',
+                combat_style: 'Unnvikelse'
+            }
+        },
+        {
+            id: 'karakter',
+            label: 'KARAKTER',
+            icon: 'item_heart_status',
+            isExclusive: false,
+            chapterLabels: {
+                foundation: 'Helse',
+                ability: 'Dash',
+                combat_style: 'Egenskaper'
+            }
+        },
     ],
     exclusiveUpgradeIds: [
         // BUE
@@ -187,12 +250,63 @@ const WIZARD: ClassConfig = {
     traits: ['Elementær kraft', 'Områdekontroll', 'Mektige spells'],
     portrait: 'assets/ui/portraits/wizard_portrait.png',
     shopCategories: [
-        { id: 'wizard_ild',     label: 'ILDMAGI',    icon: 'item_magic_staff',     isExclusive: true },
-        { id: 'wizard_frost',   label: 'FROSTMAGI',  icon: 'item_frost_orb',       isExclusive: true },
-        { id: 'wizard_torden',  label: 'TORDENMAGI', icon: 'item_lightning_staff', isExclusive: true },
-        { id: 'wizard_evner',   label: 'EVNER',      icon: 'item_magic_staff',     isExclusive: true },
-        { id: 'wizard_synergi', label: 'SYNERGI',    icon: 'item_synergy_rune',    isExclusive: true },
-        { id: 'karakter',       label: 'KARAKTER',   icon: 'item_heart_status',    isExclusive: false },
+        {
+            id: 'wizard_ild',
+            label: 'ILDMAGI',
+            icon: 'item_magic_staff',
+            isExclusive: true,
+            chapterLabels: {
+                uncategorized: 'Ildmagi'
+            }
+        },
+        {
+            id: 'wizard_frost',
+            label: 'FROSTMAGI',
+            icon: 'item_frost_orb',
+            isExclusive: true,
+            chapterLabels: {
+                uncategorized: 'Frostmagi'
+            }
+        },
+        {
+            id: 'wizard_torden',
+            label: 'TORDENMAGI',
+            icon: 'item_lightning_staff',
+            isExclusive: true,
+            chapterLabels: {
+                uncategorized: 'Tordenmagi'
+            }
+        },
+        {
+            id: 'wizard_evner',
+            label: 'EVNER',
+            icon: 'item_magic_staff',
+            isExclusive: true,
+            chapterLabels: {
+                ability: 'Kaskade',
+                combat_style: 'Arkan Kunnskap'
+            }
+        },
+        {
+            id: 'wizard_synergi',
+            label: 'SYNERGI',
+            icon: 'item_synergy_rune',
+            isExclusive: true,
+            chapterLabels: {
+                synergy: 'Mesterverk'
+            }
+        },
+        {
+            id: 'karakter',
+            label: 'KARAKTER',
+            icon: 'item_heart_status',
+            isExclusive: false,
+            chapterLabels: {
+                foundation: 'Helse',
+                ability: 'Dash',
+                combat_style: 'Egenskaper'
+            }
+        },
     ],
     exclusiveUpgradeIds: [
         // ILDMAGI
@@ -210,12 +324,79 @@ const WIZARD: ClassConfig = {
     ],
 };
 
+const SKALD: ClassConfig = {
+    id: 'skald',
+    displayName: 'Skald',
+    tagline: 'Rytme · Vers · Makt',
+    description:
+        'Slagmarkens poet. Skalden angriper på avstand med harpe og runebolt, ' +
+        'og bygger Vers som låser opp ødeleggende Kvad-utbrudd. ' +
+        'Hold rytmen — eller mist alt.',
+    color: '#d4a017',
+    accentColor: '#f5d442',
+    particleColor: '#ffd700',
+    baseStats: {
+        hp: 1.10,       // +10% Maks HP
+        damage: 1.05,   // +5% Skade
+        speed: 1.10,    // +10% Fart
+        armor: 1,       // +1 flat rustning
+    },
+    startingWeapons: ['harp_bolt', 'vers_bolt'],
+    classAbilityId: 'seierskvad',
+    classAbilityHotkey: '4',
+    traits: ['Rytmisk kamp', 'Vers-kraft', 'Inspirerende'],
+    portrait: 'assets/ui/portraits/skald_portrait.png',
+    shopCategories: [
+        {
+            id: 'skald_kvad',
+            label: 'KVAD',
+            icon: 'item_magic_staff',
+            isExclusive: true,
+            chapterLabels: {
+                foundation: 'Stridssang',
+                ability: 'Kvad',
+                combat_style: 'Poesi'
+            }
+        },
+        {
+            id: 'skald_rytme',
+            label: 'RYTME',
+            icon: 'item_lightning',
+            isExclusive: true,
+            chapterLabels: {
+                foundation: 'Rytme',
+                combat_style: 'Harmoni',
+                ability: 'Crescendo'
+            }
+        },
+        {
+            id: 'karakter',
+            label: 'KARAKTER',
+            icon: 'item_heart_status',
+            isExclusive: false,
+            chapterLabels: {
+                foundation: 'Helse',
+                ability: 'Dash',
+                combat_style: 'Egenskaper'
+            }
+        },
+    ],
+    exclusiveUpgradeIds: [
+        // KVAD
+        'vers_damage', 'sonic_damage', 'sonic_pierce', 'kvad_radius', 'kvad_duration',
+        'poetisk_lisens', 'blodkvad', 'krigsbarde', 'ekko',
+        // RYTME
+        'stridssang_slow', 'skaldsang_lifesteal', 'resonans_shield', 'crescendo', 'anthem_of_fury',
+    ],
+};
+
 // ─── Exported Map ─────────────────────────────────────────────────────────────
 
 export const CLASS_CONFIGS: Record<ClassId, ClassConfig> = {
     krieger: KRIEGER,
     archer: ARCHER,
     wizard: WIZARD,
+    skald: SKALD,
 };
 
 /** Delt KARAKTER-kategori-ID (brukes av alle klasser) */

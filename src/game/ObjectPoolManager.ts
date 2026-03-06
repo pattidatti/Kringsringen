@@ -10,6 +10,7 @@ import { EclipseWake } from './EclipseWake';
 import { Coin } from './Coin';
 import { Decoy } from './Decoy';
 import { Trap } from './Trap';
+import { SonicBolt } from './SonicBolt';
 import type { IMainScene } from './IMainScene';
 
 export class ObjectPoolManager {
@@ -44,6 +45,7 @@ export class ObjectPoolManager {
             lightningBolts: { classType: LightningBolt, maxSize: 30 },
             singularities: { classType: Singularity, maxSize: 10 },
             eclipseWakes: { classType: EclipseWake, maxSize: 20 },
+            sonicBolts: { classType: SonicBolt, maxSize: 30 },
             coins: { classType: Coin, maxSize: 5000 },
             enemyProjectiles: { classType: EnemyProjectile, maxSize: 50 },
             decoys: { classType: Decoy, maxSize: 10 },

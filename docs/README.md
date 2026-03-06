@@ -30,6 +30,18 @@ Liste over våpen-synergier (f.eks. Thermal Shock) og unike gjenstander.
 ### [UI Design Guide](./ui_guide.md)
 Prinsipper for spillets visuelle uttrykk og Medieval-tema.
 
+### [Klassesystem – Design](./class-system-design.md)
+Opprinnelig designdokument for klassesystemet (3 klasser). Skald ble lagt til i etterkant og er dokumentert i GDD seksjon 13.
+
+### [Klassesystem – Detaljert plan](./class-system-detailed-plan.md)
+Teknisk implementeringsplan for klassesystemet (fase 1–5).
+
+### [Klassesystem – Fase 6](./class-system-phase6-plan.md)
+Plan for å koble inn class-upgrade-effekter i gameplay (ikke fullimplementert per mars 2026).
+
+### [Ideer – Nye klasser](./ideer/nye-klasser.md)
+Brainstorm for fremtidige klasser: Dyremaner og Runesmeden.
+
 ## Nøkkelsystemer
 
 ### Lagring (`src/game/SaveManager.ts`)
@@ -48,6 +60,7 @@ Se [`docs/save_system.md`](./save_system.md) for full teknisk dokumentasjon av l
 - [ ] UI Design System (Cinzel/Medieval-tema)
 - [ ] Upgrade Registry (Balance & Synergies)
 - [ ] Enemy AI & Pathfinding (Context Steering)
+- [ ] Class Upgrade Effects (Fase 6 – se `class-system-phase6-plan.md`)
 
 ---
-*Sist oppdatert: 1. mars 2026*
+*Sist oppdatert: 6. mars 2026*

@@ -110,7 +110,8 @@ export class CollisionManager {
             (this.scene as any).arrows,
             (this.scene as any).fireballs,
             (this.scene as any).frostBolts,
-            (this.scene as any).lightningBolts
+            (this.scene as any).lightningBolts,
+            (this.scene as any).sonicBolts
         ].filter(group => group !== undefined); // Ensure groups exist
 
         phaserScene.physics.add.overlap(

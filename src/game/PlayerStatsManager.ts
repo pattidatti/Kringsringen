@@ -233,6 +233,72 @@ export class PlayerStatsManager {
             this.scene.registry.set('playerDamage', this.playerDamage);
         }
 
+        // ── Skald Buffs ──────────────────────────────────────────────
+        // Inspirerende Kvad: +25% speed and damage
+        if (this.scene.buffs?.hasBuff('inspirerende_kvad')) {
+            this.playerDamage *= 1.25;
+            this.playerSpeed *= 1.25;
+            this.scene.registry.set('playerDamage', this.playerDamage);
+            this.scene.registry.set('playerSpeed', this.playerSpeed);
+        }
+
+        // Anthem of Fury: +20%/lvl damage
+        if (this.scene.buffs?.hasBuff('anthem_of_fury')) {
+            const anthemLvl = levels['anthem_of_fury'] || 0;
+            if (anthemLvl > 0) {
+                this.playerDamage *= (1 + anthemLvl * 0.20);
+                this.scene.registry.set('playerDamage', this.playerDamage);
+            }
+        }
+
+        // Vers Damage scaling (from upgrade)
+        const versDmgLvl = levels['vers_damage'] || 0;
+        if (versDmgLvl > 0) {
+            const versCount = (this.scene.registry.get('skaldVers') || 0) as number;
+            if (versCount > 0) {
+                this.playerDamage *= (1 + versCount * 0.15 * versDmgLvl);
+                this.scene.registry.set('playerDamage', this.playerDamage);
+            }
+        }
+
+        // NEW: Vers Passive Bonuses (resource-based system)
+        const playerClassId = this.scene.registry.get('playerClass');
+        if (playerClassId === 'skald') {
+            const versCount = (this.scene.registry.get('skaldVers') || 0) as number;
+
+            if (versCount >= 1) {
+                // +8% movement speed at 1+ Vers
+                this.playerSpeed *= 1.08;
+                this.scene.registry.set('playerSpeed', this.playerSpeed);
+            }
+
+            if (versCount >= 2) {
+                // +12% attack speed at 2+ Vers
+                const currentAttackSpeed = this.scene.registry.get('playerAttackSpeed') || 1;
+                this.scene.registry.set('playerAttackSpeed', currentAttackSpeed * 1.12);
+            }
+
+            if (versCount >= 3) {
+                // +15% damage at 3+ Vers
+                this.playerDamage *= 1.15;
+                this.scene.registry.set('playerDamage', this.playerDamage);
+            }
+
+            if (versCount >= 4) {
+                // +25% crit chance at 4 Vers (max stack)
+                const currentCrit = this.scene.registry.get('playerCritChance') || 0;
+                this.scene.registry.set('playerCritChance', currentCrit + 0.25);
+            }
+        }
+
+        // Resonans Shield: damage reduction at max vers
+        const resonansLvl = levels['resonans_shield'] || 0;
+        if (resonansLvl > 0 && this.scene.buffs?.hasBuff('resonans_shield')) {
+            this.scene.registry.set('skaldDamageReduction', resonansLvl * 0.15);
+        } else {
+            this.scene.registry.set('skaldDamageReduction', 0);
+        }
+
         // Dash stats (Previously fixed, using current values but verifying formula)
         const dashCdLvl = levels['dash_cooldown'] || 0;
         const dashDistLvl = levels['dash_distance'] || 0;

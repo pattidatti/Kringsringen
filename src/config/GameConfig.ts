@@ -249,6 +249,18 @@ export const GAME_CONFIG = {
             totalTicks: [4, 6, 8] as const,             // total ticks per level
             color: 0x00cc44
         },
+        HARP_BOLT: {
+            damageMult: 0.6,     // Fast, low damage baseline
+            speed: 600,
+            cooldown: 400,       // Faster than Vers Bolt
+            range: 500
+        },
+        VERS_BOLT: {
+            damageMult: 0.9,     // Slower, higher damage, builds Vers
+            speed: 500,
+            cooldown: 800,       // Slower than Harp Bolt
+            range: 500
+        },
         ECLIPSE: {
             baseRadius: 65,
             spawnOffset: 45,    // Shift vortex forward towards strike point

@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState, useRef } from 'react';
 import { useGameRegistry, getGameInstance } from '../../hooks/useGameRegistry';
-import { KRIEGER_WEAPON_SLOTS, ARCHER_WEAPON_SLOTS, WIZARD_WEAPON_SLOTS, type WeaponId } from '../../config/weapons';
+import { KRIEGER_WEAPON_SLOTS, ARCHER_WEAPON_SLOTS, WIZARD_WEAPON_SLOTS, SKALD_WEAPON_SLOTS, type WeaponId } from '../../config/weapons';
 import { resolveClassId } from '../../config/classes';
 import { motion } from 'framer-motion';
 import clsx from 'clsx';
@@ -82,7 +82,10 @@ export const Hotbar: React.FC = React.memo(() => {
     const classAbility4Cooldown = useGameRegistry('classAbility4Cooldown', null) as { duration: number, timestamp: number } | null;
 
     const classId = resolveClassId(playerClass);
-    const activeSlots = classId === 'wizard' ? WIZARD_WEAPON_SLOTS : (classId === 'archer' ? ARCHER_WEAPON_SLOTS : KRIEGER_WEAPON_SLOTS);
+    const activeSlots = classId === 'wizard' ? WIZARD_WEAPON_SLOTS
+        : classId === 'archer' ? ARCHER_WEAPON_SLOTS
+        : classId === 'skald' ? SKALD_WEAPON_SLOTS
+        : KRIEGER_WEAPON_SLOTS;
 
     const handleSelectWeapon = useCallback((weaponId: WeaponId) => {
         const game = getGameInstance();
@@ -195,7 +198,12 @@ export const Hotbar: React.FC = React.memo(() => {
                                 {isUnlocked && !isAbilitySlot && weaponCooldown && (
                                     <RadialCooldown duration={weaponCooldown.duration} timestamp={weaponCooldown.timestamp} />
                                 )}
-                                {isAbilitySlot && slot.hotkey === '2' && classAbilityCooldown && (
+                                {/* Special case: Skald Vers Bolt (ability_vers_bolt) uses weaponCooldown, not classAbilityCooldown */}
+                                {isAbilitySlot && slot.id === 'ability_vers_bolt' && weaponCooldown && (
+                                    <RadialCooldown duration={weaponCooldown.duration} timestamp={weaponCooldown.timestamp} />
+                                )}
+                                {/* Standard class abilities use class-specific cooldowns */}
+                                {isAbilitySlot && slot.id !== 'ability_vers_bolt' && slot.hotkey === '2' && classAbilityCooldown && (
                                     <RadialCooldown duration={classAbilityCooldown.duration} timestamp={classAbilityCooldown.timestamp} />
                                 )}
                                 {isAbilitySlot && slot.hotkey === '3' && classAbility3Cooldown && (

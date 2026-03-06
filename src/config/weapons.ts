@@ -21,6 +21,14 @@ export const ARCHER_WEAPON_SLOTS: WeaponUIConfig[] = [
     { id: 'ability_decoy', label: 'DECOY', hotkey: '4', icon: 'item_shadow_orb' },
 ];
 
+/** Skald-specific hotbar: Harpe=1, Versbolt=2 (ability), Inspirerende Kvad=3, Seierskvad=4 */
+export const SKALD_WEAPON_SLOTS: WeaponUIConfig[] = [
+    { id: 'harp_bolt', label: 'HARPE', hotkey: '1', icon: 'item_magic_staff' },
+    { id: 'ability_vers_bolt', label: 'VERS', hotkey: '2', icon: 'item_lightning_staff' },
+    { id: 'ability_kvad_inspire', label: 'KVAD', hotkey: '3', icon: 'item_lightning' },
+    { id: 'ability_kvad_seier', label: 'SEIER', hotkey: '4', icon: 'item_sword_heavy' },
+];
+
 /** Wizard-specific hotbar: Fire=1, Frost=2, Lightning=3, Cascade ability=4 */
 export const WIZARD_WEAPON_SLOTS: WeaponUIConfig[] = [
     { id: 'fireball', label: 'ILD', hotkey: '1', icon: 'item_magic_staff' },

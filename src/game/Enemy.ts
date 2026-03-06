@@ -5,6 +5,7 @@ import type { IMainScene } from './IMainScene';
 import { JitterBuffer } from '../network/JitterBuffer';
 import type { PackedEnemy } from '../network/SyncSchemas';
 import { HistoryBuffer } from './HistoryBuffer';
+import { AudioManager } from './AudioManager';
 
 export class Enemy extends Phaser.Physics.Arcade.Sprite {
     private targetStart: Phaser.GameObjects.Components.Transform; // Renamed to avoid confusion with internal target
@@ -601,7 +602,10 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         }
 
         const myRadius = Math.max(this.body!.width, this.body!.height) * 0.5;
-        const lookaheadMargin = myRadius + 10;
+        // ULTRATHINK FIX: Lookahead must be >= 2x flow field cell size (128px)
+        // or 3.5x body radius (to see around corners). Use whichever is larger.
+        const FLOW_FIELD_CELL_SIZE = 64;
+        const lookaheadMargin = Math.max(myRadius * 3.5, FLOW_FIELD_CELL_SIZE * 2);
         const flowFieldManager = (this.scene as unknown as IMainScene).flowFieldManager;
 
         // Interest + Static Wall Danger
@@ -618,6 +622,14 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
                 if (cost === 255) {
                     dangers[i] = 1.0; // Absolute danger overrides dynamic flocking
                 }
+            }
+        }
+
+        // --- Wall Repulsion: Boost interest in opposite direction when wall detected ---
+        for (let i = 0; i < numRays; i++) {
+            if (dangers[i] > 0.95) { // High wall danger detected
+                const oppositeIdx = Math.floor((i + numRays / 2)) % numRays;
+                interests[oppositeIdx] = Math.max(interests[oppositeIdx], 0.6); // Boost escape interest
             }
         }
 
@@ -711,24 +723,40 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 
         if (this.stuckTimer > stuckDurationLimit && this.recoveryTimer <= 0) {
             let escapeAngle = -1;
-            let lowestIntegrationCost = 65535;
+            let lowestEscapeScore = Infinity;
 
-            // Ultrathink deterministic escaping
-            const flowFieldManager = (this.scene as unknown as IMainScene).flowFieldManager;
-            const myRadius = Math.max(this.body!.width, this.body!.height) * 0.5;
-            const lookaheadMargin = myRadius + 10;
-
+            // ULTRATHINK RECOVERY FIX: Prioritize directions perpendicular/opposite to stuck direction
             if (flowFieldManager) {
+                // Get current flow direction to determine "stuck direction"
+                const currentFlowVector = flowFieldManager.getVector(this.x, this.y);
+                const stuckAngle = currentFlowVector ? Math.atan2(currentFlowVector.y, currentFlowVector.x) : targetAngle;
+
                 for (let i = 0; i < numRays; i++) {
-                    const lx = this.x + Enemy.COS_TABLE[i] * lookaheadMargin * 2;
-                    const ly = this.y + Enemy.SIN_TABLE[i] * lookaheadMargin * 2;
+                    // Use 3x lookahead for recovery (384px+ for typical enemy) to see around obstacles
+                    const lx = this.x + Enemy.COS_TABLE[i] * lookaheadMargin * 3;
+                    const ly = this.y + Enemy.SIN_TABLE[i] * lookaheadMargin * 3;
                     const tileCost = flowFieldManager.getCost(lx, ly);
 
+                    // ONLY consider non-wall directions
                     if (tileCost < 255) {
+                        const rayAngle = (i / numRays) * Math.PI * 2;
+
+                        // Calculate angle difference from stuck direction
+                        const angleDiff = Math.abs(Phaser.Math.Angle.Wrap(rayAngle - stuckAngle));
+
+                        // Prefer directions perpendicular (90°) or opposite (180°) to stuck direction
+                        // Bonus: -10000 for angles > 60° from stuck direction
+                        const directionBonus = angleDiff > Math.PI / 3 ? -10000 : 0;
+
+                        // Integration cost (lower is closer to target)
                         const integrationCost = flowFieldManager.getIntegrationCost(lx, ly);
-                        if (integrationCost < lowestIntegrationCost) {
-                            lowestIntegrationCost = integrationCost;
-                            escapeAngle = (i / numRays) * Math.PI * 2;
+
+                        // Combined score: prefer perpendicular/opposite + lower integration cost
+                        const escapeScore = integrationCost + directionBonus;
+
+                        if (escapeScore < lowestEscapeScore) {
+                            lowestEscapeScore = escapeScore;
+                            escapeAngle = rayAngle;
                         }
                     }
                 }
@@ -785,6 +813,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         this.predictedHP = this.hp;
 
         this.scene.events.emit('enemy-hit');
+        AudioManager.instance.playSFX('punch');
         this.setTint(0xff0000);
         this.scene.time.delayedCall(100, () => {
             if (this.active && !this.isDead && !this.predictedDeadUntil) {

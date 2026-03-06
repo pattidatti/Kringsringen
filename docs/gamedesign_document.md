@@ -182,7 +182,7 @@ Alle 5 våpen er tilgjengelige fra spillstart (ingen kjøpes lenger). Hotkeys 1�
 | **4** | **Frostbolt** | ✅ | Magic. Bremser fiender. Splash 100px. |
 | **5** | **Lyn** | ✅ | Homing-bolt. Kjedeblinker til nye mål. |
 | **Shift**| **Dash** | ✅ | Rask unnamanøver. |
-| **[2-4]** | **Klasse-Evne**| ✅ | Unik evne basert på valgt klasse (se Seksjon 13). |
+| **[2-4]** | **Klasse-Evner** | ✅ | Tre unike evner per klasse (se Seksjon 13). Hotbar-layout varierer per klasse. |
 
 ### Åpne feil – Våpen
 - ⚠️ **Bue krasjer** spillet ved treff med Eksplosive Piler aktivert
@@ -461,27 +461,59 @@ Hvert Map Level laster et statisk kart via `StaticMapLoader` + `StaticMapData`. 
 
 ## 13. Klassesystem (Classes) ✅
 
-Spilleren velger én av tre klasser ved start av en ny run. Hver klasse har unike stats, startvåpen og en kraftig Klasse-Evne som kan oppgraderes i butikken under kategorien **DRIVKRAFT**.
+Spilleren velger én av **fire klasser** ved start av en ny run. Hver klasse har unike stats, startvåpen, egne shop-kategorier og tre klasse-evner (Hotkey 2–4) som kan oppgraderes under klassens eksklusive kategorier i butikken.
 
 ### 🛡️ Krieger (Melee Warrior)
 - **Identitet:** Nærkamps-spesialist, høy HP, tung knockback.
 - **Start-stats:** +30% HP, +20% Damage, +2 Armor, -5% Speed.
 - **Startvåpen:** Sverd (Hotkey 1).
-- **Klasse-Evne:** **Whirlwind Slash** (Hotkey 2). Roterende angrep som treffer alle fiender rundt spilleren.
+- **Shop-kategorier:** SVERD, RUSTNING, KARAKTER.
+
+| Hotkey | Evne | Beskrivelse |
+| :--- | :--- | :--- |
+| **2** | **Whirlwind Slash** | 3s roterende AoE-angrep (120px radius). 15 skadetikk à 200ms. CD: 8s (skalerer med `whirl_cooldown`). |
+| **3** | **Iron Bulwark** | Hexagonal skjoldaura i 5s. Visuell kjøring, ingen skade. CD: 12s. |
+| **4** | **Chain Grapple** | Trekker alle fiender innen 400px til seg. AoE-ring + kjedegrafik. CD: 10s. |
 
 ### 🏹 Archer (Ranged Specialist)
-- **Identitet:** Rask, fragil, kontroll over piler.
+- **Identitet:** Rask, fragil, kontroll over piler. 2 dash-ladinger (base).
 - **Start-stats:** +25% Speed, +15% Damage, +15% Atk Speed, -10% HP.
 - **Startvåpen:** Bue (Hotkey 1).
-- **Klasse-Evne:** **Multishot Barrage** (Hotkey 2). Fyrer en salve med piler i en rask sekvens.
+- **Shop-kategorier:** BUE, SMIDIGHET, KARAKTER.
+
+| Hotkey | Evne | Beskrivelse |
+| :--- | :--- | :--- |
+| **2** | **Phantom Volley (Fantombyge)** | 15–25 piler avfyrt over 1.5s mot musepeker. Lav skade per pil (0.35×). CD: 12s. |
+| **3** | **Vault & Volley** | Hopp 180px bakover + avfyr 5 piler i vifte. CD: 7s. |
+| **4** | **Shadow Decoy** | Spawner en lokkefugl-klon i 1.5s. Spiller halvgjennomsiktig. CD: 15s. |
 
 ### 🧙 Wizard (Magic User)
-- **Identitet:** Magisk mestring, mana-basert, elemental kontroll.
-- **Start-stats:** +50% CDR (Mana Regen), +25% Damage, +10% Atk Speed, -20% HP.
+- **Identitet:** Magisk mestring, elemental kontroll.
+- **Start-stats:** +25% Damage, +10% Atk Speed, -20% HP.
 - **Startvåpen:** Ildkule (Slot 1), Frostbolt (Slot 2), Chain Lightning (Slot 3).
-- **Klasse-Evne:** **Elemental Cascade** (Hotkey 4). Triggere kjedereaksjoner mellom ulike magityper.
+- **Shop-kategorier:** ILDMAGI, FROSTMAGI, TORDENMAGI, EVNER, SYNERGI, KARAKTER.
+
+| Hotkey | Evne | Beskrivelse |
+| :--- | :--- | :--- |
+| **4** | **Arcane Cascade** | Spawner en Singularity (tyngdefelt) ved musepeker i 3–4.5s. Kollapser i eksplosjon. CD: 12s. |
+
+### 🎵 Skald (Battle Bard) ✅
+- **Identitet:** Rytmisk kamp — bygger opp Vers-ressurs ved angrep som låser opp kraftige Kvad-utbrudd.
+- **Start-stats:** +10% HP, +5% Damage, +10% Speed, +1 Armor.
+- **Startvåpen:** Harpe-boltprosjektil (Slot 1, `harp_bolt`).
+- **Shop-kategorier:** KVAD, RYTME, KARAKTER.
+- **Ressurs:** **Vers** – fire ladinger (♦♦♦♦). Bygges opp ved Vers Bolt-angrep (hotkey `2`). Passive bonuser: 1 Vers → +SPD, 2 → +ATK, 3 → +DMG, 4 → +CRIT. Vises i `VersIndicator`-komponenten over Hotbar.
+
+| Hotkey | Evne | Kost | Beskrivelse |
+| :--- | :--- | :--- | :--- |
+| **2** | **Vers Bolt** (Ability) | — | Gull SonicBolt-prosjektil. Bygger +1 Vers per cast (maks 4). CD: 700ms (skaleres med attack speed). |
+| **3** | **Inspirerende Kvad** | 2 Vers | Healer 30–50 HP + gull aura i 5–8s. CD: 8s. |
+| **4** | **Seierskvad** | 4 Vers | Massiv AoE-burst (2.5× skade, 200px+ radius) + stun + opptil 4 ekko-tikk (m/ `ekko`-oppgradering). CD: 20s. |
+
+> **SonicBolt** (`src/game/SonicBolt.ts`): Vers-bolt-prosjektil med gull Add-blandmodus, pulserende skala-animasjon og prosedyralt musikknotegrafik. Kan piercer og påføre slow (via `stridssang_slow`-oppgradering). ✅
 
 ---
 
-**Dokumentversjon:** 2.5
+**Dokumentversjon:** 2.6
+**Sist oppdatert:** 6. mars 2026
 **Ansvarlig AI Architect:** Antigravity

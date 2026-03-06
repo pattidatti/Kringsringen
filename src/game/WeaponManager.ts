@@ -7,6 +7,8 @@ import { Fireball } from './Fireball';
 import { FrostBolt } from './FrostBolt';
 import { LightningBolt } from './LightningBolt';
 import { EclipseWake } from './EclipseWake';
+import { SonicBolt } from './SonicBolt';
+import { AudioManager } from './AudioManager';
 
 /**
  * Manages player weapon execution, cooldowns, and network synchronization.
@@ -56,6 +58,9 @@ export class WeaponManager {
             case 'lightning':
                 this.executeLightningAttack(player, angle);
                 break;
+            case 'harp_bolt':
+                this.executeHarpBoltAttack(player, angle);
+                break;
         }
     }
 
@@ -74,6 +79,7 @@ export class WeaponManager {
 
         player.play(attackAnimKey);
         this.scene.events.emit('player-swing');
+        AudioManager.instance.playSFX('swing');
 
         this.scene.networkManager?.broadcast({
             t: PacketType.GAME_EVENT,
@@ -139,6 +145,7 @@ export class WeaponManager {
         const bowCooldown = this.scene.stats.playerCooldown;
         this.scene.registry.set('weaponCooldown', { duration: bowCooldown, timestamp: Date.now() });
         player.play('player-bow');
+        AudioManager.instance.playSFX('bow_attack');
 
         this.scene.time.delayedCall(bowCooldown * 0.5, () => {
             const arrowDamageMultiplier = this.scene.registry.get('playerArrowDamageMultiplier') || 1;
@@ -185,6 +192,7 @@ export class WeaponManager {
         const fireCd = GAME_CONFIG.WEAPONS.FIREBALL.cooldown;
         this.scene.registry.set('weaponCooldown', { duration: fireCd, timestamp: Date.now() });
         player.play('player-bow'); // Wizard uses bow anim for cast currently
+        AudioManager.instance.playSFX('fireball_cast');
         this.scene.events.emit('fireball-cast');
 
         this.scene.time.delayedCall(100, () => {
@@ -220,6 +228,7 @@ export class WeaponManager {
             if (frostBolt) {
                 const cascadeBonus = Date.now() < this.scene.abilityManager.cascadeActiveUntil ? 1.5 + ((this.scene.registry.get('upgradeLevels') || {})['cascade_damage'] || 0) * 0.15 : 1;
                 frostBolt.fire(player.x, player.y, frostTarget.x, frostTarget.y, this.scene.stats.damage * GAME_CONFIG.WEAPONS.FROST.damageMult * (this.scene.registry.get('frostDamageMulti') || 1) * cascadeBonus);
+                AudioManager.instance.playSFX('ice_throw');
                 this.scene.events.emit('frost-cast');
 
                 this.scene.networkManager?.broadcast({
@@ -250,6 +259,7 @@ export class WeaponManager {
             if (bolt) {
                 bolt.fire(player.x, player.y, ltTarget.x, ltTarget.y, baseDamage, this.scene.registry.get('lightningBounces') || GAME_CONFIG.WEAPONS.LIGHTNING.bounces, new Set(), angle);
             }
+            AudioManager.instance.playSFX('lightning_cast');
             this.scene.events.emit('lightning-cast');
 
             this.scene.networkManager?.broadcast({
@@ -264,4 +274,38 @@ export class WeaponManager {
             player.play('player-idle');
         });
     }
+
+    // ─── SKALD ────────────────────────────────────────────────────────────────
+
+    private executeHarpBoltAttack(player: Phaser.Physics.Arcade.Sprite, angle: number): void {
+        const attackSpeedMult = this.scene.registry.get('playerAttackSpeed') || 1;
+        const harpCooldown = GAME_CONFIG.WEAPONS.HARP_BOLT.cooldown / attackSpeedMult;
+
+        this.scene.registry.set('weaponCooldown', { duration: harpCooldown, timestamp: Date.now() });
+        player.play('player-cast');
+
+        this.scene.time.delayedCall(harpCooldown * 0.3, () => {
+            const baseDamage = this.scene.stats.damage * GAME_CONFIG.WEAPONS.HARP_BOLT.damageMult;
+
+            // Fire blue/silver harp bolt (reuse SonicBolt with different visual)
+            const bolt = this.scene.sonicBolts.get(player.x, player.y) as SonicBolt;
+            if (bolt) {
+                bolt.fire(player.x, player.y, angle, baseDamage, 0, 0);
+                // Override tint to blue/silver for visual distinction
+                bolt.setTint(0x88ccff);
+                AudioManager.instance.playSFX('harp_cast');
+                this.scene.events.emit('harp-cast');
+            }
+        });
+
+        player.once('animationcomplete-player-cast', () => {
+            this.scene.data.set('isAttacking', false);
+            player.play('player-idle');
+        });
+
+        // NO Vers building — fast baseline attack
+    }
+
+    // NOTE: Vers Bolt (Skald ability 2) is now handled by ClassAbilityManager.activateVersBolt()
+
 }

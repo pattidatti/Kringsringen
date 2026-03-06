@@ -176,7 +176,7 @@ const ClassCard: React.FC<ClassCardProps> = ({ config, isSelected, isAnyConfirmi
 
 // ─── ClassSelector ────────────────────────────────────────────────────────────
 
-const CLASS_ORDER: ClassId[] = ['krieger', 'archer', 'wizard'];
+const CLASS_ORDER: ClassId[] = ['krieger', 'archer', 'wizard', 'skald'];
 
 export const ClassSelector: React.FC<ClassSelectorProps> = ({ onSelect, onClose }) => {
     const [selectedId, setSelectedId] = useState<ClassId | null>(null);

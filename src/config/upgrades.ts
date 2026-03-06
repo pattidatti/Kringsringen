@@ -1,7 +1,30 @@
 import { GAME_CONFIG } from './GameConfig';
 import type { ClassId } from './classes';
 
-export type UpgradeCategory = 'Karakter' | 'Sverd' | 'Bue' | 'Magi' | 'Synergi';
+export type UpgradeCategory = 'Karakter' | 'Sverd' | 'Bue' | 'Magi' | 'Synergi' | 'Kvad' | 'Rytme';
+
+export type ChapterId =
+    | 'foundation'    // Grunnlag: Passive stats (HP, Armor, Speed)
+    | 'combat_style'  // Kampstil: Global behavior (Lifesteal, Crit, Retaliation)
+    | 'ability'       // Spesialitet: Class-specific active skills (Virvelvind)
+    | 'synergy'       // Synergi: Elemental/Skill interactions
+    | 'uncategorized';
+
+export interface ChapterDef {
+    id: ChapterId;
+    label: string;
+    order: number;
+    loreText: string;
+    themeColor: string;
+}
+
+export const CHAPTER_DEFINITIONS: Record<ChapterId, ChapterDef> = {
+    foundation: { id: 'foundation', label: 'Grunnlag', order: 1, loreText: 'Det som holder deg i live.', themeColor: '#8b7355' }, // Muted Bronze
+    combat_style: { id: 'combat_style', label: 'Kampstil', order: 2, loreText: 'Måten du fører strid på.', themeColor: '#b71c1c' }, // Deep Crimson
+    ability: { id: 'ability', label: 'Spesialitet', order: 3, loreText: 'Dine unike kraftuttrykk.', themeColor: '#4a148c' }, // Deep Purple
+    synergy: { id: 'synergy', label: 'Synergi', order: 4, loreText: 'Når elementene forenes.', themeColor: '#00695c' }, // Deep Emerald/Teal
+    uncategorized: { id: 'uncategorized', label: 'Diverse', order: 99, loreText: 'Uklassifisert lærdom.', themeColor: '#455a64' }, // Slate Blue/Grey
+};
 
 export interface UpgradeValue {
     prefix?: string;
@@ -26,8 +49,8 @@ export interface UpgradeConfig {
     classRestriction?: ClassId;
     /** Hvilken ShopCategoryDef.id denne tilhører. Udefinert = avled fra category.toLowerCase() */
     shopCategoryId?: string;
-    /** Sub-header innad i en tab for gruppering (brukes i renderMerchantItems) */
-    displayGroup?: string;
+    /** Kapittel-inndeling for visning i boken */
+    chapterId?: ChapterId;
 }
 
 export const UPGRADES: UpgradeConfig[] = [
@@ -37,6 +60,7 @@ export const UPGRADES: UpgradeConfig[] = [
         title: 'Vitalitet',
         icon: 'item_heart_status',
         category: 'Karakter',
+        chapterId: 'foundation',
         summary: 'Øker maksimal helse',
         value: { suffix: ' HP', getValue: (lvl) => GAME_CONFIG.PLAYER.BASE_MAX_HP + lvl * 20 },
         maxLevel: 20,
@@ -48,6 +72,7 @@ export const UPGRADES: UpgradeConfig[] = [
         title: 'Lynrask',
         icon: 'item_lightning',
         category: 'Karakter',
+        chapterId: 'combat_style',
         summary: 'Øker løpehastighet',
         value: { getValue: (lvl) => GAME_CONFIG.PLAYER.BASE_SPEED + lvl * 10 },
         maxLevel: 10,
@@ -59,6 +84,7 @@ export const UPGRADES: UpgradeConfig[] = [
         title: 'Trollblod',
         icon: 'item_potion_red',
         category: 'Karakter',
+        chapterId: 'foundation',
         summary: 'Gjenoppretter helse over tid',
         value: { suffix: ' HP/s', getValue: (lvl) => lvl },
         maxLevel: 10,
@@ -69,7 +95,10 @@ export const UPGRADES: UpgradeConfig[] = [
         id: 'armor',
         title: 'Jernhud',
         icon: 'item_shield',
-        category: 'Karakter',
+        category: 'Sverd',
+        classRestriction: 'krieger',
+        shopCategoryId: 'krieger_rustning',
+        chapterId: 'foundation',
         summary: 'Reduserer mottatt skade',
         value: { getValue: (lvl) => lvl },
         maxLevel: 10,
@@ -82,6 +111,7 @@ export const UPGRADES: UpgradeConfig[] = [
         title: 'Vindstøt',
         icon: 'item_lightning',
         category: 'Karakter',
+        chapterId: 'ability',
         summary: 'Reduserer ventetid på dash',
         value: {
             suffix: ' sek',
@@ -97,6 +127,7 @@ export const UPGRADES: UpgradeConfig[] = [
         title: 'Lynskritt',
         icon: 'item_lightning',
         category: 'Karakter',
+        chapterId: 'ability',
         summary: 'Øker lengden på dash',
         value: { suffix: 'px', getValue: (lvl) => GAME_CONFIG.PLAYER.DASH_DISTANCE + lvl * 50 },
         maxLevel: 5,
@@ -108,6 +139,7 @@ export const UPGRADES: UpgradeConfig[] = [
         title: 'Blodsug',
         icon: 'item_potion_red',
         category: 'Karakter',
+        chapterId: 'ability',
         summary: 'Gjenoppretter helse ved hver dash',
         value: { prefix: '+', suffix: ' HP', getValue: (lvl) => lvl * 5 },
         maxLevel: 3,
@@ -123,7 +155,7 @@ export const UPGRADES: UpgradeConfig[] = [
         category: 'Sverd',
         classRestriction: 'krieger',
         shopCategoryId: 'krieger_sverd',
-        displayGroup: 'Grunnlag',
+        chapterId: 'foundation',
         summary: 'Øker all nærkampskade',
         value: { prefix: '+', suffix: '%', getValue: (lvl) => lvl * 10 },
         maxLevel: 20,
@@ -137,7 +169,7 @@ export const UPGRADES: UpgradeConfig[] = [
         category: 'Sverd',
         classRestriction: 'krieger',
         shopCategoryId: 'krieger_sverd',
-        displayGroup: 'Grunnlag',
+        chapterId: 'foundation',
         summary: 'Slår fiender lenger bakover',
         value: { prefix: '+', suffix: '%', getValue: (lvl) => lvl * 15 },
         maxLevel: 10,
@@ -151,7 +183,7 @@ export const UPGRADES: UpgradeConfig[] = [
         category: 'Sverd',
         classRestriction: 'krieger',
         shopCategoryId: 'krieger_sverd',
-        displayGroup: 'Grunnlag',
+        chapterId: 'foundation',
         summary: 'Øker angrepshastighet',
         value: { prefix: '+', suffix: '%', getValue: (lvl) => lvl * 10 },
         maxLevel: 10,
@@ -167,7 +199,7 @@ export const UPGRADES: UpgradeConfig[] = [
         category: 'Bue',
         classRestriction: 'archer',
         shopCategoryId: 'archer_bue',
-        displayGroup: 'Pilstyrke',
+        chapterId: 'foundation',
         summary: 'Reduserer ladetid for bue',
         value: { prefix: '-', suffix: '%', isReduction: true, getValue: (lvl) => lvl * 10 },
         maxLevel: 10,
@@ -181,7 +213,7 @@ export const UPGRADES: UpgradeConfig[] = [
         category: 'Bue',
         classRestriction: 'archer',
         shopCategoryId: 'archer_bue',
-        displayGroup: 'Pilstyrke',
+        chapterId: 'combat_style',
         summary: 'Skyter flere piler samtidig',
         value: { suffix: ' piler', getValue: (lvl) => 1 + lvl },
         maxLevel: 5,
@@ -195,7 +227,7 @@ export const UPGRADES: UpgradeConfig[] = [
         category: 'Bue',
         classRestriction: 'archer',
         shopCategoryId: 'archer_bue',
-        displayGroup: 'Pilstyrke',
+        chapterId: 'combat_style',
         summary: 'Piler går gjennom fiender',
         value: { prefix: '+', getValue: (lvl) => lvl },
         maxLevel: 3,
@@ -209,7 +241,7 @@ export const UPGRADES: UpgradeConfig[] = [
         category: 'Bue',
         classRestriction: 'archer',
         shopCategoryId: 'archer_bue',
-        displayGroup: 'Pilstyrke',
+        chapterId: 'foundation',
         summary: 'Øker pilskade',
         value: { prefix: '+', suffix: '%', getValue: (lvl) => lvl * 15 },
         maxLevel: 8,
@@ -223,7 +255,7 @@ export const UPGRADES: UpgradeConfig[] = [
         category: 'Bue',
         classRestriction: 'archer',
         shopCategoryId: 'archer_bue',
-        displayGroup: 'Pilstyrke',
+        chapterId: 'foundation',
         summary: 'Øker pilhastighet',
         value: { prefix: '+', suffix: '%', getValue: (lvl) => lvl * 20 },
         maxLevel: 5,
@@ -237,7 +269,7 @@ export const UPGRADES: UpgradeConfig[] = [
         category: 'Bue',
         classRestriction: 'archer',
         shopCategoryId: 'archer_bue',
-        displayGroup: 'Spesialpiler',
+        chapterId: 'ability',
         summary: 'Piler eksploderer ved treff',
         value: { suffix: 'px radius', getValue: (lvl) => lvl > 0 ? 80 + (lvl - 1) * 50 : 0 },
         maxLevel: 3,
@@ -251,7 +283,7 @@ export const UPGRADES: UpgradeConfig[] = [
         category: 'Bue',
         classRestriction: 'archer',
         shopCategoryId: 'archer_bue',
-        displayGroup: 'Spesialpiler',
+        chapterId: 'ability',
         summary: 'Piler skaper et kaskade-felt',
         value: { suffix: 'px radius', getValue: (lvl: number) => 150 + lvl * 30 },
         maxLevel: 3,
@@ -427,7 +459,7 @@ export const UPGRADES: UpgradeConfig[] = [
         category: 'Bue',
         classRestriction: 'archer',
         shopCategoryId: 'archer_bue',
-        displayGroup: 'Spesialpiler',
+        chapterId: 'ability',
         summary: 'Piler forgifter fiender',
         value: { suffix: ' tikk', getValue: (lvl) => lvl > 0 ? [4, 6, 8][lvl - 1] : 0 },
         maxLevel: 3,
@@ -456,7 +488,7 @@ export const UPGRADES: UpgradeConfig[] = [
         category: 'Sverd',
         classRestriction: 'krieger',
         shopCategoryId: 'krieger_sverd',
-        displayGroup: 'Grunnlag',
+        chapterId: 'synergy',
         summary: 'Etterlater en mørk sti som skader fiender',
         value: { suffix: '% skade', getValue: (lvl) => 30 * lvl },
         maxLevel: 3,
@@ -490,6 +522,7 @@ export const UPGRADES: UpgradeConfig[] = [
         title: 'Gullmagneten',
         icon: 'item_coin',
         category: 'Karakter',
+        chapterId: 'combat_style',
         summary: 'Øker rekkevidden for å plukke opp gull',
         value: { prefix: '+', suffix: 'px', getValue: (lvl) => lvl * 50 },
         maxLevel: 5,
@@ -501,6 +534,7 @@ export const UPGRADES: UpgradeConfig[] = [
         title: 'Skarpeskytte',
         icon: 'item_swords_crossed',
         category: 'Karakter',
+        chapterId: 'combat_style',
         summary: 'Øker sjanse for kritiske treff',
         value: { prefix: '+', suffix: '%', getValue: (lvl) => lvl * 5 },
         maxLevel: 6,
@@ -514,7 +548,7 @@ export const UPGRADES: UpgradeConfig[] = [
         category: 'Bue',
         classRestriction: 'archer',
         shopCategoryId: 'archer_bue',
-        displayGroup: 'Spesialpiler',
+        chapterId: 'synergy',
         summary: 'Legger ut feller som fryser fiender',
         value: { suffix: ' sek', getValue: (lvl) => 1.5 + lvl * 0.5 },
         maxLevel: 5,

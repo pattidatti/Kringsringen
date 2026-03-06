@@ -329,7 +329,7 @@ export class LightningBolt extends Phaser.Physics.Arcade.Sprite {
         }
 
         // Play impact sound
-        AudioManager.instance.playSFX('fireball_hit');
+        AudioManager.instance.playSFX('lightning_impact');
 
         // Chain to next target if bounces remaining
         if (this.bouncesLeft > 0) {

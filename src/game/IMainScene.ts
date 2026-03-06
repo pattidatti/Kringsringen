@@ -33,6 +33,7 @@ export interface IMainScene extends Phaser.Scene {
     lightningBolts: Phaser.Physics.Arcade.Group;
     singularities: Phaser.Physics.Arcade.Group;
     eclipseWakes: Phaser.Physics.Arcade.Group;
+    sonicBolts: Phaser.Physics.Arcade.Group;
     enemyProjectiles: Phaser.Physics.Arcade.Group;
     decoys: Phaser.Physics.Arcade.Group;
     traps: Phaser.Physics.Arcade.Group;

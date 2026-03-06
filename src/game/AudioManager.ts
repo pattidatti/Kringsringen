@@ -22,6 +22,8 @@ export class AudioManager {
     private currentBGMId: string | null = null;
     private currentBGS: Phaser.Sound.BaseSound | null = null;
     private currentBGSId: string | null = null;
+    private _bgmFading: boolean = false;
+    private _bgsFading: boolean = false;
     private reverbNode: ConvolverNode | null = null;
 
     private settings: AudioSettings = {
@@ -359,7 +361,10 @@ export class AudioManager {
         this.currentBGMId = id;
         this.currentBGM.play();
 
-        this.manualFade(this.currentBGM, finalVolume, fadeDuration);
+        this._bgmFading = true;
+        this.manualFade(this.currentBGM, finalVolume, fadeDuration, () => {
+            this._bgmFading = false;
+        });
     }
 
     /**
@@ -398,7 +403,10 @@ export class AudioManager {
         this.currentBGSId = id;
         this.currentBGS.play();
 
-        this.manualFade(this.currentBGS, finalVolume, fadeDuration);
+        this._bgsFading = true;
+        this.manualFade(this.currentBGS, finalVolume, fadeDuration, () => {
+            this._bgsFading = false;
+        });
     }
 
     /**
@@ -474,15 +482,15 @@ export class AudioManager {
         this.scene.sound.mute = this.settings.isMuted;
         this.scene.sound.volume = this.settings.masterVolume;
 
-        // Update current BGM volume
-        if (this.currentBGM && this.currentBGMId) {
+        // Update current BGM volume (skip if a fade-in is in progress to avoid clobbering it)
+        if (this.currentBGM && this.currentBGMId && !this._bgmFading) {
             const config = AUDIO_MANIFEST.find(c => c.id === this.currentBGMId);
             const baseVol = config?.volume || 1.0;
             (this.currentBGM as any).volume = baseVol * this.settings.bgmVolume * this.settings.masterVolume;
         }
 
-        // Update current BGS volume
-        if (this.currentBGS && this.currentBGSId) {
+        // Update current BGS volume (skip if a fade-in is in progress to avoid clobbering it)
+        if (this.currentBGS && this.currentBGSId && !this._bgsFading) {
             const config = AUDIO_MANIFEST.find(c => c.id === this.currentBGSId);
             const baseVol = config?.volume || 0.3;
             (this.currentBGS as any).volume = baseVol * this.settings.bgsVolume * this.settings.masterVolume;

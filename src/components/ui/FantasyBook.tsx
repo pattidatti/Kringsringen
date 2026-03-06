@@ -5,7 +5,7 @@ import bookOpen from '../../assets/ui/fantasy/containers/book_open.png';
 import tabRed from '../../assets/ui/fantasy/tabs/red.png';
 import tabGreen from '../../assets/ui/fantasy/tabs/green.png';
 import tabYellow from '../../assets/ui/fantasy/tabs/yellow.png';
-import { UPGRADES, type UpgradeConfig, isItemSpriteIcon } from '../../config/upgrades';
+import { UPGRADES, type UpgradeConfig, isItemSpriteIcon, CHAPTER_DEFINITIONS, type ChapterId } from '../../config/upgrades';
 import { CLASS_UPGRADES } from '../../config/class-upgrades';
 import { CLASS_CONFIGS, resolveClassId } from '../../config/classes';
 import { ItemIcon, type ItemIconKey } from './ItemIcon';
@@ -60,29 +60,29 @@ const CATEGORY_THEMES: Record<string, { primary: string; secondary: string; bord
     'Magi': { primary: '#3730a3', secondary: '#6366f1', border: 'border-indigo-900/40', bg: 'bg-indigo-100/40', text: 'text-indigo-950' },
     'Synergi': { primary: '#9a3412', secondary: '#ea580c', border: 'border-orange-900/40', bg: 'bg-orange-100/40', text: 'text-orange-950' },
     // Krieger (rød)
-    'krieger_sverd':     { primary: '#7f1d1d', secondary: '#c0392b', border: 'border-red-900/30', bg: 'bg-red-200/30', text: 'text-red-950' },
-    'krieger_rustning':  { primary: '#7f1d1d', secondary: '#c0392b', border: 'border-red-900/30', bg: 'bg-red-200/30', text: 'text-red-950' },
+    'krieger_sverd': { primary: '#7f1d1d', secondary: '#c0392b', border: 'border-red-900/30', bg: 'bg-red-200/30', text: 'text-red-950' },
+    'krieger_rustning': { primary: '#7f1d1d', secondary: '#c0392b', border: 'border-red-900/30', bg: 'bg-red-200/30', text: 'text-red-950' },
     // Legacy krieger ids (kept for safety)
     'krieger_drivkraft': { primary: '#7f1d1d', secondary: '#c0392b', border: 'border-red-900/30', bg: 'bg-red-200/30', text: 'text-red-950' },
-    'krieger_mastring':  { primary: '#7f1d1d', secondary: '#c0392b', border: 'border-red-900/30', bg: 'bg-red-200/30', text: 'text-red-950' },
-    'krieger_kamptalent':{ primary: '#7f1d1d', secondary: '#c0392b', border: 'border-red-900/30', bg: 'bg-red-200/30', text: 'text-red-950' },
+    'krieger_mastring': { primary: '#7f1d1d', secondary: '#c0392b', border: 'border-red-900/30', bg: 'bg-red-200/30', text: 'text-red-950' },
+    'krieger_kamptalent': { primary: '#7f1d1d', secondary: '#c0392b', border: 'border-red-900/30', bg: 'bg-red-200/30', text: 'text-red-950' },
     // Archer (grønn)
-    'archer_bue':        { primary: '#14532d', secondary: '#27ae60', border: 'border-emerald-900/30', bg: 'bg-emerald-200/30', text: 'text-emerald-950' },
-    'archer_smidighet':  { primary: '#14532d', secondary: '#27ae60', border: 'border-emerald-900/30', bg: 'bg-emerald-200/30', text: 'text-emerald-950' },
+    'archer_bue': { primary: '#14532d', secondary: '#27ae60', border: 'border-emerald-900/30', bg: 'bg-emerald-200/30', text: 'text-emerald-950' },
+    'archer_smidighet': { primary: '#14532d', secondary: '#27ae60', border: 'border-emerald-900/30', bg: 'bg-emerald-200/30', text: 'text-emerald-950' },
     // Legacy archer ids
-    'archer_drivkraft':  { primary: '#14532d', secondary: '#27ae60', border: 'border-emerald-900/30', bg: 'bg-emerald-200/30', text: 'text-emerald-950' },
-    'archer_mastring':   { primary: '#14532d', secondary: '#27ae60', border: 'border-emerald-900/30', bg: 'bg-emerald-200/30', text: 'text-emerald-950' },
-    'archer_talenter':   { primary: '#14532d', secondary: '#27ae60', border: 'border-emerald-900/30', bg: 'bg-emerald-200/30', text: 'text-emerald-950' },
+    'archer_drivkraft': { primary: '#14532d', secondary: '#27ae60', border: 'border-emerald-900/30', bg: 'bg-emerald-200/30', text: 'text-emerald-950' },
+    'archer_mastring': { primary: '#14532d', secondary: '#27ae60', border: 'border-emerald-900/30', bg: 'bg-emerald-200/30', text: 'text-emerald-950' },
+    'archer_talenter': { primary: '#14532d', secondary: '#27ae60', border: 'border-emerald-900/30', bg: 'bg-emerald-200/30', text: 'text-emerald-950' },
     // Wizard (lilla)
-    'wizard_ild':        { primary: '#7c2d12', secondary: '#ea580c', border: 'border-orange-900/30', bg: 'bg-orange-200/30', text: 'text-orange-950' },
-    'wizard_frost':      { primary: '#1e3a5f', secondary: '#3b82f6', border: 'border-blue-900/30', bg: 'bg-blue-200/30', text: 'text-blue-950' },
-    'wizard_torden':     { primary: '#4a1d96', secondary: '#7c3aed', border: 'border-violet-900/30', bg: 'bg-violet-200/30', text: 'text-violet-950' },
-    'wizard_evner':      { primary: '#4c1d95', secondary: '#8e44ad', border: 'border-purple-900/30', bg: 'bg-purple-200/30', text: 'text-purple-950' },
-    'wizard_synergi':    { primary: '#4c1d95', secondary: '#8e44ad', border: 'border-purple-900/30', bg: 'bg-purple-200/30', text: 'text-purple-950' },
+    'wizard_ild': { primary: '#7c2d12', secondary: '#ea580c', border: 'border-orange-900/30', bg: 'bg-orange-200/30', text: 'text-orange-950' },
+    'wizard_frost': { primary: '#1e3a5f', secondary: '#3b82f6', border: 'border-blue-900/30', bg: 'bg-blue-200/30', text: 'text-blue-950' },
+    'wizard_torden': { primary: '#4a1d96', secondary: '#7c3aed', border: 'border-violet-900/30', bg: 'bg-violet-200/30', text: 'text-violet-950' },
+    'wizard_evner': { primary: '#4c1d95', secondary: '#8e44ad', border: 'border-purple-900/30', bg: 'bg-purple-200/30', text: 'text-purple-950' },
+    'wizard_synergi': { primary: '#4c1d95', secondary: '#8e44ad', border: 'border-purple-900/30', bg: 'bg-purple-200/30', text: 'text-purple-950' },
     // Legacy wizard ids
-    'wizard_drivkraft':  { primary: '#4c1d95', secondary: '#8e44ad', border: 'border-purple-900/30', bg: 'bg-purple-200/30', text: 'text-purple-950' },
-    'wizard_mastring':   { primary: '#4c1d95', secondary: '#8e44ad', border: 'border-purple-900/30', bg: 'bg-purple-200/30', text: 'text-purple-950' },
-    'wizard_arkan':      { primary: '#4c1d95', secondary: '#8e44ad', border: 'border-purple-900/30', bg: 'bg-purple-200/30', text: 'text-purple-950' },
+    'wizard_drivkraft': { primary: '#4c1d95', secondary: '#8e44ad', border: 'border-purple-900/30', bg: 'bg-purple-200/30', text: 'text-purple-950' },
+    'wizard_mastring': { primary: '#4c1d95', secondary: '#8e44ad', border: 'border-purple-900/30', bg: 'bg-purple-200/30', text: 'text-purple-950' },
+    'wizard_arkan': { primary: '#4c1d95', secondary: '#8e44ad', border: 'border-purple-900/30', bg: 'bg-purple-200/30', text: 'text-purple-950' },
 };
 
 function topoSort(items: UpgradeConfig[]): UpgradeConfig[] {
@@ -104,24 +104,57 @@ function topoSort(items: UpgradeConfig[]): UpgradeConfig[] {
     return sorted;
 }
 
-function groupByDisplayGroup(items: UpgradeConfig[]): { label: string | undefined; items: UpgradeConfig[] }[] {
-    const groups: { label: string | undefined; items: UpgradeConfig[] }[] = [];
-    let currentLabel: string | undefined = undefined;
-    let currentGroup: UpgradeConfig[] = [];
-
+function groupByChapter(items: UpgradeConfig[], customLabels?: Partial<Record<ChapterId, string>>) {
+    const map = new Map<ChapterId, UpgradeConfig[]>();
     for (const item of items) {
-        const g = (item as UpgradeConfig & { displayGroup?: string }).displayGroup;
-        if (g !== currentLabel) {
-            if (currentGroup.length > 0) groups.push({ label: currentLabel, items: currentGroup });
-            currentLabel = g;
-            currentGroup = [item];
-        } else {
-            currentGroup.push(item);
-        }
+        const cid = item.chapterId ?? 'uncategorized';
+        if (!map.has(cid)) map.set(cid, []);
+        map.get(cid)!.push(item);
     }
-    if (currentGroup.length > 0) groups.push({ label: currentLabel, items: currentGroup });
+
+    // Convert to array and sort by chapter order
+    const groups = Array.from(map.entries()).map(([cid, groupItems]) => {
+        const def = CHAPTER_DEFINITIONS[cid] ?? CHAPTER_DEFINITIONS['uncategorized'];
+        return {
+            chapterId: cid as ChapterId,
+            label: customLabels?.[cid as ChapterId] || def.label,
+            loreText: def.loreText,
+            themeColor: def.themeColor,
+            order: def.order,
+            items: topoSort(groupItems),
+        };
+    });
+
+    groups.sort((a, b) => a.order - b.order);
     return groups;
 }
+
+const ChapterHeader = ({ label, loreText, themeColor }: { label: string, loreText: string, themeColor: string }) => {
+    const firstLetter = label.charAt(0);
+    const rest = label.slice(1);
+
+    return (
+        <div className="relative pt-4 pb-2 mb-3 -mx-2 px-2" style={{ borderBottom: `1px solid ${themeColor}30` }}>
+            <div className="flex items-start gap-1">
+                <span className="font-cinzel text-5xl font-black leading-none drop-shadow-sm mt-1" style={{ color: `${themeColor}95` }}>
+                    {firstLetter}
+                </span>
+                <div className="flex flex-col pt-1">
+                    <span className="font-cinzel text-xl font-bold tracking-[0.2em] uppercase" style={{ color: themeColor }}>
+                        {rest}
+                    </span>
+                    {loreText && (
+                        <span className="font-crimson italic text-[13px] opacity-70 mt-[-2px] whitespace-normal text-balance" style={{ color: themeColor }}>
+                            {loreText}
+                        </span>
+                    )}
+                </div>
+            </div>
+            {/* Asymmetrical border bottom line */}
+            <div className="mt-1 h-[2px] w-2/5 max-w-[120px] rounded-r-full" style={{ backgroundColor: themeColor, opacity: 0.6 }} />
+        </div>
+    );
+};
 
 const StatRow = ({ label, value, icon }: { label: string, value: string | number, icon: string }) => (
     <div className="flex items-center justify-between py-1 border-b border-dotted border-slate-300">
@@ -192,6 +225,22 @@ export const FantasyBook: React.FC<FantasyBookProps> = React.memo(({
             });
         }
     }, [activeTab, isOpen]);
+
+    const shopItems = React.useMemo(() => {
+        const allUpgrades = [...UPGRADES, ...CLASS_UPGRADES];
+        return allUpgrades.filter(u => {
+            const catId = u.shopCategoryId ?? u.category.toLowerCase();
+            if (catId !== activeShopCategory) return false;
+            if (u.classRestriction && u.classRestriction !== playerClass) return false;
+            if (u.id === 'unlock_bow') return false;
+            return true;
+        });
+    }, [activeShopCategory, playerClass]);
+
+    const groupedShopItems = React.useMemo(() => {
+        const activeCategoryDef = classConfig.shopCategories.find(c => c.id === activeShopCategory);
+        return groupByChapter(shopItems, activeCategoryDef?.chapterLabels);
+    }, [shopItems, activeShopCategory, classConfig]);
 
     const renderTabButton = (key: TabKey, topOffset: number) => {
         const config = TABS[key];
@@ -389,14 +438,6 @@ export const FantasyBook: React.FC<FantasyBookProps> = React.memo(({
 
     // --- MERCHANT RIGHT PAGE: Items ---
     const renderMerchantItems = () => {
-        const allUpgrades = [...UPGRADES, ...CLASS_UPGRADES];
-        const shopItems = allUpgrades.filter(u => {
-            const catId = u.shopCategoryId ?? u.category.toLowerCase();
-            if (catId !== activeShopCategory) return false;
-            if (u.classRestriction && u.classRestriction !== playerClass) return false;
-            if (u.id === 'unlock_bow') return false;
-            return true;
-        });
         const theme = CATEGORY_THEMES[activeShopCategory] || CATEGORY_THEMES['karakter'];
 
         return (
@@ -463,113 +504,122 @@ export const FantasyBook: React.FC<FantasyBookProps> = React.memo(({
                                 animate={{ opacity: 1 }}
                                 exit={{ opacity: 0 }}
                             >
-                                {groupByDisplayGroup(topoSort(shopItems)).map(({ label: groupLabel, items: groupItems }) => (
-                                    <React.Fragment key={groupLabel ?? '__ungrouped'}>
-                                        {groupLabel && (
-                                            <div className={`flex items-center gap-2 mt-1 mb-0.5 px-1`}>
-                                                <div className="h-px flex-1 opacity-30" style={{ backgroundColor: theme.primary }} />
-                                                <span className={`text-[10px] font-cinzel uppercase tracking-[0.2em] font-bold opacity-50 ${theme.text}`}>{groupLabel}</span>
-                                                <div className="h-px flex-1 opacity-30" style={{ backgroundColor: theme.primary }} />
-                                            </div>
-                                        )}
-                                        {groupItems.map(item => {
-                                    const lvl = upgradeLevels[item.id] || 0;
-                                    const cost = Math.floor(item.basePrice * Math.pow(item.priceScale, lvl));
-                                    const canAfford = coins >= cost;
-                                    const isMaxed = lvl >= item.maxLevel;
-                                    const isExclusive = !!item.classRestriction;
+                                {groupedShopItems.map(({ chapterId, label, loreText, themeColor: chapterThemeColor, items: groupItems }) => (
+                                    <div key={chapterId} className="mb-6 relative">
+                                        <ChapterHeader label={label} loreText={loreText} themeColor={chapterThemeColor} />
 
-                                    // Check requirements (search combined pool)
-                                    const allUpgradesForLookup = [...UPGRADES, ...CLASS_UPGRADES];
-                                    let reqMet = true;
-                                    let reqText = '';
-                                    if (item.requires) {
-                                        for (const [rId, rLvl] of Object.entries(item.requires)) {
-                                            if ((upgradeLevels[rId] || 0) < rLvl) {
-                                                reqMet = false;
-                                                const rName = allUpgradesForLookup.find(u => u.id === rId)?.title || rId;
-                                                reqText += `${rName} nivå ${rLvl} kreves. `;
-                                            }
-                                        }
-                                    }
+                                        <div className="flex flex-col gap-3">
+                                            {groupItems.map(item => {
+                                                const lvl = upgradeLevels[item.id] || 0;
+                                                const cost = Math.floor(item.basePrice * Math.pow(item.priceScale, lvl));
+                                                const canAfford = coins >= cost;
+                                                const isMaxed = lvl >= item.maxLevel;
+                                                const isExclusive = !!item.classRestriction;
 
-                                    return (
-                                        <motion.div
-                                            key={item.id}
-                                            initial={{ opacity: 0, x: 10 }}
-                                            animate={{ opacity: 1, x: 0 }}
-                                            className={`flex p-4 border rounded-lg transition-all group relative overflow-hidden gap-4
-                                                ${!reqMet
-                                                    ? 'bg-slate-200/70 border-slate-400/50 grayscale opacity-80'
-                                                    : `${theme.bg} ${theme.border} hover:brightness-[1.03] shadow-sm hover:shadow`
-                                                }`}
-                                            style={isExclusive && reqMet ? {
-                                                borderColor: classConfig.color + '66',
-                                                background: `linear-gradient(135deg, ${classConfig.color}18 0%, transparent 75%)`,
-                                            } : {}}
-                                        >
-                                            {/* Left Side: Info */}
-                                            <div className="flex-1 flex flex-col">
-                                                <div className="flex items-center gap-3 mb-2">
-                                                    <div className={`w-10 h-10 flex items-center justify-center rounded-lg border 
-                                                        ${!reqMet ? 'bg-slate-300/60 border-slate-400' : `bg-white/70 ${theme.border}`}`}>
-                                                        {isItemSpriteIcon(item.icon)
-                                                            ? <ItemIcon
-                                                                icon={item.icon as ItemIconKey}
-                                                                size="md"
-                                                                style={item.iconTint ? { filter: item.iconTint } : {}}
-                                                            />
-                                                            : <div
-                                                                className={`${item.icon} ${theme.text} text-xl`}
-                                                                style={item.iconTint ? { filter: item.iconTint } : {}}
-                                                            />
+                                                // Check requirements (search combined pool)
+                                                const allUpgradesForLookup = [...UPGRADES, ...CLASS_UPGRADES];
+                                                let reqMet = true;
+                                                let reqText = '';
+                                                if (item.requires) {
+                                                    for (const [rId, rLvl] of Object.entries(item.requires)) {
+                                                        if ((upgradeLevels[rId] || 0) < rLvl) {
+                                                            reqMet = false;
+                                                            const rName = allUpgradesForLookup.find(u => u.id === rId)?.title || rId;
+                                                            reqText += `${rName} nivå ${rLvl} kreves. `;
                                                         }
-                                                    </div>
-                                                    <span className={`font-bold text-xl ${!reqMet ? 'text-slate-600' : theme.text}`}>{item.title}</span>
-                                                </div>
+                                                    }
+                                                }
 
-                                                <div className={`text-lg pl-1 leading-snug font-crimson mt-2
-                                                    ${!reqMet ? 'text-slate-600' : `${theme.text} opacity-90`}
-                                                `}>
-                                                    {item.summary} ({item.value.prefix || ''}{item.value.getValue(lvl + 1)}{item.value.suffix || ''})
-                                                </div>
-                                                {!reqMet && (
-                                                    <div className="text-sm text-red-800 font-bold mt-3 p-2 bg-red-100/60 rounded border border-red-900/20 flex items-center gap-2">
-                                                        <span>🔒</span>
-                                                        <span>{reqText}</span>
-                                                    </div>
-                                                )}
-                                            </div>
+                                                return (
+                                                    <motion.div
+                                                        key={item.id}
+                                                        initial={{ opacity: 0, x: 10 }}
+                                                        animate={{ opacity: 1, x: 0 }}
+                                                        className={`flex p-4 border rounded-lg transition-all group relative overflow-hidden gap-4
+                                                ${!reqMet
+                                                                ? 'bg-slate-200/70 border-slate-400/50 grayscale opacity-80'
+                                                                : `hover:brightness-[1.03] shadow-sm hover:shadow`
+                                                            }`}
+                                                        style={!reqMet ? {} : (isExclusive ? {
+                                                            borderColor: classConfig.color + '66',
+                                                            background: `linear-gradient(135deg, ${classConfig.color}18 0%, transparent 75%), ${chapterThemeColor}15`,
+                                                        } : {
+                                                            backgroundColor: `${chapterThemeColor}10`,
+                                                            borderColor: `${chapterThemeColor}30`,
+                                                        })}
+                                                    >
+                                                        {/* Left Side: Info */}
+                                                        <div className="flex-1 flex flex-col">
+                                                            <div className="flex items-center gap-3 mb-2">
+                                                                <div className={`w-10 h-10 flex items-center justify-center rounded-lg border 
+                                                        ${!reqMet ? 'bg-slate-300/60 border-slate-400' : `bg-white/70`}`}
+                                                                    style={reqMet ? { borderColor: `${chapterThemeColor}40` } : {}}>
+                                                                    {isItemSpriteIcon(item.icon)
+                                                                        ? <ItemIcon
+                                                                            icon={item.icon as ItemIconKey}
+                                                                            size="md"
+                                                                            style={item.iconTint ? { filter: item.iconTint } : {}}
+                                                                        />
+                                                                        : <div
+                                                                            className={`${item.icon} text-xl`}
+                                                                            style={{ color: chapterThemeColor, ...(item.iconTint ? { filter: item.iconTint } : {}) }}
+                                                                        />
+                                                                    }
+                                                                </div>
+                                                                <span className={`font-bold text-xl ${!reqMet ? 'text-slate-600' : ''}`}
+                                                                    style={reqMet ? { color: chapterThemeColor, filter: 'brightness(0.7)' } : {}}>
+                                                                    {item.title}
+                                                                </span>
+                                                            </div>
 
-                                            {/* Right Side: Action & Level */}
-                                            <div className="flex flex-col w-28 shrink-0 justify-between items-end gap-2">
-                                                <span className={`text-3xl font-bold ${!reqMet ? 'text-slate-500' : theme.text} opacity-90 block mt-1 tracking-tighter`}>{lvl}/{item.maxLevel}</span>
-
-                                                <div className="w-full mt-auto">
-                                                    {isMaxed ? (
-                                                        <div className={`w-full py-2 text-sm font-bold ${theme.text} bg-${theme.primary}/10 rounded border ${theme.border} text-center uppercase tracking-widest`}>
-                                                            Max
+                                                            <div className={`text-lg pl-1 leading-snug font-crimson mt-2
+                                                    ${!reqMet ? 'text-slate-600' : `opacity-90`}
+                                                `}
+                                                                style={reqMet ? { color: chapterThemeColor, filter: 'brightness(0.5)' } : {}}>
+                                                                {item.summary} ({item.value.prefix || ''}{item.value.getValue(lvl + 1)}{item.value.suffix || ''})
+                                                            </div>
+                                                            {!reqMet && (
+                                                                <div className="text-sm text-red-800 font-bold mt-3 p-2 bg-red-100/60 rounded border border-red-900/20 flex items-center gap-2">
+                                                                    <span>🔒</span>
+                                                                    <span>{reqText}</span>
+                                                                </div>
+                                                            )}
                                                         </div>
-                                                    ) : (
-                                                        <button
-                                                            onClick={() => actions.onBuyUpgrade(item.id, cost)}
-                                                            disabled={!canAfford || !reqMet}
-                                                            className={`w-full py-2 text-base font-bold border rounded-lg transition-all flex items-center justify-center gap-1.5 shadow-sm
+
+                                                        {/* Right Side: Action & Level */}
+                                                        <div className="flex flex-col w-28 shrink-0 justify-between items-end gap-2">
+                                                            <span className={`text-3xl font-bold ${!reqMet ? 'text-slate-500' : ''} opacity-90 block mt-1 tracking-tighter`}
+                                                                style={reqMet ? { color: chapterThemeColor, filter: 'brightness(0.7)' } : {}}>
+                                                                {lvl}/{item.maxLevel}
+                                                            </span>
+
+                                                            <div className="w-full mt-auto">
+                                                                {isMaxed ? (
+                                                                    <div className={`w-full py-2 text-sm font-bold bg-black/5 rounded border text-center uppercase tracking-widest`}
+                                                                        style={{ color: chapterThemeColor, borderColor: `${chapterThemeColor}40` }}>
+                                                                        Max
+                                                                    </div>
+                                                                ) : (
+                                                                    <button
+                                                                        onClick={() => actions.onBuyUpgrade(item.id, cost)}
+                                                                        disabled={!canAfford || !reqMet}
+                                                                        className={`w-full py-2 text-base font-bold border rounded-lg transition-all flex items-center justify-center gap-1.5 shadow-sm
                                                                 ${canAfford && reqMet
-                                                                    ? 'bg-amber-100 border-amber-400 text-amber-950 hover:bg-amber-50 hover:-translate-y-0.5 active:translate-y-0 active:shadow-inner'
-                                                                    : 'bg-slate-200/80 border-slate-400/50 text-slate-500 cursor-not-allowed opacity-80'}
+                                                                                ? 'bg-amber-100 border-amber-400 text-amber-950 hover:bg-amber-50 hover:-translate-y-0.5 active:translate-y-0 active:shadow-inner'
+                                                                                : 'bg-slate-200/80 border-slate-400/50 text-slate-500 cursor-not-allowed opacity-80'}
                                                             `}
-                                                        >
-                                                            <span>{cost}</span>
-                                                            <div className="w-2.5 h-2.5 rounded-full bg-amber-600 shadow-[0_0_5px_rgba(180,83,9,0.5)]" />
-                                                        </button>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        </motion.div>
-                                    )
-                                })}
-                                    </React.Fragment>
+                                                                    >
+                                                                        <span>{cost}</span>
+                                                                        <div className="w-2.5 h-2.5 rounded-full bg-amber-600 shadow-[0_0_5px_rgba(180,83,9,0.5)]" />
+                                                                    </button>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    </motion.div>
+                                                )
+                                            })}
+                                        </div>
+                                    </div>
                                 ))}
                             </motion.div>
                         )}

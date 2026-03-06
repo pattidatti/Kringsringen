@@ -12,6 +12,7 @@ import { BossSplashScreen } from './ui/BossSplashScreen';
 import { BossHUD } from './ui/BossHUD';
 import { HighscoreNotification } from './ui/HighscoreNotification';
 import { BuffHUD } from './ui/BuffHUD';
+import { VersIndicator } from './ui/VersIndicator';
 import { PacketType } from '../network/SyncSchemas';
 
 import { setGameInstance } from '../hooks/useGameRegistry';
@@ -721,6 +722,7 @@ export const GameContainer: React.FC<GameContainerProps> = React.memo(({ network
 
                 <div className="absolute bottom-6 left-1/2 -translate-x-1/2 pointer-events-auto transition-all duration-500 flex flex-col items-center gap-2">
                     <ClassAbilityBar />
+                    {selectedClass === 'skald' && <VersIndicator />}
                     <DashCooldownBar />
                     <Hotbar />
                 </div>

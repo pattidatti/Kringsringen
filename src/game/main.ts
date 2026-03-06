@@ -56,6 +56,7 @@ export class MainScene extends Phaser.Scene implements IMainScene {
     public lightningBolts!: Phaser.Physics.Arcade.Group;
     public singularities!: Phaser.Physics.Arcade.Group;
     public eclipseWakes!: Phaser.Physics.Arcade.Group;
+    public sonicBolts!: Phaser.Physics.Arcade.Group;
     public enemyProjectiles!: Phaser.Physics.Arcade.Group;
     public decoys!: Phaser.Physics.Arcade.Group;
     public traps!: Phaser.Physics.Arcade.Group;

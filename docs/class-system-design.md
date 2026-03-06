@@ -1,5 +1,7 @@
 # CLASS SYSTEM DESIGN DOCUMENT
 
+> **Status (mars 2026):** Dette er det opprinnelige designdokumentet for 3-klassesystemet. Systemet er fullt implementert (fase 1–5). En **fjerde klasse – Skald** – ble lagt til post-design og er dokumentert i GDD seksjon 13. Fase 6 (effekter for class upgrades) er ikke fullimplementert – se `class-system-phase6-plan.md`.
+
 ## 1. VISION
 
 Introduce a **class system** where players choose between **Melee (Krieger), Ranged (Archer), or Magic (Wizard)** at game start. Each class has:
@@ -376,6 +378,7 @@ Each class has a **set of active abilities** that can be triggered and leveled u
   - **Krieger**: Slot 1: Sword, Slot 2: Whirlwind Slash
   - **Archer**: Slot 1: Bow, Slot 2: Multishot Barrage, Slot 3: Explosive Shot
   - **Wizard**: Slot 1: Fireball, Slot 2: Frost Bolt, Slot 3: Chain Lightning, Slot 4: Elemental Cascade
+  - **Skald**: Slot 1: Harp Bolt, Slot 2: Vers Bolt (Ability), Slot 3: Inspirerende Kvad, Slot 4: Seierskvad
 - **Q, E, F, R**: Sekundærevner / Verktøy (Utility/Global Abilities)
   - Standardized utility slots shared across classes
 
