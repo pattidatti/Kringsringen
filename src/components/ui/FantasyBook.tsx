@@ -8,6 +8,8 @@ import tabYellow from '../../assets/ui/fantasy/tabs/yellow.png';
 import { UPGRADES, type UpgradeConfig, isItemSpriteIcon, CHAPTER_DEFINITIONS, type ChapterId } from '../../config/upgrades';
 import { CLASS_UPGRADES } from '../../config/class-upgrades';
 import { CLASS_CONFIGS, resolveClassId } from '../../config/classes';
+import { PARAGON_UPGRADES, type ParagonUpgradeConfig } from '../../config/paragon-upgrades';
+import { getParagonTierName } from '../../config/paragon';
 import { ItemIcon, type ItemIconKey } from './ItemIcon';
 import { useGameRegistry } from '../../hooks/useGameRegistry';
 import { SettingsContent } from './SettingsContent';
@@ -83,6 +85,8 @@ const CATEGORY_THEMES: Record<string, { primary: string; secondary: string; bord
     'wizard_drivkraft': { primary: '#4c1d95', secondary: '#8e44ad', border: 'border-purple-900/30', bg: 'bg-purple-200/30', text: 'text-purple-950' },
     'wizard_mastring': { primary: '#4c1d95', secondary: '#8e44ad', border: 'border-purple-900/30', bg: 'bg-purple-200/30', text: 'text-purple-950' },
     'wizard_arkan': { primary: '#4c1d95', secondary: '#8e44ad', border: 'border-purple-900/30', bg: 'bg-purple-200/30', text: 'text-purple-950' },
+    // Paragon (gold/diamond)
+    'paragon': { primary: '#b8860b', secondary: '#ffd700', border: 'border-amber-600/50', bg: 'bg-amber-100/50', text: 'text-amber-900' },
 };
 
 function topoSort(items: UpgradeConfig[]): UpgradeConfig[] {
@@ -226,7 +230,14 @@ export const FantasyBook: React.FC<FantasyBookProps> = React.memo(({
         }
     }, [activeTab, isOpen]);
 
+    const paragonLevel = useGameRegistry('paragonLevel', 0) as number;
+
     const shopItems = React.useMemo(() => {
+        // Paragon category: show Paragon-exclusive upgrades filtered by tier
+        if (activeShopCategory === 'paragon') {
+            return PARAGON_UPGRADES.filter(u => paragonLevel >= u.paragonRequired);
+        }
+
         const allUpgrades = [...UPGRADES, ...CLASS_UPGRADES];
         return allUpgrades.filter(u => {
             const catId = u.shopCategoryId ?? u.category.toLowerCase();
@@ -235,7 +246,7 @@ export const FantasyBook: React.FC<FantasyBookProps> = React.memo(({
             if (u.id === 'unlock_bow') return false;
             return true;
         });
-    }, [activeShopCategory, playerClass]);
+    }, [activeShopCategory, playerClass, paragonLevel]);
 
     const groupedShopItems = React.useMemo(() => {
         const activeCategoryDef = classConfig.shopCategories.find(c => c.id === activeShopCategory);
@@ -310,7 +321,11 @@ export const FantasyBook: React.FC<FantasyBookProps> = React.memo(({
 
     // --- MERCHANT LEFTS PAGE: Categories ---
     const renderMerchantCategories = () => {
-        const categories = classConfig.shopCategories;
+        const baseCategories = classConfig.shopCategories;
+        // Add Paragon category when player has reached Paragon 1+
+        const categories = paragonLevel > 0
+            ? [...baseCategories, { id: 'paragon', label: 'PARAGON', icon: 'item_synergy_rune', isExclusive: false }]
+            : baseCategories;
 
         return (
             <div className="flex flex-col h-full font-crimson">
@@ -520,6 +535,12 @@ export const FantasyBook: React.FC<FantasyBookProps> = React.memo(({
                                                 const allUpgradesForLookup = [...UPGRADES, ...CLASS_UPGRADES];
                                                 let reqMet = true;
                                                 let reqText = '';
+                                                // Paragon tier requirement
+                                                const paragonReq = (item as ParagonUpgradeConfig).paragonRequired;
+                                                if (paragonReq && paragonLevel < paragonReq) {
+                                                    reqMet = false;
+                                                    reqText += `${getParagonTierName(paragonReq)} kreves. `;
+                                                }
                                                 if (item.requires) {
                                                     for (const [rId, rLvl] of Object.entries(item.requires)) {
                                                         if ((upgradeLevels[rId] || 0) < rLvl) {

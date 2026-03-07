@@ -15,6 +15,7 @@ import type { AmbientParticleManager } from './AmbientParticleManager';
 import type { InputManager } from './InputManager';
 import type { FlowFieldManager } from './pathing/FlowFieldManager';
 import type { BuffManager } from './BuffManager';
+import type { ParagonAbilityManager } from './ParagonAbilityManager';
 
 /**
  * Lightweight interface for MainScene.
@@ -55,6 +56,7 @@ export interface IMainScene extends Phaser.Scene {
     weather: WeatherManager;
     ambient: AmbientParticleManager;
     buffs: BuffManager;
+    paragonAbility: ParagonAbilityManager;
     player: Phaser.Physics.Arcade.Sprite;
     quality: any;
     networkManager?: any;

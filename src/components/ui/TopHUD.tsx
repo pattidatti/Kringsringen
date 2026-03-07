@@ -3,7 +3,7 @@ import { useGameRegistry } from '../../hooks/useGameRegistry';
 import { useGameRegistryThrottled } from '../../hooks/useGameRegistryThrottled';
 import { FantasyIcon } from './FantasyIcon';
 import { ItemIcon } from './ItemIcon';
-// import { FantasyPanel } from './FantasyPanel'; // We might use a custom ribbon approach
+import { getParagonTierName } from '../../config/paragon';
 
 export const TopHUD: React.FC = React.memo(() => {
     console.log('[TopHUD] Rendering...');
@@ -14,6 +14,7 @@ export const TopHUD: React.FC = React.memo(() => {
     const wave = useGameRegistry('currentWave', 1);
     const maxWaves = useGameRegistry('maxWaves', 1);
     const coins = useGameRegistryThrottled('playerCoins', 0, 200);
+    const paragonLevel = useGameRegistry('paragonLevel', 0) as number;
 
     const hpPercent = Math.min(100, Math.max(0, (hp / maxHp) * 100));
 
@@ -55,6 +56,13 @@ export const TopHUD: React.FC = React.memo(() => {
                 {/* Decorative Ribbon Backing (CSS or Image) */}
                 <div className="relative bg-amber-950/80 border-x border-b border-amber-500/30 px-8 py-2 rounded-b-xl shadow-2xl backdrop-blur-md flex flex-col items-center gap-1 group">
                     <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-amber-400 to-transparent opacity-50" />
+
+                    {/* Paragon Badge */}
+                    {paragonLevel > 0 && (
+                        <div className="absolute -top-1 -right-2 px-1.5 py-0.5 rounded text-[8px] font-cinzel font-bold uppercase tracking-widest bg-gradient-to-r from-amber-500 to-amber-300 text-black shadow-[0_0_8px_rgba(251,191,36,0.5)] z-10">
+                            {getParagonTierName(paragonLevel)}
+                        </div>
+                    )}
 
                     <div className="flex items-center gap-3">
                         <div className="w-8 h-[1px] bg-gradient-to-r from-transparent to-amber-500/50" />

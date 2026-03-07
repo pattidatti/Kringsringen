@@ -30,6 +30,7 @@ import { NetworkManager } from '../network/NetworkManager';
 import { BOSS_CONFIGS } from '../config/bosses';
 import { FlowFieldManager } from './pathing/FlowFieldManager';
 import { BuffManager } from './BuffManager';
+import { ParagonAbilityManager } from './ParagonAbilityManager';
 import { HpBarRenderer, type IHpBarTarget } from './HpBarRenderer';
 
 
@@ -46,6 +47,7 @@ export class MainScene extends Phaser.Scene implements IMainScene {
     public eventManager!: SceneEventManager;
     public weaponManager!: WeaponManager;
     public abilityManager!: ClassAbilityManager;
+    public paragonAbility!: ParagonAbilityManager;
     public buffs!: BuffManager;
     public hpBarRenderer!: HpBarRenderer;
     private hpTargets: IHpBarTarget[] = [];
@@ -203,6 +205,7 @@ export class MainScene extends Phaser.Scene implements IMainScene {
             this.weaponManager = new WeaponManager(this);
             this.abilityManager = new ClassAbilityManager(this);
             this.buffs = new BuffManager(this);
+            this.paragonAbility = new ParagonAbilityManager(this);
             this.collisions = new CollisionManager(this);
             console.log('[MainScene] All managers instantiated.');
 
@@ -374,6 +377,7 @@ export class MainScene extends Phaser.Scene implements IMainScene {
             this.visuals.update();
             this.inputManager.update(_time, delta);
             this.abilityManager.update(_time, delta);
+            this.paragonAbility.update(_time, delta);
             this.buffs.update();
 
             // Update Spatial Grid (Throttled for Performance)

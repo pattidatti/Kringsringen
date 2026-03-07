@@ -43,7 +43,9 @@ export class InputManager {
             '3': Phaser.Input.Keyboard.KeyCodes.THREE,
             '4': Phaser.Input.Keyboard.KeyCodes.FOUR,
             '5': Phaser.Input.Keyboard.KeyCodes.FIVE,
-            'E': Phaser.Input.Keyboard.KeyCodes.E
+            'E': Phaser.Input.Keyboard.KeyCodes.E,
+            'F': Phaser.Input.Keyboard.KeyCodes.F,
+            'Q': Phaser.Input.Keyboard.KeyCodes.Q
         }) as any;
     }
 
@@ -319,8 +321,21 @@ export class InputManager {
         const playerClassId = this.scene.registry.get('playerClass');
         const abilityReady = Date.now() >= this.scene.abilityManager.classAbilityCooldownEnd;
 
+        // E key: Paragon ability takes priority if unlocked, otherwise class ability
         if (Phaser.Input.Keyboard.JustDown(this.hotkeys['E'])) {
-            this.scene.events.emit('attempt-class-ability-e');
+            if (!this.scene.paragonAbility.attemptSlot('E')) {
+                this.scene.events.emit('attempt-class-ability-e');
+            }
+        }
+
+        // F key: Paragon ability only
+        if (Phaser.Input.Keyboard.JustDown(this.hotkeys['F'])) {
+            this.scene.paragonAbility.attemptSlot('F');
+        }
+
+        // Q key: Paragon ability only
+        if (Phaser.Input.Keyboard.JustDown(this.hotkeys['Q'])) {
+            this.scene.paragonAbility.attemptSlot('Q');
         }
 
         // Action key based on class
