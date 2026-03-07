@@ -32,6 +32,7 @@ import { FlowFieldManager } from './pathing/FlowFieldManager';
 import { BuffManager } from './BuffManager';
 import { ParagonAbilityManager } from './ParagonAbilityManager';
 import { HpBarRenderer, type IHpBarTarget } from './HpBarRenderer';
+import { AchievementManager } from './AchievementManager';
 
 
 export class MainScene extends Phaser.Scene implements IMainScene {
@@ -50,6 +51,7 @@ export class MainScene extends Phaser.Scene implements IMainScene {
     public paragonAbility!: ParagonAbilityManager;
     public buffs!: BuffManager;
     public hpBarRenderer!: HpBarRenderer;
+    public achievementManager!: AchievementManager;
     private hpTargets: IHpBarTarget[] = [];
 
     public arrows!: Phaser.Physics.Arcade.Group;
@@ -206,6 +208,7 @@ export class MainScene extends Phaser.Scene implements IMainScene {
             this.abilityManager = new ClassAbilityManager(this);
             this.buffs = new BuffManager(this);
             this.paragonAbility = new ParagonAbilityManager(this);
+            this.achievementManager = new AchievementManager(this);
             this.collisions = new CollisionManager(this);
             console.log('[MainScene] All managers instantiated.');
 
@@ -379,6 +382,7 @@ export class MainScene extends Phaser.Scene implements IMainScene {
             this.abilityManager.update(_time, delta);
             this.paragonAbility.update(_time, delta);
             this.buffs.update();
+            this.achievementManager.update(delta);
 
             // Update Spatial Grid (Throttled for Performance)
             this.flowFieldManager.update(this.player.x, this.player.y);

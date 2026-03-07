@@ -807,8 +807,6 @@ export class ClassAbilityManager {
             ease: 'Sine.inOut'
         });
 
-        // Camera flash (gold)
-        this.scene.cameras.main.flash(150, 255, 215, 0, false);
         this.scene.cameras.main.shake(120, 0.006);
 
         // Trigger stat recalculation to update passive bonuses
@@ -975,7 +973,6 @@ export class ClassAbilityManager {
 
         // Distortion effect: Intense screen shake + chromatic aberration pulse
         this.scene.cameras.main.shake(220, 0.018);
-        this.scene.cameras.main.flash(220, 255, 215, 0, false);
 
         // Title text + particle burst
         this.scene.poolManager.getDamageText(player.x, player.y - 70, 'SEIERSKVAD!', '#ffd700');
@@ -1058,8 +1055,6 @@ export class ClassAbilityManager {
             this.scene.events.emit('vers-cast');
 
             // Visual feedback scales with bolt count
-            const flashIntensity = 80 + vers * 25;
-            (this.scene as any).cameras.main.flash(flashIntensity, 255, 215, 0, false);
             (this.scene as any).cameras.main.shake(80 + vers * 20, 0.003 + vers * 0.001);
 
             // Consume all Vers

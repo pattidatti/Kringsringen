@@ -689,7 +689,6 @@ export class ParagonAbilityManager {
         });
 
         player.setTint(0xffcc44);
-        this.scene.cameras.main.flash(200, 255, 200, 50);
 
         this.addBuff('ragnarok_vers', 'RAGNARÖK', 'item_lute', 0xffaa00, duration);
 

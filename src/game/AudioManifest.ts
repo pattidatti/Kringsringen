@@ -77,7 +77,7 @@ export const AUDIO_MANIFEST: SoundConfig[] = [
         category: 'sfx',
         volume: 0.45,
     },
-    { id: 'punch', path: 'assets/audio/sfx/punch.wav', category: 'sfx', volume: 0.45, pitchVariance: 0.20 },
+    { id: 'punch', path: 'assets/audio/sfx/punch.wav', category: 'sfx', volume: 0.12, pitchVariance: 0.20 },
 
     // — Movement SFX —
     {

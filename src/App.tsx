@@ -12,6 +12,7 @@ import { SaveManager } from './game/SaveManager'
 import { resolveClassId, CLASS_CONFIGS } from './config/classes'
 import type { ClassId } from './config/classes'
 import type { ParagonProfile } from './config/paragon'
+import { AuthProvider } from './contexts/AuthContext'
 import './index.css'
 import './styles/pixel-ui.css'
 
@@ -168,7 +169,7 @@ function App() {
 
   if (screen === 'landing') {
     return (
-      <>
+      <AuthProvider>
         <LandingPage
           onStart={handleStartNew}
           onContinue={handleContinue}
@@ -188,42 +189,49 @@ function App() {
             defaultClass={selectedClass}
           />
         )}
-      </>
+      </AuthProvider>
     );
   }
 
   if (screen === 'character-select') {
     return (
-      <CharacterSelectScreen
+      <AuthProvider>
+        <CharacterSelectScreen
         onSelectProfile={handleSelectProfile}
         onNewCharacter={handleNewCharacter}
         onClose={() => setScreen('landing')}
       />
+      </AuthProvider>
     );
   }
 
   if (screen === 'class-select') {
     return (
-      <ClassSelector
+      <AuthProvider>
+        <ClassSelector
         onSelect={handleClassSelected}
         onClose={() => setScreen('character-select')}
         defaultClass={selectedClass}
       />
+      </AuthProvider>
     );
   }
 
   if (screen === 'level-select' && activeProfile) {
     return (
-      <LevelSelectScreen
+      <AuthProvider>
+        <LevelSelectScreen
         profile={activeProfile}
         onSelectLevel={handleSelectLevel}
         onClose={() => setScreen('character-select')}
       />
+      </AuthProvider>
     );
   }
 
   return (
-    <div className="w-full h-screen bg-black relative">
+    <AuthProvider>
+      <div className="w-full h-screen bg-black relative">
       {/* Toggle Button */}
       <div className="absolute bottom-4 right-4 z-50">
         <FantasyButton
@@ -245,6 +253,7 @@ function App() {
             targetLevel={targetLevel}
           />}
     </div>
+    </AuthProvider>
   );
 }
 

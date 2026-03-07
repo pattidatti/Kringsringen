@@ -1,3 +1,8 @@
+# Paragon-update
+- [ ] Lage karakternavn når man oppretter karakter. Tilbakeknapp når man velger klasse. 
+- [x] Flash på hele skjermen med abilit 2 til Skald er litt voldsom. 
+- [x] Vi må ha mye lavere volum på enemy-hit (punch)
+
 # Bugs fra refaktor/classe
 - [x] Krieger: Sverd gjør ikke skade på enemies 
 - [x] Det mørke overlayet over mappet er veldig blått, akkurat som det blå fra react? blør inn i scenen eller noe slikt. 

@@ -16,6 +16,9 @@ import { VersIndicator } from './ui/VersIndicator';
 import { SkaldBuffPanel } from './ui/SkaldBuffPanel';
 import { VictoryOverlay } from './ui/VictoryOverlay';
 import { PacketType } from '../network/SyncSchemas';
+import { AchievementToastQueue } from './ui/AchievementPopup';
+import type { AchievementDef } from '../config/achievements';
+import { SaveManager } from '../game/SaveManager';
 
 import { setGameInstance } from '../hooks/useGameRegistry';
 import type { NetworkConfig } from '../App';
@@ -69,6 +72,9 @@ export const GameContainer: React.FC<GameContainerProps> = React.memo(({ network
 
     // Victory / Ascension state
     const [showVictory, setShowVictory] = useState(false);
+
+    // Achievement toast queue
+    const [achievementQueue, setAchievementQueue] = useState<Array<{ achievement: AchievementDef; id: string }>>([]);
 
     const [rebootKey, setRebootKey] = useState(0);
     const rebootKeyRef = useRef(rebootKey);
@@ -193,6 +199,14 @@ export const GameContainer: React.FC<GameContainerProps> = React.memo(({ network
                 if (!listenersRegistered && mainScene) {
                     listenersRegistered = true;
                     console.log('[GameContainer] MainScene found. Registering event listeners.');
+
+                    // Achievement unlocked event
+                    mainScene.events.on('achievement-unlocked', (achievement: AchievementDef) => {
+                        setAchievementQueue((prev) => [
+                            ...prev,
+                            { achievement, id: `${achievement.id}-${Date.now()}` },
+                        ]);
+                    });
 
                     mainScene.events.on('level-complete', () => {
                         setLoadedPlayers(new Set());
@@ -806,6 +820,14 @@ export const GameContainer: React.FC<GameContainerProps> = React.memo(({ network
 
             <BossSplashScreen />
             <GameOverOverlay />
+
+            {/* Achievement Toast Queue */}
+            <AchievementToastQueue
+                queue={achievementQueue}
+                onDismiss={(id) => {
+                    setAchievementQueue((prev) => prev.filter((item) => item.id !== id));
+                }}
+            />
 
             {/* Victory / Ascension Overlay (Paragon: after beating Level 10) */}
             {showVictory && activeProfile && (

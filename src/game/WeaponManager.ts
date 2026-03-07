@@ -319,7 +319,6 @@ export class WeaponManager {
                 this.scene.registry.set('skaldVers', newVers);
                 if (newVers >= 5) {
                     this.scene.registry.set('skaldKvadReady', true);
-                    (this.scene as any).cameras.main.flash(150, 255, 215, 0, false);
                     this.scene.poolManager.getDamageText(player.x, player.y - 70, 'KVAD KLAR!', '#ffed4e');
                 }
                 this.scene.events.emit('vers-gained', newVers);

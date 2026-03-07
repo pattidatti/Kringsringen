@@ -9,6 +9,10 @@ import {
   onValue,
   type Unsubscribe,
 } from 'firebase/database';
+import {
+  getFirestore,
+  type Firestore,
+} from 'firebase/firestore';
 
 export interface Highscore {
   id: string;
@@ -34,18 +38,27 @@ const firebaseConfig = {
 // Lazy-initialize Firebase on first use (prevents blocking app startup)
 let app: any = null;
 let database: any = null;
+let firestore: Firestore | null = null;
 
 export function initializeFirebase() {
   if (!app) {
     try {
       app = initializeApp(firebaseConfig);
       database = getDatabase(app);
+      firestore = getFirestore(app);
     } catch (error) {
       console.error('[Firebase] Initialization failed:', error);
       throw error;
     }
   }
   return database;
+}
+
+export function getFirestoreInstance(): Firestore {
+  if (!firestore) {
+    initializeFirebase();
+  }
+  return firestore!;
 }
 
 export class HighscoreManager {
