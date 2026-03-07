@@ -14,7 +14,7 @@ import { getParagonTierName } from '../../config/paragon';
 import { ItemIcon, type ItemIconKey } from './ItemIcon';
 import { useGameRegistry } from '../../hooks/useGameRegistry';
 import { SettingsContent } from './SettingsContent';
-import { AchievementList } from './AchievementList';
+import { AchievementBookOverlay } from './AchievementBookOverlay';
 import { useSprite } from '../../hooks/useSprite';
 import type { SpriteKey } from '../../config/ui-atlas';
 // import { type FantasyTabVariant } from '../../types/fantasy-ui.generated';
@@ -188,14 +188,19 @@ const TabButton: React.FC<TabButtonProps> = ({ tabKey, topOffset, activeTab, onT
     const config = TABS[tabKey];
     const isActive = activeTab === tabKey;
 
-    // ✅ Safe: useSprite is now called inside a React component
-    const { style: spriteStyle } = useSprite({ sprite: config.spriteIcon, scale: 2 });
+    // Scale 1.25 for 20px icon (16px × 1.25 = 20px, better fit in 34×18 sprite)
+    const { style: spriteStyle } = useSprite({ sprite: config.spriteIcon, scale: 1.25 });
 
     return (
         <button
             onClick={() => onTabChange(tabKey)}
-            className={`absolute right-[-74px] w-[80px] h-[32px] flex items-center gap-1 pl-2 transition-all duration-200
-                ${isActive ? 'translate-x-[-4px] brightness-110' : 'hover:translate-x-[-2px] opacity-80'}`}
+            className={`absolute right-[-74px] w-[80px] h-[32px]
+                flex items-center gap-1 pl-2
+                transition-all duration-200
+                ${isActive
+                    ? 'translate-x-[-4px] brightness-115 drop-shadow-[0_0_6px_rgba(255,255,255,0.4)]'
+                    : 'hover:translate-x-[-2px] hover:brightness-105 opacity-85'
+                }`}
             style={{
                 top: `${topOffset}%`,
                 backgroundImage: `url(${config.icon})`,
@@ -203,15 +208,26 @@ const TabButton: React.FC<TabButtonProps> = ({ tabKey, topOffset, activeTab, onT
                 imageRendering: 'pixelated',
                 zIndex: isActive ? 10 : 0
             }}
+            title={config.title} // Tooltip for accessibility
         >
-            {/* Sprite icon rendered directly with useSprite */}
+            {/* Icon container - left-aligned */}
             <div
-                style={spriteStyle}
-                className={`transition-transform flex-shrink-0 ${isActive ? 'scale-110' : ''}`}
-            />
+                className="flex-shrink-0"
+                style={{
+                    width: '20px',
+                    height: '20px',
+                    filter: isActive ? 'brightness(1.1) saturate(1.2)' : 'saturate(0.85)'
+                }}
+            >
+                <div style={spriteStyle} />
+            </div>
 
-            <span className={`font-cinzel text-[9px] uppercase tracking-tighter leading-tight ${config.color}
-                ${isActive ? 'font-bold' : 'opacity-70'}`}>
+            {/* Label - always visible, improved legibility */}
+            <span className={`font-cinzel text-[9px] uppercase tracking-tighter leading-tight
+                ${config.color}
+                ${isActive ? 'font-bold' : 'font-medium opacity-75'}
+                [text-shadow:_0_1px_2px_rgb(0_0_0_/_50%)]`}
+            >
                 {config.title}
             </span>
         </button>
@@ -730,12 +746,7 @@ export const FantasyBook: React.FC<FantasyBookProps> = React.memo(({
                                         <SettingsContent inBookContext={true} />
                                     </div>
                                 ) : activeTab === 'achievements' ? (
-                                    <div className="col-span-2 h-full px-5 py-3 overflow-y-auto custom-scrollbar">
-                                        <h2 className={`text-2xl font-bold mb-4 font-cinzel border-b-2 pb-2 ${TABS[activeTab].color} border-current opacity-80 sticky top-0 bg-[#e3dac9] z-10`}>
-                                            Achievements
-                                        </h2>
-                                        <AchievementList onClose={() => {}} />
-                                    </div>
+                                    <AchievementBookOverlay />
                                 ) : (
                                     <>
                                         {/* Left Page: Main Content Area */}

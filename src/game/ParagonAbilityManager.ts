@@ -4,12 +4,11 @@ import { resolveClassId } from '../config/classes';
 import type { ClassId } from '../config/classes';
 import {
     getUnlockedParagonAbilities,
-    getParagonAbilityById,
     type ParagonAbilityDef,
     type ParagonAbilitySlot,
 } from '../config/paragon-abilities';
 import { AudioManager } from './AudioManager';
-import { Enemy } from './Enemy';
+import type { ItemIconKey } from '../components/ui/ItemIcon';
 
 /**
  * ParagonAbilityManager — Phaser-side manager for Paragon-tier abilities (E, F, Q).
@@ -137,7 +136,7 @@ export class ParagonAbilityManager {
         this.scene.poolManager.getDamageText(x, y - 30, text, color);
     }
 
-    private addBuff(key: string, title: string, icon: string, color: number, duration: number): void {
+    private addBuff(key: string, title: string, icon: ItemIconKey, color: number, duration: number): void {
         this.scene.buffs.addBuff({
             key,
             title,
@@ -211,10 +210,6 @@ export class ParagonAbilityManager {
         // Apply stat modifiers via registry
         const currentDmg = this.scene.registry.get('playerDamage') || this.getBaseDamage();
         const currentSpd = this.scene.registry.get('playerSpeed') || this.scene.stats.speed;
-
-        // Store originals for cleanup
-        const origDmg = currentDmg;
-        const origSpd = currentSpd;
 
         this.scene.stats.recalculateStats();
         // Boost damage by 50% and speed by 30%
@@ -290,7 +285,6 @@ export class ParagonAbilityManager {
 
     /** Rain of Arrows — rains arrows in a target area for 3 seconds */
     private doRainOfArrows(ability: ParagonAbilityDef): void {
-        const player = this.getPlayer();
         const pointer = this.scene.input.activePointer;
         const targetX = pointer.worldX;
         const targetY = pointer.worldY;
@@ -305,7 +299,7 @@ export class ParagonAbilityManager {
         const phaserScene = this.scene as unknown as Phaser.Scene;
         let elapsed = 0;
 
-        const timer = phaserScene.time.addEvent({
+        phaserScene.time.addEvent({
             delay: tickInterval,
             repeat: Math.floor(duration / tickInterval) - 1,
             callback: () => {
@@ -433,12 +427,10 @@ export class ParagonAbilityManager {
                     const burnX = projectile.x;
                     const burnY = projectile.y;
                     const burnDmg = this.getBaseDamage() * 0.5;
-                    let burnTicks = 0;
-                    const burnTimer = phaserScene.time.addEvent({
+                    phaserScene.time.addEvent({
                         delay: 500,
                         repeat: 5,
                         callback: () => {
-                            burnTicks++;
                             const burnTargets = this.getNearbyEnemies(burnX, burnY, explosionRadius * 0.7);
                             for (const enemy of burnTargets) {
                                 enemy.takeDamage(burnDmg, '#ff6600');
@@ -473,7 +465,7 @@ export class ParagonAbilityManager {
 
         const phaserScene = this.scene as unknown as Phaser.Scene;
 
-        const timer = phaserScene.time.addEvent({
+        phaserScene.time.addEvent({
             delay: tickInterval,
             repeat: Math.floor(duration / tickInterval) - 1,
             callback: () => {

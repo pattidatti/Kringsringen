@@ -9,7 +9,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { FantasyButton } from './FantasyButton';
 import { SaveManager } from '../../game/SaveManager';
 import { CLASS_CONFIGS } from '../../config/classes';
-import type { ClassId } from '../../config/classes';
 import type { ParagonProfile } from '../../config/paragon';
 import { getParagonTierName, MAX_CHARACTER_SLOTS } from '../../config/paragon';
 
@@ -79,28 +78,28 @@ const CharacterCard: React.FC<{
                 >
                     {profile.name}
                 </h3>
-                <p className="font-cinzel text-xs uppercase tracking-[0.2em] text-white/50 mb-4">
+                <p className="font-cinzel text-sm uppercase tracking-[0.2em] text-white/50 mb-4">
                     {classConfig.displayName}
                 </p>
 
                 {/* Stats Row */}
                 <div className="grid grid-cols-3 gap-2 mb-4">
                     <div className="flex flex-col items-center bg-white/5 rounded py-2">
-                        <span className="text-[9px] uppercase tracking-widest text-white/40">Level</span>
-                        <span className="text-lg font-cinzel text-white font-bold">{profile.currentGameLevel}</span>
+                        <span className="text-[11px] uppercase tracking-widest text-white/50 mb-1">Level</span>
+                        <span className="text-2xl font-cinzel text-white font-bold">{profile.currentGameLevel}</span>
                     </div>
                     <div className="flex flex-col items-center bg-white/5 rounded py-2">
-                        <span className="text-[9px] uppercase tracking-widest text-white/40">Gull</span>
-                        <span className="text-lg font-cinzel text-amber-300 font-bold">{formatNumber(profile.coins)}</span>
+                        <span className="text-[11px] uppercase tracking-widest text-white/50 mb-1">Gull</span>
+                        <span className="text-2xl font-cinzel text-amber-300 font-bold">{formatNumber(profile.coins)}</span>
                     </div>
                     <div className="flex flex-col items-center bg-white/5 rounded py-2">
-                        <span className="text-[9px] uppercase tracking-widest text-white/40">Drap</span>
-                        <span className="text-lg font-cinzel text-red-400 font-bold">{formatNumber(profile.totalKills)}</span>
+                        <span className="text-[11px] uppercase tracking-widest text-white/50 mb-1">Drap</span>
+                        <span className="text-2xl font-cinzel text-red-400 font-bold">{formatNumber(profile.totalKills)}</span>
                     </div>
                 </div>
 
                 {/* Last played */}
-                <p className="text-[10px] text-white/30 font-cinzel tracking-widest text-center">
+                <p className="text-xs text-white/40 font-cinzel tracking-widest text-center">
                     {timeAgo}
                 </p>
             </div>
@@ -166,12 +165,19 @@ const NewCharacterSlot: React.FC<{ onClick: () => void; disabled: boolean }> = (
         animate={{ opacity: 1, y: 0 }}
         whileHover={disabled ? {} : { y: -4, scale: 1.02 }}
         onClick={disabled ? undefined : onClick}
-        className={`relative rounded-xl border-2 border-dashed overflow-hidden w-[260px] h-[360px] select-none flex flex-col items-center justify-center gap-4 transition-colors
+        className={`relative group rounded-xl border-2 border-dashed overflow-hidden w-[260px] h-[360px] select-none flex flex-col items-center justify-center gap-4 transition-all duration-300
             ${disabled ? 'border-white/5 cursor-not-allowed opacity-30' : 'border-white/20 hover:border-amber-400/50 cursor-pointer'}
         `}
         style={{ background: '#0a0f1a' }}
     >
-        <div className={`w-16 h-16 rounded-full flex items-center justify-center text-3xl font-cinzel ${disabled ? 'bg-white/5 text-white/20' : 'bg-amber-400/10 text-amber-400/70'}`}>
+        <div
+            className={`w-20 h-20 rounded-full flex items-center justify-center text-4xl font-cinzel transition-all duration-300
+                ${disabled
+                    ? 'bg-white/5 text-white/20'
+                    : 'bg-gradient-to-br from-amber-500/20 to-amber-700/10 border-2 border-amber-600/30 text-amber-400/80 shadow-[0_0_20px_rgba(245,158,11,0.15)] group-hover:shadow-[0_0_30px_rgba(245,158,11,0.3)]'
+                }`
+            }
+        >
             +
         </div>
         <p className={`font-cinzel text-sm uppercase tracking-[0.2em] ${disabled ? 'text-white/20' : 'text-white/40'}`}>
@@ -218,19 +224,21 @@ export const CharacterSelectScreen: React.FC<CharacterSelectScreenProps> = ({
                 </p>
             </motion.div>
 
-            {/* Character Grid */}
-            <div className="relative z-10 flex flex-row gap-6 items-start justify-center flex-wrap max-w-[1200px] px-8">
-                {profiles
-                    .sort((a, b) => b.lastPlayedAt - a.lastPlayedAt)
-                    .map((profile) => (
-                        <CharacterCard
-                            key={profile.id}
-                            profile={profile}
-                            onSelect={() => onSelectProfile(profile)}
-                            onDelete={() => handleDelete(profile.id)}
-                        />
-                    ))}
-                <NewCharacterSlot onClick={onNewCharacter} disabled={isFull} />
+            {/* Character Grid (responsive) */}
+            <div className="relative z-10 w-full max-w-[1400px] px-6 sm:px-8 max-h-[65vh] overflow-y-auto scrollbar-thin scrollbar-thumb-white/10 py-8">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 items-start justify-items-center">
+                    {profiles
+                        .sort((a, b) => b.lastPlayedAt - a.lastPlayedAt)
+                        .map((profile) => (
+                            <CharacterCard
+                                key={profile.id}
+                                profile={profile}
+                                onSelect={() => onSelectProfile(profile)}
+                                onDelete={() => handleDelete(profile.id)}
+                            />
+                        ))}
+                    <NewCharacterSlot onClick={onNewCharacter} disabled={isFull} />
+                </div>
             </div>
 
             {/* Back button */}

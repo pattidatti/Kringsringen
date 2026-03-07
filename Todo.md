@@ -70,7 +70,7 @@
 # Score 
 - [x] Score ingame oppe ved siden av mynter
 - [x] Penger og score ser ikke ut til å oppdatere seg oppe til høyre. 
-- [ ] Hvis en overlever hele spillet og dreper sisteboss, må en få highscore og kan skrive inn navnet sitt. 
+- [x] Hvis en overlever hele spillet og dreper sisteboss, må en få highscore og kan skrive inn navnet sitt. 
 
 # Boss battles
 - [x] Orkehøvding er altfor lett å drepe. Trenger litt mer hp, bør være raskere, bruke dash? Kom med forslag. 

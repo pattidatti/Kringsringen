@@ -8,9 +8,10 @@ import { FantasyDebug } from './components/dev/FantasyDebug'
 import { ClassSelector } from './components/ui/ClassSelector'
 import { CharacterSelectScreen } from './components/ui/CharacterSelectScreen'
 import { LevelSelectScreen } from './components/ui/LevelSelectScreen'
+import { LoginGateScreen } from './components/ui/LoginGateScreen'
 import { SaveManager } from './game/SaveManager'
 import { CloudSaveManager } from './services/CloudSaveManager'
-import { resolveClassId, CLASS_CONFIGS } from './config/classes'
+import { resolveClassId } from './config/classes'
 import type { ClassId } from './config/classes'
 import type { ParagonProfile } from './config/paragon'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
@@ -27,7 +28,7 @@ export interface NetworkConfig {
   hostPeerId?: string; // Påkrevd for klienter
 }
 
-type AppScreen = 'landing' | 'character-select' | 'class-select' | 'level-select' | 'game';
+type AppScreen = 'landing' | 'login-gate' | 'character-select' | 'class-select' | 'level-select' | 'game';
 
 /** Inner component with access to AuthContext */
 function AppContent() {
@@ -55,7 +56,7 @@ function AppContent() {
 
   // ─── New Flow: Character Select Screen ───────────────────────────────
 
-  /** "Spill" button → show character select (or landing if no profiles exist) */
+  /** "Spill" button → show login gate or character select */
   const handlePlay = useCallback(() => {
     // One-time migration from legacy save system
     if (!SaveManager.hasProfiles()) {
@@ -68,8 +69,16 @@ function AppContent() {
       }
     }
 
-    setScreen('character-select');
-  }, []);
+    // Check if user has opted to skip login gate
+    const skipLoginGate = localStorage.getItem('kringsringen_skip_login_gate') === 'true';
+    if (skipLoginGate || user) {
+      // User already logged in or opted out → go straight to character select
+      setScreen('character-select');
+    } else {
+      // Show login gate
+      setScreen('login-gate');
+    }
+  }, [user]);
 
   /** Player selected an existing character → show level select */
   const handleSelectProfile = useCallback((profile: ParagonProfile) => {
@@ -90,10 +99,18 @@ function AppContent() {
     setScreen('class-select');
   }, []);
 
+  /** Player completes login/sync on LoginGateScreen */
+  const handleLoginComplete = useCallback(() => {
+    setScreen('character-select');
+  }, []);
+
+  /** Player clicks "Continue without login" on LoginGateScreen */
+  const handleSkipLogin = useCallback(() => {
+    setScreen('character-select');
+  }, []);
+
   /** Player chose a class for new character → create profile and go to game */
-  const handleClassSelected = useCallback((classId: ClassId) => {
-    const classConfig = CLASS_CONFIGS[classId];
-    const characterName = classConfig.displayName; // Default name = class name
+  const handleClassSelected = useCallback((classId: ClassId, characterName: string) => {
     const profile = SaveManager.createProfile(characterName, classId);
 
     setActiveProfile(profile);
@@ -222,7 +239,7 @@ function AppContent() {
           />
           {showClassSelector && (
             <ClassSelector
-              onSelect={(classId) => {
+              onSelect={(classId, _characterName) => {
                 setSelectedClass(classId);
                 SaveManager.save({ lastSelectedClass: classId });
                 setShowClassSelector(false);
@@ -234,6 +251,13 @@ function AppContent() {
             />
           )}
         </>
+      )}
+
+      {screen === 'login-gate' && (
+        <LoginGateScreen
+          onContinue={handleSkipLogin}
+          onLoginComplete={handleLoginComplete}
+        />
       )}
 
       {screen === 'character-select' && (

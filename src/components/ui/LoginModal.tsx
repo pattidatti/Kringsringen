@@ -12,9 +12,13 @@ interface LoginModalProps {
 }
 
 export const LoginModal: React.FC<LoginModalProps> = ({ onSyncComplete }) => {
-  const { user, signIn, signOut, loading: authLoading, error: authError } = useAuth();
+  const { user, signIn, signInWithEmail, signUpWithEmail, signOut, loading: authLoading, error: authError } = useAuth();
   const [syncState, setSyncState] = useState<SyncState>('offline');
   const [syncError, setSyncError] = useState<string | null>(null);
+  const [showEmailForm, setShowEmailForm] = useState(false);
+  const [isSignUp, setIsSignUp] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
 
   // Sync profiles on login
   useEffect(() => {
@@ -52,6 +56,23 @@ export const LoginModal: React.FC<LoginModalProps> = ({ onSyncComplete }) => {
     try {
       await signIn();
       // Sync will be triggered by useEffect when user state updates
+    } catch (error) {
+      // Error already handled by AuthContext
+    }
+  };
+
+  const handleEmailSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      if (isSignUp) {
+        await signUpWithEmail(email, password);
+      } else {
+        await signInWithEmail(email, password);
+      }
+      // Sync will be triggered by useEffect when user state updates
+      setShowEmailForm(false);
+      setEmail('');
+      setPassword('');
     } catch (error) {
       // Error already handled by AuthContext
     }
@@ -146,7 +167,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ onSyncComplete }) => {
     );
   }
 
-  // Show sign-in button
+  // Show sign-in options
   return (
     <motion.div
       className="space-y-4"
@@ -159,14 +180,89 @@ export const LoginModal: React.FC<LoginModalProps> = ({ onSyncComplete }) => {
         Logg inn for å synkronisere karakterene dine på tvers av enheter.
       </div>
 
-      {/* Sign in button */}
-      <FantasyButton
-        label="🔐 Logg inn med Google"
-        variant="primary"
-        onClick={handleSignIn}
-        className="w-full"
-        disabled={authLoading}
-      />
+      {!showEmailForm ? (
+        <>
+          {/* Google Sign-in button */}
+          <FantasyButton
+            label="🔐 Logg inn med Google"
+            variant="primary"
+            onClick={handleSignIn}
+            className="w-full"
+            disabled={authLoading}
+          />
+
+          {/* Email/Password button */}
+          <FantasyButton
+            label="📧 Logg inn med e-post"
+            variant="secondary"
+            onClick={() => {
+              setShowEmailForm(true);
+              setIsSignUp(false);
+            }}
+            className="w-full !text-black [text-shadow:none]"
+            disabled={authLoading}
+          />
+        </>
+      ) : (
+        <>
+          {/* Email/Password Form */}
+          <form onSubmit={handleEmailSubmit} className="space-y-3">
+            <h3 className="font-cinzel font-bold text-lg text-amber-900 text-center">
+              {isSignUp ? 'Opprett konto' : 'Logg inn'}
+            </h3>
+
+            <input
+              type="email"
+              placeholder="E-postadresse"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              className="w-full px-4 py-2 rounded-lg border-2 border-amber-300 bg-white text-amber-900 font-crimson focus:border-amber-500 focus:outline-none"
+              disabled={authLoading}
+            />
+
+            <input
+              type="password"
+              placeholder="Passord (min. 6 tegn)"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              minLength={6}
+              className="w-full px-4 py-2 rounded-lg border-2 border-amber-300 bg-white text-amber-900 font-crimson focus:border-amber-500 focus:outline-none"
+              disabled={authLoading}
+            />
+
+            <FantasyButton
+              label={isSignUp ? 'Opprett konto' : 'Logg inn'}
+              variant="primary"
+              type="submit"
+              className="w-full"
+              disabled={authLoading}
+            />
+
+            <button
+              type="button"
+              onClick={() => setIsSignUp(!isSignUp)}
+              className="w-full text-sm text-amber-700 hover:text-amber-900 font-crimson underline"
+              disabled={authLoading}
+            >
+              {isSignUp ? 'Har du allerede konto? Logg inn' : 'Ingen konto? Opprett en'}
+            </button>
+
+            <FantasyButton
+              label="← Tilbake"
+              variant="secondary"
+              onClick={() => {
+                setShowEmailForm(false);
+                setEmail('');
+                setPassword('');
+              }}
+              className="w-full !text-black [text-shadow:none]"
+              disabled={authLoading}
+            />
+          </form>
+        </>
+      )}
 
       {/* Auth error message */}
       {authError && (

@@ -5,16 +5,14 @@ import { GameOverOverlay } from './ui/GameOverOverlay';
 import { Hotbar } from './ui/Hotbar';
 import { TopHUD } from './ui/TopHUD';
 import { EnhancedDashIndicator } from './ui/EnhancedDashIndicator';
-import { ClassAbilityBar } from './ui/ClassAbilityBar';
 import { MenuAnchor } from './ui/MenuAnchor';
 import { FantasyBook, type BookMode } from './ui/FantasyBook';
 import { BossSplashScreen } from './ui/BossSplashScreen';
 import { BossHUD } from './ui/BossHUD';
 import { HighscoreNotification } from './ui/HighscoreNotification';
-import { BuffHUD } from './ui/BuffHUD';
-import { VersIndicator } from './ui/VersIndicator';
-import { SkaldBuffPanel } from './ui/SkaldBuffPanel';
+import { UnifiedBuffDisplay } from './ui/UnifiedBuffDisplay';
 import { VictoryOverlay } from './ui/VictoryOverlay';
+import { VersIndicator } from './ui/VersIndicator';
 import { PacketType } from '../network/SyncSchemas';
 import { AchievementToastQueue } from './ui/AchievementPopup';
 import type { AchievementDef } from '../config/achievements';
@@ -773,7 +771,6 @@ export const GameContainer: React.FC<GameContainerProps> = React.memo(({ network
                 </div>
 
                 <div className="absolute bottom-6 left-1/2 -translate-x-1/2 pointer-events-auto transition-all duration-500 flex flex-col items-center gap-2">
-                    <ClassAbilityBar />
                     {selectedClass === 'skald' && <VersIndicator />}
                     <EnhancedDashIndicator />
                     <Hotbar />
@@ -800,8 +797,7 @@ export const GameContainer: React.FC<GameContainerProps> = React.memo(({ network
             </div>
 
             <BossHUD />
-            <BuffHUD />
-            {selectedClass === 'skald' && <SkaldBuffPanel />}
+            <UnifiedBuffDisplay />
 
             {isLoadingLevel && (
                 <div className="absolute inset-0 z-[100] bg-black/80 flex items-center justify-center pointer-events-auto backdrop-blur-sm">

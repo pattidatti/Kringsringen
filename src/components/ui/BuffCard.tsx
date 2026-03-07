@@ -109,13 +109,22 @@ export const BuffCard: React.FC<BuffCardProps> = React.memo(({
                         animate={{ opacity: 1, y: 0 }}
                         className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 z-50 pointer-events-none"
                     >
-                        <div className="bg-black/95 backdrop-blur-md border border-amber-700/50 rounded-lg px-3 py-2 min-w-[140px]">
-                            <div className="text-amber-300 text-[10px] font-cinzel font-bold tracking-wider uppercase">
+                        <div className="bg-black/95 backdrop-blur-md border border-amber-700/50 rounded-lg px-3 py-2 min-w-[160px] shadow-xl">
+                            <div className="text-amber-300 text-xs font-cinzel font-bold tracking-wider uppercase">
                                 {title}
                             </div>
                             {description && (
-                                <div className="text-white/80 text-[9px] mt-1">
+                                <div className="text-white/90 text-[10px] mt-1">
                                     {description}
+                                </div>
+                            )}
+                            {statModifiers && statModifiers.length > 0 && (
+                                <div className="flex flex-wrap gap-1 mt-2 pt-2 border-t border-amber-700/30">
+                                    {statModifiers.map((stat, idx) => (
+                                        <span key={idx} className="text-amber-400 text-[10px] font-bold">
+                                            {stat.displayFormat === 'percent' ? `+${stat.value}%` : `+${stat.value}`} {stat.type}
+                                        </span>
+                                    ))}
                                 </div>
                             )}
                         </div>
@@ -174,18 +183,18 @@ export const BuffCard: React.FC<BuffCardProps> = React.memo(({
 
             {/* Title & Description */}
             <div className="flex flex-col">
-                <span className="text-[10px] font-black uppercase tracking-widest text-white/50 leading-none mb-1" style={{ fontFamily: 'Cinzel, serif' }}>
+                <span className="text-xs font-black uppercase tracking-widest text-white/60 leading-none mb-1" style={{ fontFamily: 'Cinzel, serif' }}>
                     {title}
                 </span>
                 {description && (
-                    <span className="text-white text-[10px] font-medium truncate max-w-[100px]" style={{ fontFamily: 'Crimson Text, serif' }}>
+                    <span className="text-white text-[11px] font-medium truncate max-w-[110px]" style={{ fontFamily: 'Crimson Text, serif' }}>
                         {description}
                     </span>
                 )}
                 {statModifiers && statModifiers.length > 0 && (
                     <div className="flex flex-wrap gap-1 mt-1">
                         {statModifiers.map((stat, idx) => (
-                            <span key={idx} className="text-amber-400 text-[9px] font-bold">
+                            <span key={idx} className="text-amber-400 text-[10px] font-bold">
                                 {stat.displayFormat === 'percent' ? `+${stat.value}%` : `+${stat.value}`}
                             </span>
                         ))}

@@ -11,7 +11,7 @@ import { ItemIcon, type ItemIconKey } from './ItemIcon';
 import { isItemSpriteIcon } from '../../config/upgrades';
 import { AbilityTooltip } from './AbilityTooltip';
 import { getAbilityTooltipData } from '../../utils/tooltipDataBuilder';
-import { getUnlockedParagonAbilities, type ParagonAbilityDef } from '../../config/paragon-abilities';
+import { getUnlockedParagonAbilities } from '../../config/paragon-abilities';
 
 /**
  * Selector sprite constants.
@@ -168,6 +168,19 @@ export const Hotbar: React.FC = React.memo(() => {
                         const isUnlocked = isAbilitySlot || (isRealWeapon && unlocked.includes(slot.id));
                         const isActive = isAbilitySlot ? false : currentWeapon === slot.id;
 
+                        // Check if ability is ready (not on cooldown)
+                        let isAbilityReady = false;
+                        if (isAbilitySlot) {
+                            const now = Date.now();
+                            if (slot.hotkey === '2') {
+                                isAbilityReady = !classAbilityCooldown || (classAbilityCooldown.timestamp + classAbilityCooldown.duration) <= now;
+                            } else if (slot.hotkey === '3') {
+                                isAbilityReady = !classAbility3Cooldown || (classAbility3Cooldown.timestamp + classAbility3Cooldown.duration) <= now;
+                            } else if (slot.hotkey === '4') {
+                                isAbilityReady = !classAbility4Cooldown || (classAbility4Cooldown.timestamp + classAbility4Cooldown.duration) <= now;
+                            }
+                        }
+
                         return (
                             <div
                                 key={slot.hotkey}
@@ -190,6 +203,21 @@ export const Hotbar: React.FC = React.memo(() => {
                             >
                                 {/* Slot dark recess */}
                                 <div className="absolute inset-x-0 inset-y-0.5 bg-black/50 rounded-md" />
+
+                                {/* Ready glow for abilities */}
+                                {isAbilitySlot && isAbilityReady && (
+                                    <motion.div
+                                        className="absolute inset-0 rounded-md border-2 border-purple-400/60 pointer-events-none z-10"
+                                        animate={{
+                                            boxShadow: [
+                                                '0 0 8px rgba(168,85,247,0.4)',
+                                                '0 0 16px rgba(168,85,247,0.6)',
+                                                '0 0 8px rgba(168,85,247,0.4)',
+                                            ]
+                                        }}
+                                        transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                                    />
+                                )}
 
                                 {/* Selector — active weapon only */}
                                 {isActive && (

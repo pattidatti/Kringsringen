@@ -7,7 +7,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { FantasyButton } from './FantasyButton';
 import { LEVEL_CONFIG } from '../../config/levels';
-import { getBossForLevel, BOSS_CONFIGS } from '../../config/bosses';
+import { getBossForLevel } from '../../config/bosses';
 import { getParagonTierName, FARM_COIN_MULTIPLIER } from '../../config/paragon';
 import type { ParagonProfile } from '../../config/paragon';
 
@@ -197,7 +197,7 @@ export const LevelSelectScreen: React.FC<LevelSelectScreenProps> = ({
                 })}
             </div>
 
-            {/* Continue button (quick access to current level) */}
+            {/* Action buttons (Tilbake on left, Fortsett on right) */}
             <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -205,16 +205,16 @@ export const LevelSelectScreen: React.FC<LevelSelectScreenProps> = ({
                 className="relative z-10 mt-8 flex gap-4"
             >
                 <FantasyButton
+                    label="← Tilbake"
+                    variant="secondary"
+                    onClick={onClose}
+                    className="w-44 text-base !text-black [text-shadow:none]"
+                />
+                <FantasyButton
                     label={`Fortsett Level ${profile.currentGameLevel}`}
                     variant="primary"
                     onClick={() => onSelectLevel(profile.currentGameLevel)}
-                    className="w-64 text-base"
-                />
-                <FantasyButton
-                    label="Tilbake"
-                    variant="secondary"
-                    onClick={onClose}
-                    className="w-36 text-base"
+                    className="w-64 text-base !text-black [text-shadow:none]"
                 />
             </motion.div>
         </div>

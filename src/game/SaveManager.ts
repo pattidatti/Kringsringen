@@ -240,6 +240,20 @@ export class SaveManager {
         return store.globalSettings;
     }
 
+    /** Check if user has seen login gate before */
+    static hasSeenLoginGate(): boolean {
+        return localStorage.getItem('kringsringen_skip_login_gate') === 'true';
+    }
+
+    /** Set user preference to skip login gate */
+    static setLoginGatePreference(skip: boolean): void {
+        if (skip) {
+            localStorage.setItem('kringsringen_skip_login_gate', 'true');
+        } else {
+            localStorage.removeItem('kringsringen_skip_login_gate');
+        }
+    }
+
     // ─── Legacy RunProgress System (kept for backward compat + multiplayer) ──
 
     static saveRunProgress(progress: RunProgress): void {

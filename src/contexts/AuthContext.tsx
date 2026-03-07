@@ -4,6 +4,8 @@ import {
   getAuth,
   signInWithPopup,
   GoogleAuthProvider,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
   signOut as firebaseSignOut,
   onAuthStateChanged,
   type Auth,
@@ -40,6 +42,10 @@ export interface AuthContextValue {
   user: User | null;
   /** Sign in with Google popup */
   signIn: () => Promise<void>;
+  /** Sign in with email and password */
+  signInWithEmail: (email: string, password: string) => Promise<void>;
+  /** Sign up with email and password */
+  signUpWithEmail: (email: string, password: string) => Promise<void>;
   /** Sign out current user */
   signOut: () => Promise<void>;
   /** Loading state during auth initialization */
@@ -116,6 +122,56 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   };
 
+  const signInWithEmail = async (email: string, password: string) => {
+    setError(null);
+    setLoading(true);
+    try {
+      const authInstance = getAuthInstance();
+      await signInWithEmailAndPassword(authInstance, email, password);
+      // User state will be updated by onAuthStateChanged listener
+    } catch (err: any) {
+      console.error('[AuthContext] Email sign-in failed:', err);
+      if (err.code === 'auth/user-not-found') {
+        setError('Bruker ikke funnet.');
+      } else if (err.code === 'auth/wrong-password') {
+        setError('Feil passord.');
+      } else if (err.code === 'auth/invalid-email') {
+        setError('Ugyldig e-postadresse.');
+      } else if (err.code === 'auth/user-disabled') {
+        setError('Kontoen er deaktivert.');
+      } else {
+        setError('Kunne ikke logge inn. Prøv igjen.');
+      }
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const signUpWithEmail = async (email: string, password: string) => {
+    setError(null);
+    setLoading(true);
+    try {
+      const authInstance = getAuthInstance();
+      await createUserWithEmailAndPassword(authInstance, email, password);
+      // User state will be updated by onAuthStateChanged listener
+    } catch (err: any) {
+      console.error('[AuthContext] Email sign-up failed:', err);
+      if (err.code === 'auth/email-already-in-use') {
+        setError('E-postadressen er allerede i bruk.');
+      } else if (err.code === 'auth/invalid-email') {
+        setError('Ugyldig e-postadresse.');
+      } else if (err.code === 'auth/weak-password') {
+        setError('Passordet er for svakt (minimum 6 tegn).');
+      } else {
+        setError('Kunne ikke opprette konto. Prøv igjen.');
+      }
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const signOut = async () => {
     setError(null);
     try {
@@ -131,6 +187,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const value: AuthContextValue = {
     user,
     signIn,
+    signInWithEmail,
+    signUpWithEmail,
     signOut,
     loading,
     error,

@@ -39,11 +39,13 @@ export function useSprite({ sprite, scale = 1 }: UseSpriteOptions) {
         const style: CSSProperties = {
             backgroundImage,
             backgroundPosition: `-${frame.x}px -${frame.y}px`,
-            width: `${frame.w * scale}px`,
-            height: `${frame.h * scale}px`,
+            width: `${frame.w}px`,
+            height: `${frame.h}px`,
             backgroundRepeat: 'no-repeat',
             imageRendering: 'pixelated',
-            backgroundSize: 'auto', // Important so it doesn't scale the whole image
+            backgroundSize: 'auto',
+            transform: scale !== 1 ? `scale(${scale})` : undefined,
+            transformOrigin: 'top left',
         };
 
         return { style, frame };
