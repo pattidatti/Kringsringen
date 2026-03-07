@@ -143,14 +143,37 @@ export const AUDIO_MANIFEST: SoundConfig[] = [
     { id: 'dash', path: 'assets/audio/sfx/whoosh_1.wav', category: 'sfx', volume: 1.0, pitchVariance: 0.1 },
     { id: 'upgrade_buy', path: 'assets/audio/sfx/coins_gather_quick.wav', category: 'sfx', volume: 0.5 },
     { id: 'page_turn', path: 'assets/audio/sfx/page_turn.wav', category: 'sfx', volume: 0.5 },
+    { id: 'achievement_unlock', path: 'assets/audio/sfx/weapon_pick_up.wav', category: 'ui', volume: 0.6, pitchVariance: 0.15 },
 
     // — Lightning SFX —
     { id: 'lightning_cast', path: 'assets/audio/sfx/ice_throw.wav', category: 'sfx', volume: 0.5, pitchVariance: 0.2 },
     { id: 'lightning_impact', path: 'assets/audio/sfx/ice_freeze.wav', category: 'sfx', volume: 0.55, reverb: true },
 
     // — Skald SFX —
-    { id: 'harp_cast', path: 'assets/audio/sfx/whoosh_1.wav', category: 'sfx', volume: 0.4, pitchVariance: 0.15 },
-    { id: 'vers_cast', path: 'assets/audio/sfx/whoosh_1.wav', category: 'sfx', volume: 0.5, pitchVariance: 0.20 },
+    {
+        id: 'harp_cast',
+        variants: [
+            'assets/audio/sfx/skald_cast_1.wav',
+            'assets/audio/sfx/skald_cast_2.wav',
+            'assets/audio/sfx/skald_cast_3.wav',
+            'assets/audio/sfx/skald_cast_4.wav',
+        ],
+        category: 'sfx',
+        volume: 0.45,
+        pitchVariance: 0.12,
+    },
+    {
+        id: 'vers_cast',
+        variants: [
+            'assets/audio/sfx/skald_cast_1.wav',
+            'assets/audio/sfx/skald_cast_2.wav',
+            'assets/audio/sfx/skald_cast_3.wav',
+            'assets/audio/sfx/skald_cast_4.wav',
+        ],
+        category: 'sfx',
+        volume: 0.45,
+        pitchVariance: 0.12,
+    },
 
     // — Krieger Abilities —
     { id: 'whirl_activate', path: 'assets/audio/sfx/sword_slice.wav', category: 'sfx', volume: 0.6, pitchVariance: 0.12 },
@@ -163,5 +186,17 @@ export const AUDIO_MANIFEST: SoundConfig[] = [
         category: 'sfx',
         volume: 0.5,
         pitchVariance: 0.10,
+    },
+
+    // — Shield SFX —
+    {
+        id: 'shield_activate',
+        variants: [
+            'assets/audio/sfx/shield_activate_1.wav',
+            'assets/audio/sfx/shield_activate_2.wav',
+        ],
+        category: 'sfx',
+        volume: 0.55,
+        pitchVariance: 0.08,
     },
 ];

@@ -5,6 +5,7 @@ import bookOpen from '../../assets/ui/fantasy/containers/book_open.png';
 import tabRed from '../../assets/ui/fantasy/tabs/red.png';
 import tabGreen from '../../assets/ui/fantasy/tabs/green.png';
 import tabYellow from '../../assets/ui/fantasy/tabs/yellow.png';
+import tabBlue from '../../assets/ui/fantasy/tabs/blue.png';
 import { UPGRADES, type UpgradeConfig, isItemSpriteIcon, CHAPTER_DEFINITIONS, type ChapterId } from '../../config/upgrades';
 import { CLASS_UPGRADES } from '../../config/class-upgrades';
 import { CLASS_CONFIGS, resolveClassId } from '../../config/classes';
@@ -13,6 +14,9 @@ import { getParagonTierName } from '../../config/paragon';
 import { ItemIcon, type ItemIconKey } from './ItemIcon';
 import { useGameRegistry } from '../../hooks/useGameRegistry';
 import { SettingsContent } from './SettingsContent';
+import { AchievementList } from './AchievementList';
+import { useSprite } from '../../hooks/useSprite';
+import type { SpriteKey } from '../../config/ui-atlas';
 // import { type FantasyTabVariant } from '../../types/fantasy-ui.generated';
 
 export type BookMode = 'view' | 'level_up' | 'shop';
@@ -45,12 +49,13 @@ interface FantasyBookProps {
     onExitGame?: () => void;
 }
 
-type TabKey = 'character' | 'upgrades' | 'settings';
+type TabKey = 'character' | 'upgrades' | 'achievements' | 'settings';
 
-const TABS: Record<TabKey, { title: string; icon: string; color: string; locked?: boolean }> = {
-    character: { title: 'Character', icon: tabRed, color: 'text-red-900' },
-    upgrades: { title: 'Upgrades', icon: tabGreen, color: 'text-emerald-900' },
-    settings: { title: 'Settings', icon: tabYellow, color: 'text-amber-900' },
+const TABS: Record<TabKey, { title: string; icon: string; spriteIcon: SpriteKey; color: string; locked?: boolean }> = {
+    character: { title: 'Character', icon: tabRed, spriteIcon: 'icon_shield_large', color: 'text-red-900' },
+    upgrades: { title: 'Upgrades', icon: tabGreen, spriteIcon: 'icon_backpack', color: 'text-emerald-900' },
+    achievements: { title: 'Achievements', icon: tabBlue, spriteIcon: 'icon_coin', color: 'text-blue-900' },
+    settings: { title: 'Settings', icon: tabYellow, spriteIcon: 'icon_gear', color: 'text-amber-900' },
 };
 
 const CATEGORY_THEMES: Record<string, { primary: string; secondary: string; border: string; bg: string; text: string }> = {
@@ -171,6 +176,48 @@ const StatRow = ({ label, value, icon }: { label: string, value: string | number
     </div>
 );
 
+// Tab button component (extracted to fix Rules of Hooks violation)
+interface TabButtonProps {
+    tabKey: TabKey;
+    topOffset: number;
+    activeTab: TabKey;
+    onTabChange: (key: TabKey) => void;
+}
+
+const TabButton: React.FC<TabButtonProps> = ({ tabKey, topOffset, activeTab, onTabChange }) => {
+    const config = TABS[tabKey];
+    const isActive = activeTab === tabKey;
+
+    // ✅ Safe: useSprite is now called inside a React component
+    const { style: spriteStyle } = useSprite({ sprite: config.spriteIcon, scale: 2 });
+
+    return (
+        <button
+            onClick={() => onTabChange(tabKey)}
+            className={`absolute right-[-74px] w-[80px] h-[32px] flex items-center gap-1 pl-2 transition-all duration-200
+                ${isActive ? 'translate-x-[-4px] brightness-110' : 'hover:translate-x-[-2px] opacity-80'}`}
+            style={{
+                top: `${topOffset}%`,
+                backgroundImage: `url(${config.icon})`,
+                backgroundSize: '100% 100%',
+                imageRendering: 'pixelated',
+                zIndex: isActive ? 10 : 0
+            }}
+        >
+            {/* Sprite icon rendered directly with useSprite */}
+            <div
+                style={spriteStyle}
+                className={`transition-transform flex-shrink-0 ${isActive ? 'scale-110' : ''}`}
+            />
+
+            <span className={`font-cinzel text-[9px] uppercase tracking-tighter leading-tight ${config.color}
+                ${isActive ? 'font-bold' : 'opacity-70'}`}>
+                {config.title}
+            </span>
+        </button>
+    );
+};
+
 export const FantasyBook: React.FC<FantasyBookProps> = React.memo(({
     isOpen,
     mode,
@@ -252,31 +299,6 @@ export const FantasyBook: React.FC<FantasyBookProps> = React.memo(({
         const activeCategoryDef = classConfig.shopCategories.find(c => c.id === activeShopCategory);
         return groupByChapter(shopItems, activeCategoryDef?.chapterLabels);
     }, [shopItems, activeShopCategory, classConfig]);
-
-    const renderTabButton = (key: TabKey, topOffset: number) => {
-        const config = TABS[key];
-        const isActive = activeTab === key;
-
-        return (
-            <button
-                onClick={() => setActiveTab(key)}
-                className={`absolute right-[-74px] w-[80px] h-[32px] flex items-center pl-3 transition-all duration-200 
-                    ${isActive ? 'translate-x-[-4px] brightness-110' : 'hover:translate-x-[-2px] opacity-80'}`}
-                style={{
-                    top: `${topOffset}%`,
-                    backgroundImage: `url(${config.icon})`,
-                    backgroundSize: '100% 100%',
-                    imageRendering: 'pixelated',
-                    zIndex: isActive ? 10 : 0
-                }}
-            >
-                <span className={`font-cinzel text-[10px] uppercase tracking-tighter ${config.color} 
-                    ${isActive ? 'font-bold' : 'opacity-70'}`}>
-                    {config.title}
-                </span>
-            </button>
-        );
-    };
 
     const renderStatusPage = () => (
         <div className="space-y-4 font-crimson text-slate-800">
@@ -691,9 +713,10 @@ export const FantasyBook: React.FC<FantasyBookProps> = React.memo(({
                             />
 
                             {/* Tabs */}
-                            {renderTabButton('character', 15)}
-                            {renderTabButton('upgrades', 30)}
-                            {renderTabButton('settings', 45)}
+                            <TabButton tabKey="character" topOffset={15} activeTab={activeTab} onTabChange={setActiveTab} />
+                            <TabButton tabKey="upgrades" topOffset={30} activeTab={activeTab} onTabChange={setActiveTab} />
+                            <TabButton tabKey="achievements" topOffset={45} activeTab={activeTab} onTabChange={setActiveTab} />
+                            <TabButton tabKey="settings" topOffset={60} activeTab={activeTab} onTabChange={setActiveTab} />
 
                             {/* Content Layer */}
                             <motion.div
@@ -705,6 +728,13 @@ export const FantasyBook: React.FC<FantasyBookProps> = React.memo(({
                                 {activeTab === 'settings' ? (
                                     <div className="col-span-2 h-full">
                                         <SettingsContent inBookContext={true} />
+                                    </div>
+                                ) : activeTab === 'achievements' ? (
+                                    <div className="col-span-2 h-full px-5 py-3 overflow-y-auto custom-scrollbar">
+                                        <h2 className={`text-2xl font-bold mb-4 font-cinzel border-b-2 pb-2 ${TABS[activeTab].color} border-current opacity-80 sticky top-0 bg-[#e3dac9] z-10`}>
+                                            Achievements
+                                        </h2>
+                                        <AchievementList onClose={() => {}} />
                                     </div>
                                 ) : (
                                     <>

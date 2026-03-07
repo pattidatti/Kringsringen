@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import type { IMainScene } from './IMainScene';
+import { AudioManager } from './AudioManager';
 
 /**
  * Handles all player input and translates it into game commands.
@@ -240,6 +241,7 @@ export class InputManager {
         }
         player.setAlpha(0.7);
         this.scene.events.emit('player-dash');
+        AudioManager.instance.playSFX('dash');
 
         const dashFx = (this.scene as unknown as Phaser.Scene).add.sprite(player.x, player.y, 'dash_effect');
         dashFx.setDepth(player.depth + 1).setScale(2).play('player-dash-effect', true);
@@ -390,6 +392,7 @@ export class InputManager {
                 if (time - this.lastFootstepTime > 250) {
                     this.lastFootstepTime = time;
                     this.scene.events.emit('play-footstep');
+                    AudioManager.instance.playSFX('footstep');
                 }
             } else {
                 if (player.anims.currentAnim?.key !== 'player-idle') player.play('player-idle');

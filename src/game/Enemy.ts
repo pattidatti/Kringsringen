@@ -912,6 +912,9 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         this.emit('dead', this.x, this.y);
         console.log(`Enemy ${this.enemyType} emitted 'dead' event at ${this.x}, ${this.y}. Listeners:`, this.listenerCount('dead'));
 
+        // Emit scene event for achievement tracking
+        this.scene.events.emit('enemy-killed', { enemyType: this.enemyType, isBoss: false });
+
         // ── Death visual sequence ────────────────────────────────────────────
         // 1. Brief white flash to signal the killing blow.
         this.clearTint();

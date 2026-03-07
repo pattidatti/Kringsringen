@@ -36,11 +36,16 @@ export const UI_ATLAS = {
         panel_red: { x: 0, y: 240, w: 48, h: 48, slice: 16 }, // Row 5: Red
         panel_purple: { x: 0, y: 288, w: 48, h: 48, slice: 16 }, // Row 6: Purple
 
-        // Icons (Assuming 16x16 grid)
+        // Icons (UI_Icons.png - 16x16 grid)
         icon_sword: { x: 0, y: 0, w: 16, h: 16 },
         icon_shield: { x: 16, y: 0, w: 16, h: 16 },
         icon_heart: { x: 32, y: 0, w: 16, h: 16 },
         icon_coin: { x: 48, y: 0, w: 16, h: 16 },
+
+        // Tab icons (for FantasyBook tabs)
+        icon_gear: { x: 32, y: 16, w: 16, h: 16 },         // col=2 row=1 ✓ Settings
+        icon_backpack: { x: 160, y: 32, w: 16, h: 16 },    // col=10 row=2 ✓ Upgrades
+        icon_shield_large: { x: 192, y: 0, w: 16, h: 16 }, // col=12 row=0 ✓ Character
 
         // Bars
         bar_health_frame: { x: 192, y: 6, w: 48, h: 19, slice: 5 }, // Verified

@@ -374,8 +374,9 @@ export class ClassAbilityManager {
             });
         });
 
-        // Sfx placeholder or trigger
-        this.scene.events.emit('sfx-shield-up');
+        // Shield activation SFX
+        AudioManager.instance.playSFX('shield_activate', { volume: 0.6 });
+        this.scene.registry.set('bulwarkActiveUntil', Date.now() + duration);
     }
 
     public update(time: number, delta: number): void {
@@ -718,6 +719,9 @@ export class ClassAbilityManager {
             category: 'ultimate',
             priority: 15
         });
+
+        // Shield/Aura activation SFX (magical protective aura)
+        AudioManager.instance.playSFX('shield_activate', { volume: 0.5, pitch: 0.95 });
 
         // Enhanced visual: Glorious healing aura
         const player = this.scene.data.get('player') as Phaser.Physics.Arcade.Sprite;

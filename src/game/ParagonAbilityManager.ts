@@ -247,6 +247,9 @@ export class ParagonAbilityManager {
         // Make player invincible
         this.scene.combat.setDashIframe(true);
 
+        // Shield activation SFX
+        AudioManager.instance.playSFX('shield_activate', { volume: 0.6 });
+
         // Blue shield VFX
         const phaserScene = this.scene as unknown as Phaser.Scene;
         const shield = phaserScene.add.circle(player.x, player.y, 60, 0x4488ff, 0.25)

@@ -282,6 +282,8 @@ export class WaveManager {
 
         if (this.enemiesAlive === 0 && this.enemiesToSpawnInWave === 0) {
             if (this.currentWave < config.waves) {
+                // Wave completed
+                this.scene.events.emit('wave-complete', { wave: this.currentWave, level: this.currentLevel });
                 this.currentWave++;
                 this.scene.time.delayedCall(GAME_CONFIG.WAVES.WAVE_DELAY, () => this.startWave());
             } else {

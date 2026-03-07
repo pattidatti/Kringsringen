@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { AchievementDef } from '../../config/achievements';
+import { AudioManager } from '../../game/AudioManager';
 
 interface AchievementPopupProps {
   /** Achievement to display (null = hidden) */
@@ -23,6 +24,9 @@ export const AchievementPopup: React.FC<AchievementPopupProps> = ({
       setProgress(100);
       return;
     }
+
+    // Play achievement unlock sound
+    AudioManager.instance.playSFX('achievement_unlock', { volume: 0.6 });
 
     // Auto-dismiss timer
     const dismissTimer = setTimeout(() => {
