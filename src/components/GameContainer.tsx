@@ -14,12 +14,14 @@ import { HighscoreNotification } from './ui/HighscoreNotification';
 import { BuffHUD } from './ui/BuffHUD';
 import { VersIndicator } from './ui/VersIndicator';
 import { SkaldBuffPanel } from './ui/SkaldBuffPanel';
+import { VictoryOverlay } from './ui/VictoryOverlay';
 import { PacketType } from '../network/SyncSchemas';
 
 import { setGameInstance } from '../hooks/useGameRegistry';
 import type { NetworkConfig } from '../App';
 import type { IMainScene } from '../game/IMainScene';
 import type { ClassId } from '../config/classes';
+import type { ParagonProfile } from '../config/paragon';
 
 interface GameContainerProps {
     networkConfig?: NetworkConfig | null;
@@ -27,9 +29,13 @@ interface GameContainerProps {
     /** Klassen spilleren valgte i ClassSelector (eller hentet fra RunProgress) */
     selectedClass?: ClassId;
     onExitToMenu?: () => void;
+    /** Active Paragon profile (null = legacy mode) */
+    activeProfile?: ParagonProfile | null;
+    /** Target level from level select (null = continue from save) */
+    targetLevel?: number | null;
 }
 
-export const GameContainer: React.FC<GameContainerProps> = React.memo(({ networkConfig, continueRun, selectedClass, onExitToMenu }) => {
+export const GameContainer: React.FC<GameContainerProps> = React.memo(({ networkConfig, continueRun, selectedClass, onExitToMenu, activeProfile, targetLevel }) => {
     const phaserContainerRef = useRef<HTMLDivElement>(null);
     const gameInstanceRef = useRef<Phaser.Game | null>(null);
 
@@ -60,6 +66,9 @@ export const GameContainer: React.FC<GameContainerProps> = React.memo(({ network
     const isLoadingLevelRef = useRef(isLoadingLevel);
     const readyReasonRef = useRef(readyReason);
     const isExitingRef = useRef(false);
+
+    // Victory / Ascension state
+    const [showVictory, setShowVictory] = useState(false);
 
     const [rebootKey, setRebootKey] = useState(0);
     const rebootKeyRef = useRef(rebootKey);
@@ -131,6 +140,16 @@ export const GameContainer: React.FC<GameContainerProps> = React.memo(({ network
             const game = createGame(phaserContainerRef.current, networkConfig, continueRun, selectedClass); // Pass element directly
             gameInstanceRef.current = game;
 
+            // Inject Paragon state into Phaser registry for WaveManager and other systems
+            if (activeProfile) {
+                game.registry.set('paragonLevel', activeProfile.paragonLevel);
+                game.registry.set('clearedLevels', [...activeProfile.clearedLevels]);
+                game.registry.set('activeProfileId', activeProfile.id);
+            } else {
+                game.registry.set('paragonLevel', 0);
+                game.registry.set('clearedLevels', []);
+            }
+
             if (continueRun) {
                 setIsLoadingLevel(true); // HARDENING: Force overlay if continuing
             } else {
@@ -178,8 +197,15 @@ export const GameContainer: React.FC<GameContainerProps> = React.memo(({ network
                     mainScene.events.on('level-complete', () => {
                         setLoadedPlayers(new Set());
                         setSyncState(s => ({ ...s, loaded: 0 }));
-                        setBookMode('shop');
-                        setIsBookOpen(true);
+
+                        // Check if this was the final level (10) — show victory/ascension overlay
+                        const currentLevel = game.registry.get('gameLevel') || 1;
+                        if (currentLevel >= 10 && activeProfile) {
+                            setShowVictory(true);
+                        } else {
+                            setBookMode('shop');
+                            setIsBookOpen(true);
+                        }
                     });
 
                     mainScene.events.on('boss-defeated', () => {
@@ -383,6 +409,17 @@ export const GameContainer: React.FC<GameContainerProps> = React.memo(({ network
                         } else {
                             mainScene.restartGame();
                         }
+                    });
+
+                    // Paragon: Retry current level (soft death)
+                    mainScene.events.on('request-retry-level', () => {
+                        const currentLevel = game.registry.get('gameLevel') || 1;
+                        mainScene.restartAtLevel(currentLevel);
+                    });
+
+                    // Paragon: Exit to menu (save and quit)
+                    mainScene.events.on('request-exit-to-menu', () => {
+                        onExitToMenu?.();
                     });
                 }
 
@@ -769,6 +806,35 @@ export const GameContainer: React.FC<GameContainerProps> = React.memo(({ network
 
             <BossSplashScreen />
             <GameOverOverlay />
+
+            {/* Victory / Ascension Overlay (Paragon: after beating Level 10) */}
+            {showVictory && activeProfile && (
+                <VictoryOverlay
+                    paragonLevel={activeProfile.paragonLevel}
+                    onAscend={() => {
+                        // Ascend to next Paragon tier
+                        const profile = SaveManager.getActiveProfile();
+                        if (profile) {
+                            profile.paragonLevel++;
+                            profile.currentGameLevel = 1;
+                            profile.currentWave = 1;
+                            profile.clearedLevels = [];
+                            profile.highestLevelReached = Math.max(profile.highestLevelReached, 10);
+                            SaveManager.updateProfile(profile);
+
+                            // Update registry
+                            gameInstanceRef.current?.registry.set('paragonLevel', profile.paragonLevel);
+                            gameInstanceRef.current?.registry.set('clearedLevels', []);
+                        }
+                        setShowVictory(false);
+                        onExitToMenu?.();
+                    }}
+                    onReturnToMenu={() => {
+                        setShowVictory(false);
+                        onExitToMenu?.();
+                    }}
+                />
+            )}
         </div>
     );
 }, (prev, next) => {
@@ -778,6 +844,8 @@ export const GameContainer: React.FC<GameContainerProps> = React.memo(({ network
         prev.networkConfig?.role === next.networkConfig?.role &&
         prev.continueRun === next.continueRun &&
         prev.selectedClass === next.selectedClass &&
-        prev.onExitToMenu === next.onExitToMenu
+        prev.onExitToMenu === next.onExitToMenu &&
+        prev.activeProfile?.id === next.activeProfile?.id &&
+        prev.targetLevel === next.targetLevel
     );
 });

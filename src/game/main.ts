@@ -516,6 +516,51 @@ export class MainScene extends Phaser.Scene implements IMainScene {
         if (this.networkManager?.role !== 'client') this.waves.startLevel(1);
         this.scene.resume();
     }
+
+    /**
+     * Paragon: Restart at a specific level (e.g., after soft death or level select).
+     * Keeps upgrades, coins, and weapons. Resets HP to max, clears enemies,
+     * and starts the given level from wave 1.
+     */
+    public restartAtLevel(level: number) {
+        console.log(`[Game] Restarting at level ${level}...`);
+
+        // Clear combat state but keep progression
+        this.registry.set('gameLevel', level);
+        this.registry.set('currentWave', 1);
+        this.registry.set('isBossActive', false);
+        this.registry.set('bossComingUp', -1);
+        this.registry.set('partyDead', false);
+
+        // Restore HP to max
+        const maxHP = this.registry.get('playerMaxHP') || GAME_CONFIG.PLAYER.BASE_MAX_HP;
+        this.registry.set('playerHP', maxHP);
+
+        // Clear enemies and projectiles
+        this.enemies.clear(true, true);
+        this.bossGroup.clear(true, true);
+        this.coins.clear(true, true);
+        ['arrows', 'fireballs', 'frostBolts', 'lightningBolts', 'decoys', 'traps'].forEach(g => (this as any)[g]?.clear(true, true));
+
+        // Reset player position and state
+        if (this.player) {
+            this.player.setPosition(this.mapWidth / 2, this.mapHeight / 2);
+            this.player.clearTint();
+            this.player.setBlendMode(Phaser.BlendModes.NORMAL);
+            this.player.setAlpha(1.0);
+        }
+
+        // Recalculate stats (upgrades are kept)
+        this.stats.recalculateStats();
+
+        // Regenerate map for the target level and start it
+        this.visuals.regenerateMap(level);
+        if (this.networkManager?.role !== 'client') this.waves.startLevel(level);
+        this.scene.resume();
+
+        // Save progress
+        SaveManager.saveRunProgress(this.collectSaveData());
+    }
 }
 
 

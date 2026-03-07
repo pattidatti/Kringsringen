@@ -68,6 +68,7 @@ export interface IMainScene extends Phaser.Scene {
     swordSparkEmitter: Phaser.GameObjects.Particles.ParticleEmitter;
     playerShadow: Phaser.GameObjects.Sprite | null;
     restartGame(): void;
+    restartAtLevel(level: number): void;
     handlePlayerActionCombat(time: number, delta: number): void;
     spawnBoss(idx: number): void;
     collectSaveData(): RunProgress;

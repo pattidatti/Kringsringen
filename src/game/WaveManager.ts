@@ -11,6 +11,7 @@ import type { IMainScene } from './IMainScene';
 import { getBossForLevel } from '../config/bosses';
 import { getWaveComposition, weightedRandom } from '../config/wave_compositions';
 import { LEVEL_CONFIG } from '../config/levels';
+import { getParagonMultiplier, FARM_COIN_MULTIPLIER } from '../config/paragon';
 
 /**
  * Manages level/wave lifecycle: spawning enemies, tracking progress,
@@ -33,6 +34,17 @@ export class WaveManager {
 
     constructor(scene: IMainScene) {
         this.scene = scene;
+    }
+
+    /** Current Paragon tier from registry (0 = first playthrough) */
+    private getParagonLevel(): number {
+        return this.scene.registry.get('paragonLevel') || 0;
+    }
+
+    /** Whether this level is a farming replay (already cleared) */
+    private isFarmingLevel(): boolean {
+        const clearedLevels: number[] = this.scene.registry.get('clearedLevels') || [];
+        return clearedLevels.includes(this.currentLevel);
     }
 
     private getPlayerCount(): number {
@@ -70,10 +82,12 @@ export class WaveManager {
 
     private startWave(): void {
         const playerCount = this.getPlayerCount();
+        const paragonLevel = this.getParagonLevel();
         const config = LEVEL_CONFIG[Math.min(this.currentLevel - 1, LEVEL_CONFIG.length - 1)];
 
-        // Scaling: +25% more enemies per extra player
-        this.enemiesToSpawnInWave = Math.round(config.enemiesPerWave * (1 + (playerCount - 1) * 0.25));
+        // Scaling: +25% more enemies per extra player, + Paragon enemy count scaling
+        const paragonCountMult = getParagonMultiplier(paragonLevel, 'enemyCountMultiplier');
+        this.enemiesToSpawnInWave = Math.round(config.enemiesPerWave * (1 + (playerCount - 1) * 0.25) * paragonCountMult);
 
         // Snapshot total for ranged budget calculation + reset counter
         this.enemiesToSpawnInWave_total = this.enemiesToSpawnInWave;
@@ -153,9 +167,11 @@ export class WaveManager {
         const player = this.scene.data.get('player') as Phaser.Physics.Arcade.Sprite;
         const config = LEVEL_CONFIG[Math.min(this.currentLevel - 1, LEVEL_CONFIG.length - 1)];
         const playerCount = this.getPlayerCount();
+        const paragonLevel = this.getParagonLevel();
 
-        // Scaling: +50% HP per extra player
-        const hpMultiplier = config.multiplier * (1 + (playerCount - 1) * 0.5);
+        // Scaling: +50% HP per extra player, + Paragon HP scaling
+        const paragonHPMult = getParagonMultiplier(paragonLevel, 'enemyHPMultiplier');
+        const hpMultiplier = config.multiplier * (1 + (playerCount - 1) * 0.5) * paragonHPMult;
 
         // Select Enemy Type using weighted composition table
         let type = this.selectEnemyType();
@@ -191,7 +207,9 @@ export class WaveManager {
             if (!player) return;
 
             const baseCoins = Phaser.Math.Between(5, 15);
-            const coinCount = baseCoins + (this.currentLevel - 1) * 3;
+            const paragonCoinMult = getParagonMultiplier(this.getParagonLevel(), 'coinMultiplier');
+            const farmMult = this.isFarmingLevel() ? FARM_COIN_MULTIPLIER : 1;
+            const coinCount = Math.round((baseCoins + (this.currentLevel - 1) * 3) * paragonCoinMult * farmMult);
             const coinData: { x: number, y: number, id: string }[] = [];
 
             for (let i = 0; i < coinCount; i++) {
@@ -274,6 +292,13 @@ export class WaveManager {
                     SaveManager.save({ highStage: currentStage + 1 });
                 }
 
+                // Track cleared levels for Paragon level-select
+                const clearedLevels: number[] = this.scene.registry.get('clearedLevels') || [];
+                if (!clearedLevels.includes(this.currentLevel)) {
+                    clearedLevels.push(this.currentLevel);
+                    this.scene.registry.set('clearedLevels', clearedLevels);
+                }
+
                 const bossConfig = getBossForLevel(this.currentLevel);
                 this.scene.registry.set('bossComingUp', bossConfig ? bossConfig.bossIndex : -1);
 
@@ -301,9 +326,11 @@ export class WaveManager {
         const player = this.scene.data.get('player') as Phaser.Physics.Arcade.Sprite;
         if (!player) return;
 
-        // Bosses drop significantly more coins, scaling with progress
-        // Formula: 300 + (bossIndex * 150) -> 300, 450, 600, 750, 900
-        const coinCount = GAME_CONFIG.BOSSES.COIN_DROP_COUNT + (bossIndex * 150);
+        // Bosses drop significantly more coins, scaling with progress + Paragon
+        // Formula: (300 + bossIndex * 150) * paragonCoinMult * farmMult
+        const paragonCoinMult = getParagonMultiplier(this.getParagonLevel(), 'coinMultiplier');
+        const farmMult = this.isFarmingLevel() ? FARM_COIN_MULTIPLIER : 1;
+        const coinCount = Math.round((GAME_CONFIG.BOSSES.COIN_DROP_COUNT + (bossIndex * 150)) * paragonCoinMult * farmMult);
         const coinData: { x: number, y: number, id: string }[] = [];
 
         for (let i = 0; i < coinCount; i++) {
