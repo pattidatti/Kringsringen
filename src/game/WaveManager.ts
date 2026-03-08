@@ -143,6 +143,7 @@ export class WaveManager {
 
         // Schedule wave event 15s into the wave (singleplayer / host only)
         if (!isClient) {
+            this.scene.shrines?.trySpawnShrine();
             this.scene.time.delayedCall(15000, () => {
                 if (this.isLevelActive) {
                     this.scene.waveEvents?.triggerRandom();

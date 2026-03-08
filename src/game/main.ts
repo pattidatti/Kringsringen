@@ -34,6 +34,7 @@ import { ParagonAbilityManager } from './ParagonAbilityManager';
 import { HpBarRenderer, type IHpBarTarget } from './HpBarRenderer';
 import { AchievementManager } from './AchievementManager';
 import { WaveEventManager } from './WaveEventManager';
+import { ShrineManager } from './ShrineManager';
 
 
 export class MainScene extends Phaser.Scene implements IMainScene {
@@ -76,6 +77,7 @@ export class MainScene extends Phaser.Scene implements IMainScene {
     public combat!: PlayerCombatManager;
     public waves!: WaveManager;
     public waveEvents!: WaveEventManager;
+    public shrines!: ShrineManager;
 
     // Map Generation
     private mapWidth: number = 3000;
@@ -200,6 +202,7 @@ export class MainScene extends Phaser.Scene implements IMainScene {
             this.combat = new PlayerCombatManager(this);
             this.waves = new WaveManager(this);
             this.waveEvents = new WaveEventManager(this);
+            this.shrines = new ShrineManager(this);
             this.weather = new WeatherManager(this);
             this.ambient = new AmbientParticleManager(this);
             console.log('[MainScene] Initializing managers...');
@@ -385,6 +388,7 @@ export class MainScene extends Phaser.Scene implements IMainScene {
             this.abilityManager.update(_time, delta);
             this.paragonAbility.update(_time, delta);
             this.buffs.update();
+            this.shrines.update(cappedDelta);
             this.achievementManager.update(delta);
 
             // Update Spatial Grid (Throttled for Performance)
@@ -508,42 +512,27 @@ export class MainScene extends Phaser.Scene implements IMainScene {
         console.log("[Game] Restarting run...");
         SaveManager.clearRunProgress();
         if (this.networkManager?.role === 'host') this.networkManager.broadcast({ t: PacketType.GAME_EVENT, ev: { type: 'restart_game', data: {} }, ts: Date.now() });
-        this.events.emit('restart-game');
 
+        // End any lingering wave event (resets speed/coin multipliers in registry)
+        this.waveEvents?.endActive();
+
+        // Minimal registry reset — hides the Game Over overlay in React immediately
+        // while the full Phaser instance reboot (triggered by 'restart-game') runs.
         const playerClassId = resolveClassId(this.registry.get('playerClass'));
         const classConfig = CLASS_CONFIGS[playerClassId];
-
-        this.registry.set('playerMaxHP', GAME_CONFIG.PLAYER.BASE_MAX_HP);
         this.registry.set('playerHP', GAME_CONFIG.PLAYER.BASE_MAX_HP);
         this.registry.set('playerCoins', 0);
-        this.registry.set('gameLevel', 1);
-        this.registry.set('currentWave', 1);
+        this.registry.set('partyDead', false);
         this.registry.set('isBossActive', false);
         this.registry.set('bossComingUp', -1);
-        this.registry.set('reviveCount', 0);
+        this.registry.set('upgradeLevels', {});
         this.registry.set('unlockedWeapons', [...classConfig.startingWeapons]);
         this.registry.set('currentWeapon', classConfig.startingWeapons[0] || 'sword');
-        this.registry.set('partyDead', false);
-        this.registry.set('upgradeLevels', {});
-        this.registry.set('classAbilityCooldown', null);
-        this.buffs.clear();
 
-        this.enemies.clear(true, true);
-        this.bossGroup.clear(true, true);
-        this.coins.clear(true, true);
-        ['arrows', 'fireballs', 'frostBolts', 'lightningBolts', 'decoys', 'traps'].forEach(g => (this as any)[g].clear(true, true));
-
-        if (this.player) {
-            this.player.setPosition(this.mapWidth / 2, this.mapHeight / 2);
-            this.player.clearTint();
-            this.player.setBlendMode(Phaser.BlendModes.NORMAL);
-            this.player.setAlpha(1.0);
-        }
-        this.remotePlayers.forEach(rp => { rp.clearTint(); rp.setBlendMode(Phaser.BlendModes.NORMAL); rp.setAlpha(1.0); });
-        this.stats.recalculateStats();
-        this.visuals.regenerateMap(1);
-        if (this.networkManager?.role !== 'client') this.waves.startLevel(1);
-        this.scene.resume();
+        // Trigger the full reboot via GameContainer (setRebootKey).
+        // The new game instance handles all further reset — no need to resume or
+        // regenerate the map here, as this instance is about to be destroyed.
+        this.events.emit('restart-game');
     }
 
     /**
@@ -554,41 +543,51 @@ export class MainScene extends Phaser.Scene implements IMainScene {
     public restartAtLevel(level: number) {
         console.log(`[Game] Restarting at level ${level}...`);
 
-        // Clear combat state but keep progression
-        this.registry.set('gameLevel', level);
-        this.registry.set('currentWave', 1);
-        this.registry.set('isBossActive', false);
-        this.registry.set('bossComingUp', -1);
-        this.registry.set('partyDead', false);
+        // End any active wave event first — resets speed/coin multipliers
+        this.waveEvents?.endActive();
 
-        // Restore HP to max
-        const maxHP = this.registry.get('playerMaxHP') || GAME_CONFIG.PLAYER.BASE_MAX_HP;
-        this.registry.set('playerHP', maxHP);
+        // scene.resume() MUST be called regardless of errors below (scene was paused on death)
+        try {
+            // Clear combat state but keep progression
+            this.registry.set('gameLevel', level);
+            this.registry.set('currentWave', 1);
+            this.registry.set('isBossActive', false);
+            this.registry.set('bossComingUp', -1);
+            this.registry.set('partyDead', false);
 
-        // Clear enemies and projectiles
-        this.enemies.clear(true, true);
-        this.bossGroup.clear(true, true);
-        this.coins.clear(true, true);
-        ['arrows', 'fireballs', 'frostBolts', 'lightningBolts', 'decoys', 'traps'].forEach(g => (this as any)[g]?.clear(true, true));
+            // Restore HP to max
+            const maxHP = this.registry.get('playerMaxHP') || GAME_CONFIG.PLAYER.BASE_MAX_HP;
+            this.registry.set('playerHP', maxHP);
 
-        // Reset player position and state
-        if (this.player) {
-            this.player.setPosition(this.mapWidth / 2, this.mapHeight / 2);
-            this.player.clearTint();
-            this.player.setBlendMode(Phaser.BlendModes.NORMAL);
-            this.player.setAlpha(1.0);
+            // Clear enemies and projectiles
+            this.enemies.clear(true, true);
+            this.bossGroup.clear(true, true);
+            this.coins.clear(true, true);
+            ['arrows', 'fireballs', 'frostBolts', 'lightningBolts', 'decoys', 'traps'].forEach(g => (this as any)[g]?.clear(true, true));
+
+            // Reset player position and state
+            if (this.player) {
+                this.player.setPosition(this.mapWidth / 2, this.mapHeight / 2);
+                this.player.clearTint();
+                this.player.setBlendMode(Phaser.BlendModes.NORMAL);
+                this.player.setAlpha(1.0);
+            }
+
+            // Recalculate stats (upgrades are kept)
+            this.stats.recalculateStats();
+
+            // Regenerate map for the target level and start it
+            this.visuals.regenerateMap(level);
+            if (this.networkManager?.role !== 'client') this.waves.startLevel(level);
+
+            // Save progress
+            SaveManager.saveRunProgress(this.collectSaveData());
+        } catch (e) {
+            console.error('[Game] restartAtLevel failed:', e);
+        } finally {
+            // Always resume — the scene was paused on death
+            this.scene.resume();
         }
-
-        // Recalculate stats (upgrades are kept)
-        this.stats.recalculateStats();
-
-        // Regenerate map for the target level and start it
-        this.visuals.regenerateMap(level);
-        if (this.networkManager?.role !== 'client') this.waves.startLevel(level);
-        this.scene.resume();
-
-        // Save progress
-        SaveManager.saveRunProgress(this.collectSaveData());
     }
 }
 

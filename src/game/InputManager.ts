@@ -46,7 +46,8 @@ export class InputManager {
             '5': Phaser.Input.Keyboard.KeyCodes.FIVE,
             'E': Phaser.Input.Keyboard.KeyCodes.E,
             'F': Phaser.Input.Keyboard.KeyCodes.F,
-            'Q': Phaser.Input.Keyboard.KeyCodes.Q
+            'Q': Phaser.Input.Keyboard.KeyCodes.Q,
+            'C': Phaser.Input.Keyboard.KeyCodes.C
         }) as any;
     }
 
@@ -79,6 +80,9 @@ export class InputManager {
 
         // 7. Handle Movement
         this.handleMovement(time);
+
+        // 8. Handle Shrine Interaction
+        this.handleShrineInteract();
     }
 
     private handleAttack(): void {
@@ -396,6 +400,14 @@ export class InputManager {
                 }
             } else {
                 if (player.anims.currentAnim?.key !== 'player-idle') player.play('player-idle');
+            }
+        }
+    }
+
+    private handleShrineInteract(): void {
+        if (Phaser.Input.Keyboard.JustDown(this.hotkeys['C'])) {
+            if (this.scene.registry.get('shrinePromptVisible')) {
+                this.scene.events.emit('activate-shrine');
             }
         }
     }

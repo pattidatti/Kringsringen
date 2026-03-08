@@ -5,6 +5,7 @@ import { FantasyIcon } from './FantasyIcon';
 import { ItemIcon } from './ItemIcon';
 import { getParagonTierName } from '../../config/paragon';
 import type { ActiveWaveEventInfo } from '../../game/WaveEventManager';
+import type { ActiveShrineInfo } from '../../game/ShrineManager';
 
 export const TopHUD: React.FC = React.memo(() => {
     console.log('[TopHUD] Rendering...');
@@ -17,7 +18,9 @@ export const TopHUD: React.FC = React.memo(() => {
     const coins = useGameRegistryThrottled('playerCoins', 0, 200);
     const paragonLevel = useGameRegistry('paragonLevel', 0) as number;
     const activeWaveEvent = useGameRegistry('activeWaveEvent', null) as ActiveWaveEventInfo | null;
+    const activeShrineEffect = useGameRegistry('activeShrineEffect', null) as ActiveShrineInfo | null;
     const [eventSecondsLeft, setEventSecondsLeft] = useState(0);
+    const [shrineSecondsLeft, setShrineSecondsLeft] = useState(0);
 
     useEffect(() => {
         if (!activeWaveEvent) { setEventSecondsLeft(0); return; }
@@ -29,6 +32,16 @@ export const TopHUD: React.FC = React.memo(() => {
         const id = setInterval(tick, 500);
         return () => clearInterval(id);
     }, [activeWaveEvent]);
+
+    useEffect(() => {
+        if (!activeShrineEffect) { setShrineSecondsLeft(0); return; }
+        const tick = () => setShrineSecondsLeft(
+            Math.max(0, Math.ceil((activeShrineEffect.startTime + activeShrineEffect.duration - Date.now()) / 1000))
+        );
+        tick();
+        const id = setInterval(tick, 500);
+        return () => clearInterval(id);
+    }, [activeShrineEffect]);
 
     const hpPercent = Math.min(100, Math.max(0, (hp / maxHp) * 100));
 
@@ -114,6 +127,27 @@ export const TopHUD: React.FC = React.memo(() => {
                     </span>
                 </div>
             )}
+
+            {/* Shrine Effect Badge */}
+            {activeShrineEffect && (() => {
+                const colorStr = activeShrineEffect.color.toString(16).padStart(6, '0');
+                return (
+                    <div
+                        className={`absolute left-1/2 -translate-x-1/2 top-36 flex items-center gap-2 px-4 py-1.5 rounded-full border shadow-lg backdrop-blur-sm ${activeShrineEffect.type === 'curse' ? 'animate-pulse' : ''}`}
+                        style={{
+                            borderColor: `#${colorStr}88`,
+                            backgroundColor: `#${colorStr}22`,
+                            color: `#${colorStr}`,
+                            zIndex: 10000
+                        }}
+                    >
+                        <span className="font-cinzel font-black text-xs tracking-widest uppercase drop-shadow">
+                            {activeShrineEffect.type === 'blessing' ? '✦' : '✧'} {activeShrineEffect.name}
+                        </span>
+                        <span className="text-white/70 font-bold text-xs tabular-nums">{shrineSecondsLeft}s</span>
+                    </div>
+                );
+            })()}
 
             {/* Right Wing: Economy & Score */}
             <div className="flex items-center pointer-events-auto bg-black/60 border-2 border-amber-900/50 shadow-lg backdrop-blur-md mt-2 rounded-l-full overflow-hidden">

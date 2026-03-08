@@ -17,6 +17,7 @@ import type { FlowFieldManager } from './pathing/FlowFieldManager';
 import type { BuffManager } from './BuffManager';
 import type { ParagonAbilityManager } from './ParagonAbilityManager';
 import type { WaveEventManager } from './WaveEventManager';
+import type { ShrineManager } from './ShrineManager';
 
 /**
  * Lightweight interface for MainScene.
@@ -59,6 +60,7 @@ export interface IMainScene extends Phaser.Scene {
     buffs: BuffManager;
     paragonAbility: ParagonAbilityManager;
     waveEvents: WaveEventManager;
+    shrines: ShrineManager;
     player: Phaser.Physics.Arcade.Sprite;
     quality: any;
     networkManager?: any;

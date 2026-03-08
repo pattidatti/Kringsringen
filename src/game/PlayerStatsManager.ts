@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import type { ShrineMods } from '../config/shrines';
 import { UPGRADES } from '../config/upgrades';
 import { CLASS_UPGRADES } from '../config/class-upgrades';
 import { SaveManager } from './SaveManager';
@@ -302,6 +303,42 @@ export class PlayerStatsManager {
         // Sync Skald-specific passive buffs to BuffManager
         if (playerClassId === 'skald') {
             this.syncSkaldPassiveBuffs();
+        }
+
+        // ── Shrine Mods (last pass — multiplies fully-calculated stats) ──────
+        const shrineMods = this.scene.registry.get('shrineStatMods') as ShrineMods | null;
+        if (shrineMods) {
+            if (shrineMods.damageMult) {
+                this.playerDamage *= shrineMods.damageMult;
+                this.scene.registry.set('playerDamage', this.playerDamage);
+            }
+            if (shrineMods.speedMult) {
+                this.playerSpeed *= shrineMods.speedMult;
+                this.scene.registry.set('playerSpeed', this.playerSpeed);
+            }
+            if (shrineMods.maxHpMult) {
+                this.playerMaxHP = Math.round(this.playerMaxHP * shrineMods.maxHpMult);
+                this.scene.registry.set('playerMaxHP', this.playerMaxHP);
+            }
+            if (shrineMods.cooldownMult) {
+                this.playerCooldown *= shrineMods.cooldownMult;
+            }
+            if (shrineMods.regenBonus) {
+                const currentRegen = (this.scene.registry.get('playerRegen') as number) || 0;
+                this.scene.registry.set('playerRegen', currentRegen + shrineMods.regenBonus);
+            }
+            if (shrineMods.pierceBonus) {
+                const currentPierce = (this.scene.registry.get('playerPierceCount') as number) || 0;
+                this.scene.registry.set('playerPierceCount', currentPierce + shrineMods.pierceBonus);
+            }
+            if (shrineMods.critBonus) {
+                const currentCrit = (this.scene.registry.get('playerCritChance') as number) || 0;
+                this.scene.registry.set('playerCritChance', Math.max(0, currentCrit + shrineMods.critBonus));
+            }
+            if (shrineMods.extraProjectiles) {
+                const currentProj = (this.scene.registry.get('playerProjectiles') as number) || 0;
+                this.scene.registry.set('playerProjectiles', currentProj + shrineMods.extraProjectiles);
+            }
         }
 
         // Dash stats (Previously fixed, using current values but verifying formula)
