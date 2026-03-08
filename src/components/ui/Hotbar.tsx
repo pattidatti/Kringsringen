@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState, useRef } from 'react';
 import { useGameRegistry, getGameInstance } from '../../hooks/useGameRegistry';
 import { KRIEGER_WEAPON_SLOTS, ARCHER_WEAPON_SLOTS, WIZARD_WEAPON_SLOTS, SKALD_WEAPON_SLOTS, type WeaponId } from '../../config/weapons';
 import { resolveClassId } from '../../config/classes';
+import type { ClassId } from '../../config/classes';
 import { motion } from 'framer-motion';
 import clsx from 'clsx';
 import { FantasyPanel } from './FantasyPanel';
@@ -10,6 +11,7 @@ import { ItemIcon, type ItemIconKey } from './ItemIcon';
 import { isItemSpriteIcon } from '../../config/upgrades';
 import { AbilityTooltip } from './AbilityTooltip';
 import { getAbilityTooltipData } from '../../utils/tooltipDataBuilder';
+import { getUnlockedParagonAbilities } from '../../config/paragon-abilities';
 
 /**
  * Selector sprite constants.
@@ -84,6 +86,12 @@ export const Hotbar: React.FC = React.memo(() => {
     const classAbility4Cooldown = useGameRegistry('classAbility4Cooldown', null) as { duration: number, timestamp: number } | null;
     const upgradeLevels = useGameRegistry('upgradeLevels', {}) as Record<string, number>;
     const skaldVers = useGameRegistry('skaldVers', 0) as number;
+    const paragonLevel = useGameRegistry('paragonLevel', 0) as number;
+
+    // Paragon ability cooldowns (E, F, Q)
+    const paragonECooldown = useGameRegistry('paragonAbilityCooldown_E', null) as { duration: number, timestamp: number } | null;
+    const paragonFCooldown = useGameRegistry('paragonAbilityCooldown_F', null) as { duration: number, timestamp: number } | null;
+    const paragonQCooldown = useGameRegistry('paragonAbilityCooldown_Q', null) as { duration: number, timestamp: number } | null;
 
     // Tooltip state
     const [hoveredSlot, setHoveredSlot] = useState<{ id: WeaponId; element: HTMLElement } | null>(null);
@@ -160,6 +168,19 @@ export const Hotbar: React.FC = React.memo(() => {
                         const isUnlocked = isAbilitySlot || (isRealWeapon && unlocked.includes(slot.id));
                         const isActive = isAbilitySlot ? false : currentWeapon === slot.id;
 
+                        // Check if ability is ready (not on cooldown)
+                        let isAbilityReady = false;
+                        if (isAbilitySlot) {
+                            const now = Date.now();
+                            if (slot.hotkey === '2') {
+                                isAbilityReady = !classAbilityCooldown || (classAbilityCooldown.timestamp + classAbilityCooldown.duration) <= now;
+                            } else if (slot.hotkey === '3') {
+                                isAbilityReady = !classAbility3Cooldown || (classAbility3Cooldown.timestamp + classAbility3Cooldown.duration) <= now;
+                            } else if (slot.hotkey === '4') {
+                                isAbilityReady = !classAbility4Cooldown || (classAbility4Cooldown.timestamp + classAbility4Cooldown.duration) <= now;
+                            }
+                        }
+
                         return (
                             <div
                                 key={slot.hotkey}
@@ -182,6 +203,21 @@ export const Hotbar: React.FC = React.memo(() => {
                             >
                                 {/* Slot dark recess */}
                                 <div className="absolute inset-x-0 inset-y-0.5 bg-black/50 rounded-md" />
+
+                                {/* Ready glow for abilities */}
+                                {isAbilitySlot && isAbilityReady && (
+                                    <motion.div
+                                        className="absolute inset-0 rounded-md border-2 border-purple-400/60 pointer-events-none z-10"
+                                        animate={{
+                                            boxShadow: [
+                                                '0 0 8px rgba(168,85,247,0.4)',
+                                                '0 0 16px rgba(168,85,247,0.6)',
+                                                '0 0 8px rgba(168,85,247,0.4)',
+                                            ]
+                                        }}
+                                        transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                                    />
+                                )}
 
                                 {/* Selector — active weapon only */}
                                 {isActive && (
@@ -256,6 +292,74 @@ export const Hotbar: React.FC = React.memo(() => {
                     })}
                 </div>
             </FantasyPanel>
+
+            {/* Paragon Ability Slots (E, F, Q) — shown above main hotbar when unlocked */}
+            {paragonLevel > 0 && (() => {
+                const classId = resolveClassId(playerClass) as ClassId;
+                const abilities = getUnlockedParagonAbilities(classId, paragonLevel);
+                if (abilities.length === 0) return null;
+
+                const cdMap: Record<string, { duration: number, timestamp: number } | null> = {
+                    'E': paragonECooldown,
+                    'F': paragonFCooldown,
+                    'Q': paragonQCooldown,
+                };
+
+                return (
+                    <div className="flex justify-center mb-1">
+                        <FantasyPanel
+                            variant="obsidian"
+                            scale={1}
+                            contentPadding="px-1.5 py-1.5"
+                            style={{ filter: 'drop-shadow(0 -2px 6px rgba(180,130,0,0.3))' }}
+                        >
+                            <div className="flex gap-1">
+                                {abilities.map((ability) => {
+                                    const cd = cdMap[ability.hotkey];
+
+                                    return (
+                                        <div
+                                            key={ability.id}
+                                            className="relative w-16 h-16 flex items-center justify-center cursor-default group"
+                                            title={`${ability.name}: ${ability.description}`}
+                                        >
+                                            {/* Slot background */}
+                                            <div className="absolute inset-x-0 inset-y-0.5 bg-black/50 rounded-md" />
+
+                                            {/* Icon */}
+                                            {isItemSpriteIcon(ability.icon) ? (
+                                                <ItemIcon
+                                                    icon={ability.icon as ItemIconKey}
+                                                    fitSize={50}
+                                                    className="relative z-20"
+                                                    style={ability.iconTint ? { filter: ability.iconTint } : undefined}
+                                                />
+                                            ) : (
+                                                <span className="relative z-20 font-cinzel text-amber-200 text-xs">
+                                                    {ability.name.slice(0, 3)}
+                                                </span>
+                                            )}
+
+                                            {/* Cooldown overlay */}
+                                            {cd && (
+                                                <RadialCooldown duration={cd.duration} timestamp={cd.timestamp} />
+                                            )}
+
+                                            {/* Gold border glow */}
+                                            <div className="absolute inset-0 rounded-md border border-amber-500/30 pointer-events-none" />
+
+                                            {/* Hotkey badge */}
+                                            <div className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-amber-900/90 border border-amber-400/60 rounded flex items-center justify-center z-40">
+                                                <span className="text-[10px] text-amber-200 font-mono font-bold leading-none">{ability.hotkey}</span>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </FantasyPanel>
+                    </div>
+                );
+            })()}
 
             {/* Tooltip */}
             {tooltipData && hoveredSlot && (

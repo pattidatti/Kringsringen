@@ -5,6 +5,7 @@ import { FantasyButton } from './FantasyButton';
 import { HighscoreManager } from '../../config/firebase';
 import { SaveManager } from '../../game/SaveManager';
 import { getGameInstance } from '../../hooks/useGameRegistry';
+import { DEATH_PENALTY } from '../../config/paragon';
 
 /**
  * Inner component: subscribes to all 7 registry keys.
@@ -16,6 +17,7 @@ const GameOverContent: React.FC<{ hp: number; partyDead: boolean }> = ({ hp: hpP
     const wave = useGameRegistry('currentWave', 1);
     const coins = useGameRegistry('playerCoins', 0);
     const isMultiplayer = useGameRegistry('isMultiplayer', false);
+    const paragonLevel = useGameRegistry('paragonLevel', 0);
     const syncState = useGameRegistry<{ loaded: number, ready: number, expected: number }>('syncState', { loaded: 0, ready: 0, expected: 1 });
 
     const [playerName, setPlayerName] = useState('');
@@ -28,7 +30,15 @@ const GameOverContent: React.FC<{ hp: number; partyDead: boolean }> = ({ hp: hpP
 
     const [isWaitingRetry, setIsWaitingRetry] = useState(false);
 
+    // Paragon characters use the soft-death system (coin penalty + retry)
+    const hasActiveProfile = SaveManager.getActiveProfile() !== null;
+    const isParagonDeath = hasActiveProfile && !isMultiplayer;
+    const coinPenalty = isParagonDeath ? Math.floor(coins * DEATH_PENALTY.coinLossFraction) : 0;
+
     React.useEffect(() => {
+        // Skip rank calculation for Paragon deaths (not a "game over")
+        if (isParagonDeath) return;
+
         let isMounted = true;
         const fetchRank = async () => {
             try {
@@ -58,7 +68,7 @@ const GameOverContent: React.FC<{ hp: number; partyDead: boolean }> = ({ hp: hpP
         fetchRank();
 
         return () => { isMounted = false; };
-    }, [score]);
+    }, [score, isParagonDeath]);
 
     const handleSubmitScore = useCallback(async () => {
         const trimmedName = playerName.trim();
@@ -91,6 +101,27 @@ const GameOverContent: React.FC<{ hp: number; partyDead: boolean }> = ({ hp: hpP
         }
     }, [playerName, score, level, wave, coins]);
 
+    /** Paragon: Retry level with coin penalty (no full restart) */
+    const handleRetryLevel = useCallback(() => {
+        const game = getGameInstance();
+        const mainScene = game?.scene.getScene('MainScene');
+
+        // Apply coin penalty
+        if (coinPenalty > 0) {
+            const currentCoins = game?.registry.get('playerCoins') || 0;
+            const newCoins = Math.max(DEATH_PENALTY.coinFloor, currentCoins - coinPenalty);
+            game?.registry.set('playerCoins', newCoins);
+        }
+
+        // Emit retry event - this restarts the current level, not the whole game
+        mainScene?.events.emit('request-retry-level');
+
+        if (isMultiplayer) {
+            setIsWaitingRetry(true);
+        }
+    }, [coinPenalty, isMultiplayer]);
+
+    /** Legacy: Full restart (for non-Paragon or explicit restart) */
     const handleRestart = useCallback(async () => {
         const trimmedName = playerName.trim();
 
@@ -113,9 +144,95 @@ const GameOverContent: React.FC<{ hp: number; partyDead: boolean }> = ({ hp: hpP
     }, [isMultiplayer, playerName, submitted, submitting, handleSubmitScore]);
 
     const retryLabel = isMultiplayer
-        ? (isWaitingRetry ? `Venter (${syncState.ready}/${syncState.expected})` : 'Prøv Igjen')
-        : 'Prøv Igjen';
+        ? (isWaitingRetry ? `Venter (${syncState.ready}/${syncState.expected})` : 'Prov Igjen')
+        : 'Prov Igjen';
 
+    // ─── Paragon Defeated Screen (softer, no score submission) ──────────
+    if (isParagonDeath) {
+        return (
+            <motion.div
+                className="absolute inset-0 z-[100] flex items-center justify-center overflow-hidden"
+                style={{ background: 'radial-gradient(ellipse at center, #1a0a0a 0%, #000000 100%)' }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.8 }}
+            >
+                <div
+                    className="absolute inset-0 pointer-events-none"
+                    style={{ background: 'radial-gradient(ellipse at center, transparent 40%, rgba(80,0,0,0.5) 100%)' }}
+                />
+
+                <motion.div
+                    className="relative flex flex-col items-center gap-6 z-10 w-full max-w-md px-8"
+                    initial={{ y: 30, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    transition={{ duration: 0.6, delay: 0.3 }}
+                >
+                    {/* Title - softer than full game over */}
+                    <div className="text-center">
+                        <motion.h1
+                            className="font-cinzel text-6xl tracking-[0.1em] uppercase text-center"
+                            style={{
+                                color: '#cc4444',
+                                textShadow: '0 0 30px rgba(200,50,50,0.6), 2px 2px 0 #000, -2px -2px 0 #000',
+                            }}
+                            animate={{ opacity: [1, 0.8, 1] }}
+                            transition={{ duration: 3, repeat: Infinity }}
+                        >
+                            Beseiret
+                        </motion.h1>
+                        <p className="font-cinzel text-sm tracking-[0.3em] text-red-400/60 uppercase mt-2 text-center">
+                            Du falt i kamp, men reisen fortsetter
+                        </p>
+                    </div>
+
+                    {/* Coin penalty info */}
+                    {coinPenalty > 0 && (
+                        <motion.div
+                            initial={{ opacity: 0, y: -10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.6 }}
+                            className="w-full border-2 border-red-800/40 bg-black/60 rounded py-4 flex flex-col items-center gap-1"
+                        >
+                            <span className="font-cinzel text-xs text-red-400/60 uppercase tracking-widest">
+                                Gull mistet
+                            </span>
+                            <span className="font-cinzel text-3xl text-red-400">
+                                -{coinPenalty.toLocaleString()}
+                            </span>
+                            <span className="font-cinzel text-xs text-white/30 tracking-widest">
+                                {(coins - coinPenalty).toLocaleString()} gull gjenstår
+                            </span>
+                        </motion.div>
+                    )}
+
+                    {/* Action buttons */}
+                    <div className="flex flex-col gap-3 w-full mt-4">
+                        <FantasyButton
+                            label="Prov Level Igjen"
+                            variant="primary"
+                            onClick={handleRetryLevel}
+                            disabled={isWaitingRetry}
+                            className="w-full text-lg"
+                        />
+                        <FantasyButton
+                            label="Tilbake til Meny"
+                            variant="secondary"
+                            onClick={() => {
+                                // Save current state and go to menu
+                                const game = getGameInstance();
+                                const mainScene = game?.scene.getScene('MainScene');
+                                mainScene?.events.emit('request-exit-to-menu');
+                            }}
+                            className="w-full text-base"
+                        />
+                    </div>
+                </motion.div>
+            </motion.div>
+        );
+    }
+
+    // ─── Classic Game Over Screen (legacy / multiplayer) ────────────────
     return (
         <motion.div
             className="absolute inset-0 z-[100] flex items-center justify-center overflow-hidden"
@@ -154,7 +271,7 @@ const GameOverContent: React.FC<{ hp: number; partyDead: boolean }> = ({ hp: hpP
                         Falnet
                     </motion.h1>
                     <p className="font-cinzel text-base tracking-[0.35em] text-red-400 uppercase mt-2 text-center">
-                        {partyDeadProp ? "Hele følget har falt" : "Din saga ender her"}
+                        {partyDeadProp ? "Hele folget har falt" : "Din saga ender her"}
                     </p>
                 </div>
 

@@ -30,7 +30,9 @@ import { NetworkManager } from '../network/NetworkManager';
 import { BOSS_CONFIGS } from '../config/bosses';
 import { FlowFieldManager } from './pathing/FlowFieldManager';
 import { BuffManager } from './BuffManager';
+import { ParagonAbilityManager } from './ParagonAbilityManager';
 import { HpBarRenderer, type IHpBarTarget } from './HpBarRenderer';
+import { AchievementManager } from './AchievementManager';
 
 
 export class MainScene extends Phaser.Scene implements IMainScene {
@@ -46,8 +48,10 @@ export class MainScene extends Phaser.Scene implements IMainScene {
     public eventManager!: SceneEventManager;
     public weaponManager!: WeaponManager;
     public abilityManager!: ClassAbilityManager;
+    public paragonAbility!: ParagonAbilityManager;
     public buffs!: BuffManager;
     public hpBarRenderer!: HpBarRenderer;
+    public achievementManager!: AchievementManager;
     private hpTargets: IHpBarTarget[] = [];
 
     public arrows!: Phaser.Physics.Arcade.Group;
@@ -203,6 +207,8 @@ export class MainScene extends Phaser.Scene implements IMainScene {
             this.weaponManager = new WeaponManager(this);
             this.abilityManager = new ClassAbilityManager(this);
             this.buffs = new BuffManager(this);
+            this.paragonAbility = new ParagonAbilityManager(this);
+            this.achievementManager = new AchievementManager(this);
             this.collisions = new CollisionManager(this);
             console.log('[MainScene] All managers instantiated.');
 
@@ -374,7 +380,9 @@ export class MainScene extends Phaser.Scene implements IMainScene {
             this.visuals.update();
             this.inputManager.update(_time, delta);
             this.abilityManager.update(_time, delta);
+            this.paragonAbility.update(_time, delta);
             this.buffs.update();
+            this.achievementManager.update(delta);
 
             // Update Spatial Grid (Throttled for Performance)
             this.flowFieldManager.update(this.player.x, this.player.y);
@@ -515,6 +523,51 @@ export class MainScene extends Phaser.Scene implements IMainScene {
         this.visuals.regenerateMap(1);
         if (this.networkManager?.role !== 'client') this.waves.startLevel(1);
         this.scene.resume();
+    }
+
+    /**
+     * Paragon: Restart at a specific level (e.g., after soft death or level select).
+     * Keeps upgrades, coins, and weapons. Resets HP to max, clears enemies,
+     * and starts the given level from wave 1.
+     */
+    public restartAtLevel(level: number) {
+        console.log(`[Game] Restarting at level ${level}...`);
+
+        // Clear combat state but keep progression
+        this.registry.set('gameLevel', level);
+        this.registry.set('currentWave', 1);
+        this.registry.set('isBossActive', false);
+        this.registry.set('bossComingUp', -1);
+        this.registry.set('partyDead', false);
+
+        // Restore HP to max
+        const maxHP = this.registry.get('playerMaxHP') || GAME_CONFIG.PLAYER.BASE_MAX_HP;
+        this.registry.set('playerHP', maxHP);
+
+        // Clear enemies and projectiles
+        this.enemies.clear(true, true);
+        this.bossGroup.clear(true, true);
+        this.coins.clear(true, true);
+        ['arrows', 'fireballs', 'frostBolts', 'lightningBolts', 'decoys', 'traps'].forEach(g => (this as any)[g]?.clear(true, true));
+
+        // Reset player position and state
+        if (this.player) {
+            this.player.setPosition(this.mapWidth / 2, this.mapHeight / 2);
+            this.player.clearTint();
+            this.player.setBlendMode(Phaser.BlendModes.NORMAL);
+            this.player.setAlpha(1.0);
+        }
+
+        // Recalculate stats (upgrades are kept)
+        this.stats.recalculateStats();
+
+        // Regenerate map for the target level and start it
+        this.visuals.regenerateMap(level);
+        if (this.networkManager?.role !== 'client') this.waves.startLevel(level);
+        this.scene.resume();
+
+        // Save progress
+        SaveManager.saveRunProgress(this.collectSaveData());
     }
 }
 

@@ -23,7 +23,9 @@ For å redusere kompleksitet og forbedre testbarhet, er spillets kjerne-logikk d
 | `SpatialHashGrid` | Rask fiende-nærhetssøk for kollisjonsdeteksjon (performance-kritisk). |
 | `WeatherManager` | Regn- og tåke-partikkeleffekter per level-tema. |
 | `AmbientParticleManager` | Ildfluer, løv, embers — ambient VFX basert på level-tema. |
-| `SaveManager` | Persistens av meta-progresjon og "in-run" tilstand (to-lags localStorage). |
+| `ParagonAbilityManager` | Paragon-exclusive abilities (E/F/Q hotkeys) unlocked at P2/P4/P6. |
+| `AchievementManager` | Tracks gameplay achievements across 5 categories (combat, progression, economy, exploration, skill). |
+| `SaveManager` | Persistens av meta-progresjon, Paragon profiler og "in-run" tilstand (multi-tier localStorage). |
 | `AudioManager` | Global orkestrering av BGM, BGS og asynkron loading av SFX-varianter. |
 | `NetworkPacketHandler` | Multiplayer-pakke serialisering/deserialisering via BinaryPacker (kun i multiplayer-modus). |
 
@@ -73,4 +75,29 @@ graph TD
 4.  **`Visuals`**: `SceneVisualManager` oppdaterer dynamisk lys og kamera-vignett.
 
 ---
-*Sist oppdatert: 3. mars 2026*
+
+## 🌟 Paragon & Cloud Save Architecture
+
+### Paragon Progression System
+Se [PARAGON_DESIGN.md](./PARAGON_DESIGN.md) for full dokumentasjon av:
+- Multi-character system (6 slots)
+- Paragon level scaling (1.4× enemy HP per tier)
+- Ascension flow (beat level 10 → Paragon +1)
+- Death penalty (10% coin loss, no permadeath)
+
+### Firebase Integration
+Se [CLOUD_SAVE_ARCHITECTURE.md](./CLOUD_SAVE_ARCHITECTURE.md) for:
+- Authentication (Google + Email/Password)
+- Firestore sync strategy (offline-first, last-write-wins)
+- Conflict resolution
+- Security rules
+
+### Achievement System
+Se [ACHIEVEMENT_SYSTEM.md](./ACHIEVEMENT_SYSTEM.md) for:
+- 30+ achievements across 5 categories
+- Real-time event tracking
+- Progress bars for incremental achievements
+- Toast notification system
+
+---
+*Sist oppdatert: 7. mars 2026*

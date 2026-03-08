@@ -24,9 +24,11 @@ interface LandingPageProps {
     onStart: () => void;
     onContinue: () => void;
     onStartMP: (role: 'host' | 'client', roomCode: string, peer: Peer, nickname: string, hostPeerId?: string) => void;
+    /** New Paragon flow: opens character select screen */
+    onPlay?: () => void;
 }
 
-const LandingPage: React.FC<LandingPageProps> = ({ onStart, onContinue, onStartMP }) => {
+const LandingPage: React.FC<LandingPageProps> = ({ onStart, onContinue, onStartMP, onPlay }) => {
     useGameAssetPreloader();
 
     const [showHighscores, setShowHighscores] = useState(false);
@@ -176,27 +178,28 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart, onContinue, onStartM
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, ease: 'easeOut', delay: 0.2 }}
             >
-                {hasSave ? (
-                    <>
-                        <FantasyButton
-                            label="Fortsett Spill"
-                            variant="primary"
-                            onClick={handleContinue}
-                            className="w-64 text-xl !text-black [text-shadow:none]"
-                        />
-                        <FantasyButton
-                            label="Nytt Spill"
-                            variant="secondary"
-                            onClick={handleStart}
-                            className="w-64 text-base !text-black [text-shadow:none]"
-                        />
-                    </>
-                ) : (
+                {/* Primary: Paragon character select flow */}
+                <FantasyButton
+                    label="Spill"
+                    variant="primary"
+                    onClick={() => {
+                        if (onPlay) {
+                            fadeAudio(onPlay);
+                        } else if (SaveManager.load().tutorialSeen) {
+                            fadeAudioAndStart();
+                        } else {
+                            setShowTutorial(true);
+                        }
+                    }}
+                    className="w-64 text-xl !text-black [text-shadow:none]"
+                />
+                {/* Legacy: quick continue for existing saved run */}
+                {hasSave && !onPlay && (
                     <FantasyButton
-                        label="Start Spill"
-                        variant="primary"
-                        onClick={handleStart}
-                        className="w-64 text-xl !text-black [text-shadow:none]"
+                        label="Fortsett Spill"
+                        variant="secondary"
+                        onClick={handleContinue}
+                        className="w-64 text-base !text-black [text-shadow:none]"
                     />
                 )}
                 <FantasyButton

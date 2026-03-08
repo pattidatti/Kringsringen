@@ -5,12 +5,18 @@ import bookOpen from '../../assets/ui/fantasy/containers/book_open.png';
 import tabRed from '../../assets/ui/fantasy/tabs/red.png';
 import tabGreen from '../../assets/ui/fantasy/tabs/green.png';
 import tabYellow from '../../assets/ui/fantasy/tabs/yellow.png';
+import tabBlue from '../../assets/ui/fantasy/tabs/blue.png';
 import { UPGRADES, type UpgradeConfig, isItemSpriteIcon, CHAPTER_DEFINITIONS, type ChapterId } from '../../config/upgrades';
 import { CLASS_UPGRADES } from '../../config/class-upgrades';
 import { CLASS_CONFIGS, resolveClassId } from '../../config/classes';
+import { PARAGON_UPGRADES, type ParagonUpgradeConfig } from '../../config/paragon-upgrades';
+import { getParagonTierName } from '../../config/paragon';
 import { ItemIcon, type ItemIconKey } from './ItemIcon';
 import { useGameRegistry } from '../../hooks/useGameRegistry';
 import { SettingsContent } from './SettingsContent';
+import { AchievementBookOverlay } from './AchievementBookOverlay';
+import { useSprite } from '../../hooks/useSprite';
+import type { SpriteKey } from '../../config/ui-atlas';
 // import { type FantasyTabVariant } from '../../types/fantasy-ui.generated';
 
 export type BookMode = 'view' | 'level_up' | 'shop';
@@ -43,12 +49,13 @@ interface FantasyBookProps {
     onExitGame?: () => void;
 }
 
-type TabKey = 'character' | 'upgrades' | 'settings';
+type TabKey = 'character' | 'upgrades' | 'achievements' | 'settings';
 
-const TABS: Record<TabKey, { title: string; icon: string; color: string; locked?: boolean }> = {
-    character: { title: 'Character', icon: tabRed, color: 'text-red-900' },
-    upgrades: { title: 'Upgrades', icon: tabGreen, color: 'text-emerald-900' },
-    settings: { title: 'Settings', icon: tabYellow, color: 'text-amber-900' },
+const TABS: Record<TabKey, { title: string; icon: string; spriteIcon: SpriteKey; color: string; locked?: boolean }> = {
+    character: { title: 'Character', icon: tabRed, spriteIcon: 'icon_shield_large', color: 'text-red-900' },
+    upgrades: { title: 'Upgrades', icon: tabGreen, spriteIcon: 'icon_backpack', color: 'text-emerald-900' },
+    achievements: { title: 'Achievements', icon: tabBlue, spriteIcon: 'icon_coin', color: 'text-blue-900' },
+    settings: { title: 'Settings', icon: tabYellow, spriteIcon: 'icon_gear', color: 'text-amber-900' },
 };
 
 const CATEGORY_THEMES: Record<string, { primary: string; secondary: string; border: string; bg: string; text: string }> = {
@@ -83,6 +90,20 @@ const CATEGORY_THEMES: Record<string, { primary: string; secondary: string; bord
     'wizard_drivkraft': { primary: '#4c1d95', secondary: '#8e44ad', border: 'border-purple-900/30', bg: 'bg-purple-200/30', text: 'text-purple-950' },
     'wizard_mastring': { primary: '#4c1d95', secondary: '#8e44ad', border: 'border-purple-900/30', bg: 'bg-purple-200/30', text: 'text-purple-950' },
     'wizard_arkan': { primary: '#4c1d95', secondary: '#8e44ad', border: 'border-purple-900/30', bg: 'bg-purple-200/30', text: 'text-purple-950' },
+    // Krieger (ny: Virvelvind + Krok-kategori)
+    'krieger_virvelvind': { primary: '#7f1d1d', secondary: '#c0392b', border: 'border-red-900/30', bg: 'bg-red-200/30', text: 'text-red-950' },
+    'krieger_krok': { primary: '#7f1d1d', secondary: '#c0392b', border: 'border-red-900/30', bg: 'bg-red-200/30', text: 'text-red-950' },
+    // Archer (ny: Fantombyge-kategori)
+    'archer_fantombyge': { primary: '#14532d', secondary: '#27ae60', border: 'border-emerald-900/30', bg: 'bg-emerald-200/30', text: 'text-emerald-950' },
+    // Skald (alle manglet tema — fikset)
+    'skald_kvad':   { primary: '#78350f', secondary: '#d4a017', border: 'border-amber-900/30', bg: 'bg-amber-200/30', text: 'text-amber-950' },
+    'skald_rytme':  { primary: '#78350f', secondary: '#d4a017', border: 'border-amber-900/30', bg: 'bg-amber-200/30', text: 'text-amber-950' },
+    'skald_harpe':  { primary: '#78350f', secondary: '#d4a017', border: 'border-amber-900/30', bg: 'bg-amber-200/30', text: 'text-amber-950' },
+    'skald_vers':   { primary: '#713f12', secondary: '#f59e0b', border: 'border-yellow-900/30', bg: 'bg-yellow-200/30', text: 'text-yellow-950' },
+    'skald_fiolin': { primary: '#78350f', secondary: '#d4a017', border: 'border-amber-900/30', bg: 'bg-amber-200/30', text: 'text-amber-950' },
+    'skald_horn':   { primary: '#713f12', secondary: '#f59e0b', border: 'border-yellow-900/30', bg: 'bg-yellow-200/30', text: 'text-yellow-950' },
+    // Paragon (gold/diamond)
+    'paragon': { primary: '#b8860b', secondary: '#ffd700', border: 'border-amber-600/50', bg: 'bg-amber-100/50', text: 'text-amber-900' },
 };
 
 function topoSort(items: UpgradeConfig[]): UpgradeConfig[] {
@@ -167,6 +188,64 @@ const StatRow = ({ label, value, icon }: { label: string, value: string | number
     </div>
 );
 
+// Tab button component (extracted to fix Rules of Hooks violation)
+interface TabButtonProps {
+    tabKey: TabKey;
+    topOffset: number;
+    activeTab: TabKey;
+    onTabChange: (key: TabKey) => void;
+}
+
+const TabButton: React.FC<TabButtonProps> = ({ tabKey, topOffset, activeTab, onTabChange }) => {
+    const config = TABS[tabKey];
+    const isActive = activeTab === tabKey;
+
+    // Scale 1.25 for 20px icon (16px × 1.25 = 20px, better fit in 34×18 sprite)
+    const { style: spriteStyle } = useSprite({ sprite: config.spriteIcon, scale: 1.25 });
+
+    return (
+        <button
+            onClick={() => onTabChange(tabKey)}
+            className={`absolute right-[-74px] w-[80px] h-[32px]
+                flex items-center gap-1 pl-2
+                transition-all duration-200
+                ${isActive
+                    ? 'translate-x-[-4px] brightness-115 drop-shadow-[0_0_6px_rgba(255,255,255,0.4)]'
+                    : 'hover:translate-x-[-2px] hover:brightness-105 opacity-85'
+                }`}
+            style={{
+                top: `${topOffset}%`,
+                backgroundImage: `url(${config.icon})`,
+                backgroundSize: '100% 100%',
+                imageRendering: 'pixelated',
+                zIndex: 20
+            }}
+            title={config.title} // Tooltip for accessibility
+        >
+            {/* Icon container - left-aligned */}
+            <div
+                className="flex-shrink-0"
+                style={{
+                    width: '20px',
+                    height: '20px',
+                    filter: isActive ? 'brightness(1.1) saturate(1.2)' : 'saturate(0.85)'
+                }}
+            >
+                <div style={spriteStyle} />
+            </div>
+
+            {/* Label - always visible, improved legibility */}
+            <span className={`font-cinzel text-[9px] uppercase tracking-tighter leading-tight
+                ${config.color}
+                ${isActive ? 'font-bold' : 'font-medium opacity-75'}
+                [text-shadow:_0_1px_2px_rgb(0_0_0_/_50%)]`}
+            >
+                {config.title}
+            </span>
+        </button>
+    );
+};
+
 export const FantasyBook: React.FC<FantasyBookProps> = React.memo(({
     isOpen,
     mode,
@@ -226,7 +305,14 @@ export const FantasyBook: React.FC<FantasyBookProps> = React.memo(({
         }
     }, [activeTab, isOpen]);
 
+    const paragonLevel = useGameRegistry('paragonLevel', 0) as number;
+
     const shopItems = React.useMemo(() => {
+        // Paragon category: show Paragon-exclusive upgrades filtered by tier
+        if (activeShopCategory === 'paragon') {
+            return PARAGON_UPGRADES.filter(u => paragonLevel >= u.paragonRequired);
+        }
+
         const allUpgrades = [...UPGRADES, ...CLASS_UPGRADES];
         return allUpgrades.filter(u => {
             const catId = u.shopCategoryId ?? u.category.toLowerCase();
@@ -235,37 +321,12 @@ export const FantasyBook: React.FC<FantasyBookProps> = React.memo(({
             if (u.id === 'unlock_bow') return false;
             return true;
         });
-    }, [activeShopCategory, playerClass]);
+    }, [activeShopCategory, playerClass, paragonLevel]);
 
     const groupedShopItems = React.useMemo(() => {
         const activeCategoryDef = classConfig.shopCategories.find(c => c.id === activeShopCategory);
         return groupByChapter(shopItems, activeCategoryDef?.chapterLabels);
     }, [shopItems, activeShopCategory, classConfig]);
-
-    const renderTabButton = (key: TabKey, topOffset: number) => {
-        const config = TABS[key];
-        const isActive = activeTab === key;
-
-        return (
-            <button
-                onClick={() => setActiveTab(key)}
-                className={`absolute right-[-74px] w-[80px] h-[32px] flex items-center pl-3 transition-all duration-200 
-                    ${isActive ? 'translate-x-[-4px] brightness-110' : 'hover:translate-x-[-2px] opacity-80'}`}
-                style={{
-                    top: `${topOffset}%`,
-                    backgroundImage: `url(${config.icon})`,
-                    backgroundSize: '100% 100%',
-                    imageRendering: 'pixelated',
-                    zIndex: isActive ? 10 : 0
-                }}
-            >
-                <span className={`font-cinzel text-[10px] uppercase tracking-tighter ${config.color} 
-                    ${isActive ? 'font-bold' : 'opacity-70'}`}>
-                    {config.title}
-                </span>
-            </button>
-        );
-    };
 
     const renderStatusPage = () => (
         <div className="space-y-4 font-crimson text-slate-800">
@@ -310,7 +371,11 @@ export const FantasyBook: React.FC<FantasyBookProps> = React.memo(({
 
     // --- MERCHANT LEFTS PAGE: Categories ---
     const renderMerchantCategories = () => {
-        const categories = classConfig.shopCategories;
+        const baseCategories = classConfig.shopCategories;
+        // Add Paragon category when player has reached Paragon 1+
+        const categories = paragonLevel > 0
+            ? [...baseCategories, { id: 'paragon', label: 'PARAGON', icon: 'item_synergy_rune', isExclusive: false }]
+            : baseCategories;
 
         return (
             <div className="flex flex-col h-full font-crimson">
@@ -520,6 +585,12 @@ export const FantasyBook: React.FC<FantasyBookProps> = React.memo(({
                                                 const allUpgradesForLookup = [...UPGRADES, ...CLASS_UPGRADES];
                                                 let reqMet = true;
                                                 let reqText = '';
+                                                // Paragon tier requirement
+                                                const paragonReq = (item as ParagonUpgradeConfig).paragonRequired;
+                                                if (paragonReq && paragonLevel < paragonReq) {
+                                                    reqMet = false;
+                                                    reqText += `${getParagonTierName(paragonReq)} kreves. `;
+                                                }
                                                 if (item.requires) {
                                                     for (const [rId, rLvl] of Object.entries(item.requires)) {
                                                         if ((upgradeLevels[rId] || 0) < rLvl) {
@@ -670,9 +741,26 @@ export const FantasyBook: React.FC<FantasyBookProps> = React.memo(({
                             />
 
                             {/* Tabs */}
-                            {renderTabButton('character', 15)}
-                            {renderTabButton('upgrades', 30)}
-                            {renderTabButton('settings', 45)}
+                            <TabButton tabKey="character" topOffset={15} activeTab={activeTab} onTabChange={setActiveTab} />
+                            <TabButton tabKey="upgrades" topOffset={30} activeTab={activeTab} onTabChange={setActiveTab} />
+                            <TabButton tabKey="achievements" topOffset={45} activeTab={activeTab} onTabChange={setActiveTab} />
+                            <TabButton tabKey="settings" topOffset={60} activeTab={activeTab} onTabChange={setActiveTab} />
+
+                            {/* Achievement Full-Book Overlay — covers entire book, sits above content layer */}
+                            <AnimatePresence>
+                                {activeTab === 'achievements' && (
+                                    <motion.div
+                                        key="achievement-book-overlay"
+                                        initial={{ opacity: 0 }}
+                                        animate={{ opacity: 1 }}
+                                        exit={{ opacity: 0 }}
+                                        transition={{ duration: 0.2 }}
+                                        className="absolute inset-0 z-10"
+                                    >
+                                        <AchievementBookOverlay />
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
 
                             {/* Content Layer */}
                             <motion.div
@@ -685,7 +773,7 @@ export const FantasyBook: React.FC<FantasyBookProps> = React.memo(({
                                     <div className="col-span-2 h-full">
                                         <SettingsContent inBookContext={true} />
                                     </div>
-                                ) : (
+                                ) : activeTab === 'achievements' ? null : (
                                     <>
                                         {/* Left Page: Main Content Area */}
                                         <div className="px-5 py-3 overflow-y-auto custom-scrollbar h-full pr-4 relative overflow-x-hidden">

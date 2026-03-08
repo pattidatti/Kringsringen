@@ -1,4 +1,6 @@
 import { CLASS_CONFIGS, type ClassId } from '../config/classes';
+import type { ParagonProfile } from '../config/paragon';
+import { createDefaultProfile, MAX_CHARACTER_SLOTS } from '../config/paragon';
 
 export interface EnemySave {
     type: string;
@@ -38,15 +40,234 @@ export interface SaveData {
     lastSelectedClass?: ClassId;
 }
 
+// ─── Profile Store (multi-character Paragon system) ─────────────────────────
+
+export interface ProfileStore {
+    profiles: ParagonProfile[];
+    activeProfileId: string | null;
+    globalSettings: {
+        audioSettings?: any;
+        graphicsQuality?: string;
+        tutorialSeen?: boolean;
+    };
+}
+
 export class SaveManager {
     private static readonly SAVE_KEY = 'kringsringen_save_v1';
     private static readonly RUN_KEY = 'kringsringen_run_v1';
+    private static readonly PROFILES_KEY = 'kringsringen_profiles_v1';
+
+    // ─── Profile System (new Paragon persistence) ───────────────────────
+
+    static loadProfiles(): ProfileStore {
+        try {
+            const data = localStorage.getItem(this.PROFILES_KEY);
+            if (data) {
+                const parsed = JSON.parse(data) as ProfileStore;
+                return {
+                    profiles: parsed.profiles || [],
+                    activeProfileId: parsed.activeProfileId || null,
+                    globalSettings: parsed.globalSettings || {},
+                };
+            }
+        } catch (e) {
+            console.error('[SaveManager] Failed to load profiles:', e);
+        }
+        return { profiles: [], activeProfileId: null, globalSettings: {} };
+    }
+
+    static saveProfiles(store: ProfileStore): void {
+        try {
+            localStorage.setItem(this.PROFILES_KEY, JSON.stringify(store));
+        } catch (e) {
+            console.error('[SaveManager] Failed to save profiles:', e);
+        }
+    }
+
+    static getActiveProfile(): ParagonProfile | null {
+        const store = this.loadProfiles();
+        if (!store.activeProfileId) return null;
+        return store.profiles.find(p => p.id === store.activeProfileId) ?? null;
+    }
+
+    static setActiveProfile(profileId: string): void {
+        const store = this.loadProfiles();
+        store.activeProfileId = profileId;
+        this.saveProfiles(store);
+    }
+
+    static createProfile(name: string, classId: ClassId): ParagonProfile {
+        const store = this.loadProfiles();
+        if (store.profiles.length >= MAX_CHARACTER_SLOTS) {
+            throw new Error(`Maximum ${MAX_CHARACTER_SLOTS} character slots`);
+        }
+        const classConfig = CLASS_CONFIGS[classId];
+        const profile = createDefaultProfile(name, classId, classConfig.startingWeapons);
+        store.profiles.push(profile);
+        store.activeProfileId = profile.id;
+        this.saveProfiles(store);
+        return profile;
+    }
+
+    static updateProfile(profile: ParagonProfile): void {
+        const store = this.loadProfiles();
+        const idx = store.profiles.findIndex(p => p.id === profile.id);
+        if (idx >= 0) {
+            store.profiles[idx] = { ...profile, lastPlayedAt: Date.now() };
+        }
+        this.saveProfiles(store);
+    }
+
+    static deleteProfile(profileId: string): void {
+        const store = this.loadProfiles();
+        store.profiles = store.profiles.filter(p => p.id !== profileId);
+        if (store.activeProfileId === profileId) {
+            store.activeProfileId = store.profiles[0]?.id ?? null;
+        }
+        this.saveProfiles(store);
+    }
+
+    static hasProfiles(): boolean {
+        const store = this.loadProfiles();
+        return store.profiles.length > 0;
+    }
+
+    /**
+     * Build a RunProgress from a ParagonProfile for compatibility with existing game code.
+     */
+    static profileToRunProgress(profile: ParagonProfile): RunProgress {
+        return {
+            gameLevel: profile.currentGameLevel,
+            currentWave: profile.currentWave,
+            playerCoins: profile.coins,
+            upgradeLevels: profile.upgradeLevels,
+            currentWeapon: profile.currentWeapon,
+            unlockedWeapons: [...profile.unlockedWeapons],
+            playerHP: profile.playerHP,
+            playerMaxHP: profile.playerMaxHP,
+            savedAt: profile.lastPlayedAt,
+            playerX: profile.playerX,
+            playerY: profile.playerY,
+            savedEnemies: profile.savedEnemies,
+            waveEnemiesRemaining: profile.waveEnemiesRemaining,
+            playerClass: profile.classId,
+        };
+    }
+
+    /**
+     * Sync current game state back into a ParagonProfile.
+     */
+    static syncToProfile(profile: ParagonProfile, run: RunProgress): ParagonProfile {
+        return {
+            ...profile,
+            currentGameLevel: run.gameLevel,
+            currentWave: run.currentWave,
+            coins: run.playerCoins,
+            upgradeLevels: { ...run.upgradeLevels },
+            currentWeapon: run.currentWeapon,
+            unlockedWeapons: [...run.unlockedWeapons],
+            playerHP: run.playerHP,
+            playerMaxHP: run.playerMaxHP,
+            playerX: run.playerX,
+            playerY: run.playerY,
+            savedEnemies: run.savedEnemies,
+            waveEnemiesRemaining: run.waveEnemiesRemaining,
+            lastPlayedAt: Date.now(),
+        };
+    }
+
+    /**
+     * Migrate legacy v1 save data into a Paragon profile (one-time migration).
+     */
+    static migrateFromLegacy(): ParagonProfile | null {
+        const legacySave = this.load();
+        const legacyRun = this.loadRunProgress();
+
+        // Nothing to migrate if no meaningful data
+        if (!legacyRun && legacySave.highStage <= 1 && legacySave.coins === 0) {
+            return null;
+        }
+
+        const classId = legacyRun?.playerClass ?? legacySave.lastSelectedClass ?? 'krieger';
+        const classConfig = CLASS_CONFIGS[classId];
+
+        const profile = createDefaultProfile('Helt', classId, classConfig.startingWeapons);
+
+        // Merge legacy data
+        if (legacyRun) {
+            profile.currentGameLevel = Math.max(1, legacyRun.gameLevel);
+            profile.currentWave = legacyRun.currentWave ?? 1;
+            profile.coins = legacyRun.playerCoins ?? 0;
+            profile.upgradeLevels = legacyRun.upgradeLevels ?? {};
+            profile.currentWeapon = legacyRun.currentWeapon ?? classConfig.startingWeapons[0];
+            profile.unlockedWeapons = legacyRun.unlockedWeapons?.length
+                ? [...legacyRun.unlockedWeapons]
+                : [...classConfig.startingWeapons];
+            profile.playerHP = legacyRun.playerHP ?? 100;
+            profile.playerMaxHP = legacyRun.playerMaxHP ?? 100;
+            profile.playerX = legacyRun.playerX;
+            profile.playerY = legacyRun.playerY;
+            profile.savedEnemies = legacyRun.savedEnemies;
+            profile.waveEnemiesRemaining = legacyRun.waveEnemiesRemaining;
+        }
+
+        profile.highestLevelReached = legacySave.highStage;
+
+        return profile;
+    }
+
+    /** Save global settings (audio, graphics, tutorial) separate from profiles */
+    static saveGlobalSettings(settings: ProfileStore['globalSettings']): void {
+        const store = this.loadProfiles();
+        store.globalSettings = { ...store.globalSettings, ...settings };
+        this.saveProfiles(store);
+
+        // Also save to legacy for backward compatibility during transition
+        this.save(settings as Partial<SaveData>);
+    }
+
+    static loadGlobalSettings(): ProfileStore['globalSettings'] {
+        const store = this.loadProfiles();
+        // Fall back to legacy settings if profile store has none
+        if (!store.globalSettings.graphicsQuality && !store.globalSettings.tutorialSeen) {
+            const legacy = this.load();
+            return {
+                audioSettings: legacy.audioSettings,
+                graphicsQuality: legacy.graphicsQuality,
+                tutorialSeen: legacy.tutorialSeen,
+            };
+        }
+        return store.globalSettings;
+    }
+
+    /** Check if user has seen login gate before */
+    static hasSeenLoginGate(): boolean {
+        return localStorage.getItem('kringsringen_skip_login_gate') === 'true';
+    }
+
+    /** Set user preference to skip login gate */
+    static setLoginGatePreference(skip: boolean): void {
+        if (skip) {
+            localStorage.setItem('kringsringen_skip_login_gate', 'true');
+        } else {
+            localStorage.removeItem('kringsringen_skip_login_gate');
+        }
+    }
+
+    // ─── Legacy RunProgress System (kept for backward compat + multiplayer) ──
 
     static saveRunProgress(progress: RunProgress): void {
         try {
             localStorage.setItem(this.RUN_KEY, JSON.stringify({ ...progress, savedAt: Date.now() }));
         } catch (e) {
             console.error('Failed to save run progress:', e);
+        }
+
+        // Also sync to active profile
+        const activeProfile = this.getActiveProfile();
+        if (activeProfile) {
+            const updated = this.syncToProfile(activeProfile, progress);
+            this.updateProfile(updated);
         }
     }
 

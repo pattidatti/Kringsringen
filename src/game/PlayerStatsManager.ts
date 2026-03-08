@@ -234,8 +234,8 @@ export class PlayerStatsManager {
         }
 
         // ── Skald Buffs ──────────────────────────────────────────────
-        // Inspirerende Kvad: +25% speed and damage
-        if (this.scene.buffs?.hasBuff('inspirerende_kvad')) {
+        // Horn: +25% speed and damage
+        if (this.scene.buffs?.hasBuff('horn')) {
             this.playerDamage *= 1.25;
             this.playerSpeed *= 1.25;
             this.scene.registry.set('playerDamage', this.playerDamage);

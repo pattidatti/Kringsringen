@@ -7,20 +7,22 @@ import { UI_ATLAS } from '../../config/ui-atlas';
 
 const ITEM_ICONS_URL = import.meta.env.BASE_URL + 'assets/ui/fantasy/UI_Item_Icons.png';
 const UI_ALL_URL = import.meta.env.BASE_URL + 'assets/ui/UI_ALL.png';
+const UI_ICONS_URL = import.meta.env.BASE_URL + 'assets/ui/fantasy/UI_Icons.png';
 
-// Icons are 32×32px → 16 columns in a 512px-wide sheet
-const CELL = 32;
+// Cell size is now per-sheet via activeSheet.cellSize
 
 type SpriteSheetInfo = {
     name: string;
     url: string;
     cols: number;
     rows: number;
+    cellSize: number; // 16 or 32px per icon
 };
 
 const SPRITE_SHEETS: SpriteSheetInfo[] = [
-    { name: 'UI_Item_Icons', url: ITEM_ICONS_URL, cols: 16, rows: 28 },
-    { name: 'UI_ALL', url: UI_ALL_URL, cols: 64, rows: 81 },
+    { name: 'UI_Item_Icons', url: ITEM_ICONS_URL, cols: 16, rows: 28, cellSize: 32 },
+    { name: 'UI_ALL', url: UI_ALL_URL, cols: 64, rows: 81, cellSize: 32 },
+    { name: 'UI_Icons', url: UI_ICONS_URL, cols: 39, rows: 16, cellSize: 16 },
 ];
 
 // ─── Named icon list ──────────────────────────────────────────────────────────
@@ -28,6 +30,7 @@ const ItemIconNamedList: React.FC = () => {
     const itemFrames = Object.entries(UI_ATLAS.frames).filter(([key]) =>
         key.startsWith('item_')
     );
+    const CELL = 32; // Item icons are always 32×32
 
     return (
         <div className="flex flex-wrap gap-4">
@@ -73,7 +76,7 @@ const ItemIconDebugGrid: React.FC = () => {
     const [sheetIdx, setSheetIdx] = useState(0);
 
     const activeSheet = SPRITE_SHEETS[sheetIdx];
-    const display = CELL * zoom;
+    const display = activeSheet.cellSize * zoom;
 
     const [dragStart, setDragStart] = useState<CellPos | null>(null);
     const [dragEnd, setDragEnd] = useState<CellPos | null>(null);
@@ -86,10 +89,10 @@ const ItemIconDebugGrid: React.FC = () => {
         rows: Math.abs(dragEnd.row - dragStart.row) + 1,
     } : null;
 
-    const selX = sel ? sel.col * CELL : null;
-    const selY = sel ? sel.row * CELL : null;
-    const selW = sel ? sel.cols * CELL : null;
-    const selH = sel ? sel.rows * CELL : null;
+    const selX = sel ? sel.col * activeSheet.cellSize : null;
+    const selY = sel ? sel.row * activeSheet.cellSize : null;
+    const selW = sel ? sel.cols * activeSheet.cellSize : null;
+    const selH = sel ? sel.rows * activeSheet.cellSize : null;
 
     const handleMouseDown = useCallback((col: number, row: number) => {
         setIsMouseDown(true);
@@ -144,7 +147,7 @@ const ItemIconDebugGrid: React.FC = () => {
                         ))}
                     </div>
                     <span className="text-sm text-slate-500">
-                        Cellestr: {display}×{display}px &nbsp;|&nbsp; Kvar ikon = 1 celle ({CELL}×{CELL}px)
+                        Cellestr: {display}×{display}px &nbsp;|&nbsp; Kvar ikon = 1 celle ({activeSheet.cellSize}×{activeSheet.cellSize}px)
                     </span>
                 </div>
             </div>
@@ -189,7 +192,7 @@ const ItemIconDebugGrid: React.FC = () => {
                                         x={selX}  y={selY}
                                     </span>
                                     <span className="text-green-300 text-base">
-                                        {'{ x: '}{selX}{', y: '}{selY}{', w: 32, h: 32 }'}
+                                        {'{ x: '}{selX}{', y: '}{selY}{', w: '}{activeSheet.cellSize}{', h: '}{activeSheet.cellSize}{' }'}
                                     </span>
                                 </>
                             ) : (
@@ -235,7 +238,7 @@ const ItemIconDebugGrid: React.FC = () => {
                                 userSelect: 'none',
                                 flexShrink: 0,
                             }}>
-                                {row * CELL}
+                                {row * activeSheet.cellSize}
                             </div>
 
                             {Array.from({ length: activeSheet.cols }, (_, col) => {
@@ -262,10 +265,10 @@ const ItemIconDebugGrid: React.FC = () => {
                                         }}
                                     >
                                         <div style={{
-                                            width: CELL,
-                                            height: CELL,
+                                            width: activeSheet.cellSize,
+                                            height: activeSheet.cellSize,
                                             backgroundImage: `url(${activeSheet.url})`,
-                                            backgroundPosition: `-${col * CELL}px -${row * CELL}px`,
+                                            backgroundPosition: `-${col * activeSheet.cellSize}px -${row * activeSheet.cellSize}px`,
                                             backgroundRepeat: 'no-repeat',
                                             backgroundSize: 'auto',
                                             imageRendering: 'pixelated',

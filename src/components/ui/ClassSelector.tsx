@@ -8,11 +8,13 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CLASS_CONFIGS } from '../../config/classes';
 import type { ClassId, ClassConfig } from '../../config/classes';
+import { CharacterNameInput } from './CharacterNameInput';
+import { FantasyButton } from './FantasyButton';
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
 interface ClassSelectorProps {
-    onSelect: (classId: ClassId) => void;
+    onSelect: (classId: ClassId, characterName: string) => void;
     onClose: () => void;
     defaultClass?: ClassId;
 }
@@ -181,16 +183,29 @@ const CLASS_ORDER: ClassId[] = ['krieger', 'archer', 'wizard', 'skald'];
 export const ClassSelector: React.FC<ClassSelectorProps> = ({ onSelect, onClose }) => {
     const [selectedId, setSelectedId] = useState<ClassId | null>(null);
     const [isConfirming, setIsConfirming] = useState(false);
+    const [showNameInput, setShowNameInput] = useState(false);
 
     const handleSelect = (id: ClassId) => {
         if (isConfirming) return;
         setSelectedId(id);
         setIsConfirming(true);
 
-        // Premium feel: Let the choice settle for a moment
+        // Premium feel: Let the choice settle for a moment, then show name input
         setTimeout(() => {
-            onSelect(id);
+            setShowNameInput(true);
         }, 1200);
+    };
+
+    const handleNameConfirm = (characterName: string) => {
+        if (selectedId) {
+            onSelect(selectedId, characterName);
+        }
+    };
+
+    const handleNameCancel = () => {
+        setShowNameInput(false);
+        setIsConfirming(false);
+        setSelectedId(null);
     };
 
     return (
@@ -248,6 +263,29 @@ export const ClassSelector: React.FC<ClassSelectorProps> = ({ onSelect, onClose 
             >
                 Klikk for å starte din reise
             </motion.div>
+
+            {/* Back Button (bottom-left) */}
+            <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.5 }}
+                className="absolute bottom-8 left-8 z-20"
+            >
+                <FantasyButton
+                    label="← Tilbake"
+                    variant="secondary"
+                    onClick={onClose}
+                    className="w-44 text-base !text-black [text-shadow:none]"
+                />
+            </motion.div>
+
+            {/* Character Name Input Modal */}
+            <CharacterNameInput
+                isOpen={showNameInput}
+                defaultName={selectedId ? CLASS_CONFIGS[selectedId].displayName : 'Helt'}
+                onConfirm={handleNameConfirm}
+                onCancel={handleNameCancel}
+            />
         </div>
     );
 };

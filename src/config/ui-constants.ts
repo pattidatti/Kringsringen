@@ -36,6 +36,28 @@ export const UI_CONSTANTS = {
         ANIMATION_DURATION: 0.2
     },
 
+    // Buff Display System
+    BUFF_DISPLAY: {
+        POSITION: {
+            TOP: '4.5rem',      // Below TopHUD HP bar
+            LEFT: '1rem',       // Safe zone (left side)
+            MAX_WIDTH: '220px'  // Constrain width to avoid overlap
+        },
+        FONT_SIZES: {
+            TITLE: '12px',           // text-xs
+            DESCRIPTION: '11px',     // text-[11px]
+            STATS: '10px',           // text-[10px]
+            SECTION_HEADER: '10px'   // text-[10px]
+        },
+        COMPACT_THRESHOLD: {
+            COMBAT: 3,    // Switch to grid mode if > 3 buffs
+            PASSIVE: 1,   // Always compact
+            ULTIMATE: 999 // Never compact
+        },
+        Z_INDEX: 50,
+        GRID_COLUMNS: 3
+    },
+
     // Responsive breakpoints
     BREAKPOINTS: {
         MOBILE: 400 // px

@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import type { IMainScene } from './IMainScene';
+import { AudioManager } from './AudioManager';
 
 /**
  * Manages player damage, invincibility frames, and knockback state.
@@ -84,6 +85,8 @@ export class PlayerCombatManager {
         if (manaShieldLvl > 0 && Math.random() < manaShieldLvl * 0.30) {
             // Shield absorbs: show feedback but skip damage
             this.scene.poolManager.getDamageText(player.x, player.y - 40, 'MANA SHIELD', '#00aaff');
+            // Shield activation SFX (subtle variant with pitch shift)
+            AudioManager.instance.playSFX('shield_activate', { volume: 0.35, pitch: 1.15 });
             // Reduce a spell cooldown by 2s
             const weaponCd = this.scene.registry.get('weaponCooldown') as { duration: number; timestamp: number } | undefined;
             if (weaponCd) {
@@ -102,6 +105,9 @@ export class PlayerCombatManager {
 
         // Throttled HP update
         this.pendingHPChange -= actualDamage;
+
+        // Emit player-hit event for achievement tracking
+        this.scene.events.emit('player-hit', { damage: actualDamage });
 
         // ── Fase 6: Iron Will (Krieger) – survive lethal hit with 1 HP ──────
         const ironWillLvl = levels['iron_will'] || 0;
@@ -433,8 +439,14 @@ export class PlayerCombatManager {
         if (this.pendingHPChange !== 0) {
             let currentHP = this.scene.registry.get('playerHP');
             const maxHP = this.scene.registry.get('playerMaxHP') || 100;
-            currentHP = Math.max(0, Math.min(maxHP, currentHP + this.pendingHPChange));
-            this.scene.registry.set('playerHP', currentHP);
+            const newHP = Math.max(0, Math.min(maxHP, currentHP + this.pendingHPChange));
+
+            // Emit player-death event when HP reaches 0
+            if (currentHP > 0 && newHP <= 0) {
+                this.scene.events.emit('player-death');
+            }
+
+            this.scene.registry.set('playerHP', newHP);
             this.pendingHPChange = 0;
         }
     }

@@ -77,36 +77,6 @@ export const VersIndicator: React.FC = React.memo(() => {
                 })}
             </div>
 
-            {/* Passive Buff Labels */}
-            {safeVers > 0 && (
-                <motion.div
-                    initial={{ opacity: 0, y: -5 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="flex gap-2 mt-2 text-[8px] md:text-[9px] text-amber-300/90 font-cinzel tracking-widest uppercase"
-                >
-                    {safeVers >= 1 && (
-                        <span className="px-1.5 py-0.5 bg-black/40 rounded border border-amber-800/50">
-                            SPD
-                        </span>
-                    )}
-                    {safeVers >= 2 && (
-                        <span className="px-1.5 py-0.5 bg-black/40 rounded border border-amber-800/50">
-                            ATK
-                        </span>
-                    )}
-                    {safeVers >= 3 && (
-                        <span className="px-1.5 py-0.5 bg-black/40 rounded border border-amber-800/50">
-                            DMG
-                        </span>
-                    )}
-                    {safeVers >= 4 && (
-                        <span className="px-1.5 py-0.5 bg-black/40 rounded border border-amber-600/60 text-amber-200 animate-pulse">
-                            CRIT
-                        </span>
-                    )}
-                </motion.div>
-            )}
-
             {/* Kvad Ready Notification */}
             <AnimatePresence>
                 {kvadReady && (

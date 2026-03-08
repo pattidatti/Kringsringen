@@ -1,3 +1,8 @@
+# Paragon-update
+- [ ] Lage karakternavn når man oppretter karakter. Tilbakeknapp når man velger klasse. 
+- [x] Flash på hele skjermen med abilit 2 til Skald er litt voldsom. 
+- [x] Vi må ha mye lavere volum på enemy-hit (punch)
+
 # Bugs fra refaktor/classe
 - [x] Krieger: Sverd gjør ikke skade på enemies 
 - [x] Det mørke overlayet over mappet er veldig blått, akkurat som det blå fra react? blør inn i scenen eller noe slikt. 
@@ -65,7 +70,7 @@
 # Score 
 - [x] Score ingame oppe ved siden av mynter
 - [x] Penger og score ser ikke ut til å oppdatere seg oppe til høyre. 
-- [ ] Hvis en overlever hele spillet og dreper sisteboss, må en få highscore og kan skrive inn navnet sitt. 
+- [x] Hvis en overlever hele spillet og dreper sisteboss, må en få highscore og kan skrive inn navnet sitt. 
 
 # Boss battles
 - [x] Orkehøvding er altfor lett å drepe. Trenger litt mer hp, bør være raskere, bruke dash? Kom med forslag. 

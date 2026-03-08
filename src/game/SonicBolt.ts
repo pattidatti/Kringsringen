@@ -14,8 +14,8 @@ export class SonicBolt extends Phaser.Physics.Arcade.Sprite {
     private hitCount: number = 0;
     private slowDuration: number = 0;
     private pulseDirection: number = 1; // For size pulsing animation
-    private noteGraphics: Phaser.GameObjects.Graphics | null = null; // Musical note shape
     private weaponType: 'harp' | 'vers' = 'vers'; // Current weapon type for visual theming
+    private versGiven: boolean = false; // Ensures only one Vers per bolt flight
 
     constructor(scene: Phaser.Scene, x: number, y: number) {
         super(scene, x, y, 'arrow'); // Placeholder texture — tinted gold
@@ -27,11 +27,6 @@ export class SonicBolt extends Phaser.Physics.Arcade.Sprite {
         this.setBodySize(20, 10);
         this.setTint(0xffd700);
         this.setBlendMode(Phaser.BlendModes.ADD); // Glowing effect
-
-        // Create a procedural musical note graphic overlay
-        this.noteGraphics = this.scene.add.graphics();
-        this.noteGraphics.setDepth(this.depth + 1);
-        this.noteGraphics.setBlendMode(Phaser.BlendModes.ADD);
 
         // Enhanced gold particle trail with note-like shapes
         this.trail = this.scene.add.particles(0, 0, 'arrow', {
@@ -69,6 +64,24 @@ export class SonicBolt extends Phaser.Physics.Arcade.Sprite {
         e.takeDamage(this.damage, '#ffd700');
         e.pushback(this.startX, this.startY, 150);
 
+        // Build Vers on hit (not on cast) — only once per bolt
+        if (this.weaponType === 'harp' && !this.versGiven) {
+            this.versGiven = true;
+            mainScene.events.emit('harp-bolt-hit');
+        }
+
+        // Skaldsang Lifesteal — helbred ved Stridssang-treff
+        if (this.weaponType === 'vers') {
+            const levels = (mainScene.registry.get('upgradeLevels') || {}) as Record<string, number>;
+            const lvl = levels['skaldsang_lifesteal'] || 0;
+            if (lvl > 0) {
+                const healAmt = lvl * 2;
+                const curHP = (mainScene.registry.get('playerHP') || 0) as number;
+                const maxHP = (mainScene.registry.get('playerMaxHP') || 100) as number;
+                mainScene.registry.set('playerHP', Math.min(maxHP, curHP + healAmt));
+            }
+        }
+
         // Spark burst at impact point
         if (mainScene.swordSparkEmitter) {
             mainScene.swordSparkEmitter.setEmitterAngle({ min: 0, max: 360 });
@@ -101,6 +114,7 @@ export class SonicBolt extends Phaser.Physics.Arcade.Sprite {
         this.hitEnemies = new WeakSet();
         this.hitCount = 0;
         this.pulseDirection = 1;
+        this.versGiven = false;
 
         this.setActive(true);
         this.setVisible(true);
@@ -137,30 +151,9 @@ export class SonicBolt extends Phaser.Physics.Arcade.Sprite {
             this.trail.follow = this;
         }
 
-        if (this.noteGraphics) {
-            this.noteGraphics.setVisible(true);
-        }
-
         if (this.body) {
             this.body.enable = true;
             this.scene.physics.velocityFromRotation(angle, this.speed, this.body.velocity);
-        }
-
-        // Spawn ripple effect for visual "oomph" (color based on weapon type)
-        const mainScene = this.scene as any;
-        if (mainScene.add && mainScene.tweens) {
-            const rippleColor = weaponType === 'harp' ? 0x88ccff : 0xffd700;
-            const ripple = mainScene.add.circle(x, y, 15, rippleColor, 0);
-            ripple.setStrokeStyle(3, rippleColor, 0.9);
-            ripple.setDepth(this.depth - 2);
-            mainScene.tweens.add({
-                targets: ripple,
-                radius: 60,
-                alpha: 0,
-                duration: 200,
-                ease: 'Cubic.out',
-                onComplete: () => ripple.destroy()
-            });
         }
     }
 
@@ -169,10 +162,6 @@ export class SonicBolt extends Phaser.Physics.Arcade.Sprite {
         this.setVisible(false);
         if (this.body) this.body.enable = false;
         if (this.trail) this.trail.stop();
-        if (this.noteGraphics) {
-            this.noteGraphics.setVisible(false);
-            this.noteGraphics.clear();
-        }
     }
 
     update(): void {
@@ -192,50 +181,10 @@ export class SonicBolt extends Phaser.Physics.Arcade.Sprite {
 
         // Rotate sprite for "tumbling note" effect
         this.rotation += 0.08;
-
-        // Draw procedural musical note overlay (color based on weapon type)
-        if (this.noteGraphics) {
-            this.noteGraphics.clear();
-
-            // Color theming based on weapon type
-            const primaryColor = this.weaponType === 'harp' ? 0x88ccff : 0xffd700;
-            const secondaryColor = this.weaponType === 'harp' ? 0xaaddff : 0xffed4e;
-
-            // Pulsing glow effect
-            const glowAlpha = 0.6 + Math.sin(Date.now() * 0.01) * 0.2;
-            this.noteGraphics.lineStyle(4, primaryColor, glowAlpha); // Thicker stroke
-            this.noteGraphics.fillStyle(primaryColor, 0.8); // Brighter fill
-
-            // Simple eighth note shape at bolt position (scaled up)
-            const noteX = this.x;
-            const noteY = this.y;
-
-            // Note head (larger circle with glow)
-            this.noteGraphics.fillCircle(noteX, noteY, 10); // Increased from 6
-
-            // Outer glow ring
-            this.noteGraphics.lineStyle(2, secondaryColor, 0.4);
-            this.noteGraphics.strokeCircle(noteX, noteY, 14);
-
-            // Note stem (thicker line)
-            this.noteGraphics.lineStyle(4, primaryColor, glowAlpha);
-            this.noteGraphics.beginPath();
-            this.noteGraphics.moveTo(noteX + 8, noteY);
-            this.noteGraphics.lineTo(noteX + 8, noteY - 24); // Taller stem
-            this.noteGraphics.strokePath();
-
-            // Note flag (more visible)
-            this.noteGraphics.beginPath();
-            this.noteGraphics.moveTo(noteX + 8, noteY - 24);
-            this.noteGraphics.lineTo(noteX + 14, noteY - 18);
-            this.noteGraphics.lineTo(noteX + 11, noteY - 14);
-            this.noteGraphics.strokePath();
-        }
     }
 
     public destroy(fromScene?: boolean): void {
         if (this.trail) this.trail.destroy();
-        if (this.noteGraphics) this.noteGraphics.destroy();
         super.destroy(fromScene);
     }
 }

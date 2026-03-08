@@ -4,18 +4,60 @@
 
 ---
 
-## Two-Tier Storage
+## Three-Tier Storage
 
 ```
 localStorage
-├── kringsringen_save_v1   ← permanent (never cleared automatically)
-└── kringsringen_run_v1    ← in-run snapshot (cleared on game over / new game)
+├── kringsringen_profiles_v1  ← Paragon multi-character profiles (NEW)
+├── kringsringen_save_v1      ← Legacy meta-progression (deprecated)
+└── kringsringen_run_v1       ← In-run snapshot (compatibility bridge)
 ```
 
 | Key | Purpose | Cleared when |
 |-----|---------|-------------|
-| `kringsringen_save_v1` | Meta-progression: coins, highStage, audioSettings, graphicsQuality, tutorialSeen | Never (manual only) |
+| `kringsringen_profiles_v1` | **Paragon profiles** (up to 6 characters, persistent progression) | Never (manual delete only) |
+| `kringsringen_save_v1` | Legacy meta-progression (auto-migrated to first profile on startup) | After migration |
 | `kringsringen_run_v1` | Full run snapshot: level, wave, enemies, position, upgrades | Game over or new game |
+
+### ProfileStore Structure
+
+```typescript
+interface ProfileStore {
+  profiles: ParagonProfile[];         // Up to 6 characters
+  activeProfileId: string | null;     // Currently selected profile
+  globalSettings: {
+    audioSettings?: any;
+    graphicsQuality?: string;
+    tutorialSeen?: boolean;
+  };
+}
+```
+
+### ParagonProfile
+
+Each profile represents a persistent character with full progression:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | `string` | UUID (e.g., "abc-123-def") |
+| `name` | `string` | Character display name |
+| `classId` | `ClassId` | "krieger" \| "archer" \| "wizard" \| "skald" |
+| `paragonLevel` | `number` | 0 = first playthrough, 1-10 = Paragon tiers |
+| `currentGameLevel` | `number` | Which level (1-10) they're on |
+| `currentWave` | `number` | Current wave within level |
+| `coins` | `number` | Persistent gold (survives death) |
+| `upgradeLevels` | `Record<string, number>` | All purchased upgrades |
+| `unlockedWeapons` | `string[]` | Unlocked weapons |
+| `currentWeapon` | `string` | Active weapon |
+| `paragonUpgrades` | `Record<string, number>` | Paragon-exclusive upgrades |
+| `achievements` | `string[]` | Unlocked achievement IDs |
+| `totalKills` | `number` | Lifetime kill count |
+| `totalDeaths` | `number` | Lifetime death count |
+| `clearedLevels` | `number[]` | Levels beaten (for farming) |
+| `playerHP` | `number` | Current HP |
+| `playerMaxHP` | `number` | Max HP |
+| `createdAt` | `number` | Unix timestamp |
+| `lastPlayedAt` | `number` | Unix timestamp (used for sorting) |
 
 ---
 

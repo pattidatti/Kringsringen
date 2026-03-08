@@ -5,6 +5,7 @@ import { SaveManager } from '../../game/SaveManager';
 import { FantasyButton } from './FantasyButton';
 import { getGameInstance } from '../../hooks/useGameRegistry';
 import { DEFAULT_QUALITY } from '../../config/QualityConfig';
+import { LoginModal } from './LoginModal';
 
 interface SettingsContentProps {
     inBookContext?: boolean; // Changes layout slightly if needed
@@ -22,7 +23,7 @@ export const SettingsContent: React.FC<SettingsContentProps> = ({ inBookContext,
     });
 
     const [graphicsQuality, setGraphicsQuality] = useState<string>(DEFAULT_QUALITY);
-    const [activeCategory, setActiveCategory] = useState<'audio' | 'graphics'>('audio');
+    const [activeCategory, setActiveCategory] = useState<'audio' | 'graphics' | 'cloud'>('audio');
 
     useEffect(() => {
         const saved = SaveManager.load();
@@ -138,7 +139,7 @@ export const SettingsContent: React.FC<SettingsContentProps> = ({ inBookContext,
 
                 <button
                     onClick={() => setActiveCategory('graphics')}
-                    className={`w-full text-left py-3 px-4 rounded-lg font-cinzel text-lg font-bold transition-all
+                    className={`w-full text-left py-3 px-4 rounded-lg font-cinzel text-lg font-bold transition-all mb-2
                         ${activeCategory === 'graphics'
                             ? (inBookContext ? 'bg-amber-900/10 text-amber-950 border border-amber-900/20 shadow-inner' : 'bg-slate-800 text-slate-100 border border-slate-600')
                             : (inBookContext ? 'text-amber-900/40 hover:text-amber-950' : 'text-slate-400 hover:text-slate-200')}
@@ -146,13 +147,24 @@ export const SettingsContent: React.FC<SettingsContentProps> = ({ inBookContext,
                 >
                     <span className="mr-3">✨</span> Grafikk
                 </button>
+
+                <button
+                    onClick={() => setActiveCategory('cloud')}
+                    className={`w-full text-left py-3 px-4 rounded-lg font-cinzel text-lg font-bold transition-all
+                        ${activeCategory === 'cloud'
+                            ? (inBookContext ? 'bg-amber-900/10 text-amber-950 border border-amber-900/20 shadow-inner' : 'bg-slate-800 text-slate-100 border border-slate-600')
+                            : (inBookContext ? 'text-amber-900/40 hover:text-amber-950' : 'text-slate-400 hover:text-slate-200')}
+                    `}
+                >
+                    <span className="mr-3">☁️</span> Skylagring
+                </button>
             </div>
 
             {/* Right content: Toggles & Sliders */}
             <div className={`flex-1 overflow-y-auto custom-scrollbar ${inBookContext ? 'pl-8 pr-2' : 'pl-6'}`}>
                 <h2 className="font-cinzel font-bold text-2xl mb-4 tracking-wider uppercase border-b pb-2"
                     style={{ borderColor: inBookContext ? 'rgba(120,53,15,0.2)' : 'rgba(148,163,184,0.2)' }}>
-                    {activeCategory === 'audio' ? 'Lydinnstillinger' : 'Grafikkinnstillinger'}
+                    {activeCategory === 'audio' ? 'Lydinnstillinger' : activeCategory === 'graphics' ? 'Grafikkinnstillinger' : 'Skylagring'}
                 </h2>
 
                 {activeCategory === 'audio' ? (
@@ -163,7 +175,7 @@ export const SettingsContent: React.FC<SettingsContentProps> = ({ inBookContext,
                         {renderSliderRow('Grensesnitt', 'uiVolume', '🖱️')}
                         {renderSliderRow('Omgivelser', 'bgsVolume', '🍃')}
                     </div>
-                ) : (
+                ) : activeCategory === 'graphics' ? (
                     <div className="space-y-6 pt-4">
                         <div className="flex flex-col gap-4">
                             <span className="font-cinzel font-bold text-lg opacity-80 uppercase tracking-widest">Kvalitet</span>
@@ -190,6 +202,10 @@ export const SettingsContent: React.FC<SettingsContentProps> = ({ inBookContext,
                                 {graphicsQuality === 'high' && "Full visuell prakt med avansert lys og atmosfæriske effekter."}
                             </p>
                         </div>
+                    </div>
+                ) : (
+                    <div className="pt-4">
+                        <LoginModal />
                     </div>
                 )}
 

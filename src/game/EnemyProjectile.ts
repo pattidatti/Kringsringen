@@ -185,7 +185,7 @@ export class EnemyProjectile extends Phaser.Physics.Arcade.Sprite {
         if (!this.active) return;
 
         // Emit hit event to handle damage logic in main scene
-        this.scene.events.emit('enemy-projectile-hit-player', this.damage, this.projectileType, this.x, this.y, player);
+        this.scene.events.emit('enemy-hit-player', this.damage, this.projectileType, this.x, this.y, player);
         this.hit();
     }
 

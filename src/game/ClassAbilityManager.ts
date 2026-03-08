@@ -4,6 +4,7 @@ import { resolveClassId } from '../config/classes';
 import { Enemy } from './Enemy';
 import { Arrow } from './Arrow';
 import { AudioManager } from './AudioManager';
+import type { GridClient } from './SpatialGrid';
 
 /**
  * Manages active class abilities like Whirlwind, Explosive Shot, and Cascade.
@@ -31,7 +32,7 @@ export class ClassAbilityManager {
         if (playerClassId === 'krieger') this.activateWhirlwind();
         else if (playerClassId === 'wizard') this.activateCascade();
         else if (playerClassId === 'archer') this.activatePhantomVolley();
-        else if (playerClassId === 'skald') this.activateResonanspuls();
+        else if (playerClassId === 'skald') this.activateViolin();
     }
 
     public attemptAbility3(): void {
@@ -374,8 +375,9 @@ export class ClassAbilityManager {
             });
         });
 
-        // Sfx placeholder or trigger
-        this.scene.events.emit('sfx-shield-up');
+        // Shield activation SFX
+        AudioManager.instance.playSFX('shield_activate', { volume: 0.6 });
+        this.scene.registry.set('bulwarkActiveUntil', Date.now() + duration);
     }
 
     public update(time: number, delta: number): void {
@@ -454,14 +456,24 @@ export class ClassAbilityManager {
     }
 
     private activateChainGrapple(): void {
-        const cd = 10000;
+        const levels = (this.scene.registry.get('upgradeLevels') || {}) as Record<string, number>;
+        const cdLvl        = levels['grapple_cooldown']  || 0;
+        const radiusLvl    = levels['grapple_radius']    || 0;
+        const damageLvl    = levels['grapple_damage']    || 0;
+        const stunLvl      = levels['grapple_stun']      || 0;
+        const lifestealLvl = levels['grapple_lifesteal'] || 0;
+        const chainLvl     = levels['grapple_chain']     || 0;
+
+        const cd     = Math.max(6000, 10000 - cdLvl * 1000);
+        const radius = 400 * (1 + radiusLvl * 0.25);
+        const damage = damageLvl * 75;
+
         if (Date.now() < this.classAbility4CooldownEnd) return;
 
         this.classAbility4CooldownEnd = Date.now() + cd;
         this.scene.registry.set('classAbility4Cooldown', { duration: cd, timestamp: Date.now() });
 
         const player = this.scene.data.get('player') as Phaser.Physics.Arcade.Sprite;
-        const radius = 400;
 
         // 1. Visceral Shockwave Effect
         const ring = this.scene.add.circle(player.x, player.y, 10, 0xaaaaaa, 0.4);
@@ -487,49 +499,94 @@ export class ClassAbilityManager {
             height: 1
         }, radius);
 
+        if (chainLvl > 0) {
+            // Split enemies into two hemispheres based on pointer direction
+            const pointer = this.scene.input.activePointer;
+            const angle = Phaser.Math.Angle.Between(player.x, player.y, pointer.worldX, pointer.worldY);
+            const dirX = Math.cos(angle);
+            const dirY = Math.sin(angle);
+
+            const frontEntries: GridClient[] = [];
+            const backEntries: GridClient[] = [];
+
+            nearbyEntries.forEach(entry => {
+                const enemy = entry.ref as Enemy;
+                if (enemy && enemy.active && !enemy.getIsDead()) {
+                    const ex = enemy.x - player.x;
+                    const ey = enemy.y - player.y;
+                    const dot = ex * dirX + ey * dirY;
+                    if (dot >= 0) frontEntries.push(entry);
+                    else backEntries.push(entry);
+                }
+            });
+
+            this.runGrapplePull(player, frontEntries, damage, stunLvl, lifestealLvl, 0xcccccc);
+            this.runGrapplePull(player, backEntries, damage, stunLvl, lifestealLvl, 0xffaa44);
+        } else {
+            this.runGrapplePull(player, nearbyEntries, damage, stunLvl, lifestealLvl, 0xcccccc);
+        }
+    }
+
+    private runGrapplePull(
+        player: Phaser.Physics.Arcade.Sprite,
+        entries: readonly GridClient[],
+        damage: number,
+        stunLvl: number,
+        lifestealLvl: number,
+        chainColor: number
+    ): void {
         const chainGraphics = this.scene.add.graphics();
         chainGraphics.setDepth(player.depth - 1);
         const activeChains: Array<{ enemy: Enemy, color: number }> = [];
 
-        nearbyEntries.forEach(entry => {
+        entries.forEach(entry => {
             const enemy = entry.ref as Enemy;
             if (enemy && enemy.active && !enemy.getIsDead()) {
-                activeChains.push({ enemy, color: 0xcccccc });
+                activeChains.push({ enemy, color: chainColor });
 
-                // Vekt: Tension/Stun phase before the pull starts
+                // Tension phase before the pull starts
                 enemy.setTint(0xffaa00);
                 if (enemy.body) enemy.setVelocity(0, 0);
 
-                // Start the pull after a short tension delay
                 this.scene.time.delayedCall(150, () => {
                     if (!enemy.active || enemy.getIsDead()) return;
 
                     enemy.clearTint();
                     this.scene.tweens.add({
                         targets: enemy,
-                        x: player.x + (enemy.x - player.x) * 0.15, // Pull close but not on top
+                        x: player.x + (enemy.x - player.x) * 0.15,
                         y: player.y + (enemy.y - player.y) * 0.15,
                         duration: 350,
-                        ease: 'Back.out', // Snappy pull
+                        ease: 'Back.out',
                         onUpdate: () => {
                             if (enemy.body) enemy.setVelocity(0, 0);
                         },
                         onComplete: () => {
                             if (!enemy.active) return;
 
-                            // 2. Impact Layer
-                            // Remove from active chains so it stops drawing
                             const idx = activeChains.findIndex(c => c.enemy === enemy);
                             if (idx !== -1) activeChains.splice(idx, 1);
 
-                            // Juice: Spark explosion on impact
                             this.scene.swordSparkEmitter.emitParticleAt(enemy.x, enemy.y, 5);
                             this.scene.cameras.main.shake(100, 0.008);
 
-                            // Visual: Impact Text
-                            this.scene.poolManager.getDamageText(enemy.x, enemy.y - 40, 'PULL!', '#ffffff');
+                            if (damage > 0) {
+                                enemy.takeDamage(damage, '#ffaa00');
+                                if (lifestealLvl > 0) {
+                                    const heal = Math.floor(damage * lifestealLvl * 0.15);
+                                    const curHP = this.scene.registry.get('playerHP') || 0;
+                                    const maxHP = this.scene.registry.get('playerMaxHP') || 100;
+                                    this.scene.registry.set('playerHP', Math.min(maxHP, curHP + heal));
+                                    this.scene.poolManager.getDamageText(player.x, player.y - 40, `+${heal}`, '#55ff55');
+                                }
+                                if (stunLvl > 0) {
+                                    enemy.stun(1000);
+                                    this.scene.poolManager.getDamageText(enemy.x, enemy.y - 50, '★ STUNNET', '#ffed4e');
+                                }
+                            } else {
+                                this.scene.poolManager.getDamageText(enemy.x, enemy.y - 40, 'PULL!', '#ffffff');
+                            }
 
-                            // Stun enemy briefly on impact
                             enemy.setTint(0xffffff);
                             this.scene.time.delayedCall(200, () => { if (enemy.active) enemy.clearTint(); });
                         }
@@ -538,10 +595,10 @@ export class ClassAbilityManager {
             }
         });
 
-        // 3. Dynamic Chain Rendering Loop
+        // Dynamic Chain Rendering Loop
         const renderTimer = this.scene.time.addEvent({
             delay: 16,
-            repeat: 100, // Should cover the 350ms duration + tension
+            repeat: 100,
             callback: () => {
                 chainGraphics.clear();
                 if (activeChains.length === 0) {
@@ -552,7 +609,6 @@ export class ClassAbilityManager {
 
                 activeChains.forEach(chain => {
                     if (chain.enemy && chain.enemy.active) {
-                        // Draw a jagged/segmented chain for aesthetic
                         chainGraphics.lineStyle(2, chain.color, 0.8);
 
                         const startX = player.x;
@@ -560,7 +616,6 @@ export class ClassAbilityManager {
                         const endX = chain.enemy.x;
                         const endY = chain.enemy.y;
 
-                        // Zig-zag effect for 'tension'
                         const segments = 6;
                         chainGraphics.beginPath();
                         chainGraphics.moveTo(startX, startY);
@@ -576,7 +631,6 @@ export class ClassAbilityManager {
                         chainGraphics.lineTo(endX, endY);
                         chainGraphics.strokePath();
 
-                        // Add small 'hook' circle at the end
                         chainGraphics.fillStyle(0xffffff, 1);
                         chainGraphics.fillCircle(endX, endY, 4);
                     }
@@ -586,7 +640,12 @@ export class ClassAbilityManager {
     }
 
     private activateVaultAndVolley(): void {
-        const cd = 7000;
+        const levels = (this.scene.registry.get('upgradeLevels') || {}) as Record<string, number>;
+
+        // vault_cooldown: 7s → 5.5 → 4.5 → 3.5
+        const cdLvl = levels['vault_cooldown'] || 0;
+        const cd = ([7000, 5500, 4500, 3500][cdLvl]) ?? 7000;
+
         if (Date.now() < this.classAbility3CooldownEnd) return;
 
         this.classAbility3CooldownEnd = Date.now() + cd;
@@ -596,8 +655,8 @@ export class ClassAbilityManager {
         const pointer = this.scene.input.activePointer;
         const angle = Phaser.Math.Angle.Between(player.x, player.y, pointer.worldX, pointer.worldY);
 
-        // Leap backward
-        const leapDist = 180;
+        // vault_distance: base 180px, +30% per level
+        const leapDist = 180 * (1 + (levels['vault_distance'] || 0) * 0.30);
         const targetX = player.x - Math.cos(angle) * leapDist;
         const targetY = player.y - Math.sin(angle) * leapDist;
 
@@ -619,19 +678,30 @@ export class ClassAbilityManager {
             }
         });
 
-        // Volley: Fire 5 arrows in a fan
-        for (let i = -2; i <= 2; i++) {
+        // vault_arrows: base half-width 2 (5 arrows), +1 per level (→7, 9, 11)
+        const half = 2 + (levels['vault_arrows'] || 0);
+        // vault_damage: base 0.7x, +25% per level
+        const damageMult = 0.7 * (1 + (levels['vault_damage'] || 0) * 0.25);
+        // vault_pierce: +1 pierce per level
+        const pierceLvl = levels['vault_pierce'] || 0;
+
+        for (let i = -half; i <= half; i++) {
             const arrowAngle = angle + (i * 0.15);
             const arrow = (this.scene as any).arrows.get(player.x, player.y) as Arrow;
             if (arrow) {
                 // Ability 3 optimization: Only the middle arrow (i=0) has light to prevent FPS drops
-                arrow.fire(player.x, player.y, arrowAngle, this.scene.stats.damage * 0.7, 700, 0, 0, 0, 0, 0, i === 0);
+                arrow.fire(player.x, player.y, arrowAngle, this.scene.stats.damage * damageMult, 700, pierceLvl, 0, 0, 0, 0, i === 0);
             }
         }
     }
 
     private activateShadowDecoy(): void {
-        const cd = 15000;
+        const levels = (this.scene.registry.get('upgradeLevels') || {}) as Record<string, number>;
+
+        // decoy_cooldown: 15s → 12 → 9 → 7
+        const cdLvl = levels['decoy_cooldown'] || 0;
+        const cd = ([15000, 12000, 9000, 7000][cdLvl]) ?? 15000;
+
         if (Date.now() < this.classAbility4CooldownEnd) return;
 
         this.classAbility4CooldownEnd = Date.now() + cd;
@@ -639,15 +709,21 @@ export class ClassAbilityManager {
 
         const player = this.scene.data.get('player') as Phaser.Physics.Arcade.Sprite;
 
+        // decoy_duration: base 3000ms + 2000ms per level
+        const decoyLifespan = 3000 + (levels['decoy_duration'] || 0) * 2000;
+        const withExplosion = (levels['decoy_explode'] || 0) > 0;
+        const withMimic = (levels['decoy_mimic'] || 0) > 0;
+
         // Spawn Decoy
         const decoy = (this.scene as any).decoys.get(player.x, player.y) as any;
         if (decoy) {
-            decoy.spawn(player.x, player.y);
+            decoy.spawn(player.x, player.y, decoyLifespan, withExplosion, withMimic);
         }
 
-        // Pseudo-invis for player
+        // decoy_invis: base 1500ms + 1000ms per level
+        const invisDuration = 1500 + (levels['decoy_invis'] || 0) * 1000;
         player.setAlpha(0.3);
-        this.scene.time.delayedCall(1500, () => {
+        this.scene.time.delayedCall(invisDuration, () => {
             player.setAlpha(1);
         });
     }
@@ -692,8 +768,10 @@ export class ClassAbilityManager {
 
         const levels = (this.scene.registry.get('upgradeLevels') || {}) as Record<string, number>;
         const durationLvl = levels['kvad_duration'] || 0;
+        const hornHealLvl = levels['horn_heal'] || 0;
+        const hornCdLvl   = levels['horn_cooldown'] || 0;
         const duration = 5000 + durationLvl * 1000;
-        const cd = 8000; // Shorter CD since it only costs 2 Vers
+        const cd = Math.max(3000, 8000 - hornCdLvl * 1000);
 
         // CONSUME 2 VERS
         this.scene.registry.set('skaldVers', vers - 2);
@@ -703,9 +781,9 @@ export class ClassAbilityManager {
         this.scene.registry.set('classAbility3Cooldown', { duration: cd, timestamp: Date.now() });
 
         this.scene.buffs.addBuff({
-            key: 'inspirerende_kvad',
-            title: 'INSPIRERENDE KVAD',
-            icon: 'item_lightning',
+            key: 'horn',
+            title: 'HORN',
+            icon: 'item_moon_crescent',
             color: 0xffd700,
             duration: duration,
             maxStacks: 1,
@@ -718,6 +796,9 @@ export class ClassAbilityManager {
             category: 'ultimate',
             priority: 15
         });
+
+        // Shield/Aura activation SFX (magical protective aura)
+        AudioManager.instance.playSFX('shield_activate', { volume: 0.5, pitch: 0.95 });
 
         // Enhanced visual: Glorious healing aura
         const player = this.scene.data.get('player') as Phaser.Physics.Arcade.Sprite;
@@ -787,15 +868,15 @@ export class ClassAbilityManager {
             });
         });
 
-        // Heal based on duration upgrade
-        const healAmount = 30 + durationLvl * 10;
+        // Heal based on duration upgrade and horn_heal upgrade
+        const healAmount = 30 + durationLvl * 10 + hornHealLvl * 15;
         const curHP = this.scene.registry.get('playerHP') || 0;
         const maxHP = this.scene.registry.get('playerMaxHP') || 100;
         this.scene.registry.set('playerHP', Math.min(maxHP, curHP + healAmount));
 
         // Heal VFX: Green "+" symbols floating up + player pulse
         this.scene.poolManager.getDamageText(player.x, player.y - 60, `+${healAmount}`, '#55ff55');
-        this.scene.poolManager.getDamageText(player.x, player.y - 75, 'INSPIRERENDE KVAD!', '#ffd700');
+        this.scene.poolManager.getDamageText(player.x, player.y - 75, 'HORN!', '#ffd700');
 
         // Player scale pulse
         this.scene.tweens.add({
@@ -807,8 +888,6 @@ export class ClassAbilityManager {
             ease: 'Sine.inOut'
         });
 
-        // Camera flash (gold)
-        this.scene.cameras.main.flash(150, 255, 215, 0, false);
         this.scene.cameras.main.shake(120, 0.006);
 
         // Trigger stat recalculation to update passive bonuses
@@ -855,14 +934,20 @@ export class ClassAbilityManager {
         }, radius);
 
         let totalDamageDealt = 0;
+        let stunCount = 0;
         nearbyEntries.forEach(entry => {
             const enemy = entry.ref as Enemy;
             if (enemy && enemy.active && !enemy.getIsDead()) {
                 enemy.takeDamage(damage, '#ffd700');
                 totalDamageDealt += damage;
-                // Stun
+                // Bosses get half stun duration to signal resistance
+                const isBoss = !!(enemy as any).bossConfig;
+                const stunDuration = isBoss ? 1500 : 3000;
                 if (enemy.stun && typeof enemy.stun === 'function') {
-                    enemy.stun(3000);
+                    enemy.stun(stunDuration);
+                    stunCount++;
+                    // Stun indicator above enemy
+                    this.scene.poolManager.getDamageText(enemy.x, enemy.y - 50, '★ STUNNET', '#ffed4e');
                 }
             }
         });
@@ -943,22 +1028,30 @@ export class ClassAbilityManager {
         }
 
         // Enhanced visual: Cascading sound-wave shockwaves
-        // Primary wave
-        const primaryRing = this.scene.add.circle(player.x, player.y, 10, 0xffd700, 0.6);
+        // Primary wave — expands to full radius so player can see what got hit
+        const primaryRing = this.scene.add.circle(player.x, player.y, 10, 0xffd700, 0.5);
         primaryRing.setStrokeStyle(6, 0xffffff, 0.9);
         primaryRing.setDepth(player.depth - 1);
         this.scene.tweens.add({
             targets: primaryRing,
             radius: radius,
-            alpha: 0,
-            duration: 500,
-            ease: 'Expo.out',
-            onComplete: () => primaryRing.destroy()
+            alpha: 0.1,
+            duration: 600,
+            ease: 'Sine.out',
+            onComplete: () => {
+                // Hold briefly at full radius so player reads the area
+                this.scene.tweens.add({
+                    targets: primaryRing,
+                    alpha: 0,
+                    duration: 200,
+                    onComplete: () => primaryRing.destroy()
+                });
+            }
         });
 
         // Secondary cascading waves (3 waves trailing behind)
         for (let i = 1; i <= 3; i++) {
-            this.scene.time.delayedCall(i * 100, () => {
+            this.scene.time.delayedCall(i * 120, () => {
                 const secondaryRing = this.scene.add.circle(player.x, player.y, 10, 0xffed4e, 0.4);
                 secondaryRing.setStrokeStyle(4, 0xffd700, 0.7);
                 secondaryRing.setDepth(player.depth - 1);
@@ -966,7 +1059,7 @@ export class ClassAbilityManager {
                     targets: secondaryRing,
                     radius: radius * 0.8,
                     alpha: 0,
-                    duration: 400,
+                    duration: 450,
                     ease: 'Cubic.out',
                     onComplete: () => secondaryRing.destroy()
                 });
@@ -975,10 +1068,10 @@ export class ClassAbilityManager {
 
         // Distortion effect: Intense screen shake + chromatic aberration pulse
         this.scene.cameras.main.shake(220, 0.018);
-        this.scene.cameras.main.flash(220, 255, 215, 0, false);
 
-        // Title text + particle burst
-        this.scene.poolManager.getDamageText(player.x, player.y - 70, 'SEIERSKVAD!', '#ffd700');
+        // Feedback: show how many enemies were stunned
+        const feedbackText = stunCount > 0 ? `${stunCount} STUNNET!` : 'PANFLØYTE!';
+        this.scene.poolManager.getDamageText(player.x, player.y - 70, feedbackText, '#ffd700');
 
         // Massive particle explosion
         const burstCount = Math.max(15, Math.floor(40 * (this.scene.quality?.particleMultiplier || 1.0)));
@@ -1005,7 +1098,7 @@ export class ClassAbilityManager {
         this.scene.stats.recalculateStats();
     }
 
-    private activateResonanspuls(): void {
+    private activateViolin(): void {
         const player = this.scene.data.get('player') as Phaser.Physics.Arcade.Sprite;
         if (!player || !player.active) return;
 
@@ -1033,7 +1126,8 @@ export class ClassAbilityManager {
             const slowLvl = levels['stridssang_slow'] || 0;
 
             const vers = (this.scene.registry.get('skaldVers') || 0) as number;
-            const boltCount = 1 + vers;
+            const poetiskLvl = levels['poetisk_lisens'] || 0;
+            const boltCount = Math.max(1 + vers, 1 + poetiskLvl);
             const baseDamage = this.scene.stats.damage * 1.0 * (1 + versDmgLvl * 0.20);
             const slowDuration = slowLvl > 0 ? (500 + slowLvl * 500) : 0;
 
@@ -1058,8 +1152,6 @@ export class ClassAbilityManager {
             this.scene.events.emit('vers-cast');
 
             // Visual feedback scales with bolt count
-            const flashIntensity = 80 + vers * 25;
-            (this.scene as any).cameras.main.flash(flashIntensity, 255, 215, 0, false);
             (this.scene as any).cameras.main.shake(80 + vers * 20, 0.003 + vers * 0.001);
 
             // Consume all Vers

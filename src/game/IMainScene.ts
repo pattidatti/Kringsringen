@@ -15,6 +15,7 @@ import type { AmbientParticleManager } from './AmbientParticleManager';
 import type { InputManager } from './InputManager';
 import type { FlowFieldManager } from './pathing/FlowFieldManager';
 import type { BuffManager } from './BuffManager';
+import type { ParagonAbilityManager } from './ParagonAbilityManager';
 
 /**
  * Lightweight interface for MainScene.
@@ -55,6 +56,7 @@ export interface IMainScene extends Phaser.Scene {
     weather: WeatherManager;
     ambient: AmbientParticleManager;
     buffs: BuffManager;
+    paragonAbility: ParagonAbilityManager;
     player: Phaser.Physics.Arcade.Sprite;
     quality: any;
     networkManager?: any;
@@ -68,6 +70,7 @@ export interface IMainScene extends Phaser.Scene {
     swordSparkEmitter: Phaser.GameObjects.Particles.ParticleEmitter;
     playerShadow: Phaser.GameObjects.Sprite | null;
     restartGame(): void;
+    restartAtLevel(level: number): void;
     handlePlayerActionCombat(time: number, delta: number): void;
     spawnBoss(idx: number): void;
     collectSaveData(): RunProgress;
