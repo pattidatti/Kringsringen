@@ -640,7 +640,12 @@ export class ClassAbilityManager {
     }
 
     private activateVaultAndVolley(): void {
-        const cd = 7000;
+        const levels = (this.scene.registry.get('upgradeLevels') || {}) as Record<string, number>;
+
+        // vault_cooldown: 7s → 5.5 → 4.5 → 3.5
+        const cdLvl = levels['vault_cooldown'] || 0;
+        const cd = ([7000, 5500, 4500, 3500][cdLvl]) ?? 7000;
+
         if (Date.now() < this.classAbility3CooldownEnd) return;
 
         this.classAbility3CooldownEnd = Date.now() + cd;
@@ -650,8 +655,8 @@ export class ClassAbilityManager {
         const pointer = this.scene.input.activePointer;
         const angle = Phaser.Math.Angle.Between(player.x, player.y, pointer.worldX, pointer.worldY);
 
-        // Leap backward
-        const leapDist = 180;
+        // vault_distance: base 180px, +30% per level
+        const leapDist = 180 * (1 + (levels['vault_distance'] || 0) * 0.30);
         const targetX = player.x - Math.cos(angle) * leapDist;
         const targetY = player.y - Math.sin(angle) * leapDist;
 
@@ -673,19 +678,30 @@ export class ClassAbilityManager {
             }
         });
 
-        // Volley: Fire 5 arrows in a fan
-        for (let i = -2; i <= 2; i++) {
+        // vault_arrows: base half-width 2 (5 arrows), +1 per level (→7, 9, 11)
+        const half = 2 + (levels['vault_arrows'] || 0);
+        // vault_damage: base 0.7x, +25% per level
+        const damageMult = 0.7 * (1 + (levels['vault_damage'] || 0) * 0.25);
+        // vault_pierce: +1 pierce per level
+        const pierceLvl = levels['vault_pierce'] || 0;
+
+        for (let i = -half; i <= half; i++) {
             const arrowAngle = angle + (i * 0.15);
             const arrow = (this.scene as any).arrows.get(player.x, player.y) as Arrow;
             if (arrow) {
                 // Ability 3 optimization: Only the middle arrow (i=0) has light to prevent FPS drops
-                arrow.fire(player.x, player.y, arrowAngle, this.scene.stats.damage * 0.7, 700, 0, 0, 0, 0, 0, i === 0);
+                arrow.fire(player.x, player.y, arrowAngle, this.scene.stats.damage * damageMult, 700, pierceLvl, 0, 0, 0, 0, i === 0);
             }
         }
     }
 
     private activateShadowDecoy(): void {
-        const cd = 15000;
+        const levels = (this.scene.registry.get('upgradeLevels') || {}) as Record<string, number>;
+
+        // decoy_cooldown: 15s → 12 → 9 → 7
+        const cdLvl = levels['decoy_cooldown'] || 0;
+        const cd = ([15000, 12000, 9000, 7000][cdLvl]) ?? 15000;
+
         if (Date.now() < this.classAbility4CooldownEnd) return;
 
         this.classAbility4CooldownEnd = Date.now() + cd;
@@ -693,15 +709,21 @@ export class ClassAbilityManager {
 
         const player = this.scene.data.get('player') as Phaser.Physics.Arcade.Sprite;
 
+        // decoy_duration: base 3000ms + 2000ms per level
+        const decoyLifespan = 3000 + (levels['decoy_duration'] || 0) * 2000;
+        const withExplosion = (levels['decoy_explode'] || 0) > 0;
+        const withMimic = (levels['decoy_mimic'] || 0) > 0;
+
         // Spawn Decoy
         const decoy = (this.scene as any).decoys.get(player.x, player.y) as any;
         if (decoy) {
-            decoy.spawn(player.x, player.y);
+            decoy.spawn(player.x, player.y, decoyLifespan, withExplosion, withMimic);
         }
 
-        // Pseudo-invis for player
+        // decoy_invis: base 1500ms + 1000ms per level
+        const invisDuration = 1500 + (levels['decoy_invis'] || 0) * 1000;
         player.setAlpha(0.3);
-        this.scene.time.delayedCall(1500, () => {
+        this.scene.time.delayedCall(invisDuration, () => {
             player.setAlpha(1);
         });
     }
