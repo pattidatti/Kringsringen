@@ -194,6 +194,237 @@ const WAVE_EVENTS: WaveEventDef[] = [
                 meteorTimer.destroy();
             };
         }
+    },
+
+    // ─── 6. GRAVITETSVORTEKS ─────────────────────────────────────────────────
+    {
+        id: 'gravity_vortex',
+        displayName: 'GRAVITETSVORTEKS',
+        description: 'En vorteks drar alle fiender mot kartsenter i 15 sekunder!',
+        duration: 15000,
+        color: 0x9933ff,
+        activate(scene) {
+            // Pulsing rings at map center (world coordinates)
+            const gfx = scene.add.graphics().setDepth(3000);
+            let pulse = 0;
+            const pulseTimer = scene.time.addEvent({
+                delay: 50,
+                loop: true,
+                callback: () => {
+                    pulse += 0.12;
+                    gfx.clear();
+                    gfx.lineStyle(2, 0x9933ff, 0.4 + Math.sin(pulse) * 0.3);
+                    gfx.strokeCircle(1500, 1500, 80 + Math.sin(pulse) * 20);
+                    gfx.lineStyle(1, 0x9933ff, 0.2 + Math.sin(pulse + 1) * 0.15);
+                    gfx.strokeCircle(1500, 1500, 160 + Math.sin(pulse + 1) * 30);
+                }
+            });
+
+            const worldStep = () => {
+                scene.enemies.children.iterate((child: any) => {
+                    if (!child.active || !child.body) return true;
+                    const dx = 1500 - child.x;
+                    const dy = 1500 - child.y;
+                    const d = Math.sqrt(dx * dx + dy * dy) || 1;
+                    const pull = Math.min(d * 0.25, 70);
+                    child.body.velocity.x += (dx / d) * pull;
+                    child.body.velocity.y += (dy / d) * pull;
+                    return true;
+                });
+            };
+            scene.physics.world.on('worldstep', worldStep);
+
+            return () => {
+                scene.physics.world.off('worldstep', worldStep);
+                pulseTimer.destroy();
+                if (gfx.active) gfx.destroy();
+            };
+        }
+    },
+
+    // ─── 7. TIDSAKSELERASJON ─────────────────────────────────────────────────
+    {
+        id: 'time_acceleration',
+        displayName: 'TIDSAKSELERASJON',
+        description: 'Alt beveger seg 1.8× raskere i 15 sekunder!',
+        duration: 15000,
+        color: 0x6666ff,
+        activate(scene) {
+            const prev = scene.physics.world.timeScale;
+            scene.physics.world.timeScale = 1.8;
+
+            const cam = scene.cameras.main;
+            const overlay = scene.add.rectangle(
+                cam.width / 2, cam.height / 2, 4000, 4000, 0x3300cc, 0
+            ).setScrollFactor(0).setDepth(7900);
+            scene.tweens.add({ targets: overlay, alpha: { from: 0, to: 0.10 }, duration: 600 });
+
+            return () => {
+                scene.physics.world.timeScale = prev;
+                if (overlay.active) {
+                    scene.tweens.add({
+                        targets: overlay, alpha: 0, duration: 600,
+                        onComplete: () => { if (overlay.active) overlay.destroy(); }
+                    });
+                }
+            };
+        }
+    },
+
+    // ─── 8. TIDSFRYS ─────────────────────────────────────────────────────────
+    {
+        id: 'time_freeze',
+        displayName: 'TIDSFRYS',
+        description: 'Fiendene fryser hvert 5. sekund – angrip dem mens de er stille!',
+        duration: 20000,
+        color: 0x44ddff,
+        activate(scene) {
+            let stillActive = true;
+            const cam = scene.cameras.main;
+            const flashOverlay = scene.add.rectangle(
+                cam.width / 2, cam.height / 2, 4000, 4000, 0x44ddff, 0
+            ).setScrollFactor(0).setDepth(7900);
+
+            const freezeTimer = scene.time.addEvent({
+                delay: 5000,
+                loop: true,
+                callback: () => {
+                    if (!stillActive) return;
+                    scene.physics.world.timeScale = 0.05;
+                    scene.tweens.add({ targets: flashOverlay, alpha: { from: 0.22, to: 0 }, duration: 500 });
+                    scene.time.delayedCall(1200, () => {
+                        if (stillActive) scene.physics.world.timeScale = 1.0;
+                    });
+                }
+            });
+
+            return () => {
+                stillActive = false;
+                freezeTimer.destroy();
+                scene.physics.world.timeScale = 1.0;
+                if (flashOverlay.active) flashOverlay.destroy();
+            };
+        }
+    },
+
+    // ─── 9. BLODTØRST ────────────────────────────────────────────────────────
+    {
+        id: 'bloodlust',
+        displayName: 'BLODTØRST',
+        description: 'Heal +6 HP for hvert kill i 20 sekunder!',
+        duration: 20000,
+        color: 0xff3366,
+        activate(scene) {
+            const cam = scene.cameras.main;
+            const overlay = scene.add.rectangle(
+                cam.width / 2, cam.height / 2, 4000, 4000, 0x880022, 0
+            ).setScrollFactor(0).setDepth(7900);
+            scene.tweens.add({ targets: overlay, alpha: { from: 0, to: 0.12 }, duration: 800 });
+
+            const healHandler = () => {
+                const hp = (scene.registry.get('playerHP') as number) || 0;
+                const maxHP = (scene.registry.get('playerMaxHP') as number) || 100;
+                scene.registry.set('playerHP', Math.min(maxHP, hp + 6));
+                const player = scene.player;
+                if (player?.active) {
+                    scene.poolManager.getDamageText(player.x, player.y - 40, '+6 HP', '#00ff66');
+                }
+            };
+            scene.events.on('enemy-killed', healHandler);
+
+            return () => {
+                scene.events.off('enemy-killed', healHandler);
+                if (overlay.active) {
+                    scene.tweens.add({
+                        targets: overlay, alpha: 0, duration: 800,
+                        onComplete: () => { if (overlay.active) overlay.destroy(); }
+                    });
+                }
+            };
+        }
+    },
+
+    // ─── 10. KJEDEREAKSJON ───────────────────────────────────────────────────
+    {
+        id: 'chain_reaction',
+        displayName: 'KJEDEREAKSJON',
+        description: 'Fiender eksploderer ved død og skader naboer!',
+        duration: 20000,
+        color: 0xff9900,
+        activate(scene) {
+            const chainHandler = ({ x, y }: { x: number; y: number }) => {
+                scene.poolManager.spawnFireballExplosion(x, y);
+                scene.enemies.children.iterate((child: any) => {
+                    if (child.active && !child.isDead) {
+                        const d = Phaser.Math.Distance.Between(child.x, child.y, x, y);
+                        if (d < 120) child.takeDamage?.(25, '#ff6600');
+                    }
+                    return true;
+                });
+            };
+            scene.events.on('enemy-killed', chainHandler);
+
+            return () => {
+                scene.events.off('enemy-killed', chainHandler);
+            };
+        }
+    },
+
+    // ─── 11. BERSERKER ───────────────────────────────────────────────────────
+    {
+        id: 'berserker',
+        displayName: 'BERSERKER',
+        description: 'Du tar 1.8× skade, men healer 20% av fiendens maks-HP ved kill!',
+        duration: 25000,
+        color: 0xff0000,
+        activate(scene) {
+            scene.registry.set('waveEventDamageTakenMult', 1.8);
+
+            const cam = scene.cameras.main;
+            const overlay = scene.add.rectangle(
+                cam.width / 2, cam.height / 2, 4000, 4000, 0x880000, 0
+            ).setScrollFactor(0).setDepth(7900);
+            scene.tweens.add({ targets: overlay, alpha: { from: 0, to: 0.15 }, duration: 600 });
+
+            // Pulsing red border
+            const gfx = scene.add.graphics().setScrollFactor(0).setDepth(7901);
+            let pulse = 0;
+            const borderPulse = scene.time.addEvent({
+                delay: 50,
+                loop: true,
+                callback: () => {
+                    pulse += 0.10;
+                    gfx.clear();
+                    gfx.lineStyle(4, 0xff0000, 0.5 + Math.sin(pulse) * 0.4);
+                    gfx.strokeRect(4, 4, cam.width - 8, cam.height - 8);
+                }
+            });
+
+            const berserkerHeal = ({ maxHP }: { maxHP: number }) => {
+                const hp = (scene.registry.get('playerHP') as number) || 0;
+                const cap = (scene.registry.get('playerMaxHP') as number) || 100;
+                const healAmt = Math.max(1, Math.floor(maxHP * 0.2));
+                scene.registry.set('playerHP', Math.min(cap, hp + healAmt));
+                const player = scene.player;
+                if (player?.active) {
+                    scene.poolManager.getDamageText(player.x, player.y - 40, `+${healAmt} HP`, '#ff4444');
+                }
+            };
+            scene.events.on('enemy-killed', berserkerHeal);
+
+            return () => {
+                scene.registry.set('waveEventDamageTakenMult', 1);
+                scene.events.off('enemy-killed', berserkerHeal);
+                borderPulse.destroy();
+                if (gfx.active) gfx.destroy();
+                if (overlay.active) {
+                    scene.tweens.add({
+                        targets: overlay, alpha: 0, duration: 800,
+                        onComplete: () => { if (overlay.active) overlay.destroy(); }
+                    });
+                }
+            };
+        }
     }
 ];
 

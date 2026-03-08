@@ -103,6 +103,12 @@ export class PlayerCombatManager {
             actualDamage *= (1 - globalDR);
         }
 
+        // ── Wave Event: Berserker — increased damage taken ──────────────────
+        const eventDamageMult = (this.scene.registry.get('waveEventDamageTakenMult') as number) ?? 1;
+        if (eventDamageMult !== 1) {
+            actualDamage *= eventDamageMult;
+        }
+
         // Throttled HP update
         this.pendingHPChange -= actualDamage;
 

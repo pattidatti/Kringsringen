@@ -212,6 +212,7 @@ export class WaveManager {
         enemy.on('dead', (ex: number, ey: number) => {
             this.enemiesAlive = Math.max(0, this.enemiesAlive - 1);
             this.checkWaveProgress();
+            this.scene.events.emit('enemy-killed', { x: ex, y: ey, maxHP: enemy.maxHP });
 
             // Sync enemy death reliably to prevent ghosting
             this.scene.networkManager?.broadcast({
@@ -598,6 +599,7 @@ export class WaveManager {
             enemy.on('dead', (ex: number, ey: number) => {
                 this.enemiesAlive = Math.max(0, this.enemiesAlive - 1);
                 this.checkWaveProgress();
+                this.scene.events.emit('enemy-killed', { x: ex, y: ey, maxHP: enemy.maxHP });
 
                 this.scene.networkManager?.broadcast({
                     t: PacketType.GAME_EVENT,
