@@ -42,6 +42,9 @@ Teknisk implementeringsplan for klassesystemet (fase 1–5).
 ### [Klassesystem – Fase 6](./class-system-phase6-plan.md)
 Plan for å koble inn class-upgrade-effekter i gameplay (ikke fullimplementert per mars 2026).
 
+### [Helligstedsystem (Shrines)](./shrine-system.md)
+Teknisk referanse for det proseduralt genererte Pakt-systemet: spawning, blessings/curses, aktivering, stat-applisering og React HUD-integrasjon.
+
 ### [Ideer – Nye klasser](./ideer/nye-klasser.md)
 Brainstorm for fremtidige klasser: Dyremaner og Runesmeden.
 
@@ -66,4 +69,4 @@ Se [`docs/save_system.md`](./save_system.md) for full teknisk dokumentasjon av l
 - [ ] Class Upgrade Effects (Fase 6 – se `class-system-phase6-plan.md`)
 
 ---
-*Sist oppdatert: 6. mars 2026 (Doc Audit)*
+*Sist oppdatert: 8. mars 2026 (Doc Audit)*

@@ -52,6 +52,14 @@
 |:---|:---|:---|:---|:---|:---|
 | `whirl_activate` | `sword_slice.wav` | 1 | 0.6 | ±0.12 | `ClassAbilityManager` → Whirlwind tick |
 | `whirl_hit` | `sword_clash.wav`, `sword_clash_2.wav` | 2 | 0.5 | ±0.10 | `ClassAbilityManager` → Whirlwind on-hit |
+| `shield_activate` | `shield_activate_1-2.wav` | 2 | 0.5 | ±0.08 | `ClassAbilityManager` → Iron Bulwark activation |
+
+#### Skald Class Abilities
+
+| ID | Files | Variants | Volume | Pitch Variance | Used By |
+|:---|:---|:---|:---|:---|:---|
+| `skald_cast` | `skald_cast_1-4.wav` | 4 | 0.4 | ±0.15 | `ClassAbilityManager` → Harp Bolt + Resonanspuls cast |
+| `vers_cast` (alias) | `skald_cast_1-4.wav` | 4 | 0.5 | ±0.20 | `ClassAbilityManager` → Vers ability cast |
 
 All SFX files are in `public/assets/audio/sfx/`.
 

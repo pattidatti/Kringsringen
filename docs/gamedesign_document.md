@@ -343,18 +343,20 @@ Hvert Map Level laster et statisk kart via `StaticMapLoader` + `StaticMapData`. 
 
 ## 9. Audio
 
+> **Merk (mars 2026):** BGM spilles nå fra en **shufflet spilleliste** i `WaveManager`, ikke deterministisk per nivå. Sporene `meadow_theme`, `exploration_theme`, `dragons_fury`, `pixel_rush_overture`, `glitch_in_the_forest`, `glitch_in_the_dungeon`, `glitch_in_the_catacombs` og `glitch_in_the_heavens` blandes tilfeldig og trekkes én om gangen. Boss-musikk settes manuelt per boss-konfig i `src/config/bosses.ts`.
+
 | Type | Spor | Status |
 | :--- | :--- | :--- |
-| BGM – Level 1 | meadow_theme.mp3 | ✅ |
-| BGM – Level 2 | exploration_theme.mp3 | ✅ |
-| BGM – Level 3 | dragons_fury.mp3 | ✅ |
-| BGM – Level 4+ | *(ingen tildeling)* | ⚠️ Mangler |
+| BGM – Spilleliste | meadow_theme, exploration_theme, dragons_fury, pixel_rush_overture, glitch_in_the_forest, glitch_in_the_dungeon, glitch_in_the_catacombs, glitch_in_the_heavens | ✅ (shufflet) |
 | BGM – Boss 1 & 3 | Final Dungeon Loop.mp3 | ✅ |
-| BGM – Boss 2 | Glitch King.mp3 | ✅ |
-| BGS – Skog | forest_day.wav | ⚠️ Volum for lav |
+| BGM – Boss 2 & 5 | Glitch King.mp3 | ✅ |
+| BGM – Boss 4 | Glitch in the Dungeon.mp3 | ✅ |
+| BGS – Skog | forest_day.ogg | ⚠️ Volum for lav |
 | SFX – Sverd | sword_attack + sword_impact | ✅ |
 | SFX – Bue | bow_attack + bow_impact | ✅ |
 | SFX – Ild/Frost/Lyn | fireball_cast/hit, ice_freeze/throw | ✅ |
+| SFX – Skald | skald_cast (4 varianter) | ✅ |
+| SFX – Krieger skjold | shield_activate (2 varianter) | ✅ |
 | SFX – Mynter | coin_collect | ✅ |
 | SFX – Footsteps | dirt_run (5 varianter) | ✅ |
 | SFX – UI | ui_click, paper_move | ✅ |
@@ -520,6 +522,58 @@ Spilleren velger én av **fire klasser** ved start av en ny run. Hver klasse har
 
 ---
 
-**Dokumentversjon:** 2.6
-**Sist oppdatert:** 6. mars 2026
+---
+
+## 14. Helligstedsystem (Shrines) ✅
+
+Helligsteder er interaktive gjenstandar som spawner tilfeldig på kartet mellom bølger. Hvert helligsted tilbyr en **Pakt** — en randomisert kombinasjon av en velsignelse og en forbannelse. Spilleren aktiverer helligstedet med `[C]` når de er nær nok (≤ 80 px).
+
+- **Spawn-sjanse:** 40% per bølge. Maks ett helligsted aktiv om gangen.
+- **Auto-despawn:** 30 sekunder etter spawn (fade-ut) hvis ikke aktivert.
+- **Varighet:** 40–85 sekunder per aktivert pakt.
+- **Visuell:** Steinpiedestall med pulserende glødende kule og Cinzel-font-tekst.
+- **HUD:** `TopHUD` viser aktiv pakt med symbol, navn og nedtelling (sekunder igjen).
+
+### Blessinges og forbannelsekategorier
+
+| Type | Eksempler |
+|:---|:---|
+| Velsignelse | +Hastighet, +Skade, −Avkjøling, +Maks HP, +Regen, +Crit, +Prosjektiler |
+| Forbannelse | −Hastighet, −Skade, +Avkjøling, −Maks HP, HP-tapping/s, −Regen |
+
+Pakter navngis som `{VELSIGNELSE}-{FORBANNELSE}` (f.eks. `KRIGER-BLOD`).
+
+Se [`docs/shrine-system.md`](./shrine-system.md) for full teknisk dokumentasjon.
+
+### Åpne mangler
+- 🚧 Ingen SFX ved aktivering
+- 🚧 Singleplayer-only — ikke synkronisert i multiplayer
+- 🚧 Shrine-effekt lagres ikke ved "Avslutt spill" (effekten gjeninnsettes ikke ved "Fortsett")
+
+---
+
+## 15. Wave Events (Bølgehendelser) ✅
+
+Tilfeldige hendelser som aktiveres ved start av bølger (utløst av `WaveEventManager`). Vises som et banner-announcement øverst på skjermen.
+
+| ID | Navn | Beskrivelse | Varighet |
+|:---|:---|:---|:---|
+| `blood_moon` | BLODMÅNE | Fiendene beveger seg 2× raskere | 15s |
+| `coin_rush` | MYNTSTORM | Alle fiender dropper 3× mynter | 20s |
+| `golden_horde` | GYLDEN HORDE | Gylne fiender dropper 2× mynter | 25s |
+| `lightning_storm` | LYNSTORM | Lynnedslag treffer kartet, 10 dmg ved treff | 18s |
+| `meteor_shower` | METEORREG | Meteorer rammer bakken i oransje soner, 18 dmg | 20s |
+| `gravity_vortex` | GRAVITETSVORTEKS | Vorteks drar alle fiender mot kartsenter | 15s |
+| `time_acceleration` | TIDSAKSELERASJON | Alt beveger seg 1.8× raskere (physics timeScale) | 15s |
+| `time_freeze` | TIDSFRYS | Fiendene fryser hvert 5. sekund i 1.2s | 20s |
+| `bloodlust` | BLODTØRST | Heal +6 HP per kill | 20s |
+| `chain_reaction` | KJEDEREAKSJON | Fiender eksploderer ved død og skader naboer (25 dmg, 120 px) | 20s |
+| `berserker` | BERSERKER | Du tar 1.8× skade, healer 20% av fiendens maks-HP per kill | 25s |
+
+Wave events bruker `waveEventSpeedMultiplier`, `waveEventCoinMultiplier` og `waveEventDamageTakenMult` i registry. `PlayerCombatManager` og `Enemy` leser disse multiplikatorene.
+
+---
+
+**Dokumentversjon:** 2.7
+**Sist oppdatert:** 8. mars 2026
 **Ansvarlig AI Architect:** Antigravity

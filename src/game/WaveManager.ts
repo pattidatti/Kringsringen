@@ -31,6 +31,8 @@ export class WaveManager {
     private isLevelActive: boolean = false;
     private bgmPlaylist: string[] = [];
     private spawnTimer: Phaser.Time.TimerEvent | null = null;
+    private levelCompleteTimer: Phaser.Time.TimerEvent | null = null;
+    private waveCompleteTimer: Phaser.Time.TimerEvent | null = null;
 
     constructor(scene: IMainScene) {
         this.scene = scene;
@@ -329,7 +331,8 @@ export class WaveManager {
                 // Wave completed
                 this.scene.events.emit('wave-complete', { wave: this.currentWave, level: this.currentLevel });
                 this.currentWave++;
-                this.scene.time.delayedCall(GAME_CONFIG.WAVES.WAVE_DELAY, () => this.startWave());
+                this.waveCompleteTimer?.destroy();
+                this.waveCompleteTimer = this.scene.time.delayedCall(GAME_CONFIG.WAVES.WAVE_DELAY, () => this.startWave());
             } else {
                 this.isLevelActive = false;
                 const currentStage = this.scene.registry.get('gameLevel');
@@ -348,7 +351,8 @@ export class WaveManager {
                 const bossConfig = getBossForLevel(this.currentLevel);
                 this.scene.registry.set('bossComingUp', bossConfig ? bossConfig.bossIndex : -1);
 
-                this.scene.time.delayedCall(GAME_CONFIG.WAVES.LEVEL_COMPLETE_DELAY, () => {
+                this.levelCompleteTimer?.destroy();
+                this.levelCompleteTimer = this.scene.time.delayedCall(GAME_CONFIG.WAVES.LEVEL_COMPLETE_DELAY, () => {
                     this.scene.events.emit('level-complete');
                     this.scene.scene.pause();
 
@@ -652,6 +656,22 @@ export class WaveManager {
                 loop: true
             });
         }
+    }
+
+    /**
+     * Immediately halts all wave activity and cancels all pending timers.
+     * Call before in-place restarts to prevent ghost level-complete timers.
+     */
+    public stopAllTimers(): void {
+        this.isLevelActive = false;
+        this.enemiesAlive = 0;
+        this.enemiesToSpawnInWave = 0;
+        this.spawnTimer?.destroy();
+        this.spawnTimer = null;
+        this.levelCompleteTimer?.destroy();
+        this.levelCompleteTimer = null;
+        this.waveCompleteTimer?.destroy();
+        this.waveCompleteTimer = null;
     }
 
     public findEnemyById(id: string): Enemy | null {

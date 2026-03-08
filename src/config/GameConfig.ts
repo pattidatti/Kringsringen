@@ -276,7 +276,7 @@ export const GAME_CONFIG = {
         }
     },
     ELITE: {
-        SPAWN_CHANCE: 0.10,
+        SPAWN_CHANCE: 0.05,
         STAT_MULT_MIN: 2.0,
         STAT_MULT_MAX: 3.0,
         COIN_MULT: 3.0,

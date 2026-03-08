@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import type { IMainScene } from './IMainScene';
 import { Shrine } from './Shrine';
-import { SHRINE_EFFECTS } from '../config/shrines';
+import { generateShrineEffect } from '../config/shrines';
 import type { ShrineMods } from '../config/shrines';
 
 const PROXIMITY_RADIUS = 80;
@@ -12,8 +12,10 @@ const MAP_CENTER_Y = 1500;
 export interface ActiveShrineInfo {
     name: string;
     description: string;
+    blessingDescription?: string;
+    curseDescription?: string;
     color: number;
-    type: 'blessing' | 'curse';
+    type: 'blessing' | 'curse' | 'mixed';
     startTime: number;   // Date.now() at activation — React uses this for countdown
     duration: number;    // ms
 }
@@ -52,7 +54,7 @@ export class ShrineManager {
         const x = MAP_CENTER_X + Math.cos(angle) * dist;
         const y = MAP_CENTER_Y + Math.sin(angle) * dist;
 
-        const def = Phaser.Utils.Array.GetRandom(SHRINE_EFFECTS);
+        const def = generateShrineEffect();
         this.activeShrine = new Shrine(this.scene as unknown as Phaser.Scene, x, y, def);
     }
 
@@ -130,6 +132,8 @@ export class ShrineManager {
         const info: ActiveShrineInfo = {
             name: def.displayName,
             description: def.description,
+            blessingDescription: def.blessingDescription,
+            curseDescription: def.curseDescription,
             color: def.color,
             type: def.type,
             startTime: Date.now(),

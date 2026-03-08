@@ -461,4 +461,22 @@ export class PlayerCombatManager {
     public setDashIframe(active: boolean): void {
         this.isInvincible = active;
     }
+
+    /** Reset all transient combat state for an in-place level restart. */
+    public resetForRestart(): void {
+        this.isInvincible = false;
+        this.pendingHPChange = 0;
+        this.ironWillUsedThisLevel = false;
+        this.fortificationTimer = 0;
+        this.isFortified = false;
+        this.fortificationActiveTime = 0;
+        this.fortificationShield?.destroy();
+        this.fortificationShield = null;
+        this.fortificationTween?.stop();
+        this.fortificationTween = null;
+        this.berserkerPulseTween?.stop();
+        this.berserkerPulseTween = null;
+        this.berserkerVignette?.destroy();
+        this.berserkerVignette = null;
+    }
 }

@@ -12,196 +12,216 @@ export interface ShrineMods {
 
 export interface ShrineEffectDef {
     id: string;
-    type: 'blessing' | 'curse';
+    type: 'blessing' | 'curse' | 'mixed';
     displayName: string;
     description: string;
+    blessingDescription?: string;
+    curseDescription?: string;
     color: number;           // 0xRRGGBB
     duration: number;        // ms
     mods: ShrineMods;
 }
 
-export const SHRINE_EFFECTS: ShrineEffectDef[] = [
-    // ─── 10 Blessings (gold tones) ──────────────────────────────────────────
-    {
-        id: 'swiftfoot',
-        type: 'blessing',
-        displayName: 'KVIKKFOT',
-        description: '+50% hastighet',
-        color: 0xf6d860,
-        duration: 60000,
-        mods: { speedMult: 1.5 }
-    },
-    {
-        id: 'warblood',
-        type: 'blessing',
-        displayName: 'KRIGERSBLOD',
-        description: '+60% skade',
-        color: 0xffa040,
-        duration: 45000,
-        mods: { damageMult: 1.6 }
-    },
-    {
-        id: 'iron_skin',
-        type: 'blessing',
-        displayName: 'JERNHUD',
-        description: '+40% maks liv · +3 regen/s',
-        color: 0xf0c030,
-        duration: 75000,
-        mods: { maxHpMult: 1.4, regenBonus: 3 }
-    },
-    {
-        id: 'berserker_gift',
-        type: 'blessing',
-        displayName: 'GALNINGSGAVE',
-        description: '+80% skade · +20% hastighet',
-        color: 0xffaa20,
-        duration: 45000,
-        mods: { damageMult: 1.8, speedMult: 1.2 }
-    },
-    {
-        id: 'rapid_fire',
-        type: 'blessing',
-        displayName: 'STORMHAGEL',
-        description: '−60% angrepsavkjøling',
-        color: 0xf6d860,
-        duration: 45000,
-        mods: { cooldownMult: 0.4 }
-    },
-    {
-        id: 'true_sight',
-        type: 'blessing',
-        displayName: 'SANNSYNT',
-        description: '+35% kritsjanse',
-        color: 0xffe080,
-        duration: 60000,
-        mods: { critBonus: 0.35 }
-    },
-    {
-        id: 'multiweave',
-        type: 'blessing',
-        displayName: 'FLERTRYLL',
-        description: '+2 prosjektiler',
-        color: 0xf0c030,
-        duration: 60000,
-        mods: { extraProjectiles: 2 }
-    },
-    {
-        id: 'serpent_tooth',
-        type: 'blessing',
-        displayName: 'SLANGEKLO',
-        description: '+3 gjennomtrengning · +20% skade',
-        color: 0xffa040,
-        duration: 60000,
-        mods: { pierceBonus: 3, damageMult: 1.2 }
-    },
-    {
-        id: 'life_spring',
-        type: 'blessing',
-        displayName: 'LIVSKILDE',
-        description: '+8 regen/s · +20% maks liv',
-        color: 0xf6d860,
-        duration: 75000,
-        mods: { regenBonus: 8, maxHpMult: 1.2 }
-    },
-    {
-        id: 'godtouch',
-        type: 'blessing',
-        displayName: 'GUDEGREP',
-        description: '+30% skade · +30% hastighet · −30% avkjøling',
-        color: 0xffcc00,
-        duration: 45000,
-        mods: { damageMult: 1.3, speedMult: 1.3, cooldownMult: 0.7 }
-    },
+// ── Internal template types ──────────────────────────────────────────────────
 
-    // ─── 10 Curses (purple/red tones) ───────────────────────────────────────
+interface BlessingTemplate {
+    stat: keyof ShrineMods;
+    range: [number, number];
+    isInt?: boolean;
+    formatDisplay: (v: number) => string;
+    nameFrag: string;
+    weight: number;
+}
+
+interface CurseTemplate {
+    stat: keyof ShrineMods;
+    range: [number, number];
+    isInt?: boolean;
+    formatDisplay: (v: number) => string;
+    nameFrag: string;
+    weight: number;
+}
+
+// ── Utility functions ────────────────────────────────────────────────────────
+
+function randBetween(min: number, max: number): number {
+    return min + Math.random() * (max - min);
+}
+
+function randIntBetween(min: number, max: number): number {
+    return Math.floor(min + Math.random() * (max - min + 1));
+}
+
+function weightedPick<T extends { weight: number }>(pool: T[]): T {
+    const total = pool.reduce((sum, item) => sum + item.weight, 0);
+    let r = Math.random() * total;
+    for (const item of pool) {
+        r -= item.weight;
+        if (r <= 0) return item;
+    }
+    return pool[pool.length - 1];
+}
+
+// ── Blessing templates ───────────────────────────────────────────────────────
+
+const BLESSING_TEMPLATES: BlessingTemplate[] = [
     {
-        id: 'slugfoot',
-        type: 'curse',
-        displayName: 'TYNGFOT',
-        description: '−50% hastighet',
-        color: 0xaa22ff,
-        duration: 60000,
-        mods: { speedMult: 0.5 }
+        stat: 'speedMult',
+        range: [1.25, 1.80],
+        formatDisplay: v => `+${Math.round((v - 1) * 100)}% hastighet`,
+        nameFrag: 'KVIKK',
+        weight: 10,
     },
     {
-        id: 'weakhand',
-        type: 'curse',
-        displayName: 'SVAKHAND',
-        description: '−60% skade',
-        color: 0x9900cc,
-        duration: 60000,
-        mods: { damageMult: 0.4 }
+        stat: 'damageMult',
+        range: [1.30, 2.20],
+        formatDisplay: v => `+${Math.round((v - 1) * 100)}% skade`,
+        nameFrag: 'KRIGER',
+        weight: 10,
     },
     {
-        id: 'brittle_bones',
-        type: 'curse',
-        displayName: 'SKJØRBEIN',
-        description: '−40% maks liv',
-        color: 0xcc2222,
-        duration: 60000,
-        mods: { maxHpMult: 0.6 }
+        stat: 'cooldownMult',
+        range: [0.30, 0.70],
+        formatDisplay: v => `\u2212${Math.round((1 - v) * 100)}% avkj\u00f8ling`,
+        nameFrag: 'STORM',
+        weight: 8,
     },
     {
-        id: 'bloodlust',
-        type: 'curse',
-        displayName: 'BLODTØRST',
-        description: '+100% skade · −5 HP/s',
-        color: 0xdd1111,
-        duration: 45000,
-        mods: { damageMult: 2.0, drainPerSec: 5 }
+        stat: 'maxHpMult',
+        range: [1.20, 1.60],
+        formatDisplay: v => `+${Math.round((v - 1) * 100)}% maks liv`,
+        nameFrag: 'JERN',
+        weight: 8,
     },
     {
-        id: 'glass_cannon',
-        type: 'curse',
-        displayName: 'GLASSKULE',
-        description: '+120% skade · −50% maks liv',
-        color: 0xcc2222,
-        duration: 60000,
-        mods: { damageMult: 2.2, maxHpMult: 0.5 }
+        stat: 'regenBonus',
+        range: [3, 10],
+        isInt: true,
+        formatDisplay: v => `+${v} regen/s`,
+        nameFrag: 'LIV',
+        weight: 7,
     },
     {
-        id: 'heavy_draw',
-        type: 'curse',
-        displayName: 'TUNG BUE',
-        description: '+150% angrepsavkjøling',
-        color: 0x882200,
-        duration: 60000,
-        mods: { cooldownMult: 2.5 }
+        stat: 'critBonus',
+        range: [0.10, 0.40],
+        formatDisplay: v => `+${Math.round(v * 100)}% kritsjanse`,
+        nameFrag: 'SYNS',
+        weight: 8,
     },
     {
-        id: 'soul_drain',
-        type: 'curse',
-        displayName: 'SJELDENVAMP',
-        description: '−3 HP/s · −2 regen/s',
-        color: 0xaa22ff,
-        duration: 75000,
-        mods: { drainPerSec: 3, regenBonus: -2 }
+        stat: 'extraProjectiles',
+        range: [1, 3],
+        isInt: true,
+        formatDisplay: v => `+${v} prosjektiler`,
+        nameFrag: 'FLER',
+        weight: 6,
     },
     {
-        id: 'wild_shot',
-        type: 'curse',
-        displayName: 'VILSKUDD',
-        description: '+3 prosjektiler · −50% skade',
-        color: 0x9900cc,
-        duration: 60000,
-        mods: { extraProjectiles: 3, damageMult: 0.5 }
-    },
-    {
-        id: 'void_touch',
-        type: 'curse',
-        displayName: 'TOMROMGREP',
-        description: '−30% hastighet · −30% skade · +80% avkjøling',
-        color: 0xaa22ff,
-        duration: 60000,
-        mods: { speedMult: 0.7, damageMult: 0.7, cooldownMult: 1.8 }
-    },
-    {
-        id: 'exposed',
-        type: 'curse',
-        displayName: 'BLOTTLAGT',
-        description: '−45% maks liv · −25% skade',
-        color: 0xcc2222,
-        duration: 60000,
-        mods: { maxHpMult: 0.55, damageMult: 0.75 }
+        stat: 'pierceBonus',
+        range: [1, 4],
+        isInt: true,
+        formatDisplay: v => `+${v} gjennomtrengning`,
+        nameFrag: 'SLANGE',
+        weight: 6,
     },
 ];
+
+// ── Curse templates ──────────────────────────────────────────────────────────
+
+const CURSE_TEMPLATES: CurseTemplate[] = [
+    {
+        stat: 'speedMult',
+        range: [0.30, 0.70],
+        formatDisplay: v => `\u2212${Math.round((1 - v) * 100)}% hastighet`,
+        nameFrag: 'TUNG',
+        weight: 10,
+    },
+    {
+        stat: 'damageMult',
+        range: [0.30, 0.75],
+        formatDisplay: v => `\u2212${Math.round((1 - v) * 100)}% skade`,
+        nameFrag: 'SVAK',
+        weight: 10,
+    },
+    {
+        stat: 'cooldownMult',
+        range: [1.80, 3.50],
+        formatDisplay: v => `+${Math.round((v - 1) * 100)}% avkj\u00f8ling`,
+        nameFrag: 'TREIG',
+        weight: 8,
+    },
+    {
+        stat: 'maxHpMult',
+        range: [0.40, 0.75],
+        formatDisplay: v => `\u2212${Math.round((1 - v) * 100)}% maks liv`,
+        nameFrag: 'SKJ\u00d8RT',
+        weight: 8,
+    },
+    {
+        stat: 'drainPerSec',
+        range: [2, 8],
+        isInt: true,
+        formatDisplay: v => `\u2212${v} HP/s`,
+        nameFrag: 'BLOD',
+        weight: 9,
+    },
+    {
+        stat: 'regenBonus',
+        range: [-5, -1],
+        isInt: true,
+        formatDisplay: v => `${v} regen/s`,
+        nameFrag: 'VISNE',
+        weight: 7,
+    },
+];
+
+// ── Generator ────────────────────────────────────────────────────────────────
+
+/** Procedurally generates a unique shrine pact with both a blessing and a curse. */
+export function generateShrineEffect(): ShrineEffectDef {
+    // Pick blessing(s)
+    const blessingPicks: BlessingTemplate[] = [weightedPick(BLESSING_TEMPLATES)];
+    if (Math.random() < 0.40) {
+        const pool = BLESSING_TEMPLATES.filter(t => t.stat !== blessingPicks[0].stat);
+        blessingPicks.push(weightedPick(pool));
+    }
+
+    // Pick curse(s), excluding stats already used in blessings
+    const blessingStats = new Set(blessingPicks.map(t => t.stat));
+    const cursePool = CURSE_TEMPLATES.filter(t => !blessingStats.has(t.stat));
+    const cursePicks: CurseTemplate[] = [weightedPick(cursePool)];
+    if (Math.random() < 0.35) {
+        const pool2 = cursePool.filter(t => t.stat !== cursePicks[0].stat);
+        if (pool2.length > 0) cursePicks.push(weightedPick(pool2));
+    }
+
+    // Roll values and assemble mods
+    const mods: ShrineMods = {};
+    const blessingDescs: string[] = [];
+    for (const t of blessingPicks) {
+        const v = t.isInt ? randIntBetween(t.range[0], t.range[1]) : randBetween(t.range[0], t.range[1]);
+        (mods as Record<string, number>)[t.stat] = v;
+        blessingDescs.push(t.formatDisplay(v));
+    }
+    const curseDescs: string[] = [];
+    for (const t of cursePicks) {
+        const v = t.isInt ? randIntBetween(t.range[0], t.range[1]) : randBetween(t.range[0], t.range[1]);
+        (mods as Record<string, number>)[t.stat] = v;
+        curseDescs.push(t.formatDisplay(v));
+    }
+
+    const blessingDescription = blessingDescs.join(' \u00b7 ');
+    const curseDescription = curseDescs.join(' \u00b7 ');
+
+    return {
+        id: `pact_${Date.now()}_${Math.floor(Math.random() * 10000)}`,
+        type: 'mixed',
+        displayName: `${blessingPicks[0].nameFrag}-${cursePicks[0].nameFrag}`,
+        description: `${blessingDescription} \u00b7 ${curseDescription}`,
+        blessingDescription,
+        curseDescription,
+        color: 0xcc88ee,
+        duration: randIntBetween(40000, 85000),
+        mods,
+    };
+}

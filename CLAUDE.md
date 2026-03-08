@@ -110,7 +110,7 @@ Full technical detail lives in `docs/multiplayer/architecture.md`.
 
 ### Phaser Registry keys (shared state contract)
 
-The registry is the source of truth for game state visible to React. Key names include: `playerHP`, `playerMaxHP`, `playerCoins`, `playerDamage`, `playerSpeed`, `upgradeLevels`, `currentWeapon`, `unlockedWeapons`, `gameLevel`, `currentWave`. Both `MainScene` and React components read/write through this contract.
+The registry is the source of truth for game state visible to React. Key names include: `playerHP`, `playerMaxHP`, `playerCoins`, `playerDamage`, `playerSpeed`, `upgradeLevels`, `currentWeapon`, `unlockedWeapons`, `gameLevel`, `currentWave`. Shrine keys: `shrineStatMods` (`ShrineMods | null`), `activeShrineEffect` (`ActiveShrineInfo | null`), `shrinePromptVisible` (`boolean`). Wave event multiplier keys: `waveEventSpeedMultiplier`, `waveEventCoinMultiplier`, `waveEventDamageTakenMult`. Both `MainScene` and React components read/write through this contract.
 
 ### Upgrade economy
 

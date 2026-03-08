@@ -451,8 +451,11 @@ export const GameContainer: React.FC<GameContainerProps> = React.memo(({ network
                 if (gameInstanceRef.current) {
                     try { gameInstanceRef.current.loop.stop(); } catch (_) { }
                     try { gameInstanceRef.current.input.destroy(); } catch (_) { }
-                    gameInstanceRef.current.destroy(true);
-                    gameInstanceRef.current = null;
+                    try {
+                        gameInstanceRef.current.destroy(true);
+                    } catch (_) { } finally {
+                        gameInstanceRef.current = null;
+                    }
                 }
                 setGameInstance(null);
             };

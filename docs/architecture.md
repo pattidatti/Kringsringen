@@ -27,6 +27,8 @@ For å redusere kompleksitet og forbedre testbarhet, er spillets kjerne-logikk d
 | `AchievementManager` | Tracks gameplay achievements across 5 categories (combat, progression, economy, exploration, skill). |
 | `SaveManager` | Persistens av meta-progresjon, Paragon profiler og "in-run" tilstand (multi-tier localStorage). |
 | `AudioManager` | Global orkestrering av BGM, BGS og asynkron loading av SFX-varianter. |
+| `WaveEventManager` | Tilfeldige bølge-hendelser (BLODMÅNE, MYNTSTORM, KJEDEREAKSJON osv.) som aktiveres ved start av bølger. Hvert event har en activate()-funksjon som returnerer en cleanup-callback. |
+| `ShrineManager` | Spawner helligsteder (40% sjanse per bølge), sjekker spillernærhet, appliserer pakt-mods via registry og håndterer HP-drain fra forbannelser. Se `docs/shrine-system.md`. |
 | `NetworkPacketHandler` | Multiplayer-pakke serialisering/deserialisering via BinaryPacker (kun i multiplayer-modus). |
 
 ## 🔗 `IMainScene` interfacet
@@ -100,4 +102,4 @@ Se [ACHIEVEMENT_SYSTEM.md](./ACHIEVEMENT_SYSTEM.md) for:
 - Toast notification system
 
 ---
-*Sist oppdatert: 7. mars 2026*
+*Sist oppdatert: 8. mars 2026*

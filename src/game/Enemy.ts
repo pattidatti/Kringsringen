@@ -226,8 +226,8 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         this.movementSpeed *= (1 + (statMult - 1) * 0.5);
         this.originalSpeed = this.movementSpeed;
 
-        this.setTint(0xFFD700);
-        this.postFX.addGlow(0xFFD700, 6, 0, false, 0.1, 16);
+        this.setTint(0xFFF4D0);
+        this.postFX.addGlow(0xFFD700, 3, 0, false, 0.1, 10);
         this.setScale(this.scaleX * 1.15);
     }
 
@@ -845,6 +845,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
             if (this.active && !this.isDead && !this.predictedDeadUntil) {
                 if (this.isStunned) this.setTint(0x8888ff);
                 else if (this.config.tint !== undefined) this.setTint(this.config.tint);
+                else if (this.isElite) this.setTint(0xFFF4D0);
                 else this.clearTint();
             }
         });

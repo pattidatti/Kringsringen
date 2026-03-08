@@ -515,6 +515,8 @@ export class MainScene extends Phaser.Scene implements IMainScene {
 
         // End any lingering wave event (resets speed/coin multipliers in registry)
         this.waveEvents?.endActive();
+        // Cancel all pending wave timers before reboot
+        this.waves.stopAllTimers();
 
         // Minimal registry reset — hides the Game Over overlay in React immediately
         // while the full Phaser instance reboot (triggered by 'restart-game') runs.
@@ -529,8 +531,15 @@ export class MainScene extends Phaser.Scene implements IMainScene {
         this.registry.set('unlockedWeapons', [...classConfig.startingWeapons]);
         this.registry.set('currentWeapon', classConfig.startingWeapons[0] || 'sword');
 
+        // Clear hitstop and resume physics/scene before reboot so the
+        // new game instance starts from a clean state.
+        this._hitstopActive = false;
+        this._hitstopCooldownUntil = 0;
+        this.physics.world.resume();
+        this.scene.resume();
+
         // Trigger the full reboot via GameContainer (setRebootKey).
-        // The new game instance handles all further reset — no need to resume or
+        // The new game instance handles all further reset — no need to
         // regenerate the map here, as this instance is about to be destroyed.
         this.events.emit('restart-game');
     }
@@ -545,6 +554,9 @@ export class MainScene extends Phaser.Scene implements IMainScene {
 
         // End any active wave event first — resets speed/coin multipliers
         this.waveEvents?.endActive();
+        // Cancel all pending wave timers BEFORE clearing enemies to prevent
+        // ghost level-complete timers firing after the enemy group is destroyed.
+        this.waves.stopAllTimers();
 
         // scene.resume() MUST be called regardless of errors below (scene was paused on death)
         try {
@@ -564,6 +576,9 @@ export class MainScene extends Phaser.Scene implements IMainScene {
             this.bossGroup.clear(true, true);
             this.coins.clear(true, true);
             ['arrows', 'fireballs', 'frostBolts', 'lightningBolts', 'decoys', 'traps'].forEach(g => (this as any)[g]?.clear(true, true));
+
+            // Reset transient combat state (invincibility, fortification, berserker, etc.)
+            this.combat.resetForRestart();
 
             // Reset player position and state
             if (this.player) {
@@ -585,6 +600,10 @@ export class MainScene extends Phaser.Scene implements IMainScene {
         } catch (e) {
             console.error('[Game] restartAtLevel failed:', e);
         } finally {
+            // Clear any lingering hitstop — physics must be running after restart
+            this._hitstopActive = false;
+            this._hitstopCooldownUntil = 0;
+            this.physics.world.resume();
             // Always resume — the scene was paused on death
             this.scene.resume();
         }

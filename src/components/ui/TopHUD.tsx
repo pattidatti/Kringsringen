@@ -131,9 +131,11 @@ export const TopHUD: React.FC = React.memo(() => {
             {/* Shrine Effect Badge */}
             {activeShrineEffect && (() => {
                 const colorStr = activeShrineEffect.color.toString(16).padStart(6, '0');
+                const shrineSymbol = activeShrineEffect.type === 'blessing' ? '✦' : activeShrineEffect.type === 'curse' ? '✧' : '⚖';
+                const shouldPulse = activeShrineEffect.type !== 'blessing';
                 return (
                     <div
-                        className={`absolute left-1/2 -translate-x-1/2 top-36 flex items-center gap-2 px-4 py-1.5 rounded-full border shadow-lg backdrop-blur-sm ${activeShrineEffect.type === 'curse' ? 'animate-pulse' : ''}`}
+                        className={`absolute left-1/2 -translate-x-1/2 top-36 flex items-start gap-2 px-4 py-2 rounded-xl border shadow-lg backdrop-blur-sm ${shouldPulse ? 'animate-pulse' : ''}`}
                         style={{
                             borderColor: `#${colorStr}88`,
                             backgroundColor: `#${colorStr}22`,
@@ -141,10 +143,21 @@ export const TopHUD: React.FC = React.memo(() => {
                             zIndex: 10000
                         }}
                     >
-                        <span className="font-cinzel font-black text-xs tracking-widest uppercase drop-shadow">
-                            {activeShrineEffect.type === 'blessing' ? '✦' : '✧'} {activeShrineEffect.name}
-                        </span>
-                        <span className="text-white/70 font-bold text-xs tabular-nums">{shrineSecondsLeft}s</span>
+                        <span className="font-cinzel font-black text-sm leading-tight mt-0.5">{shrineSymbol}</span>
+                        <div className="flex flex-col">
+                            <div className="flex items-center gap-2">
+                                <span className="font-cinzel font-black text-xs tracking-widest uppercase drop-shadow">
+                                    {activeShrineEffect.name}
+                                </span>
+                                <span className="text-white/70 font-bold text-xs tabular-nums">{shrineSecondsLeft}s</span>
+                            </div>
+                            {activeShrineEffect.blessingDescription && (
+                                <span className="text-amber-300 text-xs font-cinzel">✦ {activeShrineEffect.blessingDescription}</span>
+                            )}
+                            {activeShrineEffect.curseDescription && (
+                                <span className="text-red-400 text-xs font-cinzel">✧ {activeShrineEffect.curseDescription}</span>
+                            )}
+                        </div>
                     </div>
                 );
             })()}
