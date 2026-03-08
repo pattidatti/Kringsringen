@@ -36,7 +36,7 @@ interface GameContainerProps {
     targetLevel?: number | null;
 }
 
-export const GameContainer: React.FC<GameContainerProps> = React.memo(({ networkConfig, continueRun, selectedClass, onExitToMenu, activeProfile, targetLevel }) => {
+export const GameContainer: React.FC<GameContainerProps> = React.memo(({ networkConfig, continueRun, selectedClass, onExitToMenu, activeProfile }) => {
     const phaserContainerRef = useRef<HTMLDivElement>(null);
     const gameInstanceRef = useRef<Phaser.Game | null>(null);
 

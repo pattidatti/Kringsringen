@@ -9,7 +9,6 @@ import { motion } from 'framer-motion';
 import { FantasyButton } from './FantasyButton';
 import { useGameRegistry } from '../../hooks/useGameRegistry';
 import { getParagonTierName, PARAGON_SCALING } from '../../config/paragon';
-import { getGameInstance } from '../../hooks/useGameRegistry';
 
 interface VictoryOverlayProps {
     paragonLevel: number;

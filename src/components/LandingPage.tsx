@@ -110,14 +110,6 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart, onContinue, onStartM
 
     const fadeAudioAndStart = () => fadeAudio(onStart);
 
-    const handleStart = () => {
-        if (SaveManager.load().tutorialSeen) {
-            fadeAudioAndStart();
-        } else {
-            setShowTutorial(true);
-        }
-    };
-
     const handleContinue = () => fadeAudio(onContinue);
 
     return (

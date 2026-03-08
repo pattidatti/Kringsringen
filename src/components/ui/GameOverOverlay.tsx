@@ -17,7 +17,6 @@ const GameOverContent: React.FC<{ hp: number; partyDead: boolean }> = ({ hp: hpP
     const wave = useGameRegistry('currentWave', 1);
     const coins = useGameRegistry('playerCoins', 0);
     const isMultiplayer = useGameRegistry('isMultiplayer', false);
-    const paragonLevel = useGameRegistry('paragonLevel', 0);
     const syncState = useGameRegistry<{ loaded: number, ready: number, expected: number }>('syncState', { loaded: 0, ready: 0, expected: 1 });
 
     const [playerName, setPlayerName] = useState('');
