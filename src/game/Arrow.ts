@@ -89,8 +89,8 @@ export class Arrow extends Phaser.Physics.Arcade.Sprite {
                 mainScene.events.emit('enemy-hit');
             }
         } else {
-            e.takeDamage(this.damage, '#ffffff');
             e.pushback(this.startX, this.startY, 150);
+            e.takeDamage(this.damage, '#ffffff');
 
             // ── Fase 6: Archer pil-effekter ──────────────────────────────────
             const levels = (mainScene.registry?.get('upgradeLevels') || {}) as Record<string, number>;

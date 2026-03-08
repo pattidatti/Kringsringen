@@ -231,12 +231,12 @@ export class Singularity extends Phaser.GameObjects.Sprite {
                 const dmgMult = inCenter ? this.centerDamageMult : 1;
                 const finalDamage = this.explosionDamage * dmgMult;
 
-                enemy.takeDamage(finalDamage, '#aa00ff');
-
                 // Knockback outward
                 const outAngle = Phaser.Math.Angle.Between(this.x, this.y, enemy.x, enemy.y);
                 const kbForce = 400 * (1 - dist / this.pullRadius);
                 enemy.pushback(this.x - Math.cos(outAngle) * 10, this.y - Math.sin(outAngle) * 10, kbForce); // Push away from center
+
+                enemy.takeDamage(finalDamage, '#aa00ff');
             }
         }
 

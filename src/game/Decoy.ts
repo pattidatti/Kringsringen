@@ -106,8 +106,8 @@ export class Decoy extends Phaser.Physics.Arcade.Sprite {
             for (const entry of enemies) {
                 const enemy = entry.ref;
                 if (enemy && enemy.active && !enemy.getIsDead()) {
-                    enemy.takeDamage(damage, '#ffaa00');
                     enemy.pushback(this.x, this.y, 300);
+                    enemy.takeDamage(damage, '#ffaa00');
                 }
             }
         }

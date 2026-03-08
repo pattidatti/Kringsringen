@@ -16,6 +16,7 @@ import type { InputManager } from './InputManager';
 import type { FlowFieldManager } from './pathing/FlowFieldManager';
 import type { BuffManager } from './BuffManager';
 import type { ParagonAbilityManager } from './ParagonAbilityManager';
+import type { WaveEventManager } from './WaveEventManager';
 
 /**
  * Lightweight interface for MainScene.
@@ -57,6 +58,7 @@ export interface IMainScene extends Phaser.Scene {
     ambient: AmbientParticleManager;
     buffs: BuffManager;
     paragonAbility: ParagonAbilityManager;
+    waveEvents: WaveEventManager;
     player: Phaser.Physics.Arcade.Sprite;
     quality: any;
     networkManager?: any;
@@ -71,6 +73,7 @@ export interface IMainScene extends Phaser.Scene {
     playerShadow: Phaser.GameObjects.Sprite | null;
     restartGame(): void;
     restartAtLevel(level: number): void;
+    triggerHitstop(durationMs?: number): void;
     handlePlayerActionCombat(time: number, delta: number): void;
     spawnBoss(idx: number): void;
     collectSaveData(): RunProgress;

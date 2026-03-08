@@ -61,8 +61,8 @@ export class SonicBolt extends Phaser.Physics.Arcade.Sprite {
         this.hitEnemies.add(e);
         this.hitCount++;
 
-        e.takeDamage(this.damage, '#ffd700');
         e.pushback(this.startX, this.startY, 150);
+        e.takeDamage(this.damage, '#ffd700');
 
         // Build Vers on hit (not on cast) — only once per bolt
         if (this.weaponType === 'harp' && !this.versGiven) {

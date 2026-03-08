@@ -109,8 +109,8 @@ export class ClassAbilityManager {
             for (const entry of nearby) {
                 const e = entry.ref as Enemy;
                 if (e && e.active && !e.getIsDead()) {
-                    e.takeDamage(damage, color);
                     e.pushback(px, py, this.scene.stats.knockback);
+                    e.takeDamage(damage, color);
                     hitCount++;
                 }
             }
@@ -305,6 +305,7 @@ export class ClassAbilityManager {
         this.cascadeActiveUntil = Date.now() + duration;
         this.classAbilityCooldownEnd = Date.now() + cd;
         this.scene.registry.set('classAbilityCooldown', { duration: cd, timestamp: Date.now() });
+        this.scene.registry.set('classAbility4Cooldown', { duration: cd, timestamp: Date.now() });
 
         const singularity = this.scene.singularities.get(spawnX, spawnY) as import('./Singularity').Singularity | null;
         if (singularity) {

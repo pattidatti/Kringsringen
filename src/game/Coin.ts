@@ -9,6 +9,10 @@ export class Coin extends Phaser.Physics.Arcade.Sprite {
     public id: string = "";
     private isCollected: boolean = false;
     public forceMagnet: boolean = false;
+    public magnetDelay: number = 0;
+    public magnetReadyAt: number = 0;
+    private magnetStartTime: number = -1;
+    private arcDirection: number = 1;
 
     constructor(scene: Phaser.Scene, x: number, y: number, target: Phaser.GameObjects.Components.Transform) {
         super(scene, x, y, 'coin');
@@ -33,6 +37,10 @@ export class Coin extends Phaser.Physics.Arcade.Sprite {
         this.targetStart = target;
         this.isCollected = false;
         this.forceMagnet = false;
+        this.magnetDelay = 0;
+        this.magnetReadyAt = 0;
+        this.magnetStartTime = -1;
+        this.arcDirection = Math.random() < 0.5 ? 1 : -1;
 
 
         // Visual Reset
@@ -77,12 +85,22 @@ export class Coin extends Phaser.Physics.Arcade.Sprite {
         const dynamicMagnetRange = (this.scene.registry.get('coinMagnetRadius') as number | undefined) ?? this.magnetRange;
 
         // Optimization: use distance squared to avoid Math.sqrt
-        if (this.forceMagnet || distSq < dynamicMagnetRange * dynamicMagnetRange) {
+        const magnetReady = this.forceMagnet || (time >= this.magnetReadyAt && distSq < dynamicMagnetRange * dynamicMagnetRange);
+
+        if (magnetReady) {
+            if (this.magnetStartTime < 0) this.magnetStartTime = time;
+
             const angle = Math.atan2(dy, dx);
             const currentSpeed = this.forceMagnet ? this.speed * 1.5 : this.speed;
+
+            // Arc: perpendicular force that fades out over 600ms
+            const arcFactor = Math.max(0, 1 - (time - this.magnetStartTime) / 600);
+            const perpX = -Math.sin(angle) * currentSpeed * 0.45 * arcFactor * this.arcDirection;
+            const perpY =  Math.cos(angle) * currentSpeed * 0.45 * arcFactor * this.arcDirection;
+
             this.setVelocity(
-                Math.cos(angle) * currentSpeed,
-                Math.sin(angle) * currentSpeed
+                Math.cos(angle) * currentSpeed + perpX,
+                Math.sin(angle) * currentSpeed + perpY
             );
             this.setDrag(0);
         }

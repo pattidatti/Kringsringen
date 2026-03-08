@@ -33,6 +33,7 @@ import { BuffManager } from './BuffManager';
 import { ParagonAbilityManager } from './ParagonAbilityManager';
 import { HpBarRenderer, type IHpBarTarget } from './HpBarRenderer';
 import { AchievementManager } from './AchievementManager';
+import { WaveEventManager } from './WaveEventManager';
 
 
 export class MainScene extends Phaser.Scene implements IMainScene {
@@ -74,6 +75,7 @@ export class MainScene extends Phaser.Scene implements IMainScene {
     public stats!: PlayerStatsManager;
     public combat!: PlayerCombatManager;
     public waves!: WaveManager;
+    public waveEvents!: WaveEventManager;
 
     // Map Generation
     private mapWidth: number = 3000;
@@ -197,6 +199,7 @@ export class MainScene extends Phaser.Scene implements IMainScene {
             this.stats = new PlayerStatsManager(this);
             this.combat = new PlayerCombatManager(this);
             this.waves = new WaveManager(this);
+            this.waveEvents = new WaveEventManager(this);
             this.weather = new WeatherManager(this);
             this.ambient = new AmbientParticleManager(this);
             console.log('[MainScene] Initializing managers...');
@@ -481,6 +484,24 @@ export class MainScene extends Phaser.Scene implements IMainScene {
             savedEnemies: enemies, waveEnemiesRemaining: this.waves?.getEnemiesToSpawnRemaining() ?? 0,
             savedAt: Date.now(), playerClass: this.registry.get('playerClass') ?? 'krieger'
         };
+    }
+
+    private _hitstopActive = false;
+    private _hitstopCooldownUntil = 0;
+
+    public triggerHitstop(durationMs: number = 80): void {
+        const now = Date.now();
+        if (this._hitstopActive || now < this._hitstopCooldownUntil) return;
+
+        this._hitstopActive = true;
+        this.physics.world.pause();
+        this.cameras.main.shake(80, 0.003);
+
+        this.time.delayedCall(durationMs, () => {
+            this.physics.world.resume();
+            this._hitstopActive = false;
+            this._hitstopCooldownUntil = Date.now() + 150;
+        });
     }
 
     public restartGame() {

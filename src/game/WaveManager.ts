@@ -140,6 +140,15 @@ export class WaveManager {
                 loop: true
             });
         }
+
+        // Schedule wave event 15s into the wave (singleplayer / host only)
+        if (!isClient) {
+            this.scene.time.delayedCall(15000, () => {
+                if (this.isLevelActive) {
+                    this.scene.waveEvents?.triggerRandom();
+                }
+            });
+        }
     }
 
     private spawnEnemyInWave(): void {
@@ -183,6 +192,19 @@ export class WaveManager {
         // Reset/Spawn Logic
         enemy.reset(x, y, player, hpMultiplier, type);
 
+        // Elite roll — host only in multiplayer
+        const isMultiplayerElite = this.scene.registry.get('isMultiplayer');
+        const isHostElite = this.scene.networkManager?.role === 'host';
+        if (!isMultiplayerElite || isHostElite) {
+            if (Phaser.Math.RND.frac() < GAME_CONFIG.ELITE.SPAWN_CHANCE) {
+                const statMult = Phaser.Math.FloatBetween(
+                    GAME_CONFIG.ELITE.STAT_MULT_MIN,
+                    GAME_CONFIG.ELITE.STAT_MULT_MAX
+                );
+                enemy.applyEliteModifier(statMult);
+            }
+        }
+
         this.enemiesAlive++;
         this.enemiesToSpawnInWave--;
 
@@ -209,7 +231,9 @@ export class WaveManager {
             const baseCoins = Phaser.Math.Between(5, 15);
             const paragonCoinMult = getParagonMultiplier(this.getParagonLevel(), 'coinMultiplier');
             const farmMult = this.isFarmingLevel() ? FARM_COIN_MULTIPLIER : 1;
-            const coinCount = Math.round((baseCoins + (this.currentLevel - 1) * 3) * paragonCoinMult * farmMult);
+            const eventCoinMult = (this.scene.registry.get('waveEventCoinMultiplier') as number) || 1;
+            const eliteCoinMult = enemy.isElite ? GAME_CONFIG.ELITE.COIN_MULT : 1;
+            const coinCount = Math.round((baseCoins + (this.currentLevel - 1) * 3) * paragonCoinMult * farmMult * eventCoinMult * eliteCoinMult);
             const coinData: { x: number, y: number, id: string }[] = [];
 
             for (let i = 0; i < coinCount; i++) {
@@ -218,10 +242,25 @@ export class WaveManager {
 
                 const coinId = `coin-${Phaser.Math.RND.uuid()}`;
                 coin.spawn(ex, ey, player, coinId);
+
+                // Stagger: each coin waits an extra 60ms before magnetizing, capped at 800ms
+                coin.magnetDelay = Math.min(i * 60, 800);
+                coin.magnetReadyAt = this.scene.time.now + coin.magnetDelay;
+
                 coin.removeAllListeners('collected');
                 coin.on('collected', () => {
                     this.scene.stats.addCoins(1);
-                    AudioManager.instance.playSFX('coin_collect');
+
+                    const now = Date.now();
+                    if (now - this.lastCoinCollectTime < 350) {
+                        this.coinStreakCount = Math.min(this.coinStreakCount + 1, 10);
+                    } else {
+                        this.coinStreakCount = 0;
+                    }
+                    this.lastCoinCollectTime = now;
+
+                    // Pitch rises by 5% per coin in streak (max +50%)
+                    AudioManager.instance.playSFX('coin_collect', { pitch: 1.0 + this.coinStreakCount * 0.05 });
 
                     // Sync coin collection with actual current position and ID
                     this.scene.networkManager?.broadcast({
@@ -281,6 +320,9 @@ export class WaveManager {
         if (this.enemiesAlive < 0) this.enemiesAlive = 0;
 
         if (this.enemiesAlive === 0 && this.enemiesToSpawnInWave === 0) {
+            // End any active wave event before transitioning
+            this.scene.waveEvents?.endActive();
+
             if (this.currentWave < config.waves) {
                 // Wave completed
                 this.scene.events.emit('wave-complete', { wave: this.currentWave, level: this.currentLevel });
@@ -350,7 +392,16 @@ export class WaveManager {
             coin.removeAllListeners('collected');
             coin.on('collected', () => {
                 this.scene.stats.addCoins(1);
-                AudioManager.instance.playSFX('coin_collect');
+
+                const now = Date.now();
+                if (now - this.lastCoinCollectTime < 350) {
+                    this.coinStreakCount = Math.min(this.coinStreakCount + 1, 10);
+                } else {
+                    this.coinStreakCount = 0;
+                }
+                this.lastCoinCollectTime = now;
+
+                AudioManager.instance.playSFX('coin_collect', { pitch: 1.0 + this.coinStreakCount * 0.05 });
 
                 this.scene.networkManager?.broadcast({
                     t: PacketType.GAME_EVENT,
@@ -369,6 +420,9 @@ export class WaveManager {
             ts: Date.now()
         });
     }
+
+    private coinStreakCount: number = 0;
+    private lastCoinCollectTime: number = 0;
 
     private lastEnemyStates: Map<string, string> = new Map();
     private updateTick: number = 0;
@@ -568,7 +622,16 @@ export class WaveManager {
                     coin.removeAllListeners('collected');
                     coin.on('collected', () => {
                         this.scene.stats.addCoins(1);
-                        AudioManager.instance.playSFX('coin_collect');
+
+                        const now = Date.now();
+                        if (now - this.lastCoinCollectTime < 350) {
+                            this.coinStreakCount = Math.min(this.coinStreakCount + 1, 10);
+                        } else {
+                            this.coinStreakCount = 0;
+                        }
+                        this.lastCoinCollectTime = now;
+
+                        AudioManager.instance.playSFX('coin_collect', { pitch: 1.0 + this.coinStreakCount * 0.05 });
                     });
                 }
             });

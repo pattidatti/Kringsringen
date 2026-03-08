@@ -230,8 +230,8 @@ export class CollisionManager {
         }
 
         const wasAlive = target.hp > 0;
-        target.takeDamage(swordDamage, '#ffcc00');
         target.pushback(player.x, player.y, this.scene.stats.knockback);
+        target.takeDamage(swordDamage, '#ffcc00');
 
         // Utstotbar Slag (AOE knockback on hit)
         const utstotbarLvl = levels['utstotbar_slag'] || 0;
@@ -240,8 +240,8 @@ export class CollisionManager {
             nearby.forEach(cell => {
                 if (cell.ref !== target && cell.ref && (cell.ref as Enemy).active && !(cell.ref as Enemy).getIsDead()) {
                     const neighbor = cell.ref as Enemy;
-                    neighbor.takeDamage(swordDamage * 0.4, '#ff8800');
                     neighbor.pushback(target.x, target.y, this.scene.stats.knockback * 0.6);
+                    neighbor.takeDamage(swordDamage * 0.4, '#ff8800');
                 }
             });
         }

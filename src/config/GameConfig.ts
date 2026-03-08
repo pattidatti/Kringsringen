@@ -275,9 +275,15 @@ export const GAME_CONFIG = {
             }
         }
     },
+    ELITE: {
+        SPAWN_CHANCE: 0.10,
+        STAT_MULT_MIN: 2.0,
+        STAT_MULT_MAX: 3.0,
+        COIN_MULT: 3.0,
+    },
     LIGHTING: {
-        PLAYER_INNER_RADIUS: 230,
-        PLAYER_OUTER_RADIUS: 750, // Increased from 575
+        PLAYER_INNER_RADIUS: 320,
+        PLAYER_OUTER_RADIUS: 1050,
         GHOST_INNER_RADIUS: 58,
         GHOST_OUTER_RADIUS: 115,
         PLAYER_COLOR: 0xfffaf0,

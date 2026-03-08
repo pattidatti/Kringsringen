@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useGameRegistry } from '../../hooks/useGameRegistry';
 import { useGameRegistryThrottled } from '../../hooks/useGameRegistryThrottled';
 import { FantasyIcon } from './FantasyIcon';
 import { ItemIcon } from './ItemIcon';
 import { getParagonTierName } from '../../config/paragon';
+import type { ActiveWaveEventInfo } from '../../game/WaveEventManager';
 
 export const TopHUD: React.FC = React.memo(() => {
     console.log('[TopHUD] Rendering...');
@@ -15,6 +16,19 @@ export const TopHUD: React.FC = React.memo(() => {
     const maxWaves = useGameRegistry('maxWaves', 1);
     const coins = useGameRegistryThrottled('playerCoins', 0, 200);
     const paragonLevel = useGameRegistry('paragonLevel', 0) as number;
+    const activeWaveEvent = useGameRegistry('activeWaveEvent', null) as ActiveWaveEventInfo | null;
+    const [eventSecondsLeft, setEventSecondsLeft] = useState(0);
+
+    useEffect(() => {
+        if (!activeWaveEvent) { setEventSecondsLeft(0); return; }
+        const tick = () => {
+            const rem = Math.max(0, Math.ceil((activeWaveEvent.startTime + activeWaveEvent.duration - Date.now()) / 1000));
+            setEventSecondsLeft(rem);
+        };
+        tick();
+        const id = setInterval(tick, 500);
+        return () => clearInterval(id);
+    }, [activeWaveEvent]);
 
     const hpPercent = Math.min(100, Math.max(0, (hp / maxHp) * 100));
 
@@ -80,6 +94,26 @@ export const TopHUD: React.FC = React.memo(() => {
                     </div>
                 </div>
             </div>
+
+            {/* Wave Event Badge */}
+            {activeWaveEvent && (
+                <div
+                    className="absolute left-1/2 -translate-x-1/2 top-24 flex items-center gap-2 px-4 py-1.5 rounded-full border animate-pulse shadow-lg backdrop-blur-sm"
+                    style={{
+                        borderColor: `#${activeWaveEvent.color.toString(16).padStart(6, '0')}88`,
+                        backgroundColor: `#${activeWaveEvent.color.toString(16).padStart(6, '0')}22`,
+                        color: `#${activeWaveEvent.color.toString(16).padStart(6, '0')}`,
+                        zIndex: 10000
+                    }}
+                >
+                    <span className="font-cinzel font-black text-sm tracking-widest uppercase drop-shadow">
+                        {activeWaveEvent.name}
+                    </span>
+                    <span className="text-white/70 font-bold text-xs tabular-nums">
+                        {eventSecondsLeft}s
+                    </span>
+                </div>
+            )}
 
             {/* Right Wing: Economy & Score */}
             <div className="flex items-center pointer-events-auto bg-black/60 border-2 border-amber-900/50 shadow-lg backdrop-blur-md mt-2 rounded-l-full overflow-hidden">

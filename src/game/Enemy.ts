@@ -85,8 +85,11 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     private lastX: number = 0;
     private lastY: number = 0;
 
+    public isElite: boolean = false;
+    private eliteDamageMultiplier: number = 1.0;
+
     public get damage(): number {
-        return this.config.baseDamage; // Will be updated in reset
+        return this.config.baseDamage * this.eliteDamageMultiplier;
     }
 
     constructor(scene: Phaser.Scene, x: number, y: number, target: Phaser.GameObjects.Components.Transform, multiplier: number = 1.0, type: string = 'orc') {
@@ -126,6 +129,8 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         }
         this.clearTint();
         this.postFX.clear();
+        this.isElite = false;
+        this.eliteDamageMultiplier = 1.0;
         if (this.poisonTimer) { this.poisonTimer.remove(false); this.poisonTimer = null; }
         this.isPoisoned = false;
         this.setRotation(0);
@@ -209,6 +214,21 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         if (this.config.tint !== undefined) {
             this.setTint(this.config.tint);
         }
+    }
+
+    public applyEliteModifier(statMult: number): void {
+        this.isElite = true;
+        this.eliteDamageMultiplier = statMult;
+
+        this.maxHP = Math.round(this.maxHP * statMult);
+        this.hp = this.maxHP;
+
+        this.movementSpeed *= (1 + (statMult - 1) * 0.5);
+        this.originalSpeed = this.movementSpeed;
+
+        this.setTint(0xFFD700);
+        this.postFX.addGlow(0xFFD700, 6, 0, false, 0.1, 16);
+        this.setScale(this.scaleX * 1.15);
     }
 
     public getIsDead(): boolean {
@@ -561,7 +581,8 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     private updateAIPathing() {
         if (!this.active) return;
         if (!Enemy._tablesInit) Enemy.initTables();
-        const speed = this.movementSpeed;
+        const eventSpeedMult = (this.scene.registry.get('waveEventSpeedMultiplier') as number) ?? 1;
+        const speed = this.movementSpeed * eventSpeedMult;
         const numRays = Enemy.NUM_RAYS;
         const delta = this.scene.game.loop.delta;
 
@@ -817,6 +838,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         this.predictedHP = this.hp;
 
         this.scene.events.emit('enemy-hit');
+        (this.scene as unknown as IMainScene).triggerHitstop();
         AudioManager.instance.playSFX('punch');
         this.setTint(0xff0000);
         this.scene.time.delayedCall(100, () => {
@@ -895,7 +917,6 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 
     protected die() {
         this.isDead = true;
-        this.setDrag(1000);
 
         // Clear Soul Link
         if (this.linkedEnemy) {
@@ -924,8 +945,23 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         // 2. Spark burst at death position (uses 'spark' texture created in MainScene).
         this.spawnDeathSparks();
 
-        // 3. Scale-pop: briefly enlarge then shrink to zero while fading.
-        //    This gives a satisfying "pop" rather than a plain alpha fade.
+        // 3. Branch on velocity: ragdoll if knocked back hard, normal pop otherwise.
+        const body = this.body as Phaser.Physics.Arcade.Body;
+        const vx = body ? body.velocity.x : 0;
+        const vy = body ? body.velocity.y : 0;
+        const isRagdoll = Math.abs(vx) + Math.abs(vy) >= 50;
+
+        if (isRagdoll) {
+            this.dieRagdoll();
+        } else {
+            this.dieNormal();
+        }
+    }
+
+    private dieNormal() {
+        this.setDrag(1000);
+
+        // Scale-pop: briefly enlarge then shrink to zero while fading.
         const popScale = this.scaleX * 1.25;
         this.setScale(popScale);
 
@@ -947,6 +983,45 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         });
     }
 
+    private dieRagdoll() {
+        this.setDrag(25); // reduced drag → enemy travels much further
+
+        // Disable collision so flying corpse doesn't push live enemies
+        if (this.body) (this.body as Phaser.Physics.Arcade.Body).checkCollision.none = true;
+
+        // Shadow looks wrong while spinning — hide immediately
+        if (this.shadow) this.shadow.setVisible(false);
+
+        // Boost exit velocity for drama
+        const body = this.body as Phaser.Physics.Arcade.Body;
+        if (body) {
+            body.velocity.x *= 1.4;
+            body.velocity.y *= 1.4;
+        }
+
+        // Random spin
+        const spinSign = Math.random() > 0.5 ? 1 : -1;
+        const spinSpeed = 400 + Math.random() * 300; // 400–700 deg/sec
+        this.setAngularVelocity(spinSign * spinSpeed);
+        this.setAngularDrag(20); // reduced → spin lasts longer
+
+        // Keep white flash visible longer before darkening; use lighter tint for dark maps
+        this.scene.time.delayedCall(300, () => {
+            if (this.active) this.setTint(0x888888);
+        });
+
+        // Fade at full scale while flying — ease-in keeps enemy visible longer
+        this.scene.tweens.add({
+            targets: this,
+            alpha: 0,
+            duration: 700,
+            ease: 'Sine.in',
+            onComplete: () => {
+                this.disable();
+            }
+        });
+    }
+
     /**
      * Emits a one-shot burst of tiny sparks at the enemy's position.
      * Uses the centralized emitter in MainScene to avoid object churn.
@@ -960,9 +1035,14 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 
     /** Public so WaveManager (and other systems) can return this enemy to the pool without destroying it. */
     public disable() {
+        this.setAngle(0);
+        this.setAngularVelocity(0);
+        if (this.body) {
+            this.body.enable = false;
+            (this.body as Phaser.Physics.Arcade.Body).checkCollision.none = false;
+        }
         this.setActive(false);
         this.setVisible(false);
-        if (this.body) this.body.enable = false;
         if (this.shadow) this.shadow.setVisible(false);
         if (this.attackLight) this.attackLight.setVisible(false);
         this.isClientMode = false;

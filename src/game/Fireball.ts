@@ -163,8 +163,8 @@ export class Fireball extends Phaser.Physics.Arcade.Sprite {
                 }
                 directHit.predictDamage(hitDmg);
             } else {
-                directHit.takeDamage(hitDmg, thermalShockTriggered ? '#ffaa00' : '#ff6e24'); // Bright orange/fire
                 directHit.pushback(this.startX, this.startY, 200);
+                directHit.takeDamage(hitDmg, thermalShockTriggered ? '#ffaa00' : '#ff6e24'); // Bright orange/fire
             }
         }
 
@@ -199,12 +199,12 @@ export class Fireball extends Phaser.Physics.Arcade.Sprite {
                     splashDmg = Math.max(splashDmg, scaledDamage); // Increase baseline splash
                 }
 
+                enemy.pushback(hitX, hitY, thermalShockTriggered ? 200 : 100);
                 if (mainScene.networkManager?.role === 'client') {
                     enemy.predictDamage(splashDmg);
                 } else {
                     enemy.takeDamage(splashDmg, thermalShockTriggered ? '#ffaa00' : '#ff6e24');
                 }
-                enemy.pushback(hitX, hitY, thermalShockTriggered ? 200 : 100);
                 hitEnemies.push(enemy);
             }
         };
@@ -232,12 +232,12 @@ export class Fireball extends Phaser.Physics.Arcade.Sprite {
                     if (!enemy.active) return;
                     const dist = Phaser.Math.Distance.Between(hitX, hitY, enemy.x, enemy.y);
                     if (dist <= fireballRadius && enemy !== directHit && !hitEnemies.includes(enemy)) {
+                        enemy.pushback(hitX, hitY, 80);
                         if (mainScene.networkManager?.role === 'client') {
                             enemy.predictDamage(scaledDamage * 0.3);
                         } else {
                             enemy.takeDamage(scaledDamage * 0.3, '#ff6e24');
                         }
-                        enemy.pushback(hitX, hitY, 80);
                     }
                 });
                 mainScene.poolManager.spawnFireballExplosion(hitX, hitY, fireballRadius);

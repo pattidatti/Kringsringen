@@ -93,8 +93,8 @@ export class FrostBolt extends Phaser.Physics.Arcade.Sprite {
                         this.scene.events.emit('enemy-hit');
                     }
                 } else {
-                    enemy.takeDamage(damage, '#00aaff');
                     enemy.pushback(hitX, hitY, isCenter ? 220 : 120);
+                    enemy.takeDamage(damage, '#00aaff');
 
                     // Apply slow effect if unlocked
                     if (frostSlowDuration > 0) {

@@ -243,8 +243,8 @@ export class LightningBolt extends Phaser.Physics.Arcade.Sprite {
             if (hitEnemy) hitEnemy.predictDamage(this.damage);
         } else {
             // Deal damage
-            hitEnemy.takeDamage(this.damage, this.colorStr);
             hitEnemy.pushback(this.x, this.y, 150);
+            hitEnemy.takeDamage(this.damage, this.colorStr);
 
             // STUN: Static Charge upgrade
             const stunChance = mainScene.registry.get('lightningStunChance') || 0;
