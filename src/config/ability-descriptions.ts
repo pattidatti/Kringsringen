@@ -84,18 +84,18 @@ export const ABILITY_DESCRIPTIONS: Record<string, AbilityMetadata> = {
     color: 0x88ccff,
   },
   ability_vers_bolt: {
-    name: 'Resonanspuls',
+    name: 'Violin',
     description: 'Skyter 1 + Vers bolter i vifte (forbruker alle Vers)',
     color: 0xffed4e,
   },
   ability_kvad_inspire: {
-    name: 'Inspirerende Kvad',
+    name: 'Horn',
     description: 'Bruker 2 Vers for +25% skade/fart og healing',
     color: 0xffd700,
   },
   ability_kvad_seier: {
-    name: 'Seierskvad',
-    description: 'Bruker 5 Vers (4 med Krigsbarde) for massiv AoE-eksplosjon + stun',
+    name: 'Panfløyte',
+    description: 'Lydshockwave — stunner alle fiender i 200r i 3 sek. Bosser: 1.5 sek. Koster 5 Vers.',
     color: 0xffd700,
   },
 };

@@ -130,5 +130,22 @@ export class SceneEventManager {
         scene.events.on('attempt-class-ability-3', () => scene.abilityManager.attemptAbility3());
         scene.events.on('attempt-class-ability-4', () => scene.abilityManager.attemptAbility4());
         scene.events.on('attempt-attack', () => scene.handlePlayerActionCombat(scene.time.now, 16.6));
+
+        // Skald: Build +1 Vers when a harp bolt actually hits an enemy (not on cast)
+        scene.events.on('harp-bolt-hit', () => {
+            const player = scene.data.get('player');
+            if (!player) return;
+            const currentVers = (scene.registry.get('skaldVers') || 0) as number;
+            if (currentVers < 5) {
+                const newVers = currentVers + 1;
+                scene.registry.set('skaldVers', newVers);
+                if (newVers >= 5) {
+                    scene.registry.set('skaldKvadReady', true);
+                    scene.poolManager.getDamageText(player.x, player.y - 70, 'KVAD KLAR!', '#ffed4e');
+                }
+                scene.events.emit('vers-gained', newVers);
+                scene.stats.recalculateStats();
+            }
+        });
     }
 }

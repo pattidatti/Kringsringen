@@ -31,7 +31,7 @@ export class ClassAbilityManager {
         if (playerClassId === 'krieger') this.activateWhirlwind();
         else if (playerClassId === 'wizard') this.activateCascade();
         else if (playerClassId === 'archer') this.activatePhantomVolley();
-        else if (playerClassId === 'skald') this.activateResonanspuls();
+        else if (playerClassId === 'skald') this.activateViolin();
     }
 
     public attemptAbility3(): void {
@@ -704,9 +704,9 @@ export class ClassAbilityManager {
         this.scene.registry.set('classAbility3Cooldown', { duration: cd, timestamp: Date.now() });
 
         this.scene.buffs.addBuff({
-            key: 'inspirerende_kvad',
-            title: 'INSPIRERENDE KVAD',
-            icon: 'item_lightning',
+            key: 'horn',
+            title: 'HORN',
+            icon: 'item_moon_crescent',
             color: 0xffd700,
             duration: duration,
             maxStacks: 1,
@@ -799,7 +799,7 @@ export class ClassAbilityManager {
 
         // Heal VFX: Green "+" symbols floating up + player pulse
         this.scene.poolManager.getDamageText(player.x, player.y - 60, `+${healAmount}`, '#55ff55');
-        this.scene.poolManager.getDamageText(player.x, player.y - 75, 'INSPIRERENDE KVAD!', '#ffd700');
+        this.scene.poolManager.getDamageText(player.x, player.y - 75, 'HORN!', '#ffd700');
 
         // Player scale pulse
         this.scene.tweens.add({
@@ -857,14 +857,20 @@ export class ClassAbilityManager {
         }, radius);
 
         let totalDamageDealt = 0;
+        let stunCount = 0;
         nearbyEntries.forEach(entry => {
             const enemy = entry.ref as Enemy;
             if (enemy && enemy.active && !enemy.getIsDead()) {
                 enemy.takeDamage(damage, '#ffd700');
                 totalDamageDealt += damage;
-                // Stun
+                // Bosses get half stun duration to signal resistance
+                const isBoss = !!(enemy as any).bossConfig;
+                const stunDuration = isBoss ? 1500 : 3000;
                 if (enemy.stun && typeof enemy.stun === 'function') {
-                    enemy.stun(3000);
+                    enemy.stun(stunDuration);
+                    stunCount++;
+                    // Stun indicator above enemy
+                    this.scene.poolManager.getDamageText(enemy.x, enemy.y - 50, '★ STUNNET', '#ffed4e');
                 }
             }
         });
@@ -945,22 +951,30 @@ export class ClassAbilityManager {
         }
 
         // Enhanced visual: Cascading sound-wave shockwaves
-        // Primary wave
-        const primaryRing = this.scene.add.circle(player.x, player.y, 10, 0xffd700, 0.6);
+        // Primary wave — expands to full radius so player can see what got hit
+        const primaryRing = this.scene.add.circle(player.x, player.y, 10, 0xffd700, 0.5);
         primaryRing.setStrokeStyle(6, 0xffffff, 0.9);
         primaryRing.setDepth(player.depth - 1);
         this.scene.tweens.add({
             targets: primaryRing,
             radius: radius,
-            alpha: 0,
-            duration: 500,
-            ease: 'Expo.out',
-            onComplete: () => primaryRing.destroy()
+            alpha: 0.1,
+            duration: 600,
+            ease: 'Sine.out',
+            onComplete: () => {
+                // Hold briefly at full radius so player reads the area
+                this.scene.tweens.add({
+                    targets: primaryRing,
+                    alpha: 0,
+                    duration: 200,
+                    onComplete: () => primaryRing.destroy()
+                });
+            }
         });
 
         // Secondary cascading waves (3 waves trailing behind)
         for (let i = 1; i <= 3; i++) {
-            this.scene.time.delayedCall(i * 100, () => {
+            this.scene.time.delayedCall(i * 120, () => {
                 const secondaryRing = this.scene.add.circle(player.x, player.y, 10, 0xffed4e, 0.4);
                 secondaryRing.setStrokeStyle(4, 0xffd700, 0.7);
                 secondaryRing.setDepth(player.depth - 1);
@@ -968,7 +982,7 @@ export class ClassAbilityManager {
                     targets: secondaryRing,
                     radius: radius * 0.8,
                     alpha: 0,
-                    duration: 400,
+                    duration: 450,
                     ease: 'Cubic.out',
                     onComplete: () => secondaryRing.destroy()
                 });
@@ -978,8 +992,9 @@ export class ClassAbilityManager {
         // Distortion effect: Intense screen shake + chromatic aberration pulse
         this.scene.cameras.main.shake(220, 0.018);
 
-        // Title text + particle burst
-        this.scene.poolManager.getDamageText(player.x, player.y - 70, 'SEIERSKVAD!', '#ffd700');
+        // Feedback: show how many enemies were stunned
+        const feedbackText = stunCount > 0 ? `${stunCount} STUNNET!` : 'PANFLØYTE!';
+        this.scene.poolManager.getDamageText(player.x, player.y - 70, feedbackText, '#ffd700');
 
         // Massive particle explosion
         const burstCount = Math.max(15, Math.floor(40 * (this.scene.quality?.particleMultiplier || 1.0)));
@@ -1006,7 +1021,7 @@ export class ClassAbilityManager {
         this.scene.stats.recalculateStats();
     }
 
-    private activateResonanspuls(): void {
+    private activateViolin(): void {
         const player = this.scene.data.get('player') as Phaser.Physics.Arcade.Sprite;
         if (!player || !player.active) return;
 

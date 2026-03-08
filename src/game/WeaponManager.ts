@@ -312,18 +312,6 @@ export class WeaponManager {
                 this.scene.poolManager.getDamageText(player.x, player.y - 30, `+${healAmount}`, '#55ff55');
             }
 
-            // BUILD +1 VERS on each harp_bolt cast
-            const currentVers = (this.scene.registry.get('skaldVers') || 0) as number;
-            if (currentVers < 5) {
-                const newVers = currentVers + 1;
-                this.scene.registry.set('skaldVers', newVers);
-                if (newVers >= 5) {
-                    this.scene.registry.set('skaldKvadReady', true);
-                    this.scene.poolManager.getDamageText(player.x, player.y - 70, 'KVAD KLAR!', '#ffed4e');
-                }
-                this.scene.events.emit('vers-gained', newVers);
-                this.scene.stats.recalculateStats();
-            }
         });
 
         player.once('animationcomplete-player-cast', () => {

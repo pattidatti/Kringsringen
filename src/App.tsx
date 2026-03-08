@@ -173,7 +173,9 @@ function AppContent() {
     if (activeProfile) {
       const runProgress = SaveManager.loadRunProgress();
       if (runProgress) {
-        const updated = SaveManager.syncToProfile(activeProfile, runProgress);
+        // Read fresh from localStorage to capture achievements written by AchievementManager during gameplay
+        const currentProfile = SaveManager.getActiveProfile() ?? activeProfile;
+        const updated = SaveManager.syncToProfile(currentProfile, runProgress);
         SaveManager.updateProfile(updated);
         setActiveProfile(updated);
       }
@@ -192,8 +194,11 @@ function AppContent() {
         // Sync current game progress to profile
         const runProgress = SaveManager.loadRunProgress();
         if (runProgress) {
-          const updated = SaveManager.syncToProfile(activeProfile, runProgress);
+          // Read fresh from localStorage to capture achievements written by AchievementManager during gameplay
+          const currentProfile = SaveManager.getActiveProfile() ?? activeProfile;
+          const updated = SaveManager.syncToProfile(currentProfile, runProgress);
           SaveManager.updateProfile(updated);
+          setActiveProfile(updated);
 
           // Upload to cloud immediately (no debounce)
           const store = SaveManager.loadProfiles();
@@ -208,7 +213,8 @@ function AppContent() {
       if (user && activeProfile) {
         const runProgress = SaveManager.loadRunProgress();
         if (runProgress) {
-          const updated = SaveManager.syncToProfile(activeProfile, runProgress);
+          const currentProfile = SaveManager.getActiveProfile() ?? activeProfile;
+          const updated = SaveManager.syncToProfile(currentProfile, runProgress);
           SaveManager.updateProfile(updated);
           // Note: Can't do async upload here (browser blocks it)
           // Rely on visibility change for cloud sync

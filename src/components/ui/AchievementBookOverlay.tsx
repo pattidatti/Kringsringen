@@ -1,51 +1,39 @@
 import React from 'react';
 import { AchievementGrid } from './AchievementGrid';
+import { FantasyPanel } from './FantasyPanel';
 
 /**
- * Achievement Book Overlay - Dobbelside Layout
+ * Achievement Book Overlay - Full Book Cover with Sprite Panel
  *
- * Renders achievements as a "double-page spread" inside FantasyBook.
- * Features:
- * - Parchment background overlay matching book aesthetics
- * - Visible custom scrollbar (amber gradient)
- * - Responsive layout using book dimension CSS variables
- * - Wraps AchievementGrid with book-themed container
+ * Renders as an absolute inset-0 panel inside the book container using the
+ * same FantasyPanel (9-slice sprite) system as HighscoresModal and LandingPage.
+ * Variant "paper" matches the parchment aesthetic of the book pages.
  */
 export const AchievementBookOverlay: React.FC = () => {
   return (
-    <div className="col-span-2 h-full relative">
-      {/* Parchment background overlay - subtle, matches book pages */}
-      <div
-        className="absolute inset-0 rounded-lg pointer-events-none"
-        style={{
-          background: 'linear-gradient(135deg, rgba(227, 218, 201, 0.3) 0%, rgba(227, 218, 201, 0.15) 100%)',
-        }}
-      />
-
-      {/* Content layer */}
-      <div className="relative h-full flex flex-col px-12 py-6">
-        {/* Header - Fantasy book title style */}
-        <div className="flex flex-col items-center mb-6">
+    <FantasyPanel
+      variant="paper"
+      className="h-full w-full shadow-2xl"
+      contentPadding="px-6 pt-4 pb-6 flex flex-col h-full"
+    >
+      {/* Header */}
+      <div className="flex flex-col items-center mb-4 flex-shrink-0">
+        <div className="flex items-center justify-center gap-4 mb-1">
+          <div className="h-[2px] w-12 bg-gradient-to-r from-transparent via-amber-700/40 to-amber-900/80 rounded-full" />
           <h2
-            className="font-cinzel font-bold text-center text-3xl tracking-[0.15em] uppercase text-amber-900 mb-2"
+            className="font-cinzel font-bold text-center text-3xl tracking-[0.15em] uppercase text-amber-900"
             style={{ textShadow: '0 2px 4px rgba(120,53,15,0.2)' }}
           >
             🏆 Prestasjoner
           </h2>
-
-          {/* Decorative divider */}
-          <div className="flex items-center gap-3 opacity-60">
-            <div className="h-[1px] w-16 bg-gradient-to-r from-transparent to-amber-900/40" />
-            <span className="text-amber-950/60 text-xs">✦</span>
-            <div className="h-[1px] w-16 bg-gradient-to-l from-transparent to-amber-900/40" />
-          </div>
-        </div>
-
-        {/* Scrollable achievement grid - custom scrollbar visible */}
-        <div className="flex-1 overflow-y-auto custom-scrollbar pr-3">
-          <AchievementGrid showFilters={true} showStats={true} />
+          <div className="h-[2px] w-12 bg-gradient-to-l from-transparent via-amber-700/40 to-amber-900/80 rounded-full" />
         </div>
       </div>
-    </div>
+
+      {/* Scrollable achievement grid — min-h-0 prevents overflow past panel bottom */}
+      <div className="flex-1 overflow-y-auto custom-scrollbar min-h-0 pr-3">
+        <AchievementGrid showFilters={true} showStats={true} />
+      </div>
+    </FantasyPanel>
   );
 };

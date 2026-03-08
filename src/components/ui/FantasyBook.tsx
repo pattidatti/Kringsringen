@@ -90,6 +90,15 @@ const CATEGORY_THEMES: Record<string, { primary: string; secondary: string; bord
     'wizard_drivkraft': { primary: '#4c1d95', secondary: '#8e44ad', border: 'border-purple-900/30', bg: 'bg-purple-200/30', text: 'text-purple-950' },
     'wizard_mastring': { primary: '#4c1d95', secondary: '#8e44ad', border: 'border-purple-900/30', bg: 'bg-purple-200/30', text: 'text-purple-950' },
     'wizard_arkan': { primary: '#4c1d95', secondary: '#8e44ad', border: 'border-purple-900/30', bg: 'bg-purple-200/30', text: 'text-purple-950' },
+    // Krieger (ny: Virvelvind-kategori)
+    'krieger_virvelvind': { primary: '#7f1d1d', secondary: '#c0392b', border: 'border-red-900/30', bg: 'bg-red-200/30', text: 'text-red-950' },
+    // Archer (ny: Fantombyge-kategori)
+    'archer_fantombyge': { primary: '#14532d', secondary: '#27ae60', border: 'border-emerald-900/30', bg: 'bg-emerald-200/30', text: 'text-emerald-950' },
+    // Skald (alle manglet tema — fikset)
+    'skald_kvad':   { primary: '#78350f', secondary: '#d4a017', border: 'border-amber-900/30', bg: 'bg-amber-200/30', text: 'text-amber-950' },
+    'skald_rytme':  { primary: '#78350f', secondary: '#d4a017', border: 'border-amber-900/30', bg: 'bg-amber-200/30', text: 'text-amber-950' },
+    'skald_harpe':  { primary: '#78350f', secondary: '#d4a017', border: 'border-amber-900/30', bg: 'bg-amber-200/30', text: 'text-amber-950' },
+    'skald_vers':   { primary: '#713f12', secondary: '#f59e0b', border: 'border-yellow-900/30', bg: 'bg-yellow-200/30', text: 'text-yellow-950' },
     // Paragon (gold/diamond)
     'paragon': { primary: '#b8860b', secondary: '#ffd700', border: 'border-amber-600/50', bg: 'bg-amber-100/50', text: 'text-amber-900' },
 };
@@ -206,7 +215,7 @@ const TabButton: React.FC<TabButtonProps> = ({ tabKey, topOffset, activeTab, onT
                 backgroundImage: `url(${config.icon})`,
                 backgroundSize: '100% 100%',
                 imageRendering: 'pixelated',
-                zIndex: isActive ? 10 : 0
+                zIndex: 20
             }}
             title={config.title} // Tooltip for accessibility
         >
@@ -734,6 +743,22 @@ export const FantasyBook: React.FC<FantasyBookProps> = React.memo(({
                             <TabButton tabKey="achievements" topOffset={45} activeTab={activeTab} onTabChange={setActiveTab} />
                             <TabButton tabKey="settings" topOffset={60} activeTab={activeTab} onTabChange={setActiveTab} />
 
+                            {/* Achievement Full-Book Overlay — covers entire book, sits above content layer */}
+                            <AnimatePresence>
+                                {activeTab === 'achievements' && (
+                                    <motion.div
+                                        key="achievement-book-overlay"
+                                        initial={{ opacity: 0 }}
+                                        animate={{ opacity: 1 }}
+                                        exit={{ opacity: 0 }}
+                                        transition={{ duration: 0.2 }}
+                                        className="absolute inset-0 z-10"
+                                    >
+                                        <AchievementBookOverlay />
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+
                             {/* Content Layer */}
                             <motion.div
                                 className="absolute inset-0 grid grid-cols-2 p-[6%] gap-[4%] pt-[3%] pb-[8%] font-crimson text-slate-900 overflow-hidden"
@@ -745,9 +770,7 @@ export const FantasyBook: React.FC<FantasyBookProps> = React.memo(({
                                     <div className="col-span-2 h-full">
                                         <SettingsContent inBookContext={true} />
                                     </div>
-                                ) : activeTab === 'achievements' ? (
-                                    <AchievementBookOverlay />
-                                ) : (
+                                ) : activeTab === 'achievements' ? null : (
                                     <>
                                         {/* Left Page: Main Content Area */}
                                         <div className="px-5 py-3 overflow-y-auto custom-scrollbar h-full pr-4 relative overflow-x-hidden">

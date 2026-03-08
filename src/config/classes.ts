@@ -116,9 +116,17 @@ const KRIEGER: ClassConfig = {
             isExclusive: true,
             chapterLabels: {
                 foundation: 'Sverd',
-                ability: 'Virvelvind',
                 combat_style: 'Villskap',
                 synergy: 'Sverdets Magi'
+            }
+        },
+        {
+            id: 'krieger_virvelvind',
+            label: 'VIRVELVIND',
+            icon: 'item_swords_crossed',
+            isExclusive: true,
+            chapterLabels: {
+                ability: 'Virvelvind'
             }
         },
         {
@@ -186,9 +194,17 @@ const ARCHER: ClassConfig = {
             isExclusive: true,
             chapterLabels: {
                 foundation: 'Bue',
-                ability: 'Fantombyge',
                 combat_style: 'Presisjon',
                 synergy: 'Feller'
+            }
+        },
+        {
+            id: 'archer_fantombyge',
+            label: 'FANTOMBYGE',
+            icon: 'item_spear',
+            isExclusive: true,
+            chapterLabels: {
+                ability: 'Fantombyge'
             }
         },
         {
@@ -348,14 +364,31 @@ const SKALD: ClassConfig = {
     portrait: 'assets/ui/portraits/skald_portrait.png',
     shopCategories: [
         {
-            id: 'skald_kvad',
-            label: 'KVAD',
+            id: 'skald_harpe',
+            label: 'HARPE',
+            icon: 'item_harp',
+            isExclusive: true,
+            chapterLabels: {
+                foundation: 'Harpe'
+            }
+        },
+        {
+            id: 'skald_vers',
+            label: 'VERS',
             icon: 'item_lute',
             isExclusive: true,
             chapterLabels: {
-                foundation: 'Stridssang',
-                ability: 'Kvad',
-                combat_style: 'Poesi'
+                foundation: 'Stridssang & Vers'
+            }
+        },
+        {
+            id: 'skald_kvad',
+            label: 'PANFLØYTE',
+            icon: 'item_panflute',
+            isExclusive: true,
+            chapterLabels: {
+                ability: 'Panfløyte',
+                combat_style: 'Panfløyte-Synergier'
             }
         },
         {

@@ -21,12 +21,12 @@ export const ARCHER_WEAPON_SLOTS: WeaponUIConfig[] = [
     { id: 'ability_decoy', label: 'DECOY', hotkey: '4', icon: 'item_phantom' },
 ];
 
-/** Skald-specific hotbar: Harpe=1, Resonanspuls=2 (ability), Inspirerende Kvad=3, Seierskvad=4 */
+/** Skald-specific hotbar: Harpe=1, Violin=2 (ability), Horn=3, Panfløyte=4 */
 export const SKALD_WEAPON_SLOTS: WeaponUIConfig[] = [
     { id: 'harp_bolt', label: 'HARPE', hotkey: '1', icon: 'item_harp' },
-    { id: 'ability_vers_bolt', label: 'PULS', hotkey: '2', icon: 'item_lute' },
-    { id: 'ability_kvad_inspire', label: 'KVAD', hotkey: '3', icon: 'item_harp' },
-    { id: 'ability_kvad_seier', label: 'SEIER', hotkey: '4', icon: 'item_panflute' },
+    { id: 'ability_vers_bolt', label: 'VIOLIN', hotkey: '2', icon: 'item_lute' },
+    { id: 'ability_kvad_inspire', label: 'HORN', hotkey: '3', icon: 'item_moon_crescent' },
+    { id: 'ability_kvad_seier', label: 'PANFLØYTE', hotkey: '4', icon: 'item_panflute' },
 ];
 
 /** Wizard-specific hotbar: Fire=1, Frost=2, Lightning=3, Cascade ability=4 */
