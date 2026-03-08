@@ -90,8 +90,9 @@ const CATEGORY_THEMES: Record<string, { primary: string; secondary: string; bord
     'wizard_drivkraft': { primary: '#4c1d95', secondary: '#8e44ad', border: 'border-purple-900/30', bg: 'bg-purple-200/30', text: 'text-purple-950' },
     'wizard_mastring': { primary: '#4c1d95', secondary: '#8e44ad', border: 'border-purple-900/30', bg: 'bg-purple-200/30', text: 'text-purple-950' },
     'wizard_arkan': { primary: '#4c1d95', secondary: '#8e44ad', border: 'border-purple-900/30', bg: 'bg-purple-200/30', text: 'text-purple-950' },
-    // Krieger (ny: Virvelvind-kategori)
+    // Krieger (ny: Virvelvind + Krok-kategori)
     'krieger_virvelvind': { primary: '#7f1d1d', secondary: '#c0392b', border: 'border-red-900/30', bg: 'bg-red-200/30', text: 'text-red-950' },
+    'krieger_krok': { primary: '#7f1d1d', secondary: '#c0392b', border: 'border-red-900/30', bg: 'bg-red-200/30', text: 'text-red-950' },
     // Archer (ny: Fantombyge-kategori)
     'archer_fantombyge': { primary: '#14532d', secondary: '#27ae60', border: 'border-emerald-900/30', bg: 'bg-emerald-200/30', text: 'text-emerald-950' },
     // Skald (alle manglet tema — fikset)
@@ -99,6 +100,8 @@ const CATEGORY_THEMES: Record<string, { primary: string; secondary: string; bord
     'skald_rytme':  { primary: '#78350f', secondary: '#d4a017', border: 'border-amber-900/30', bg: 'bg-amber-200/30', text: 'text-amber-950' },
     'skald_harpe':  { primary: '#78350f', secondary: '#d4a017', border: 'border-amber-900/30', bg: 'bg-amber-200/30', text: 'text-amber-950' },
     'skald_vers':   { primary: '#713f12', secondary: '#f59e0b', border: 'border-yellow-900/30', bg: 'bg-yellow-200/30', text: 'text-yellow-950' },
+    'skald_fiolin': { primary: '#78350f', secondary: '#d4a017', border: 'border-amber-900/30', bg: 'bg-amber-200/30', text: 'text-amber-950' },
+    'skald_horn':   { primary: '#713f12', secondary: '#f59e0b', border: 'border-yellow-900/30', bg: 'bg-yellow-200/30', text: 'text-yellow-950' },
     // Paragon (gold/diamond)
     'paragon': { primary: '#b8860b', secondary: '#ffd700', border: 'border-amber-600/50', bg: 'bg-amber-100/50', text: 'text-amber-900' },
 };

@@ -8,7 +8,7 @@ import { motion } from 'framer-motion';
 import { FantasyButton } from './FantasyButton';
 import { LEVEL_CONFIG } from '../../config/levels';
 import { getBossForLevel } from '../../config/bosses';
-import { getParagonTierName, FARM_COIN_MULTIPLIER } from '../../config/paragon';
+import { getParagonTierName, FARM_COIN_MULTIPLIER, getParagonMultiplier } from '../../config/paragon';
 import type { ParagonProfile } from '../../config/paragon';
 
 // ─── Level theme names (Norwegian) ──────────────────────────────────────────
@@ -45,8 +45,10 @@ const LevelCard: React.FC<{
     isFarming: boolean;
     hasBoss: boolean;
     bossName?: string;
+    paragonHPMult: number;
+    isParagon: boolean;
     onClick: () => void;
-}> = ({ level, config, isCleared, isCurrent, isLocked, isFarming, hasBoss, bossName, onClick }) => {
+}> = ({ level, config, isCleared, isCurrent, isLocked, isFarming, hasBoss, bossName, paragonHPMult, isParagon, onClick }) => {
     const levelName = LEVEL_NAMES[level] || `Level ${level}`;
 
     return (
@@ -74,10 +76,10 @@ const LevelCard: React.FC<{
                         : '#0a0f1a',
             }}
         >
-            <div className="flex items-center gap-4 p-4">
+            <div className="flex items-center gap-3 p-3">
                 {/* Level Number */}
                 <div
-                    className={`w-12 h-12 rounded-lg flex items-center justify-center font-cinzel text-xl font-bold shrink-0
+                    className={`w-10 h-10 rounded-lg flex items-center justify-center font-cinzel text-lg font-bold shrink-0
                         ${isCurrent
                             ? 'bg-amber-400/20 text-amber-300'
                             : isCleared
@@ -108,7 +110,13 @@ const LevelCard: React.FC<{
                         <div className="flex items-center gap-3 text-[10px] text-white/40 font-cinzel uppercase tracking-widest">
                             <span>{config.waves} bølger</span>
                             <span>{config.enemiesPerWave} fiender</span>
-                            <span>{config.multiplier}x HP</span>
+                            {isParagon ? (
+                                <span className="text-red-400/70">
+                                    {(config.multiplier * paragonHPMult).toFixed(1)}× HP
+                                </span>
+                            ) : (
+                                <span>{config.multiplier}× HP</span>
+                            )}
                         </div>
                     )}
                 </div>
@@ -144,9 +152,12 @@ export const LevelSelectScreen: React.FC<LevelSelectScreenProps> = ({
 }) => {
     const tierName = getParagonTierName(profile.paragonLevel);
     const highestAccessible = Math.max(profile.currentGameLevel, ...profile.clearedLevels, 1);
+    const paragonHPMult = getParagonMultiplier(profile.paragonLevel, 'enemyHPMultiplier');
+    const paragonDmgMult = getParagonMultiplier(profile.paragonLevel, 'enemyDamageMultiplier');
+    const isParagon = profile.paragonLevel > 0;
 
     return (
-        <div className="fixed inset-0 z-[500] flex flex-col items-center justify-center overflow-hidden">
+        <div className="fixed inset-0 z-[500] flex flex-col items-center overflow-hidden">
             {/* Background */}
             <div className="absolute inset-0 z-0">
                 <div className="absolute inset-0 bg-slate-950/90 backdrop-blur-md" />
@@ -156,9 +167,9 @@ export const LevelSelectScreen: React.FC<LevelSelectScreenProps> = ({
             <motion.div
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="relative z-10 text-center mb-8"
+                className="relative z-10 text-center flex-shrink-0 pt-5 pb-3 w-full px-6"
             >
-                <h1 className="font-cinzel text-4xl font-bold tracking-[0.15em] uppercase text-white mb-2">
+                <h1 className="font-cinzel text-3xl sm:text-4xl font-bold tracking-[0.15em] uppercase text-white mb-1">
                     VELG <span className="text-amber-200">LEVEL</span>
                 </h1>
                 <div className="flex items-center justify-center gap-3 text-white/40 font-cinzel text-sm tracking-widest">
@@ -168,8 +179,27 @@ export const LevelSelectScreen: React.FC<LevelSelectScreenProps> = ({
                 </div>
             </motion.div>
 
+            {/* Paragon difficulty indicator (only for paragonLevel > 0) */}
+            {isParagon && (
+                <motion.div
+                    initial={{ opacity: 0, scaleX: 0.95 }}
+                    animate={{ opacity: 1, scaleX: 1 }}
+                    className="relative z-10 flex-shrink-0 w-full max-w-lg px-6 mb-2"
+                >
+                    <div className="flex items-center justify-between gap-3 px-3 py-2 rounded-lg border border-amber-500/20 bg-amber-950/30">
+                        <span className="text-amber-400 text-xs font-cinzel uppercase tracking-widest">
+                            {tierName}
+                        </span>
+                        <div className="flex items-center gap-4 text-[10px] font-cinzel uppercase tracking-widest">
+                            <span className="text-red-400/80">{paragonHPMult.toFixed(2)}× HP</span>
+                            <span className="text-orange-400/80">{paragonDmgMult.toFixed(2)}× skade</span>
+                        </div>
+                    </div>
+                </motion.div>
+            )}
+
             {/* Level List */}
-            <div className="relative z-10 w-full max-w-lg px-6 space-y-2 max-h-[60vh] overflow-y-auto scrollbar-thin scrollbar-thumb-white/10">
+            <div className="relative z-10 w-full max-w-lg px-6 flex-1 min-h-0 overflow-y-auto custom-scrollbar space-y-1.5 py-1">
                 {LEVEL_CONFIG.map((config, idx) => {
                     const level = idx + 1;
                     const isCleared = profile.clearedLevels.includes(level);
@@ -191,6 +221,8 @@ export const LevelSelectScreen: React.FC<LevelSelectScreenProps> = ({
                             isFarming={isFarming}
                             hasBoss={hasBoss}
                             bossName={bossName}
+                            paragonHPMult={paragonHPMult}
+                            isParagon={isParagon}
                             onClick={() => onSelectLevel(level)}
                         />
                     );
@@ -202,7 +234,7 @@ export const LevelSelectScreen: React.FC<LevelSelectScreenProps> = ({
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.3 }}
-                className="relative z-10 mt-8 flex gap-4"
+                className="relative z-10 flex-shrink-0 py-4 flex gap-4"
             >
                 <FantasyButton
                     label="← Tilbake"

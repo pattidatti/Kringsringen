@@ -140,6 +140,16 @@ const KRIEGER: ClassConfig = {
             }
         },
         {
+            id: 'krieger_krok',
+            label: 'KROK',
+            icon: 'item_hook_chain',
+            isExclusive: true,
+            chapterLabels: {
+                ability: 'Kjettingkrok',
+                combat_style: 'Lenketeknikk'
+            }
+        },
+        {
             id: 'karakter',
             label: 'KARAKTER',
             icon: 'item_heart_status',
@@ -159,6 +169,9 @@ const KRIEGER: ClassConfig = {
         'counter_strike', 'stomp', 'battle_cry', 'executioner',
         // RUSTNING
         'skadeskalering', 'utstotbar_slag', 'iron_will', 'fortification', 'armor',
+        // KROK
+        'grapple_cooldown', 'grapple_radius', 'grapple_damage',
+        'grapple_stun', 'grapple_lifesteal', 'grapple_chain',
     ],
 };
 
@@ -201,10 +214,30 @@ const ARCHER: ClassConfig = {
         {
             id: 'archer_fantombyge',
             label: 'FANTOMBYGE',
-            icon: 'item_spear',
+            icon: 'item_crossbow',
             isExclusive: true,
             chapterLabels: {
                 ability: 'Fantombyge'
+            }
+        },
+        {
+            id: 'archer_vault',
+            label: 'HOPP OG BYGE',
+            icon: 'item_lightning',
+            isExclusive: true,
+            chapterLabels: {
+                ability: 'Hopp og Byge',
+                combat_style: 'Akrobatikk'
+            }
+        },
+        {
+            id: 'archer_decoy',
+            label: 'SKYGGEMANNEKENG',
+            icon: 'item_phantom',
+            isExclusive: true,
+            chapterLabels: {
+                ability: 'Skyggemannekeng',
+                combat_style: 'Lureri'
             }
         },
         {
@@ -237,6 +270,10 @@ const ARCHER: ClassConfig = {
         'bow_cooldown', 'multishot', 'pierce', 'arrow_damage', 'arrow_speed',
         'explosive_arrow', 'bow_singularity', 'poison_arrow', 'frost_trap',
         'headshot', 'eagle_eye', 'pindown', 'time_slow_arrow',
+        // HOPP OG BYGE
+        'vault_arrows', 'vault_damage', 'vault_distance', 'vault_cooldown', 'vault_pierce',
+        // SKYGGEMANNEKENG
+        'decoy_duration', 'decoy_invis', 'decoy_cooldown', 'decoy_explode', 'decoy_mimic',
         // SMIDIGHET
         'luftmobilitet', 'aerial_shot', 'shadow_step', 'kite_mastery',
     ],
@@ -368,58 +405,55 @@ const SKALD: ClassConfig = {
             label: 'HARPE',
             icon: 'item_harp',
             isExclusive: true,
-            chapterLabels: {
-                foundation: 'Harpe'
-            }
+            chapterLabels: { foundation: 'Harpe' }
         },
         {
-            id: 'skald_vers',
-            label: 'VERS',
+            id: 'skald_fiolin',
+            label: 'FIOLIN',
             icon: 'item_lute',
             isExclusive: true,
-            chapterLabels: {
-                foundation: 'Stridssang & Vers'
-            }
+            chapterLabels: { foundation: 'Stridssang', combat_style: 'Resonans', ability: 'Lisens' }
+        },
+        {
+            id: 'skald_horn',
+            label: 'HORN',
+            icon: 'item_moon_crescent',
+            isExclusive: true,
+            chapterLabels: { foundation: 'Inspirasjon', ability: 'Horn' }
         },
         {
             id: 'skald_kvad',
             label: 'PANFLØYTE',
             icon: 'item_panflute',
             isExclusive: true,
-            chapterLabels: {
-                ability: 'Panfløyte',
-                combat_style: 'Panfløyte-Synergier'
-            }
+            chapterLabels: { ability: 'Panfløyte', combat_style: 'Panfløyte-Synergier' }
         },
         {
-            id: 'skald_rytme',
-            label: 'RYTME',
-            icon: 'item_harp',
+            id: 'skald_vers',
+            label: 'VERS',
+            icon: 'item_lute',
             isExclusive: true,
-            chapterLabels: {
-                foundation: 'Rytme',
-                combat_style: 'Harmoni',
-                ability: 'Crescendo'
-            }
+            chapterLabels: { foundation: 'Vers', combat_style: 'Harmoni' }
         },
         {
             id: 'karakter',
             label: 'KARAKTER',
             icon: 'item_heart_status',
             isExclusive: false,
-            chapterLabels: {
-                foundation: 'Helse',
-                ability: 'Dash',
-                combat_style: 'Egenskaper'
-            }
+            chapterLabels: { foundation: 'Helse', ability: 'Dash', combat_style: 'Egenskaper' }
         },
     ],
     exclusiveUpgradeIds: [
-        // KVAD
-        'vers_damage', 'sonic_damage', 'sonic_pierce', 'kvad_radius', 'kvad_duration',
-        'poetisk_lisens', 'blodkvad', 'krigsbarde', 'ekko',
-        // RYTME
-        'stridssang_slow', 'skaldsang_lifesteal', 'resonans_shield', 'crescendo', 'anthem_of_fury',
+        // HARPE
+        'harpe_damage', 'harpe_speed', 'harpe_pierce', 'harpe_lifesteal',
+        // FIOLIN
+        'sonic_damage', 'sonic_pierce', 'stridssang_slow', 'skaldsang_lifesteal', 'poetisk_lisens',
+        // HORN
+        'kvad_duration', 'horn_heal', 'horn_cooldown',
+        // PANFLØYTE
+        'kvad_radius', 'blodkvad', 'krigsbarde', 'ekko', 'anthem_of_fury',
+        // VERS
+        'vers_damage', 'resonans_shield', 'crescendo',
     ],
 };
 

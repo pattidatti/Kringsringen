@@ -70,6 +70,18 @@ export class SonicBolt extends Phaser.Physics.Arcade.Sprite {
             mainScene.events.emit('harp-bolt-hit');
         }
 
+        // Skaldsang Lifesteal — helbred ved Stridssang-treff
+        if (this.weaponType === 'vers') {
+            const levels = (mainScene.registry.get('upgradeLevels') || {}) as Record<string, number>;
+            const lvl = levels['skaldsang_lifesteal'] || 0;
+            if (lvl > 0) {
+                const healAmt = lvl * 2;
+                const curHP = (mainScene.registry.get('playerHP') || 0) as number;
+                const maxHP = (mainScene.registry.get('playerMaxHP') || 100) as number;
+                mainScene.registry.set('playerHP', Math.min(maxHP, curHP + healAmt));
+            }
+        }
+
         // Spark burst at impact point
         if (mainScene.swordSparkEmitter) {
             mainScene.swordSparkEmitter.setEmitterAngle({ min: 0, max: 360 });

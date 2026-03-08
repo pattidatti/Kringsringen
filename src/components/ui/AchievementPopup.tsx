@@ -56,10 +56,10 @@ export const AchievementPopup: React.FC<AchievementPopupProps> = ({
   return (
     <AnimatePresence>
       <motion.div
-        className="fixed top-28 left-1/2 -translate-x-1/2 z-[50] max-w-sm mx-4"
-        initial={{ y: -100, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        exit={{ y: -100, opacity: 0 }}
+        className="fixed top-28 left-1/2 z-[50] max-w-sm"
+        initial={{ x: '-50%', y: -100, opacity: 0 }}
+        animate={{ x: '-50%', y: 0, opacity: 1 }}
+        exit={{ x: '-50%', y: -100, opacity: 0 }}
         transition={{ type: 'spring', stiffness: 300, damping: 30 }}
         onClick={onDismiss}
       >

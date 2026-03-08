@@ -119,3 +119,20 @@ Upgrade cost formula: `cost = basePrice * (currentLevel ^ priceScale)` (exponent
 ### Map generation
 
 Primary runtime system: `StaticMapLoader` + `StaticMapData.ts` load pre-authored static maps per level. Legacy procedural generator: `CircularForestMapGenerator` (creates a circular clearing surrounded by forest ring per level theme). Maps use tile layers with obstacles forming Arcade Physics bodies.
+
+### UI Layout Guidelines
+
+**Low vertical resolution (600–700 px)**: The game must support browser windows as short as 600 px (laptops with browser chrome). Full-screen overlay components must never use `justify-center` alone to vertically center content — the centered block overflows at the bottom on short screens and clips footer buttons.
+
+**Correct pattern for scrollable overlays** (header + scrollable list + footer):
+
+```
+flex flex-col items-center overflow-hidden   ← outer shell (no justify-center)
+  ├── flex-shrink-0                          ← header (never compressed)
+  ├── flex-1 min-h-0 overflow-y-auto        ← scrollable content (min-h-0 is critical)
+  └── flex-shrink-0                          ← footer (always pinned at bottom)
+```
+
+`min-h-0` on the scrollable zone is mandatory. Without it, the flex child ignores its allocated height and overflows. Reference implementations: `AchievementBookOverlay.tsx`, `HighscoresModal.tsx`, `LevelSelectScreen.tsx`.
+
+**Avoid**: `max-h-[Xvh]`, large `mt-N`/`mb-N` fixed gaps in full-screen overlays, `justify-center` as the sole vertical alignment strategy.
