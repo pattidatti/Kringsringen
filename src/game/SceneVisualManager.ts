@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import type { IMainScene } from './IMainScene';
-import { getQualityConfig, type QualitySettings, type GraphicsQuality } from '../config/QualityConfig';
+import { getQualityConfig, type QualitySettings, type GraphicsQuality, type ShadowMode } from '../config/QualityConfig';
 import { GAME_CONFIG } from '../config/GameConfig';
 import { StaticMapLoader } from './StaticMapLoader';
 import { STATIC_MAPS } from './StaticMapData';
@@ -202,6 +202,10 @@ export class SceneVisualManager {
         if ((this.scene as any).ambient) (this.scene as any).ambient.setTheme(safeLevel);
 
         this.scene.events.emit('map-ready', { level: safeLevel });
+    }
+
+    public getShadowMode(): ShadowMode {
+        return this.currentQuality.shadowMode;
     }
 
     public destroy(): void {

@@ -36,6 +36,7 @@ import { HpBarRenderer, type IHpBarTarget } from './HpBarRenderer';
 import { AchievementManager } from './AchievementManager';
 import { WaveEventManager } from './WaveEventManager';
 import { ShrineManager } from './ShrineManager';
+import { SpriteShadow } from './SpriteShadow';
 
 
 export class MainScene extends Phaser.Scene implements IMainScene {
@@ -83,7 +84,7 @@ export class MainScene extends Phaser.Scene implements IMainScene {
     // Map Generation
     private mapWidth: number = 3000;
     private mapHeight: number = 3000;
-    public playerShadow: Phaser.GameObjects.Sprite | null = null;
+    public playerShadow: SpriteShadow | null = null;
 
     public setupEventHandlers!: () => void;
     public wasd!: any;
@@ -269,7 +270,7 @@ export class MainScene extends Phaser.Scene implements IMainScene {
             }
 
             this.data.set('player', this.player);
-            this.playerShadow = this.add.sprite(this.player.x, this.player.y + 28, 'shadows', 0).setAlpha(0.4).setDepth(this.player.depth - 1);
+            this.playerShadow = new SpriteShadow(this, this.player, this.quality.shadowMode, 28);
             this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
             console.log('[MainScene] Camera following player.');
 
@@ -385,7 +386,7 @@ export class MainScene extends Phaser.Scene implements IMainScene {
             this.decoys.children.iterate((d: any) => { if (d.active) (d as any).update?.(_time, delta); return true; });
             this.traps.children.iterate((t: any) => { if (t.active) (t as any).update?.(_time, delta); return true; });
 
-            if (this.player && this.playerShadow) this.playerShadow.setPosition(this.player.x, this.player.y + 28);
+            if (this.player && this.playerShadow) this.playerShadow.update(this.player.x, this.player.y);
             if (!this.player || !this.player.body) return;
 
             const renderTime = this.networkManager ? this.networkManager.getServerTime() - 100 : Date.now();
