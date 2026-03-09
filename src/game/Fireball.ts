@@ -66,12 +66,15 @@ export class Fireball extends Phaser.Physics.Arcade.Sprite {
         // Add Glow FX
         this.postFX.addGlow(0xff4400, 4, 0, false, 0.1, 10);
 
-        // Add Dynamic Light (remove stale light from pool reuse first)
+        // Add Dynamic Light via budget (remove stale light from pool reuse first)
         if (this.light) {
-            this.scene.lights.removeLight(this.light);
+            const visuals = (this.scene as any).visuals;
+            if (visuals) visuals.releaseProjectileLight(this.light);
+            else this.scene.lights.removeLight(this.light);
             this.light = null;
         }
-        this.light = this.scene.lights.addLight(x, y, 200, 0xff6600, 1.0);
+        const visuals = (this.scene as any).visuals;
+        this.light = visuals ? visuals.requestProjectileLight(x, y, 200, 0xff6600, 1.0) : null;
 
         if (this.body) {
             this.body.enable = true;
@@ -97,7 +100,8 @@ export class Fireball extends Phaser.Physics.Arcade.Sprite {
 
         // Reuse travel light as impact flash — avoid new light allocation
         if (this.light) {
-            const light = this.light; // Capture for use in tween callback
+            const light = this.light;
+            const vis = (this.scene as any).visuals;
             light.setPosition(hitX, hitY).setRadius(300).setIntensity(2.0);
             this.scene.tweens.add({
                 targets: light,
@@ -105,10 +109,11 @@ export class Fireball extends Phaser.Physics.Arcade.Sprite {
                 radius: 400,
                 duration: 400,
                 onComplete: () => {
-                    if (light) this.scene.lights.removeLight(light);
+                    if (vis) vis.releaseProjectileLight(light);
+                    else this.scene.lights.removeLight(light);
                 }
             });
-            this.light = null;  // Null immediately to prevent double cleanup on pool reuse
+            this.light = null;
         }
 
         const mainScene = this.scene as any;
@@ -371,7 +376,9 @@ export class Fireball extends Phaser.Physics.Arcade.Sprite {
     public destroy(fromScene?: boolean) {
         if (this.trail) this.trail.destroy();
         if (this.light) {
-            this.scene.lights.removeLight(this.light);
+            const vis = (this.scene as any).visuals;
+            if (vis) vis.releaseProjectileLight(this.light);
+            else this.scene.lights.removeLight(this.light);
             this.light = null;
         }
         super.destroy(fromScene);

@@ -81,12 +81,15 @@ export class LightningBolt extends Phaser.Physics.Arcade.Sprite {
             this.glowEffect.color = this.colorHex;
         }
 
-        // Add Dynamic Light (remove stale light from pool reuse first)
+        // Add Dynamic Light via budget (remove stale light from pool reuse first)
         if (this.light) {
-            this.scene.lights.removeLight(this.light);
+            const vis = (this.scene as any).visuals;
+            if (vis) vis.releaseProjectileLight(this.light);
+            else this.scene.lights.removeLight(this.light);
             this.light = null;
         }
-        this.light = this.scene.lights.addLight(x, y, 150, this.colorHex, 1.0);
+        const visuals = (this.scene as any).visuals;
+        this.light = visuals ? visuals.requestProjectileLight(x, y, 150, this.colorHex, 1.0) : null;
 
         if (this.body) {
             this.body.enable = true;
@@ -307,7 +310,8 @@ export class LightningBolt extends Phaser.Physics.Arcade.Sprite {
         if (this.bouncesLeft === 0) {
             // Final impact — reuse travel light as impact flash
             if (this.light) {
-                const light = this.light; // Capture for use in tween callback
+                const light = this.light;
+                const vis = (this.scene as any).visuals;
                 light.setPosition(hitX, hitY).setRadius(250).setIntensity(2.0);
                 this.scene.tweens.add({
                     targets: light,
@@ -315,10 +319,11 @@ export class LightningBolt extends Phaser.Physics.Arcade.Sprite {
                     radius: 350,
                     duration: 300,
                     onComplete: () => {
-                        if (light) this.scene.lights.removeLight(light);
+                        if (vis) vis.releaseProjectileLight(light);
+                        else this.scene.lights.removeLight(light);
                     }
                 });
-                this.light = null;  // Null immediately to prevent double cleanup on pool reuse
+                this.light = null;
             }
             // Deactivate sprite but keep light for tween
             this.setActive(false);
@@ -377,7 +382,9 @@ export class LightningBolt extends Phaser.Physics.Arcade.Sprite {
         this.setVisible(false);
         if (this.body) this.body.enable = false;
         if (this.light) {
-            this.scene.lights.removeLight(this.light);
+            const vis = (this.scene as any).visuals;
+            if (vis) vis.releaseProjectileLight(this.light);
+            else this.scene.lights.removeLight(this.light);
             this.light = null;
         }
         this.postFX.clear();

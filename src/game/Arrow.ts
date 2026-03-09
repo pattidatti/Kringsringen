@@ -9,7 +9,7 @@ export class Arrow extends Phaser.Physics.Arcade.Sprite {
     private startX: number = 0;
     private startY: number = 0;
     private trail: Phaser.GameObjects.Particles.ParticleEmitter | null = null;
-    private light: Phaser.GameObjects.Light | null = null;
+    private glowSprite: Phaser.GameObjects.Sprite | null = null;
     private glowEffect: Phaser.FX.Glow | null = null;
     private speed: number = 700;
     private pierceCount: number = 0;
@@ -194,19 +194,20 @@ export class Arrow extends Phaser.Physics.Arcade.Sprite {
             this.glowEffect = null;
         }
 
-        // Add dynamic light
-        if (this.scene.lights.active) {
-            if (this.light) {
-                this.scene.lights.removeLight(this.light);
-                this.light = null;
+        // Cheap additive glow sprite instead of PointLight (O(1) vs O(pixels))
+        if (withLight && this.scene.textures.exists('glow-soft')) {
+            if (!this.glowSprite) {
+                this.glowSprite = this.scene.add.sprite(x, y, 'glow-soft');
+                this.glowSprite.setBlendMode(Phaser.BlendModes.ADD);
+                this.glowSprite.setDepth(this.depth - 1);
             }
-
-            if (withLight) {
-                this.setPipeline('Light2D');
-                this.light = this.scene.lights.addLight(x, y, 150, 0xffdd88, 0.8);
-            } else {
-                this.resetPipeline();
-            }
+            this.glowSprite.setPosition(x, y);
+            this.glowSprite.setTint(0xffdd88);
+            this.glowSprite.setAlpha(0.5);
+            this.glowSprite.setScale(5); // ~160px radius from 32px half-size
+            this.glowSprite.setVisible(true);
+        } else if (this.glowSprite) {
+            this.glowSprite.setVisible(false);
         }
 
         if (this.trail) {
@@ -238,17 +239,20 @@ export class Arrow extends Phaser.Physics.Arcade.Sprite {
         if (this.trail) {
             this.trail.stop();
         }
-        if (this.light) {
-            const light = this.light;
-            light.setPosition(this.x, this.y).setRadius(200).setIntensity(1.5);
+        // Impact flash using glow sprite
+        if (this.glowSprite && this.glowSprite.visible) {
+            const glow = this.glowSprite;
+            glow.setPosition(this.x, this.y);
+            glow.setAlpha(0.8);
+            glow.setScale(7);
             this.scene.tweens.add({
-                targets: light,
-                intensity: 0,
-                radius: 280,
+                targets: glow,
+                alpha: 0,
+                scale: 9,
                 duration: 300,
-                onComplete: () => { this.scene.lights.removeLight(light); }
+                onComplete: () => { glow.setVisible(false); }
             });
-            this.light = null;
+            this.glowSprite = null; // Will be re-created on next fire via pool
         }
     }
 
@@ -288,8 +292,8 @@ export class Arrow extends Phaser.Physics.Arcade.Sprite {
     update() {
         if (!this.active) return;
 
-        if (this.light) {
-            this.light.setPosition(this.x, this.y);
+        if (this.glowSprite && this.glowSprite.visible) {
+            this.glowSprite.setPosition(this.x, this.y);
         }
 
         const distance = Phaser.Math.Distance.Between(this.startX, this.startY, this.x, this.y);
@@ -300,9 +304,9 @@ export class Arrow extends Phaser.Physics.Arcade.Sprite {
 
     public destroy(fromScene?: boolean) {
         if (this.trail) this.trail.destroy();
-        if (this.light) {
-            this.scene.lights.removeLight(this.light);
-            this.light = null;
+        if (this.glowSprite) {
+            this.glowSprite.destroy();
+            this.glowSprite = null;
         }
         super.destroy(fromScene);
     }
