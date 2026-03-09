@@ -35,7 +35,7 @@ export class Fireball extends Phaser.Physics.Arcade.Sprite {
         }
     }
 
-    fire(x: number, y: number, angle: number, damage: number) {
+    fire(x: number, y: number, angle: number, damage: number, scaleOverride?: number) {
         this.startX = x;
         this.startY = y;
         this.damage = damage;
@@ -44,6 +44,7 @@ export class Fireball extends Phaser.Physics.Arcade.Sprite {
         this.setVisible(true);
         this.setPosition(x, y);
         this.setRotation(angle);
+        this.setScale(scaleOverride ?? 1.5);
         this.play('fireball-fly');
 
         // Pool trail emitter: create once, reuse on subsequent fires
@@ -124,7 +125,9 @@ export class Fireball extends Phaser.Physics.Arcade.Sprite {
         const blazeStormLvl = upgLvls['blaze_storm'] || 0;
         const synergyThermalShock = mainScene.registry.get('synergyThermalShock');
 
-        const scaledDamage = this.damage * fireballDamageMulti;
+        // ── MASTERY: Unstable Core — scale damage with distance ──
+        const unstableCoreScale = (this.getData('unstableCoreScale') as number) || 1;
+        const scaledDamage = this.damage * fireballDamageMulti * unstableCoreScale;
 
         let thermalShockTriggered = false;
 
@@ -249,6 +252,44 @@ export class Fireball extends Phaser.Physics.Arcade.Sprite {
             });
         }
 
+        // ── MASTERY: Chain Omega — kills spawn 2 new fireballs (max 3 generations) ──
+        const chainOmegaLvl = upgLvls['chain_omega'] || 0;
+        if (chainOmegaLvl > 0 && directHit && !directHit.active) {
+            const generation = (this.getData('chainGeneration') || 0) as number;
+            if (generation < 3) {
+                const nearbyForChain = mainScene.spatialGrid?.findNearby({ x: hitX, y: hitY, width: 1, height: 1 }, 300) || [];
+                let spawned = 0;
+                for (const entry of nearbyForChain) {
+                    if (spawned >= 2) break;
+                    const e = entry.ref as Enemy;
+                    if (e && e.active && !e.getIsDead()) {
+                        const ang = Phaser.Math.Angle.Between(hitX, hitY, e.x, e.y);
+                        const childFireball = mainScene.fireballs.get(hitX, hitY) as Fireball;
+                        if (childFireball) {
+                            childFireball.fire(hitX, hitY, ang, scaledDamage * 0.7, 1.5 * Math.pow(0.7, generation + 1));
+                            childFireball.setData('chainGeneration', generation + 1);
+                            childFireball.setTint(0xff2200); // Redder tint for chain fireballs
+                            spawned++;
+                        }
+                    }
+                }
+            }
+        }
+
+        // ── MASTERY: Solar Flare — leave burning trail along fireball path ──
+        const solarFlareLvl = upgLvls['solar_flare'] || 0;
+        if (solarFlareLvl > 0) {
+            // Spawn hazard areas along the travel path
+            const dist = Phaser.Math.Distance.Between(this.startX, this.startY, hitX, hitY);
+            const steps = Math.min(Math.floor(dist / 80), 5);
+            for (let i = 1; i <= steps; i++) {
+                const t = i / (steps + 1);
+                const tx = this.startX + (hitX - this.startX) * t;
+                const ty = this.startY + (hitY - this.startY) * t;
+                this.spawnHazardArea(tx, ty, scaledDamage * 0.3, 3000);
+            }
+        }
+
         // ── Fase 6: Wizard Spell Effects ─────────────────────────────────────
         // (Using upgLvls from earlier in the function)
 
@@ -366,6 +407,17 @@ export class Fireball extends Phaser.Physics.Arcade.Sprite {
 
         if (this.light) {
             this.light.setPosition(this.x, this.y);
+        }
+
+        // ── MASTERY: Unstable Core — grow fireball over distance ──
+        const mainScene = this.scene as any;
+        const upgLvls = (mainScene.registry?.get('upgradeLevels') || {}) as Record<string, number>;
+        if ((upgLvls['unstable_core'] || 0) > 0) {
+            const progress = Math.min(distance / this.maxDistance, 1);
+            const scaleFactor = 1 + progress * 2; // 1x → 3x over distance
+            this.setScale(1.5 * scaleFactor);
+            // Store scale factor for damage calculation in hit()
+            this.setData('unstableCoreScale', 0.6 + progress * 1.9); // 0.6x close, 2.5x far
         }
 
         if (distance > this.maxDistance) {

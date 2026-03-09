@@ -234,6 +234,37 @@ export class PlayerStatsManager {
             this.scene.registry.set('playerDamage', this.playerDamage);
         }
 
+        // ── Mastery: Elemental Convergence — buff spells during Cascade ──
+        const convergenceActive = (levels['elemental_convergence'] || 0) > 0 &&
+            Date.now() < (this.scene.data?.get('convergenceActiveUntil') || 0);
+        if (convergenceActive) {
+            // +50% fire radius
+            const curFireRadius = (this.scene.registry.get('fireballRadius') as number) || 80;
+            this.scene.registry.set('fireballRadius', curFireRadius * 1.5);
+            // +50% frost slow duration
+            const curFrostSlow = (this.scene.registry.get('frostSlowDuration') as number) || 1000;
+            this.scene.registry.set('frostSlowDuration', curFrostSlow * 1.5);
+            // +3 lightning bounces (already handled in WeaponManager)
+        }
+
+        // ── Mastery: Eternal Verse — permanent damage stacking ──
+        const eternalVerseStacks = (this.scene.data?.get('eternalVerseDamageStacks') || 0) as number;
+        if (eternalVerseStacks > 0) {
+            this.playerDamage *= (1 + eternalVerseStacks * 0.05);
+            this.scene.registry.set('playerDamage', this.playerDamage);
+        }
+
+        // ── Mastery: Blood Blade — 3x damage under 30% HP ──
+        const bloodBladeLvl = levels['blood_blade'] || 0;
+        if (bloodBladeLvl > 0) {
+            const curHP = (this.scene.registry.get('playerHP') || 0) as number;
+            const maxHP = this.playerMaxHP;
+            if (curHP / maxHP < 0.3) {
+                this.playerDamage *= 3;
+                this.scene.registry.set('playerDamage', this.playerDamage);
+            }
+        }
+
         // ── Skald Buffs ──────────────────────────────────────────────
         // Horn: +25% speed and damage
         if (this.scene.buffs?.hasBuff('horn')) {

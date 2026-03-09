@@ -98,6 +98,105 @@ export class SonicBolt extends Phaser.Physics.Arcade.Sprite {
             e.applySlow(this.slowDuration);
         }
 
+        // ── MASTERY: Harmonic Echo — every 3rd harp hit spawns echo bolt ──
+        if (this.weaponType === 'harp') {
+            const levels = (mainScene.registry.get('upgradeLevels') || {}) as Record<string, number>;
+            if ((levels['harmonic_echo'] || 0) > 0 && mainScene.weaponManager) {
+                mainScene.weaponManager.harmonicEchoHitCount++;
+                if (mainScene.weaponManager.harmonicEchoHitCount >= 3) {
+                    mainScene.weaponManager.harmonicEchoHitCount = 0;
+                    // Find nearest enemy to bounce to
+                    const nearbyEntries = mainScene.spatialGrid?.findNearby({ x: e.x, y: e.y, width: 1, height: 1 }, 300) || [];
+                    for (const cell of nearbyEntries) {
+                        const target = cell.ref as Enemy;
+                        if (target && target !== e && target.active && !target.getIsDead()) {
+                            const echoBolt = mainScene.sonicBolts?.get(e.x, e.y) as SonicBolt;
+                            if (echoBolt) {
+                                const ang = Phaser.Math.Angle.Between(e.x, e.y, target.x, target.y);
+                                echoBolt.fire(e.x, e.y, ang, this.damage * 0.75, 1, 0, 'harp');
+                                echoBolt.setTint(0xaaddff);
+                                echoBolt.setScale(3.0);
+                            }
+                            break;
+                        }
+                    }
+                }
+            }
+
+            // ── MASTERY: Resonance Frequency — escalating damage on same enemy ──
+            if ((levels['resonance_frequency'] || 0) > 0 && mainScene.weaponManager) {
+                const resMap = mainScene.weaponManager.resonanceHits as Map<any, {count: number, lastHit: number}>;
+                const now = Date.now();
+                const entry = resMap.get(e);
+                if (entry && now - entry.lastHit < 2000) {
+                    entry.count = Math.min(entry.count + 1, 4);
+                    entry.lastHit = now;
+                    // Bonus damage based on count: 1.5x, 2.25x, 3x
+                    const multipliers = [1, 1.5, 2.25, 3.0, 3.0];
+                    const bonus = this.damage * (multipliers[entry.count] - 1);
+                    if (bonus > 0) {
+                        e.takeDamage(bonus, entry.count >= 3 ? '#ff4400' : entry.count >= 2 ? '#ffaa00' : '#ffdd00');
+                    }
+                    // Visual tint escalation
+                    const tints = [0xffffff, 0xffff00, 0xffaa00, 0xff4400, 0xff0000];
+                    e.setTint(tints[entry.count]);
+                    mainScene.time.delayedCall(500, () => { if (e.active) e.clearTint(); });
+                } else {
+                    resMap.set(e, { count: 1, lastHit: now });
+                }
+            }
+        }
+
+        // ── MASTERY: War Melody — Stridssang applies dissonance debuff ──
+        if (this.weaponType === 'vers') {
+            const levels = (mainScene.registry.get('upgradeLevels') || {}) as Record<string, number>;
+            if ((levels['war_melody'] || 0) > 0) {
+                e.setData('dissonanceUntil', Date.now() + 3000);
+                // Dissonance = +25% damage taken (read in takeDamage)
+                mainScene.poolManager?.getDamageText(e.x, e.y - 20, '♪ DISSONANS', '#cc44ff');
+                // On death: 100px AoE explosion
+                if (!e.getData('dissonanceDeathWatcher')) {
+                    e.setData('dissonanceDeathWatcher', true);
+                    const checkDeath = mainScene.time.addEvent({
+                        delay: 200,
+                        repeat: 15,
+                        callback: () => {
+                            if (!e.active || e.getIsDead()) {
+                                checkDeath.remove();
+                                mainScene.poolManager?.spawnFireballExplosion(e.x, e.y);
+                                const deathNearby = mainScene.spatialGrid?.findNearby({ x: e.x, y: e.y, width: 1, height: 1 }, 100) || [];
+                                deathNearby.forEach((cell: any) => {
+                                    const de = cell.ref;
+                                    if (de && de.active && !de.getIsDead()) {
+                                        de.takeDamage(this.damage * 0.5, '#cc44ff');
+                                    }
+                                });
+                            }
+                        }
+                    });
+                }
+            }
+
+            // ── MASTERY: Ballad Curse — link enemies, share 30% damage ──
+            if ((levels['ballad_curse'] || 0) > 0) {
+                const linkedEnemies = (mainScene.data?.get('balladLinkedEnemies') || []) as any[];
+                if (!linkedEnemies.includes(e) && linkedEnemies.length < 5) {
+                    linkedEnemies.push(e);
+                    mainScene.data.set('balladLinkedEnemies', linkedEnemies);
+                    e.setData('balladLinked', true);
+                    e.setData('balladLinkExpiry', Date.now() + 6000);
+                    // Clean up after 6s
+                    mainScene.time.delayedCall(6000, () => {
+                        const current = (mainScene.data?.get('balladLinkedEnemies') || []) as any[];
+                        const idx = current.indexOf(e);
+                        if (idx !== -1) current.splice(idx, 1);
+                        mainScene.data.set('balladLinkedEnemies', current);
+                        if (e.active) e.setData('balladLinked', false);
+                    });
+                }
+            }
+        }
+
         // Check pierce
         if (this.hitCount > this.pierceCount) {
             this.deactivate();
