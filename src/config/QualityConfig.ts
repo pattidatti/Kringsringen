@@ -1,5 +1,7 @@
 export type GraphicsQuality = 'low' | 'medium' | 'high';
 
+export type ShadowMode = 'blob' | 'silhouette' | 'dynamic';
+
 export interface QualitySettings {
     lightingEnabled: boolean;
     particleMultiplier: number;
@@ -8,6 +10,8 @@ export interface QualitySettings {
     bloomEnabled: boolean;
     /** Max simultaneous PointLights for projectiles (player lights are separate) */
     maxProjectileLights: number;
+    /** Shadow rendering mode: blob (oval), silhouette (sprite shape), dynamic (light-reactive) */
+    shadowMode: ShadowMode;
 }
 
 export const QUALITY_CONFIGS: Record<GraphicsQuality, QualitySettings> = {
@@ -17,7 +21,8 @@ export const QUALITY_CONFIGS: Record<GraphicsQuality, QualitySettings> = {
         hpBarUpdateMode: 'reactive',
         postFXEnabled: false,
         bloomEnabled: false,
-        maxProjectileLights: 0
+        maxProjectileLights: 0,
+        shadowMode: 'blob'
     },
     medium: {
         lightingEnabled: true,
@@ -25,7 +30,8 @@ export const QUALITY_CONFIGS: Record<GraphicsQuality, QualitySettings> = {
         hpBarUpdateMode: 'reactive',
         postFXEnabled: true,
         bloomEnabled: false,
-        maxProjectileLights: 6
+        maxProjectileLights: 6,
+        shadowMode: 'silhouette'
     },
     high: {
         lightingEnabled: true,
@@ -33,7 +39,8 @@ export const QUALITY_CONFIGS: Record<GraphicsQuality, QualitySettings> = {
         hpBarUpdateMode: 'continuous',
         postFXEnabled: true,
         bloomEnabled: true,
-        maxProjectileLights: 12
+        maxProjectileLights: 12,
+        shadowMode: 'dynamic'
     }
 };
 

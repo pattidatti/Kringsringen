@@ -8,6 +8,7 @@ import type { CollisionManager } from './CollisionManager';
 import type { WeaponManager } from './WeaponManager';
 import type { ClassAbilityManager } from './ClassAbilityManager';
 import type { SceneEventManager } from './SceneEventManager';
+import type { SpriteShadow } from './SpriteShadow';
 import type { SceneVisualManager } from './SceneVisualManager';
 import type { NetworkPacketHandler } from './NetworkPacketHandler';
 import type { WeatherManager } from './WeatherManager';
@@ -72,7 +73,7 @@ export interface IMainScene extends Phaser.Scene {
     pendingDeaths: Set<string>;
     deathSparkEmitter: Phaser.GameObjects.Particles.ParticleEmitter;
     swordSparkEmitter: Phaser.GameObjects.Particles.ParticleEmitter;
-    playerShadow: Phaser.GameObjects.Sprite | null;
+    playerShadow: SpriteShadow | null;
     restartGame(): void;
     restartAtLevel(level: number): void;
     triggerHitstop(durationMs?: number): void;

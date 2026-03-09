@@ -7,6 +7,7 @@ import type { PackedEnemy } from '../network/SyncSchemas';
 import { HistoryBuffer } from './HistoryBuffer';
 import { AudioManager } from './AudioManager';
 import type { GridClient } from './SpatialGrid';
+import { SpriteShadow } from './SpriteShadow';
 
 export class Enemy extends Phaser.Physics.Arcade.Sprite {
     private targetStart: Phaser.GameObjects.Components.Transform; // Renamed to avoid confusion with internal target
@@ -33,7 +34,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     private poisonTimer: Phaser.Time.TimerEvent | null = null;
     private isPoisoned: boolean = false;
     protected originalSpeed: number = 100;
-    private shadow: Phaser.GameObjects.Sprite | null = null;
+    private shadow: SpriteShadow | null = null;
     public id: string = "";
     private attackLight: Phaser.GameObjects.Light | null = null;
     public isStunned: boolean = false;
@@ -102,9 +103,8 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         scene.add.existing(this);
         scene.physics.add.existing(this);
         this.positionHistory = new HistoryBuffer(120); // 2 seconds at 60fps
-        this.shadow = scene.add.sprite(x, y, 'shadows', 0)
-            .setAlpha(0.4)
-            .setDepth(-1);
+        const shadowMode = (scene as any).quality?.shadowMode ?? 'blob';
+        this.shadow = new SpriteShadow(scene, this, shadowMode, this.height * this.scaleY * 0.3);
 
         // If called with new(), we should initialize. If pooled, reset() will be called.
         // For now, we assume this might be called directly or via pool.
@@ -125,7 +125,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         this.setTint(0xffffff);
         if (this.shadow) {
             this.shadow.setVisible(true);
-            this.shadow.setPosition(x, y);
+            this.shadow.setPosition(x, y + (this.height * this.scaleY * 0.3));
         }
         this.clearTint();
         this.postFX.clear();
@@ -564,7 +564,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
             }
 
             if (this.shadow) {
-                this.shadow.setPosition(this.x, this.y + (this.height * this.scaleY * 0.3));
+                this.shadow.update(this.targetStart.x, this.targetStart.y);
             }
 
         }
