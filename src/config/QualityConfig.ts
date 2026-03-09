@@ -6,6 +6,8 @@ export interface QualitySettings {
     hpBarUpdateMode: 'reactive' | 'continuous';
     postFXEnabled: boolean;
     bloomEnabled: boolean;
+    /** Max simultaneous PointLights for projectiles (player lights are separate) */
+    maxProjectileLights: number;
 }
 
 export const QUALITY_CONFIGS: Record<GraphicsQuality, QualitySettings> = {
@@ -14,21 +16,24 @@ export const QUALITY_CONFIGS: Record<GraphicsQuality, QualitySettings> = {
         particleMultiplier: 0.2,
         hpBarUpdateMode: 'reactive',
         postFXEnabled: false,
-        bloomEnabled: false
+        bloomEnabled: false,
+        maxProjectileLights: 0
     },
     medium: {
         lightingEnabled: true,
         particleMultiplier: 0.6,
         hpBarUpdateMode: 'reactive',
         postFXEnabled: true,
-        bloomEnabled: false
+        bloomEnabled: false,
+        maxProjectileLights: 6
     },
     high: {
         lightingEnabled: true,
         particleMultiplier: 1.0,
         hpBarUpdateMode: 'continuous',
         postFXEnabled: true,
-        bloomEnabled: true
+        bloomEnabled: true,
+        maxProjectileLights: 12
     }
 };
 

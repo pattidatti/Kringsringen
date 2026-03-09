@@ -32,12 +32,15 @@ export class FrostBolt extends Phaser.Physics.Arcade.Sprite {
         // Add Glow FX
         this.postFX.addGlow(0x00aaff, 4, 0, false, 0.1, 10);
 
-        // Add cast glow (remove stale light from pool reuse first)
+        // Add cast glow via light budget (remove stale light from pool reuse first)
         if (this.light) {
-            this.scene.lights.removeLight(this.light);
+            const vis = (this.scene as any).visuals;
+            if (vis) vis.releaseProjectileLight(this.light);
+            else this.scene.lights.removeLight(this.light);
             this.light = null;
         }
-        this.light = this.scene.lights.addLight(x, y, 180, 0x88ccff, 1.0);
+        const visuals = (this.scene as any).visuals;
+        this.light = visuals ? visuals.requestProjectileLight(x, y, 180, 0x88ccff, 1.0) : null;
 
         // After one full cycle of cast anim (~550ms @ 12fps × 8 frames), impact at target
         const castDuration = Math.round((8 / 12) * 1000);
@@ -138,7 +141,8 @@ export class FrostBolt extends Phaser.Physics.Arcade.Sprite {
 
         // Reuse travel light as impact flash — avoid new light allocation
         if (this.light) {
-            const light = this.light; // Capture for use in tween callback
+            const light = this.light;
+            const vis = (this.scene as any).visuals;
             light.setPosition(hitX, hitY).setRadius(350).setIntensity(2.5);
             this.scene.tweens.add({
                 targets: light,
@@ -146,10 +150,11 @@ export class FrostBolt extends Phaser.Physics.Arcade.Sprite {
                 radius: 450,
                 duration: 500,
                 onComplete: () => {
-                    if (light) this.scene.lights.removeLight(light);
+                    if (vis) vis.releaseProjectileLight(light);
+                    else this.scene.lights.removeLight(light);
                 }
             });
-            this.light = null;  // Null immediately to prevent double cleanup on pool reuse
+            this.light = null;
         }
     }
 
@@ -159,7 +164,9 @@ export class FrostBolt extends Phaser.Physics.Arcade.Sprite {
 
     public destroy(fromScene?: boolean) {
         if (this.light) {
-            this.scene.lights.removeLight(this.light);
+            const vis = (this.scene as any).visuals;
+            if (vis) vis.releaseProjectileLight(this.light);
+            else this.scene.lights.removeLight(this.light);
             this.light = null;
         }
         super.destroy(fromScene);

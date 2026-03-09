@@ -239,6 +239,7 @@ export class ClassAbilityManager {
 
         // Fire loop
         const fireInterval = 1500 / totalArrows;
+        let volleyArrowIndex = 0;
 
         const fireTimer = this.scene.time.addEvent({
             delay: fireInterval,
@@ -260,8 +261,12 @@ export class ClassAbilityManager {
                 if (arrow) {
                     const poisonLvl = levels['poison_arrow'] || 0;
 
+                    // Only every 4th arrow gets glow to prevent FPS drops (15-40 lights = massive cost)
+                    const withLight = (volleyArrowIndex % 4 === 0);
+                    volleyArrowIndex++;
+
                     // Fast arrows, pierce applied
-                    arrow.fire(player.x, player.y, finalAngle, baseDamage, 900, pierceCount, 0, 0, poisonLvl, 0, true);
+                    arrow.fire(player.x, player.y, finalAngle, baseDamage, 900, pierceCount, 0, 0, poisonLvl, 0, withLight);
 
                     // Recoil (Push player slightly backwards)
                     const recoilDist = 20;

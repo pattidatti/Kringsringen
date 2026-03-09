@@ -15,6 +15,9 @@ export class SceneVisualManager {
     private vignetteEffect: any = null;
     private currentQuality!: QualitySettings;
 
+    // Light budget tracking (projectile lights only — player lights are separate)
+    private activeProjectileLights: number = 0;
+
     // Map Management
     private currentMap: StaticMapLoader | null = null;
     private mapWidth: number = 3000;
@@ -122,6 +125,26 @@ export class SceneVisualManager {
         if (this.vignetteEffect) {
             this.vignetteEffect.active = this.currentQuality.postFXEnabled;
         }
+    }
+
+    /**
+     * Request a PointLight for a projectile. Returns the light if budget allows, null otherwise.
+     * Callers must call releaseProjectileLight() when the light is no longer needed.
+     */
+    public requestProjectileLight(x: number, y: number, radius: number, color: number, intensity: number): Phaser.GameObjects.Light | null {
+        if (!this.currentQuality.lightingEnabled) return null;
+        if (this.activeProjectileLights >= this.currentQuality.maxProjectileLights) return null;
+
+        this.activeProjectileLights++;
+        return this.scene.lights.addLight(x, y, radius, color, intensity);
+    }
+
+    /**
+     * Release a projectile light back to the budget.
+     */
+    public releaseProjectileLight(light: Phaser.GameObjects.Light): void {
+        this.scene.lights.removeLight(light);
+        this.activeProjectileLights = Math.max(0, this.activeProjectileLights - 1);
     }
 
     public handleGhostMode(isDead: boolean): void {

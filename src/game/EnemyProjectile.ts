@@ -8,6 +8,7 @@ export class EnemyProjectile extends Phaser.Physics.Arcade.Sprite {
     private startY: number = 0;
     private trail: Phaser.GameObjects.Particles.ParticleEmitter | null = null;
     private light: Phaser.GameObjects.Light | null = null;
+    private glowSprite: Phaser.GameObjects.Sprite | null = null;
     private projectileType: 'arrow' | 'fireball' | 'frostball' = 'arrow';
     private isBurstProjectile: boolean = false;
 
@@ -70,14 +71,16 @@ export class EnemyProjectile extends Phaser.Physics.Arcade.Sprite {
                 this.trail.resume();
             }
 
-            // Burst-prosjektiler bruker IKKE PointLight (8 simultane lys = FPS-drop).
-            // Enkelt-prosjektiler (normal fireball/frostball) kan ha lys.
+            // Non-burst fireball/frostball: use light budget for PointLight
             if (!this.isBurstProjectile) {
-                if (!this.light) {
-                    this.light = this.scene.lights.addLight(x, y, 150, tint, 0.33);
-                } else {
-                    this.light.setPosition(x, y).setRadius(150).setColor(tint).setIntensity(0.33);
+                if (this.light) {
+                    const vis = (this.scene as any).visuals;
+                    if (vis) vis.releaseProjectileLight(this.light);
+                    else this.scene.lights.removeLight(this.light);
+                    this.light = null;
                 }
+                const vis = (this.scene as any).visuals;
+                this.light = vis ? vis.requestProjectileLight(x, y, 150, tint, 0.33) : null;
             }
 
             // postFX glow er GPU-only og trygt for burst. clear() forhindrer stacking på poolede objekter.
@@ -114,13 +117,18 @@ export class EnemyProjectile extends Phaser.Physics.Arcade.Sprite {
                 this.trail.resume();
             }
 
-            // Piler fra burst bruker ikke PointLight av ytelseshensyn
-            if (!this.isBurstProjectile) {
-                if (!this.light) {
-                    this.light = this.scene.lights.addLight(x, y, 80, 0xffffff, 0.1);
-                } else {
-                    this.light.setPosition(x, y).setRadius(80).setColor(0xffffff).setIntensity(0.1);
+            // Use cheap additive glow sprite instead of PointLight for arrows
+            if (!this.isBurstProjectile && this.scene.textures.exists('glow-soft')) {
+                if (!this.glowSprite) {
+                    this.glowSprite = this.scene.add.sprite(x, y, 'glow-soft');
+                    this.glowSprite.setBlendMode(Phaser.BlendModes.ADD);
+                    this.glowSprite.setDepth(this.depth - 1);
                 }
+                this.glowSprite.setPosition(x, y);
+                this.glowSprite.setTint(0xffffff);
+                this.glowSprite.setAlpha(0.15);
+                this.glowSprite.setScale(2.5); // ~80px radius
+                this.glowSprite.setVisible(true);
             }
 
             const mainSceneArrow = this.scene as any;
@@ -152,10 +160,15 @@ export class EnemyProjectile extends Phaser.Physics.Arcade.Sprite {
             this.trail.stop();
         }
 
-        // Keep light alive for pooling — will be reconfigured on next fire()
+        // Release light from budget
         if (this.light) {
-            this.scene.lights.removeLight(this.light);
+            const vis = (this.scene as any).visuals;
+            if (vis) vis.releaseProjectileLight(this.light);
+            else this.scene.lights.removeLight(this.light);
             this.light = null;
+        }
+        if (this.glowSprite) {
+            this.glowSprite.setVisible(false);
         }
         this.postFX.clear();
 
@@ -196,6 +209,9 @@ export class EnemyProjectile extends Phaser.Physics.Arcade.Sprite {
         if (this.light) {
             this.light.setPosition(this.x, this.y);
         }
+        if (this.glowSprite && this.glowSprite.visible) {
+            this.glowSprite.setPosition(this.x, this.y);
+        }
 
         const distance = Phaser.Math.Distance.Between(this.startX, this.startY, this.x, this.y);
         if (distance > this.maxDistance) {
@@ -206,8 +222,14 @@ export class EnemyProjectile extends Phaser.Physics.Arcade.Sprite {
     public destroy(fromScene?: boolean) {
         if (this.trail) this.trail.destroy();
         if (this.light) {
-            this.scene.lights.removeLight(this.light);
+            const vis = (this.scene as any).visuals;
+            if (vis) vis.releaseProjectileLight(this.light);
+            else this.scene.lights.removeLight(this.light);
             this.light = null;
+        }
+        if (this.glowSprite) {
+            this.glowSprite.destroy();
+            this.glowSprite = null;
         }
         super.destroy(fromScene);
     }

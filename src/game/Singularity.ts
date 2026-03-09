@@ -29,8 +29,7 @@ export class Singularity extends Phaser.GameObjects.Sprite {
 
         if (this.scene.lights && this.scene.lights.active) {
             this.setPipeline('Light2D');
-            // Create the light but keep it off until spawn
-            this.light = this.scene.lights.addLight(0, 0, 10, 0xaa00ff, 0);
+            // Light will be requested from budget on spawn()
         }
 
         // Create the purple vortex effect
@@ -102,6 +101,11 @@ export class Singularity extends Phaser.GameObjects.Sprite {
             }
         });
 
+        // Request light from budget
+        if (!this.light) {
+            const vis = (this.scene as any).visuals;
+            this.light = vis ? vis.requestProjectileLight(x, y, this.pullRadius, 0xaa00ff, 1.5) : null;
+        }
         if (this.light) {
             this.light.setPosition(x, y);
             this.light.setRadius(this.pullRadius);
@@ -200,19 +204,26 @@ export class Singularity extends Phaser.GameObjects.Sprite {
         }
 
         if (this.light) {
+            const light = this.light;
+            const vis = (this.scene as any).visuals;
             // Bright flash
-            this.light.setColor(0xff00ff);
-            this.light.setIntensity(10);
-            this.light.setRadius(this.pullRadius * 1.5);
+            light.setColor(0xff00ff);
+            light.setIntensity(10);
+            light.setRadius(this.pullRadius * 1.5);
 
-            // Fade out light quickly
+            // Fade out light quickly, then release from budget
             this.scene.tweens.add({
-                targets: this.light,
+                targets: light,
                 intensity: 0,
                 radius: 0,
                 duration: 300,
-                ease: 'Quad.easeOut'
+                ease: 'Quad.easeOut',
+                onComplete: () => {
+                    if (vis) vis.releaseProjectileLight(light);
+                    else this.scene.lights.removeLight(light);
+                }
             });
+            this.light = null;
         }
 
         // Damage and Knockback
@@ -261,7 +272,10 @@ export class Singularity extends Phaser.GameObjects.Sprite {
             this.lightTween = null;
         }
         if (this.light) {
-            this.light.setIntensity(0);
+            const vis = (this.scene as any).visuals;
+            if (vis) vis.releaseProjectileLight(this.light);
+            else this.scene.lights.removeLight(this.light);
+            this.light = null;
         }
     }
 }
