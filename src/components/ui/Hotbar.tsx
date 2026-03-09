@@ -163,9 +163,8 @@ export const Hotbar: React.FC = React.memo(() => {
                 <div className="flex gap-1" role="tablist" aria-label="Weapon Selection">
                     {activeSlots.map((slot) => {
                         const isAbilitySlot = slot.id.startsWith('ability_');
-                        const isRealWeapon = !slot.id.startsWith('wrapper_') && !isAbilitySlot;
                         const unlocked = unlockedWeapons || [];
-                        const isUnlocked = isAbilitySlot || (isRealWeapon && unlocked.includes(slot.id));
+                        const isUnlocked = unlocked.includes(slot.id);
                         const isActive = isAbilitySlot ? false : currentWeapon === slot.id;
 
                         // Check if ability is ready (not on cooldown)
@@ -204,8 +203,17 @@ export const Hotbar: React.FC = React.memo(() => {
                                 {/* Slot dark recess */}
                                 <div className="absolute inset-x-0 inset-y-0.5 bg-black/50 rounded-md" />
 
+                                {/* Lock icon for locked slots */}
+                                {!isUnlocked && (
+                                    <div className="absolute inset-0 flex items-center justify-center z-30 pointer-events-none" title="Lås opp i boken">
+                                        <svg className="w-6 h-6 text-amber-300/70 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+                                        </svg>
+                                    </div>
+                                )}
+
                                 {/* Ready glow for abilities */}
-                                {isAbilitySlot && isAbilityReady && (
+                                {isAbilitySlot && isUnlocked && isAbilityReady && (
                                     <motion.div
                                         className="absolute inset-0 rounded-md border-2 border-purple-400/60 pointer-events-none z-10"
                                         animate={{

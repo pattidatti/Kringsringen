@@ -41,13 +41,18 @@ export class ShrineManager {
     }
 
     /**
-     * 40% chance to spawn a shrine at a random position around the map center.
+     * Level-gated shrine spawning: no shrines L1-L2, 20% L3-L4, 40% L5+.
      * No-ops if a shrine is already present on the map.
      * Only call on the host / single-player (guard in WaveManager).
      */
     public trySpawnShrine(): void {
         if (this.activeShrine && this.activeShrine.active) return;
-        if (Math.random() > 0.40) return;
+
+        const level = (this.scene.registry.get('gameLevel') as number) || 1;
+        if (level < 3) return; // No shrines in levels 1-2
+
+        const spawnChance = level < 5 ? 0.20 : 0.40;
+        if (Math.random() > spawnChance) return;
 
         const angle = Math.random() * Math.PI * 2;
         const dist = Phaser.Math.Between(300, 600);

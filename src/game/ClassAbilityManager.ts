@@ -27,26 +27,47 @@ export class ClassAbilityManager {
         this.scene = scene;
     }
 
+    /** Check if a weapon/ability slot is unlocked in the registry */
+    private isSlotUnlocked(slotId: string): boolean {
+        const unlocked = (this.scene.registry.get('unlockedWeapons') || []) as string[];
+        return unlocked.includes(slotId);
+    }
+
     public attemptAbility2(): void {
         const playerClassId = resolveClassId(this.scene.registry.get('playerClass'));
-        if (playerClassId === 'krieger') this.activateWhirlwind();
-        else if (playerClassId === 'wizard') this.activateCascade();
-        else if (playerClassId === 'archer') this.activatePhantomVolley();
-        else if (playerClassId === 'skald') this.activateViolin();
+        if (playerClassId === 'krieger') {
+            if (this.isSlotUnlocked('ability_whirlwind')) this.activateWhirlwind();
+        } else if (playerClassId === 'wizard') {
+            // Wizard hotkey 2 = frost weapon, not an ability — handled by InputManager
+            // But if cascade was on hotkey 2 for some config, check here
+            if (this.isSlotUnlocked('ability_cascade')) this.activateCascade();
+        } else if (playerClassId === 'archer') {
+            if (this.isSlotUnlocked('ability_explosive')) this.activatePhantomVolley();
+        } else if (playerClassId === 'skald') {
+            if (this.isSlotUnlocked('ability_vers_bolt')) this.activateViolin();
+        }
     }
 
     public attemptAbility3(): void {
         const playerClassId = resolveClassId(this.scene.registry.get('playerClass'));
-        if (playerClassId === 'krieger') this.activateIronBulwark();
-        else if (playerClassId === 'archer') this.activateVaultAndVolley();
-        else if (playerClassId === 'skald') this.activateInspirendeKvad();
+        if (playerClassId === 'krieger') {
+            if (this.isSlotUnlocked('ability_bulwark')) this.activateIronBulwark();
+        } else if (playerClassId === 'archer') {
+            if (this.isSlotUnlocked('ability_vault')) this.activateVaultAndVolley();
+        } else if (playerClassId === 'skald') {
+            if (this.isSlotUnlocked('ability_kvad_inspire')) this.activateInspirendeKvad();
+        }
     }
 
     public attemptAbility4(): void {
         const playerClassId = resolveClassId(this.scene.registry.get('playerClass'));
-        if (playerClassId === 'krieger') this.activateChainGrapple();
-        else if (playerClassId === 'archer') this.activateShadowDecoy();
-        else if (playerClassId === 'skald') this.activateSeierskvad();
+        if (playerClassId === 'krieger') {
+            if (this.isSlotUnlocked('ability_grapple')) this.activateChainGrapple();
+        } else if (playerClassId === 'archer') {
+            if (this.isSlotUnlocked('ability_decoy')) this.activateShadowDecoy();
+        } else if (playerClassId === 'skald') {
+            if (this.isSlotUnlocked('ability_kvad_seier')) this.activateSeierskvad();
+        }
     }
 
     public attemptSpecialE(): void {

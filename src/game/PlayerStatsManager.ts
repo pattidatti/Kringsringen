@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import type { ShrineMods } from '../config/shrines';
 import { UPGRADES } from '../config/upgrades';
-import { CLASS_UPGRADES } from '../config/class-upgrades';
+import { CLASS_UPGRADES, ABILITY_UNLOCK_MAP } from '../config/class-upgrades';
 import { SaveManager } from './SaveManager';
 import { GAME_CONFIG } from '../config/GameConfig';
 import type { IMainScene } from './IMainScene';
@@ -368,6 +368,16 @@ export class PlayerStatsManager {
         if (upgradeId === 'health') {
             let currentHP = this.scene.registry.get('playerHP');
             this.scene.registry.set('playerHP', currentHP + 20);
+        }
+
+        // Ability Unlock: add weapon/ability to unlockedWeapons
+        const unlockSlotId = ABILITY_UNLOCK_MAP[upgradeId];
+        if (unlockSlotId) {
+            const weapons = [...(this.scene.registry.get('unlockedWeapons') || [])] as string[];
+            if (!weapons.includes(unlockSlotId)) {
+                weapons.push(unlockSlotId);
+                this.scene.registry.set('unlockedWeapons', weapons);
+            }
         }
 
         // Recalculate all stats
