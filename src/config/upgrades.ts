@@ -358,6 +358,7 @@ export const UPGRADES: UpgradeConfig[] = [
         maxLevel: 10,
         basePrice: 70,
         priceScale: 1.6,
+        requires: { unlock_frost: 1 },
     },
     {
         id: 'frost_radius',
@@ -412,6 +413,7 @@ export const UPGRADES: UpgradeConfig[] = [
         maxLevel: 10,
         basePrice: 70,
         priceScale: 1.6,
+        requires: { unlock_lightning: 1 },
     },
     {
         id: 'lightning_bounces',

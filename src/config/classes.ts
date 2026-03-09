@@ -162,6 +162,8 @@ const KRIEGER: ClassConfig = {
         },
     ],
     exclusiveUpgradeIds: [
+        // ABILITY UNLOCKS
+        'unlock_whirlwind', 'unlock_bulwark', 'unlock_grapple',
         // SVERD
         'whirl_damage', 'whirl_cooldown', 'whirl_chain',
         'berserker_rage', 'livsstaling', 'blodust',
@@ -264,6 +266,8 @@ const ARCHER: ClassConfig = {
         },
     ],
     exclusiveUpgradeIds: [
+        // ABILITY UNLOCKS
+        'unlock_explosive', 'unlock_vault', 'unlock_decoy',
         // BUE
         'volley_count', 'volley_damage', 'volley_pierce',
         'rikosjett', 'fokusert_skudd', 'shadeskudd',
@@ -297,7 +301,7 @@ const WIZARD: ClassConfig = {
         armor: 0,
         attackSpeed: 1.10,  // +10% Angrepsfart (raskere kasting)
     },
-    startingWeapons: ['fireball', 'frost', 'lightning'],
+    startingWeapons: ['fireball'],
     classAbilityId: 'cascade',
     classAbilityHotkey: '4',
     traits: ['Elementær kraft', 'Områdekontroll', 'Mektige spells'],
@@ -362,6 +366,8 @@ const WIZARD: ClassConfig = {
         },
     ],
     exclusiveUpgradeIds: [
+        // ABILITY UNLOCKS
+        'unlock_frost', 'unlock_lightning', 'unlock_cascade',
         // ILDMAGI
         'fire_damage', 'fire_radius', 'fire_speed', 'fire_chain', 'massiv_eksplosjon',
         // FROSTMAGI
@@ -394,7 +400,7 @@ const SKALD: ClassConfig = {
         speed: 1.10,    // +10% Fart
         armor: 1,       // +1 flat rustning
     },
-    startingWeapons: ['harp_bolt', 'vers_bolt'],
+    startingWeapons: ['harp_bolt'],
     classAbilityId: 'seierskvad',
     classAbilityHotkey: '4',
     traits: ['Rytmisk kamp', 'Vers-kraft', 'Inspirerende'],
@@ -444,6 +450,8 @@ const SKALD: ClassConfig = {
         },
     ],
     exclusiveUpgradeIds: [
+        // ABILITY UNLOCKS
+        'unlock_vers_bolt', 'unlock_kvad_inspire', 'unlock_kvad_seier',
         // HARPE
         'harpe_damage', 'harpe_speed', 'harpe_pierce', 'harpe_lifesteal',
         // FIOLIN

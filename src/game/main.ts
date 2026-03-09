@@ -17,6 +17,7 @@ import { AmbientParticleManager } from './AmbientParticleManager';
 import { PacketType, type SyncPacket } from '../network/SyncSchemas';
 import { type QualitySettings } from '../config/QualityConfig';
 import { CLASS_CONFIGS, resolveClassId } from '../config/classes';
+import { ABILITY_UNLOCK_MAP } from '../config/class-upgrades';
 import { getQualityConfig } from '../config/QualityConfig';
 import { InputManager } from './InputManager';
 import { TextureSetup } from './TextureSetup';
@@ -181,7 +182,14 @@ export class MainScene extends Phaser.Scene implements IMainScene {
                         this.registry.set('playerCoins', run.playerCoins);
                         this.registry.set('upgradeLevels', run.upgradeLevels);
                         this.registry.set('currentWeapon', run.currentWeapon);
-                        this.registry.set('unlockedWeapons', run.unlockedWeapons);
+                        // Reconstruct unlocked weapons from upgradeLevels (backward-compat)
+                        const restoredWeapons = [...(run.unlockedWeapons || classConfig.startingWeapons)];
+                        for (const [upgradeId, slotId] of Object.entries(ABILITY_UNLOCK_MAP)) {
+                            if ((run.upgradeLevels[upgradeId] || 0) > 0 && !restoredWeapons.includes(slotId)) {
+                                restoredWeapons.push(slotId);
+                            }
+                        }
+                        this.registry.set('unlockedWeapons', restoredWeapons);
 
                         // Store temporarily; applied after recalculateStats()
                         this.game.registry.set('_restoredHP', run.playerHP);

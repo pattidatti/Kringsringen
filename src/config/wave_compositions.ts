@@ -61,97 +61,89 @@ const COMPOSITIONS: Record<string, WaveComposition> = {
         rangedPool: []
     },
 
-    // ─── LEVEL 2 ── Ranged introduced cautiously ─────────────────────────
-    // Wave 1: 10% ranged max — one archer might show up, nothing more
+    // ─── LEVEL 2 ── Skeletons + first ranged (archer only) ─────────────
     '2-1': {
         maxRangedFraction: 0.10,
-        meleePool: [['orc', 1], ['skeleton', 2], ['armored_skeleton', 1]],
+        meleePool: [['orc', 2], ['skeleton', 2], ['slime', 1]],
         rangedPool: [['skeleton_archer', 1]]
     },
-    // Wave 2: 15% — archers more likely, first glimpse of wizard
     '2-2': {
         maxRangedFraction: 0.15,
-        meleePool: [['skeleton', 2], ['armored_skeleton', 1], ['orc', 1]],
-        rangedPool: [['skeleton_archer', 3], ['wizard', 1]]
+        meleePool: [['skeleton', 3], ['orc', 2], ['slime', 1]],
+        rangedPool: [['skeleton_archer', 2]]
     },
-    // Wave 3 (final): 20% — clear ranged presence, still outnumbered
     '2-3': {
         maxRangedFraction: 0.20,
-        meleePool: [['skeleton', 2], ['armored_skeleton', 2], ['orc', 1]],
-        rangedPool: [['skeleton_archer', 2], ['wizard', 1]]
+        meleePool: [['skeleton', 3], ['orc', 2]],
+        rangedPool: [['skeleton_archer', 3]]
     },
 
-    // ─── LEVEL 3 ── Harder melee + frost wizards introduced ──────────────
+    // ─── LEVEL 3 ── Armored skeleton + wizard (first real challenge) ───
     '3-1': {
         maxRangedFraction: 0.20,
-        meleePool: [['werewolf', 2], ['armored_skeleton', 2], ['armored_orc', 1]],
-        rangedPool: [['frost_wizard', 1]]
+        meleePool: [['skeleton', 2], ['armored_skeleton', 1], ['orc', 1]],
+        rangedPool: [['skeleton_archer', 2], ['wizard', 1]]
     },
     '3-2': {
         maxRangedFraction: 0.25,
-        meleePool: [['werewolf', 2], ['armored_orc', 2], ['armored_skeleton', 1]],
-        rangedPool: [['frost_wizard', 2], ['wizard', 1]]
+        meleePool: [['armored_skeleton', 2], ['skeleton', 2], ['orc', 1]],
+        rangedPool: [['skeleton_archer', 2], ['wizard', 2]]
     },
     '3-3': {
-        maxRangedFraction: 0.30,
-        meleePool: [['armored_orc', 2], ['werewolf', 2], ['armored_skeleton', 1]],
-        rangedPool: [['frost_wizard', 2], ['wizard', 1], ['skeleton_archer', 1], ['healer_wizard', 1]]
+        maxRangedFraction: 0.25,
+        meleePool: [['armored_skeleton', 3], ['skeleton', 2]],
+        rangedPool: [['wizard', 2], ['skeleton_archer', 2]]
     },
 
-    // ─── LEVEL 4 ── Elite enemies enter, ranged at 30% ceiling ───────────
+    // ─── LEVEL 4 ── Werewolf + frost wizard (speed & CC) ──────────────
     '4-1': {
         maxRangedFraction: 0.25,
-        meleePool: [['elite_orc', 2], ['greatsword_skeleton', 1], ['armored_orc', 2]],
-        rangedPool: [['frost_wizard', 2], ['wizard', 1]]
+        meleePool: [['armored_skeleton', 2], ['werewolf', 1], ['skeleton', 2]],
+        rangedPool: [['wizard', 2], ['frost_wizard', 1]]
     },
     '4-2': {
         maxRangedFraction: 0.28,
-        meleePool: [['elite_orc', 2], ['greatsword_skeleton', 2], ['armored_orc', 1]],
+        meleePool: [['werewolf', 2], ['armored_skeleton', 2], ['skeleton', 1]],
         rangedPool: [['frost_wizard', 2], ['wizard', 2], ['skeleton_archer', 1]]
     },
     '4-3': {
         maxRangedFraction: 0.30,
-        meleePool: [['elite_orc', 2], ['greatsword_skeleton', 2], ['armored_orc', 1]],
+        meleePool: [['werewolf', 3], ['armored_skeleton', 2]],
         rangedPool: [['frost_wizard', 2], ['wizard', 2], ['skeleton_archer', 1]]
     },
-    '4-4': {
-        maxRangedFraction: 0.30,
-        meleePool: [['elite_orc', 3], ['greatsword_skeleton', 2], ['armored_orc', 1]],
-        rangedPool: [['frost_wizard', 2], ['wizard', 2], ['skeleton_archer', 1], ['healer_wizard', 1]]
-    },
 
-    // ─── LEVEL 5 ── Full chaos, 35% ranged ceiling maintained ────────────
+    // ─── LEVEL 5 ── Armored orc + healer wizard (tanks & support) ─────
     '5-1': {
         maxRangedFraction: 0.30,
-        meleePool: [['elite_orc', 3], ['greatsword_skeleton', 2], ['armored_orc', 1]],
-        rangedPool: [['frost_wizard', 2], ['wizard', 2], ['skeleton_archer', 1]]
+        meleePool: [['armored_orc', 1], ['werewolf', 2], ['armored_skeleton', 2]],
+        rangedPool: [['frost_wizard', 2], ['wizard', 2]]
     },
     '5-2': {
-        maxRangedFraction: 0.33,
-        meleePool: [['elite_orc', 3], ['greatsword_skeleton', 2], ['armored_orc', 1]],
-        rangedPool: [['frost_wizard', 2], ['wizard', 2], ['skeleton_archer', 2]]
+        maxRangedFraction: 0.30,
+        meleePool: [['armored_orc', 2], ['werewolf', 2], ['armored_skeleton', 1]],
+        rangedPool: [['frost_wizard', 2], ['wizard', 2], ['healer_wizard', 1]]
     },
     '5-3': {
-        maxRangedFraction: 0.35,
-        meleePool: [['elite_orc', 3], ['greatsword_skeleton', 2], ['armored_orc', 1]],
-        rangedPool: [['frost_wizard', 3], ['wizard', 3], ['skeleton_archer', 2], ['healer_wizard', 2]]
+        maxRangedFraction: 0.33,
+        meleePool: [['armored_orc', 2], ['werewolf', 3], ['armored_skeleton', 1]],
+        rangedPool: [['frost_wizard', 3], ['wizard', 2], ['healer_wizard', 1], ['skeleton_archer', 1]]
     },
 
-    // ─── LEVEL 6 ── Mørk akt — heavier elites, healers more common ────────
+    // ─── LEVEL 6 ── Elite orc + greatsword skeleton (full roster) ──────
     '6-1': {
         maxRangedFraction: 0.33,
-        meleePool: [['elite_orc', 3], ['greatsword_skeleton', 3], ['armored_orc', 2]],
+        meleePool: [['elite_orc', 1], ['armored_orc', 2], ['greatsword_skeleton', 1], ['werewolf', 2]],
         rangedPool: [['frost_wizard', 2], ['wizard', 2], ['healer_wizard', 1]]
     },
     '6-2': {
         maxRangedFraction: 0.35,
-        meleePool: [['elite_orc', 3], ['greatsword_skeleton', 3], ['armored_orc', 2]],
-        rangedPool: [['frost_wizard', 3], ['wizard', 2], ['skeleton_archer', 1], ['healer_wizard', 2]]
+        meleePool: [['elite_orc', 2], ['greatsword_skeleton', 2], ['armored_orc', 2], ['werewolf', 1]],
+        rangedPool: [['frost_wizard', 3], ['wizard', 2], ['healer_wizard', 1], ['skeleton_archer', 1]]
     },
     '6-3': {
         maxRangedFraction: 0.35,
-        meleePool: [['elite_orc', 4], ['greatsword_skeleton', 3], ['armored_orc', 2]],
-        rangedPool: [['frost_wizard', 3], ['wizard', 3], ['skeleton_archer', 2], ['healer_wizard', 2]]
+        meleePool: [['elite_orc', 2], ['greatsword_skeleton', 2], ['armored_orc', 2], ['werewolf', 2]],
+        rangedPool: [['frost_wizard', 3], ['wizard', 3], ['healer_wizard', 2], ['skeleton_archer', 1]]
     },
 
     // ─── LEVEL 7 ── Katakomber — skeleton dominance, frost spam ──────────

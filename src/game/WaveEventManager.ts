@@ -9,6 +9,8 @@ interface WaveEventDef {
     duration: number;
     /** Hex colour for the announcement text. */
     color: number;
+    /** Minimum game level required for this event to appear (default: 3). */
+    minLevel?: number;
     /**
      * Activates the event. Returns a cleanup function called when the event ends.
      * The cleanup must undo every side effect (registry keys, overlays, timers).
@@ -24,6 +26,7 @@ const WAVE_EVENTS: WaveEventDef[] = [
         description: 'Fiendene beveger seg 2× raskere i 15 sekunder!',
         duration: 15000,
         color: 0xcc2222,
+        minLevel: 4,
         activate(scene) {
             const cam = scene.cameras.main;
             const overlay = scene.add.rectangle(
@@ -51,6 +54,7 @@ const WAVE_EVENTS: WaveEventDef[] = [
         description: 'Alle fiender dropper 3× mynter i 20 sekunder!',
         duration: 20000,
         color: 0xf6d860,
+        minLevel: 3,
         activate(scene) {
             scene.registry.set('waveEventCoinMultiplier', 3);
 
@@ -75,6 +79,7 @@ const WAVE_EVENTS: WaveEventDef[] = [
         description: 'Gylne fiender dropper 2× mynter!',
         duration: 25000,
         color: 0xffc400,
+        minLevel: 3,
         activate(scene) {
             scene.registry.set('waveEventCoinMultiplier', 2);
             const tinted: any[] = [];
@@ -100,6 +105,7 @@ const WAVE_EVENTS: WaveEventDef[] = [
         description: 'Lynnedslag treffer kartet – hold deg unna!',
         duration: 18000,
         color: 0x88ccff,
+        minLevel: 6,
         activate(scene) {
             const cam = scene.cameras.main;
             const overlay = scene.add.rectangle(
@@ -153,6 +159,7 @@ const WAVE_EVENTS: WaveEventDef[] = [
         description: 'Meteorer rammer bakken – unngå de oransje sonene!',
         duration: 20000,
         color: 0xff6600,
+        minLevel: 6,
         activate(scene) {
             const spawnSalvo = () => {
                 const player = scene.player;
@@ -203,6 +210,7 @@ const WAVE_EVENTS: WaveEventDef[] = [
         description: 'En vorteks drar alle fiender mot kartsenter i 15 sekunder!',
         duration: 15000,
         color: 0x9933ff,
+        minLevel: 5,
         activate(scene) {
             // Pulsing rings at map center (world coordinates)
             const gfx = scene.add.graphics().setDepth(3000);
@@ -249,6 +257,7 @@ const WAVE_EVENTS: WaveEventDef[] = [
         description: 'Alt beveger seg 1.8× raskere i 15 sekunder!',
         duration: 15000,
         color: 0x6666ff,
+        minLevel: 4,
         activate(scene) {
             const prev = scene.physics.world.timeScale;
             scene.physics.world.timeScale = 1.8;
@@ -278,6 +287,7 @@ const WAVE_EVENTS: WaveEventDef[] = [
         description: 'Fiendene fryser hvert 5. sekund – angrip dem mens de er stille!',
         duration: 20000,
         color: 0x44ddff,
+        minLevel: 7,
         activate(scene) {
             let stillActive = true;
             const cam = scene.cameras.main;
@@ -314,6 +324,7 @@ const WAVE_EVENTS: WaveEventDef[] = [
         description: 'Heal +6 HP for hvert kill i 20 sekunder!',
         duration: 20000,
         color: 0xff3366,
+        minLevel: 3,
         activate(scene) {
             const cam = scene.cameras.main;
             const overlay = scene.add.rectangle(
@@ -351,6 +362,7 @@ const WAVE_EVENTS: WaveEventDef[] = [
         description: 'Fiender eksploderer ved død og skader naboer!',
         duration: 20000,
         color: 0xff9900,
+        minLevel: 5,
         activate(scene) {
             const chainHandler = ({ x, y }: { x: number; y: number }) => {
                 scene.poolManager.spawnFireballExplosion(x, y);
@@ -377,6 +389,7 @@ const WAVE_EVENTS: WaveEventDef[] = [
         description: 'Du tar 1.8× skade, men healer 20% av fiendens maks-HP ved kill!',
         duration: 25000,
         color: 0xff0000,
+        minLevel: 7,
         activate(scene) {
             scene.registry.set('waveEventDamageTakenMult', 1.8);
 
@@ -450,12 +463,20 @@ export class WaveEventManager {
     /**
      * Called by WaveManager mid-wave.
      * 65% chance of triggering a random event; no-ops if one is already active.
+     * Events are level-gated: no events L1-L2, then progressively more from L3+.
      */
     public triggerRandom(): void {
         if (this.activeEventId) return;
+
+        const level = (this.scene.registry.get('gameLevel') as number) || 1;
+        if (level < 3) return; // No wave events in levels 1-2
+
         if (Math.random() > 0.65) return;
 
-        const event = Phaser.Utils.Array.GetRandom(WAVE_EVENTS) as WaveEventDef;
+        const available = WAVE_EVENTS.filter(e => level >= (e.minLevel ?? 3));
+        if (available.length === 0) return;
+
+        const event = Phaser.Utils.Array.GetRandom(available) as WaveEventDef;
         this.trigger(event);
     }
 
