@@ -2,8 +2,8 @@ import { createContext, useContext, useState, useEffect, type ReactNode } from '
 import { getApps, getApp, initializeApp } from 'firebase/app';
 import {
   getAuth,
-  signInWithRedirect,
-  getRedirectResult,
+  signInWithPopup,
+  browserPopupRedirectResolver,
   GoogleAuthProvider,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
@@ -79,18 +79,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
       try {
         const authInstance = getAuthInstance();
 
-        // Handle redirect result from signInWithRedirect flow
-        try {
-          await getRedirectResult(authInstance);
-          // If redirect was successful, onAuthStateChanged will fire with the user.
-          // If there was no pending redirect, this resolves null silently.
-        } catch (redirectErr: any) {
-          console.error('[AuthContext] Redirect result error:', redirectErr);
-          setError('Innlogging feilet etter omdirigering. Prøv igjen.');
-          setLoading(false);
-          return;
-        }
-
         unsubscribe = onAuthStateChanged(
           authInstance,
           (user) => {
@@ -120,11 +108,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
     try {
       const authInstance = getAuthInstance();
       const provider = new GoogleAuthProvider();
-      await signInWithRedirect(authInstance, provider);
-      // Page navigates away — no code runs after this point
+      await signInWithPopup(authInstance, provider, browserPopupRedirectResolver);
+      // onAuthStateChanged fires automatically — no manual state update needed
     } catch (err: any) {
-      console.error('[AuthContext] Sign-in redirect failed:', err);
-      setError('Kunne ikke starte innlogging. Prøv igjen.');
+      console.error('[AuthContext] Sign-in popup failed:', err.code, err);
+      // Don't show error if user simply closed the popup themselves
+      if (err.code !== 'auth/popup-closed-by-user' && err.code !== 'auth/cancelled-popup-request') {
+        setError('Kunne ikke starte innlogging. Prøv igjen.');
+      }
     }
   };
 
