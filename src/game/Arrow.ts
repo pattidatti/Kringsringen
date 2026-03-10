@@ -110,8 +110,10 @@ export class Arrow extends Phaser.Physics.Arcade.Sprite {
                 const dashState = mainScene.registry.get('dashState') || { isActive: false, readyAt: 0 };
                 const dashCooldown = mainScene.registry.get('dashCooldown') || 7000;
                 if (dashState.readyAt > Date.now()) {
-                    dashState.readyAt = Math.max(Date.now(), dashState.readyAt - dashCooldown * kiteLvl * 0.20);
-                    mainScene.registry.set('dashState', dashState);
+                    mainScene.registry.set('dashState', {
+                        ...dashState,
+                        readyAt: Math.max(Date.now(), dashState.readyAt - dashCooldown * kiteLvl * 0.20)
+                    });
                 }
 
                 // Shadeskudd – spawn extra arrows on kill

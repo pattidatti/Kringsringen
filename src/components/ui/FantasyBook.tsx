@@ -6,7 +6,7 @@ import tabRed from '../../assets/ui/fantasy/tabs/red.png';
 import tabGreen from '../../assets/ui/fantasy/tabs/green.png';
 import tabYellow from '../../assets/ui/fantasy/tabs/yellow.png';
 import tabBlue from '../../assets/ui/fantasy/tabs/blue.png';
-import { UPGRADES, type UpgradeConfig, isItemSpriteIcon, CHAPTER_DEFINITIONS, type ChapterId } from '../../config/upgrades';
+import { UPGRADES, type UpgradeConfig, isItemSpriteIcon, CHAPTER_DEFINITIONS, type ChapterId, getUpgradeDeltaLabel } from '../../config/upgrades';
 import { CLASS_UPGRADES } from '../../config/class-upgrades';
 import { CLASS_CONFIGS, resolveClassId } from '../../config/classes';
 import { PARAGON_UPGRADES, type ParagonUpgradeConfig } from '../../config/paragon-upgrades';
@@ -662,8 +662,20 @@ export const FantasyBook: React.FC<FantasyBookProps> = React.memo(({
                                                     ${!reqMet ? 'text-slate-600' : `opacity-90`}
                                                 `}
                                                                 style={reqMet ? { color: chapterThemeColor, filter: 'brightness(0.5)' } : {}}>
-                                                                {item.summary} ({item.value.prefix || ''}{item.value.getValue(lvl)}{item.value.suffix || ''})
+                                                                {item.summary}
                                                             </div>
+                                                            {!isMaxed && (() => {
+                                                                const deltaLabel = 'value' in item ? getUpgradeDeltaLabel(item as UpgradeConfig, lvl) : null;
+                                                                return deltaLabel ? (
+                                                                    <span className={`inline-block mt-1.5 ml-1 text-sm font-bold px-2 py-0.5 rounded border ${
+                                                                        (item as UpgradeConfig).value.isReduction
+                                                                            ? 'bg-orange-100 border-orange-300 text-orange-800'
+                                                                            : 'bg-green-100 border-green-300 text-green-800'
+                                                                    }`}>
+                                                                        {deltaLabel}
+                                                                    </span>
+                                                                ) : null;
+                                                            })()}
                                                             {!reqMet && (
                                                                 <div className="text-sm text-red-800 font-bold mt-3 p-2 bg-red-100/60 rounded border border-red-900/20 flex items-center gap-2">
                                                                     <span>🔒</span>

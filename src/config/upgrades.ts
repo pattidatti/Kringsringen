@@ -4,6 +4,7 @@ import type { ClassId } from './classes';
 export type UpgradeCategory = 'Karakter' | 'Sverd' | 'Bue' | 'Magi' | 'Synergi' | 'Kvad' | 'Rytme';
 
 export type ChapterId =
+    | 'unlock'        // Opplåsning: Unlock cards always rendered first
     | 'foundation'    // Grunnlag: Passive stats (HP, Armor, Speed)
     | 'combat_style'  // Kampstil: Global behavior (Lifesteal, Crit, Retaliation)
     | 'ability'       // Spesialitet: Class-specific active skills (Virvelvind)
@@ -19,6 +20,7 @@ export interface ChapterDef {
 }
 
 export const CHAPTER_DEFINITIONS: Record<ChapterId, ChapterDef> = {
+    unlock: { id: 'unlock', label: 'Opplåsning', order: 0, loreText: 'Nøkkelen til nye evner.', themeColor: '#b8860b' }, // Dark Gold
     foundation: { id: 'foundation', label: 'Grunnlag', order: 1, loreText: 'Det som holder deg i live.', themeColor: '#8b7355' }, // Muted Bronze
     combat_style: { id: 'combat_style', label: 'Kampstil', order: 2, loreText: 'Måten du fører strid på.', themeColor: '#b71c1c' }, // Deep Crimson
     ability: { id: 'ability', label: 'Spesialitet', order: 3, loreText: 'Dine unike kraftuttrykk.', themeColor: '#4a148c' }, // Deep Purple
@@ -55,6 +57,26 @@ export interface UpgradeConfig {
     detailedDescription?: string;
     /** Krever bekreftelse fra spilleren før kjøp (f.eks. Elementær Konvergens) */
     purchaseWarning?: string;
+}
+
+/**
+ * Returns a human-readable label for what the player gains by buying the next level.
+ * E.g. "+10%", "+20 HP", "−0.5 sek". Returns null for binary (Aktiv/Låst) upgrades.
+ */
+export function getUpgradeDeltaLabel(upgrade: UpgradeConfig, currentLevel: number): string | null {
+    const current = upgrade.value.getValue(currentLevel);
+    const next = upgrade.value.getValue(currentLevel + 1);
+
+    const currentNum = typeof current === 'string' ? parseFloat(current) : current;
+    const nextNum = typeof next === 'string' ? parseFloat(next) : next;
+
+    if (isNaN(currentNum) || isNaN(nextNum)) return null;
+
+    const delta = Math.abs(nextNum - currentNum);
+    const suffix = upgrade.value.suffix ?? '';
+    const sign = upgrade.value.isReduction ? '−' : '+';
+    const formatted = Number.isInteger(delta) ? String(delta) : delta.toFixed(1);
+    return `${sign}${formatted}${suffix}`;
 }
 
 export const UPGRADES: UpgradeConfig[] = [

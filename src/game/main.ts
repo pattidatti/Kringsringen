@@ -568,38 +568,44 @@ export class MainScene extends Phaser.Scene implements IMainScene {
 
     public restartGame() {
         console.log("[Game] Restarting run...");
-        SaveManager.clearRunProgress();
-        if (this.networkManager?.role === 'host') this.networkManager.broadcast({ t: PacketType.GAME_EVENT, ev: { type: 'restart_game', data: {} }, ts: Date.now() });
+        // physics.world.resume(), scene.resume(), and events.emit('restart-game') are
+        // guaranteed via finally so the canvas never stays frozen if any reset throws.
+        try {
+            SaveManager.clearRunProgress();
+            if (this.networkManager?.role === 'host') this.networkManager.broadcast({ t: PacketType.GAME_EVENT, ev: { type: 'restart_game', data: {} }, ts: Date.now() });
 
-        // End any lingering wave event (resets speed/coin multipliers in registry)
-        this.waveEvents?.endActive();
-        // Cancel all pending wave timers before reboot
-        this.waves.stopAllTimers();
+            // End any lingering wave event (resets speed/coin multipliers in registry)
+            this.waveEvents?.endActive();
+            // Cancel all pending wave timers before reboot
+            this.waves?.stopAllTimers();
 
-        // Minimal registry reset — hides the Game Over overlay in React immediately
-        // while the full Phaser instance reboot (triggered by 'restart-game') runs.
-        const playerClassId = resolveClassId(this.registry.get('playerClass'));
-        const classConfig = CLASS_CONFIGS[playerClassId];
-        this.registry.set('playerHP', GAME_CONFIG.PLAYER.BASE_MAX_HP);
-        this.registry.set('playerCoins', 0);
-        this.registry.set('partyDead', false);
-        this.registry.set('isBossActive', false);
-        this.registry.set('bossComingUp', -1);
-        this.registry.set('upgradeLevels', {});
-        this.registry.set('unlockedWeapons', [...classConfig.startingWeapons]);
-        this.registry.set('currentWeapon', classConfig.startingWeapons[0] || 'sword');
-
-        // Clear hitstop and resume physics/scene before reboot so the
-        // new game instance starts from a clean state.
-        this._hitstopActive = false;
-        this._hitstopCooldownUntil = 0;
-        this.physics.world.resume();
-        this.scene.resume();
-
-        // Trigger the full reboot via GameContainer (setRebootKey).
-        // The new game instance handles all further reset — no need to
-        // regenerate the map here, as this instance is about to be destroyed.
-        this.events.emit('restart-game');
+            // Minimal registry reset — hides the Game Over overlay in React immediately
+            // while the full Phaser instance reboot (triggered by 'restart-game') runs.
+            const playerClassId = resolveClassId(this.registry.get('playerClass'));
+            const classConfig = CLASS_CONFIGS[playerClassId];
+            this.registry.set('playerHP', GAME_CONFIG.PLAYER.BASE_MAX_HP);
+            this.registry.set('playerCoins', 0);
+            this.registry.set('partyDead', false);
+            this.registry.set('isBossActive', false);
+            this.registry.set('bossComingUp', -1);
+            this.registry.set('upgradeLevels', {});
+            if (classConfig) {
+                this.registry.set('unlockedWeapons', [...classConfig.startingWeapons]);
+                this.registry.set('currentWeapon', classConfig.startingWeapons[0] || 'sword');
+            }
+        } catch (e) {
+            console.error('[Game] restartGame failed during reset:', e);
+        } finally {
+            // Always clear hitstop, resume physics/scene, and trigger the reboot —
+            // even if something in the reset block threw. This guarantees the canvas
+            // never stays frozen on the death frame.
+            this._hitstopActive = false;
+            this._hitstopCooldownUntil = 0;
+            this.physics.world.resume();
+            this.scene.resume();
+            // Trigger the full reboot via GameContainer (setRebootKey).
+            this.events.emit('restart-game');
+        }
     }
 
     /**
@@ -610,14 +616,13 @@ export class MainScene extends Phaser.Scene implements IMainScene {
     public restartAtLevel(level: number) {
         console.log(`[Game] Restarting at level ${level}...`);
 
-        // End any active wave event first — resets speed/coin multipliers
-        this.waveEvents?.endActive();
-        // Cancel all pending wave timers BEFORE clearing enemies to prevent
-        // ghost level-complete timers firing after the enemy group is destroyed.
-        this.waves.stopAllTimers();
-
         // scene.resume() MUST be called regardless of errors below (scene was paused on death)
         try {
+            // End any active wave event first — resets speed/coin multipliers
+            this.waveEvents?.endActive();
+            // Cancel all pending wave timers BEFORE clearing enemies to prevent
+            // ghost level-complete timers firing after the enemy group is destroyed.
+            this.waves?.stopAllTimers();
             // Clear combat state but keep progression
             this.registry.set('gameLevel', level);
             this.registry.set('currentWave', 1);

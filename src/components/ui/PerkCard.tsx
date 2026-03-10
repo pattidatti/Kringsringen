@@ -88,7 +88,7 @@ export const PerkCard: React.FC<PerkCardProps> = ({ perk, level, onClick, index 
                 </div>
 
                 <p className={`text-sm opacity-80 mb-2 leading-snug font-crimson ${styles.text}`}>
-                    {perk.summary} ({perk.value.prefix || ''}{perk.value.getValue(level)}{perk.value.suffix || ''})
+                    {perk.summary}
                 </p>
 
                 <div className="flex items-center gap-1.5 mb-2">
