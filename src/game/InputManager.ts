@@ -282,7 +282,7 @@ export class InputManager {
                     const radius = 150;
 
                     // VFX: Screen Shake and Ground Decal
-                    this.scene.cameras.main.shake(150, 0.015);
+                    this.scene.scaledShake(150, 0.015);
                     const phaserScene = this.scene as unknown as Phaser.Scene;
                     const stompDecal = phaserScene.add.circle(player.x, player.y, radius, 0xaaaaaa, 0.4).setDepth(player.depth - 1);
                     phaserScene.tweens.add({

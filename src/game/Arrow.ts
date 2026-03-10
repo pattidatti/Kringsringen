@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { Enemy } from './Enemy';
 import { AudioManager } from './AudioManager';
 import { PacketType } from '../network/SyncSchemas';
+import type { PerformanceManager } from './PerformanceManager';
 
 export class Arrow extends Phaser.Physics.Arcade.Sprite {
     private damage: number = 0;
@@ -144,7 +145,7 @@ export class Arrow extends Phaser.Physics.Arcade.Sprite {
                     if (mainScene.poolManager) {
                         mainScene.poolManager.spawnFireballExplosion(e.x, e.y);
                     }
-                    mainScene.cameras?.main.shake(150, 0.01);
+                    mainScene.scaledShake?.(150, 0.01);
                     const solarRadius = 180;
                     const solarDmg = this.damage * 2;
                     const solarNearby = mainScene.spatialGrid?.findNearby({ x: e.x, y: e.y, width: 1, height: 1 }, solarRadius) || [];
@@ -235,10 +236,12 @@ export class Arrow extends Phaser.Physics.Arcade.Sprite {
         this.setPosition(x, y);
         this.setRotation(angle);
 
-        // Add glow post-FX (reuse on pool recycle)
-        if (withLight && !this.glowEffect) {
+        // Add glow post-FX (reuse on pool recycle, gate by PerformanceManager)
+        const pm = (this.scene as any).performanceManager as PerformanceManager | undefined;
+        const glowAllowed = !pm || pm.glowEnabled;
+        if (withLight && glowAllowed && !this.glowEffect) {
             this.glowEffect = this.postFX.addGlow(0xffdd88, 3, 0, false, 0.1, 8);
-        } else if (!withLight && this.glowEffect) {
+        } else if ((!withLight || !glowAllowed) && this.glowEffect) {
             this.postFX.remove(this.glowEffect);
             this.glowEffect = null;
         }
@@ -260,6 +263,8 @@ export class Arrow extends Phaser.Physics.Arcade.Sprite {
         }
 
         if (this.trail) {
+            const trailFreq = Math.max(1, Math.floor(18 / (pm?.trailDensityMultiplier ?? 1)));
+            this.trail.setFrequency(trailFreq);
             this.trail.start();
             this.trail.follow = this;
         }

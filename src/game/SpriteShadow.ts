@@ -121,6 +121,38 @@ export class SpriteShadow {
         this.shadow.setPosition(x, y);
     }
 
+    /**
+     * Dynamically switch shadow rendering mode (used by PerformanceManager degradation).
+     * Handles texture swap between blob atlas and parent silhouette.
+     */
+    public setMode(mode: ShadowMode): void {
+        if (mode === this.mode) return;
+        const prevMode = this.mode;
+        this.mode = mode;
+
+        if (mode === 'blob') {
+            // Switch to blob atlas texture
+            this.shadow.setTexture('shadows', 0);
+            this.shadow.setTint(0xffffff);
+            this.shadow.setAlpha(0.4);
+            this.shadow.setRotation(0);
+            this.shadow.setScale(1);
+        } else if (prevMode === 'blob') {
+            // Switching FROM blob to silhouette/dynamic — clone parent texture
+            this.shadow.setTexture(this.parent.texture.key, this.parent.frame.name);
+            this.shadow.setTint(0x000000);
+            this.shadow.setAlpha(0.3);
+            this.shadow.setRotation(0);
+            this.shadow.setScale(this.parent.scaleX, this.parent.scaleY * 0.5);
+            this.shadow.resetPipeline();
+        }
+        // silhouette ↔ dynamic doesn't need texture changes, just mode flag
+    }
+
+    public getMode(): ShadowMode {
+        return this.mode;
+    }
+
     public destroy(): void {
         this.shadow.destroy();
     }

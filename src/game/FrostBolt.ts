@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { Enemy } from './Enemy';
 import { AudioManager } from './AudioManager';
 import { PacketType } from '../network/SyncSchemas';
+import type { PerformanceManager } from './PerformanceManager';
 
 export class FrostBolt extends Phaser.Physics.Arcade.Sprite {
     private damage: number = 0;
@@ -29,8 +30,11 @@ export class FrostBolt extends Phaser.Physics.Arcade.Sprite {
         if (this.body) this.body.enable = false;
         this.play('frost-fly');
 
-        // Add Glow FX
-        this.postFX.addGlow(0x00aaff, 4, 0, false, 0.1, 10);
+        // Add Glow FX (gate by PerformanceManager)
+        const pm = (this.scene as any).performanceManager as PerformanceManager | undefined;
+        if (!pm || pm.glowEnabled) {
+            this.postFX.addGlow(0x00aaff, 4, 0, false, 0.1, 10);
+        }
 
         // Add cast glow via light budget (remove stale light from pool reuse first)
         if (this.light) {

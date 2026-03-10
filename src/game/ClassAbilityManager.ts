@@ -124,6 +124,11 @@ export class ClassAbilityManager {
         slash.setScale(radius / 64);
         slash.setBlendMode(Phaser.BlendModes.ADD);
 
+        // ── MASTERY: Eternal Storm — double duration, allow 50% movement ──
+        const eternalStormLvl = levels['eternal_storm'] || 0;
+        const whirlDuration = eternalStormLvl > 0 ? 6000 : 3000;
+        const whirlRotations = eternalStormLvl > 0 ? Math.PI * 48 : Math.PI * 24;
+
         // Client-side prediction
         this.scene.buffs.addBuff({
             key: 'whirlwind',
@@ -157,11 +162,6 @@ export class ClassAbilityManager {
             }
             return hitCount;
         };
-
-        // ── MASTERY: Eternal Storm — double duration, allow 50% movement ──
-        const eternalStormLvl = levels['eternal_storm'] || 0;
-        const whirlDuration = eternalStormLvl > 0 ? 6000 : 3000;
-        const whirlRotations = eternalStormLvl > 0 ? Math.PI * 48 : Math.PI * 24;
 
         if (eternalStormLvl > 0) {
             // Allow 50% movement during whirlwind
@@ -216,7 +216,7 @@ export class ClassAbilityManager {
 
                     // Minor screen shake randomly
                     if (Math.random() < 0.2) {
-                        this.scene.cameras.main.shake(40, 0.003);
+                        this.scene.scaledShake(40, 0.003);
                     }
                 }
             },
@@ -256,7 +256,7 @@ export class ClassAbilityManager {
                     // Avant-Garde Juice: Visual feedback on every tick that hits something
                     if (hitCount > 0) {
                         this.scene.swordSparkEmitter.emitParticleAt(player.x, player.y - 15, 3);
-                        this.scene.cameras.main.shake(50, 0.005);
+                        this.scene.scaledShake(50, 0.005);
                         AudioManager.instance.playSFX('whirl_hit');
                     }
                 }
@@ -350,7 +350,7 @@ export class ClassAbilityManager {
                     }
 
                     // Juice: minor screen shake per arrow
-                    this.scene.cameras.main.shake(40, 0.002);
+                    this.scene.scaledShake(40, 0.002);
                 }
             }
         });
@@ -414,7 +414,7 @@ export class ClassAbilityManager {
             // Dimension Rift: teleport enemies to center every 1s
             if (dimensionRiftLvl > 0) {
                 const riftRadius = 200 * radiusMult;
-                const teleportTimer = this.scene.time.addEvent({
+                this.scene.time.addEvent({
                     delay: 1000,
                     repeat: Math.floor(duration / 1000) - 1,
                     callback: () => {
@@ -430,7 +430,7 @@ export class ClassAbilityManager {
                             }
                         }
                         if (teleported > 0) {
-                            this.scene.cameras.main.shake(80, 0.005);
+                            this.scene.scaledShake(80, 0.005);
                         }
                     }
                 });
@@ -566,7 +566,7 @@ export class ClassAbilityManager {
                     }
                 }
                 this.scene.poolManager.spawnFireballExplosion(player.x, player.y);
-                this.scene.cameras.main.shake(200, 0.015);
+                this.scene.scaledShake(200, 0.015);
             });
         }
     }
@@ -713,7 +713,7 @@ export class ClassAbilityManager {
         });
 
         // Minor initial shake when hooks fly out
-        this.scene.cameras.main.shake(150, 0.005);
+        this.scene.scaledShake(150, 0.005);
 
         // Search for enemies in radius
         const nearbyEntries = this.scene.spatialGrid.findNearby({
@@ -821,7 +821,7 @@ export class ClassAbilityManager {
                             if (idx !== -1) activeChains.splice(idx, 1);
 
                             this.scene.swordSparkEmitter.emitParticleAt(enemy.x, enemy.y, 5);
-                            this.scene.cameras.main.shake(100, 0.008);
+                            this.scene.scaledShake(100, 0.008);
 
                             if (damage > 0) {
                                 enemy.takeDamage(damage, '#ffaa00');
@@ -1049,7 +1049,7 @@ export class ClassAbilityManager {
                 if (player.active && decoy) {
                     player.setPosition(decoy.x, decoy.y);
                     player.setAlpha(1);
-                    this.scene.cameras.main.shake(100, 0.008);
+                    this.scene.scaledShake(100, 0.008);
                 }
             });
         }
@@ -1272,7 +1272,7 @@ export class ClassAbilityManager {
             ease: 'Sine.inOut'
         });
 
-        this.scene.cameras.main.shake(120, 0.006);
+        this.scene.scaledShake(120, 0.006);
 
         // ── MASTERY: Valkyrie Hymn — grant 3-hit absorption shield ──
         const valkyrieHymnLvl = levels['valkyrie_hymn'] || 0;
@@ -1286,7 +1286,6 @@ export class ClassAbilityManager {
         // ── MASTERY: War Horn Echo — pulsing AoE damage during horn ──
         const warHornEchoLvl = levels['war_horn_echo'] || 0;
         if (warHornEchoLvl > 0) {
-            const versCount = (this.scene.registry.get('skaldVers') || 0) as number;
             const pulseTimer = this.scene.time.addEvent({
                 delay: 2000,
                 repeat: Math.floor(duration / 2000) - 1,
@@ -1492,7 +1491,7 @@ export class ClassAbilityManager {
                             onComplete: () => echoRing.destroy()
                         });
 
-                        this.scene.cameras.main.shake(80 - i * 10, 0.004);
+                        this.scene.scaledShake(80 - i * 10, 0.004);
                     }
                 });
             }
@@ -1561,7 +1560,7 @@ export class ClassAbilityManager {
         }
 
         // Distortion effect: Intense screen shake + chromatic aberration pulse
-        this.scene.cameras.main.shake(220, 0.018);
+        this.scene.scaledShake(220, 0.018);
 
         // Feedback: show how many enemies were stunned
         const feedbackText = stunCount > 0 ? `${stunCount} STUNNET!` : 'PANFLØYTE!';
@@ -1646,7 +1645,7 @@ export class ClassAbilityManager {
             this.scene.events.emit('vers-cast');
 
             // Visual feedback scales with bolt count
-            (this.scene as any).cameras.main.shake(80 + vers * 20, 0.003 + vers * 0.001);
+            this.scene.scaledShake(80 + vers * 20, 0.003 + vers * 0.001);
 
             // Consume all Vers
             if (vers > 0) {

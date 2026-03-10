@@ -3,6 +3,7 @@ import { Enemy } from './Enemy';
 import { AudioManager } from './AudioManager';
 import { PacketType } from '../network/SyncSchemas';
 import { GAME_CONFIG } from '../config/GameConfig';
+import type { PerformanceManager } from './PerformanceManager';
 
 export class LightningBolt extends Phaser.Physics.Arcade.Sprite {
     private damage: number = 0;
@@ -74,11 +75,17 @@ export class LightningBolt extends Phaser.Physics.Arcade.Sprite {
         this.setPosition(x, y);
         this.play(animKey);
 
-        // Add Glow FX - only add once
-        if (!this.glowEffect) {
-            this.glowEffect = this.postFX.addGlow(this.colorHex, 4, 0, false, 0.1, 10);
-        } else {
-            this.glowEffect.color = this.colorHex;
+        // Add Glow FX - only add once (gate by PerformanceManager)
+        const pm = (this.scene as any).performanceManager as PerformanceManager | undefined;
+        if (!pm || pm.glowEnabled) {
+            if (!this.glowEffect) {
+                this.glowEffect = this.postFX.addGlow(this.colorHex, 4, 0, false, 0.1, 10);
+            } else {
+                this.glowEffect.color = this.colorHex;
+            }
+        } else if (this.glowEffect) {
+            this.postFX.remove(this.glowEffect);
+            this.glowEffect = null;
         }
 
         // Add Dynamic Light via budget (remove stale light from pool reuse first)
@@ -312,7 +319,7 @@ export class LightningBolt extends Phaser.Physics.Arcade.Sprite {
                             // Delayed nuke at each marked position
                             const nukeDamage = this.damage * 3;
                             const nukeRadius = 100;
-                            mainScene.cameras.main.shake(200, 0.015);
+                            mainScene.scaledShake?.(200, 0.015);
                             const nukeNearby = mainScene.spatialGrid?.findNearby({ x: hitX, y: hitY, width: 1, height: 1 }, nukeRadius) || [];
                             nukeNearby.forEach((cell: any) => {
                                 const e = cell.ref;

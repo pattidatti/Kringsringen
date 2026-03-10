@@ -89,7 +89,9 @@ export class SonicBolt extends Phaser.Physics.Arcade.Sprite {
         }
 
         // Small screen shake
-        if (mainScene.cameras?.main) {
+        if (mainScene.scaledShake) {
+            mainScene.scaledShake(40, 0.002);
+        } else if (mainScene.cameras?.main) {
             mainScene.cameras.main.shake(40, 0.002);
         }
 

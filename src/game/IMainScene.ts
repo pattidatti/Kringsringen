@@ -77,6 +77,7 @@ export interface IMainScene extends Phaser.Scene {
     restartGame(): void;
     restartAtLevel(level: number): void;
     triggerHitstop(durationMs?: number): void;
+    scaledShake(duration: number, intensity: number): void;
     handlePlayerActionCombat(time: number, delta: number): void;
     spawnBoss(idx: number): void;
     collectSaveData(): RunProgress;

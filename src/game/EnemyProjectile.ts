@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { AudioManager } from './AudioManager';
+import type { PerformanceManager } from './PerformanceManager';
 
 export class EnemyProjectile extends Phaser.Physics.Arcade.Sprite {
     private damage: number = 0;
@@ -55,18 +56,21 @@ export class EnemyProjectile extends Phaser.Physics.Arcade.Sprite {
             const followTexture = type === 'fireball' ? 'wizard' : 'wizard_fireball';
 
             // Pool trail emitter: create once, reuse on subsequent fires
+            const pmTrail = (this.scene as any).performanceManager as PerformanceManager | undefined;
+            const trailFreqMagic = Math.max(1, Math.floor(25 / (pmTrail?.trailDensityMultiplier ?? 1)));
             if (!this.trail) {
                 this.trail = this.scene.add.particles(x, y, followTexture, {
                     lifespan: 200,
                     scale: { start: 0.5, end: 0 },
                     alpha: { start: 0.5, end: 0 },
-                    frequency: 25,
+                    frequency: trailFreqMagic,
                     follow: this,
                     tint: tint,
                     blendMode: 'ADD'
                 });
                 this.trail.setDepth(this.depth - 1);
             } else {
+                this.trail.setFrequency(trailFreqMagic);
                 this.trail.setPosition(x, y);
                 this.trail.resume();
             }
@@ -85,7 +89,8 @@ export class EnemyProjectile extends Phaser.Physics.Arcade.Sprite {
 
             // postFX glow er GPU-only og trygt for burst. clear() forhindrer stacking på poolede objekter.
             const mainSceneFB = this.scene as any;
-            if (mainSceneFB.graphicsQuality !== 'low') {
+            const pm = mainSceneFB.performanceManager as PerformanceManager | undefined;
+            if (mainSceneFB.graphicsQuality !== 'low' && (!pm || pm.glowEnabled)) {
                 this.postFX.clear();
                 const glowStrength = this.isBurstProjectile ? 6 : 4;
                 this.postFX.addGlow(tint, glowStrength, 0, false, 0.1, 10);
@@ -101,18 +106,21 @@ export class EnemyProjectile extends Phaser.Physics.Arcade.Sprite {
             this.setBodySize(20, 10);
 
             // Pool trail emitter: create once, reuse on subsequent fires
+            const pmArrowTrail = (this.scene as any).performanceManager as PerformanceManager | undefined;
+            const trailFreqArrow = Math.max(1, Math.floor(20 / (pmArrowTrail?.trailDensityMultiplier ?? 1)));
             if (!this.trail) {
                 this.trail = this.scene.add.particles(x, y, 'arrow', {
                     lifespan: 120,
                     scale: { start: 0.3, end: 0 },
                     alpha: { start: 0.4, end: 0 },
-                    frequency: 20,
+                    frequency: trailFreqArrow,
                     follow: this,
                     tint: 0xcccccc,
                     blendMode: 'ADD'
                 });
                 this.trail.setDepth(this.depth - 1);
             } else {
+                this.trail.setFrequency(trailFreqArrow);
                 this.trail.setPosition(x, y);
                 this.trail.resume();
             }
@@ -132,7 +140,8 @@ export class EnemyProjectile extends Phaser.Physics.Arcade.Sprite {
             }
 
             const mainSceneArrow = this.scene as any;
-            if (mainSceneArrow.graphicsQuality !== 'low') {
+            const pmArrow = mainSceneArrow.performanceManager as PerformanceManager | undefined;
+            if (mainSceneArrow.graphicsQuality !== 'low' && (!pmArrow || pmArrow.glowEnabled)) {
                 this.postFX.clear();
                 this.postFX.addGlow(0xffffff, 2, 0, false, 0.05, 5);
             }

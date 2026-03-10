@@ -128,7 +128,7 @@ export class Singularity extends Phaser.GameObjects.Sprite {
         }
 
         // Camera shake during active phase
-        this.scene.cameras.main.shake(this.durationMs, 0.001);
+        (this.scene as any).scaledShake?.(this.durationMs, 0.001);
 
         // Auto-explode after duration
         this.scene.time.delayedCall(this.durationMs, () => {
@@ -183,7 +183,7 @@ export class Singularity extends Phaser.GameObjects.Sprite {
         // Massive explosion
         const mainScene = this.scene as any;
 
-        mainScene.cameras.main.shake(300, 0.006); // Big shake
+        mainScene.scaledShake?.(300, 0.006); // Big shake
 
         // Visual explosion
         const flash = this.scene.add.circle(this.x, this.y, this.pullRadius, 0xaa00ff, 0.8);

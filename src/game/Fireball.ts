@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { Enemy } from './Enemy';
 import { AudioManager } from './AudioManager';
 import { PacketType } from '../network/SyncSchemas';
+import type { PerformanceManager } from './PerformanceManager';
 
 export class Fireball extends Phaser.Physics.Arcade.Sprite {
     private damage: number = 0;
@@ -47,25 +48,31 @@ export class Fireball extends Phaser.Physics.Arcade.Sprite {
         this.setScale(scaleOverride ?? 1.5);
         this.play('fireball-fly');
 
+        const pm = (this.scene as any).performanceManager as PerformanceManager | undefined;
+        const trailFreq = Math.max(1, Math.floor(20 / (pm?.trailDensityMultiplier ?? 1)));
+
         // Pool trail emitter: create once, reuse on subsequent fires
         if (!this.trail) {
             this.trail = this.scene.add.particles(x, y, 'fireball_projectile', {
                 lifespan: 200,
                 scale: { start: 0.7, end: 0 },
                 alpha: { start: 0.6, end: 0 },
-                frequency: 20,
+                frequency: trailFreq,
                 follow: this,
                 tint: 0xff4400,
                 blendMode: 'ADD'
             });
             this.trail.setDepth(this.depth - 1);
         } else {
+            this.trail.setFrequency(trailFreq);
             this.trail.setPosition(x, y);
             this.trail.resume();
         }
 
-        // Add Glow FX
-        this.postFX.addGlow(0xff4400, 4, 0, false, 0.1, 10);
+        // Add Glow FX (gate by PerformanceManager)
+        if (!pm || pm.glowEnabled) {
+            this.postFX.addGlow(0xff4400, 4, 0, false, 0.1, 10);
+        }
 
         // Add Dynamic Light via budget (remove stale light from pool reuse first)
         if (this.light) {
@@ -228,7 +235,8 @@ export class Fireball extends Phaser.Physics.Arcade.Sprite {
             AudioManager.instance.playSFX('ice_freeze');
 
             // Screen shake for massive impact
-            this.scene.cameras.main.shake(150, 0.008);
+            if ((this.scene as any).scaledShake) (this.scene as any).scaledShake(150, 0.008);
+            else this.scene.cameras.main.shake(150, 0.008);
         }
         AudioManager.instance.playSFX('fireball_hit');
 

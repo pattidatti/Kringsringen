@@ -93,7 +93,7 @@ export class PlayerCombatManager {
                 this.scene.registry.set('weaponCooldown', { duration: weaponCd.duration, timestamp: weaponCd.timestamp - 2000 });
             }
             // Apply camera shake + red flash for visual feedback even on absorb
-            this.scene.cameras.main.shake(100, 0.006);
+            this.scene.scaledShake(100, 0.006);
             return;
         }
 
@@ -149,7 +149,7 @@ export class PlayerCombatManager {
         }
 
         // Screen Shake
-        this.scene.cameras.main.shake(200, 0.014);
+        this.scene.scaledShake(200, 0.014);
 
         // Hit-impact blur: brief camera blur that resolves quickly, giving a
         // physical "impact" feel distinct from the red flash overlay.
@@ -234,6 +234,10 @@ export class PlayerCombatManager {
      * Only one blur instance is kept active at a time.
      */
     private applyHitBlur() {
+        // Gate by PerformanceManager — skip at step >= 3
+        const pm = (this.scene as any).performanceManager;
+        if (pm && !pm.hitBlurEnabled) return;
+
         const cam = this.scene.cameras.main;
 
         // Remove any previous hit blur so effects don't stack

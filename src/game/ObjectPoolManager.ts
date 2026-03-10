@@ -12,6 +12,7 @@ import { Decoy } from './Decoy';
 import { Trap } from './Trap';
 import { SonicBolt } from './SonicBolt';
 import type { IMainScene } from './IMainScene';
+import { PerformanceManager } from './PerformanceManager';
 
 export class ObjectPoolManager {
     private scene: Phaser.Scene;
@@ -56,7 +57,16 @@ export class ObjectPoolManager {
         });
     }
 
-    public getDamageText(x: number, y: number, amount: number | string, color: string = '#ffffff'): Phaser.GameObjects.Text {
+    public getDamageText(x: number, y: number, amount: number | string, color: string = '#ffffff'): Phaser.GameObjects.Text | null {
+        // Off-screen culling — skip if not visible to camera
+        const cam = this.scene.cameras.main;
+        if (!PerformanceManager.isInView(cam, x, y)) return null;
+
+        // Damage text cap from PerformanceManager
+        const pm = (this.scene as any).performanceManager as PerformanceManager | undefined;
+        const maxTexts = pm?.maxDamageTexts ?? 100;
+        if (this.activeDamageTexts.length >= maxTexts) return null;
+
         let text: Phaser.GameObjects.Text;
         const textStr = typeof amount === 'number' ? Math.round(amount).toString() : amount;
 
@@ -144,6 +154,9 @@ export class ObjectPoolManager {
     }
 
     public spawnBloodEffect(x: number, y: number) {
+        // Off-screen culling
+        if (!PerformanceManager.isInView(this.scene.cameras.main, x, y)) return;
+
         let blood: Phaser.GameObjects.Sprite;
         const bloodKey = `blood_${Phaser.Math.Between(1, 5)}`;
 
@@ -187,6 +200,9 @@ export class ObjectPoolManager {
     }
 
     public spawnFireballExplosion(x: number, y: number, customRadius?: number) {
+        // Off-screen culling
+        if (!PerformanceManager.isInView(this.scene.cameras.main, x, y)) return;
+
         let explosion: Phaser.GameObjects.Sprite;
 
         const currentRadius = customRadius || (this.scene as any).registry.get('fireballRadius') || 80;
@@ -204,7 +220,8 @@ export class ObjectPoolManager {
             explosion.setScale(finalScale);
             explosion.setDepth(500);
 
-            if ((this.scene as any).quality?.bloomEnabled) {
+            const pm = (this.scene as any).performanceManager as PerformanceManager | undefined;
+            if ((this.scene as any).quality?.bloomEnabled && (!pm || pm.bloomEnabled)) {
                 explosion.postFX.addGlow(0xff6600, 4, 0.5, false, 0.1, 20);
             }
         }
@@ -224,6 +241,9 @@ export class ObjectPoolManager {
     }
 
     public spawnFrostExplosion(x: number, y: number, customRadius?: number) {
+        // Off-screen culling
+        if (!PerformanceManager.isInView(this.scene.cameras.main, x, y)) return;
+
         let explosion: Phaser.GameObjects.Sprite;
 
         const currentRadius = customRadius || (this.scene as any).registry.get('frostRadius') || 80;
@@ -241,7 +261,8 @@ export class ObjectPoolManager {
             explosion.setScale(finalScale);
             explosion.setDepth(500);
 
-            if ((this.scene as any).quality?.bloomEnabled) {
+            const pm = (this.scene as any).performanceManager as PerformanceManager | undefined;
+            if ((this.scene as any).quality?.bloomEnabled && (!pm || pm.bloomEnabled)) {
                 explosion.postFX.addGlow(0x00aaff, 4, 0.5, false, 0.1, 20);
             }
         }
@@ -260,7 +281,10 @@ export class ObjectPoolManager {
         }
     }
 
-    public spawnLightningImpact(x: number, y: number): Phaser.GameObjects.Sprite {
+    public spawnLightningImpact(x: number, y: number): Phaser.GameObjects.Sprite | null {
+        // Off-screen culling
+        if (!PerformanceManager.isInView(this.scene.cameras.main, x, y)) return null;
+
         let impact: Phaser.GameObjects.Sprite;
 
         if (this.lightningImpactPool.length > 0) {

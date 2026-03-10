@@ -156,7 +156,7 @@ export class BossEnemy extends Enemy {
         });
 
         // Screen shake on impact
-        this.scene.cameras.main.shake(200, 0.015);
+        (this.scene as any).scaledShake?.(200, 0.015);
 
         // Damage check at midpoint of animation
         this.scene.time.delayedCall(250, () => {
@@ -395,7 +395,7 @@ export class BossEnemy extends Enemy {
             onComplete: () => graphics.destroy(),
         });
 
-        this.scene.cameras.main.shake(350, 0.02);
+        (this.scene as any).scaledShake?.(350, 0.02);
 
         this.scene.time.delayedCall(220, () => {
             if (this.active) this.clearTint();

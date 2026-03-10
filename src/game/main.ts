@@ -228,6 +228,26 @@ export class MainScene extends Phaser.Scene implements IMainScene {
             this.achievementManager = new AchievementManager(this);
             this.collisions = new CollisionManager(this);
             this.performanceManager = new PerformanceManager(this);
+
+            // Listen for performance step changes to downgrade shadow modes
+            this.events.on('perf-step-change', (_step: number) => {
+                const override = this.performanceManager.shadowModeOverride;
+                if (override) {
+                    // Downgrade enemy shadows
+                    this.enemies.children.iterate((e: any) => {
+                        const shadow = e?.getShadow?.();
+                        if (shadow && shadow.getMode() !== override) {
+                            shadow.setMode(override);
+                        }
+                        return true;
+                    });
+                    // Downgrade player shadow
+                    if (this.playerShadow && (this.playerShadow as any).getMode() !== override) {
+                        (this.playerShadow as any).setMode(override);
+                    }
+                }
+            });
+
             console.log('[MainScene] All managers instantiated.');
 
             this.quality = getQualityConfig((this.registry.get('graphicsQuality') as any) || 'medium');
@@ -273,7 +293,7 @@ export class MainScene extends Phaser.Scene implements IMainScene {
             }
 
             this.data.set('player', this.player);
-            this.playerShadow = new SpriteShadow(this, this.player, this.quality.shadowMode, this.player.height * this.player.scaleY * 0.05);
+            this.playerShadow = new SpriteShadow(this, this.player, this.quality.shadowMode, this.player.height * this.player.scaleY * 0.5);
             this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
             console.log('[MainScene] Camera following player.');
 
@@ -507,13 +527,23 @@ export class MainScene extends Phaser.Scene implements IMainScene {
     private _hitstopActive = false;
     private _hitstopCooldownUntil = 0;
 
+    /**
+     * Scaled camera shake — multiplies intensity by performanceManager.shakeMultiplier.
+     * At high degradation steps shake is reduced or eliminated entirely.
+     */
+    public scaledShake(duration: number, intensity: number): void {
+        const mult = this.performanceManager?.shakeMultiplier ?? 1;
+        if (mult <= 0) return;
+        this.cameras.main.shake(duration, intensity * mult);
+    }
+
     public triggerHitstop(durationMs: number = 80): void {
         const now = Date.now();
         if (this._hitstopActive || now < this._hitstopCooldownUntil) return;
 
         this._hitstopActive = true;
         this.physics.world.pause();
-        this.cameras.main.shake(80, 0.003);
+        this.scaledShake(80, 0.003);
 
         this.time.delayedCall(durationMs, () => {
             this.physics.world.resume();

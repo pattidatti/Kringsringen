@@ -173,7 +173,7 @@ export class ParagonAbilityManager {
         const stunDuration = 1500;
 
         // Screen shake
-        this.scene.cameras.main.shake(300, 0.03);
+        this.scene.scaledShake(300, 0.03);
 
         // Ground VFX
         this.createGroundCircle(player.x, player.y, radius, 0x8B4513, 0.5, 800);
@@ -378,7 +378,7 @@ export class ParagonAbilityManager {
         target.takeDamage(damage, '#ffff00');
         this.showDamageText(target.x, target.y, 'KRITISK!', '#ffff00');
 
-        this.scene.cameras.main.shake(100, 0.01);
+        this.scene.scaledShake(100, 0.01);
         AudioManager.instance.playSFX('swing');
     }
 
@@ -415,7 +415,7 @@ export class ParagonAbilityManager {
                 if (hit.length > 0 || lifetime > 2000) {
                     // Explode!
                     this.createGroundCircle(projectile.x, projectile.y, explosionRadius, 0xff4400, 0.4, 1500);
-                    this.scene.cameras.main.shake(200, 0.02);
+                    this.scene.scaledShake(200, 0.02);
 
                     // AoE damage
                     const aoeTargets = this.getNearbyEnemies(projectile.x, projectile.y, explosionRadius);
@@ -485,7 +485,7 @@ export class ParagonAbilityManager {
                     onComplete: () => impact.destroy(),
                 });
 
-                this.scene.cameras.main.shake(80, 0.008);
+                this.scene.scaledShake(80, 0.008);
 
                 // Damage
                 const enemies = this.getNearbyEnemies(mx, my, 50);
@@ -556,7 +556,7 @@ export class ParagonAbilityManager {
         const radius = 300;
 
         // Screen shake and flash
-        this.scene.cameras.main.shake(400, 0.04);
+        this.scene.scaledShake(400, 0.04);
         this.scene.cameras.main.flash(300, 180, 100, 255);
 
         // Multi-ring explosion VFX
@@ -652,7 +652,7 @@ export class ParagonAbilityManager {
         }
 
         this.addBuff('dissonance', 'DISSONANS', 'item_harp', 0x8844cc, duration);
-        this.scene.cameras.main.shake(100, 0.01);
+        this.scene.scaledShake(100, 0.01);
     }
 
     /** Ragnarök Vers — ultimate: all 4 Vers active simultaneously for 10 seconds */

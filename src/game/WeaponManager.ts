@@ -107,7 +107,7 @@ export class WeaponManager {
 
         this.scene.time.delayedCall(Math.max(100, swordCooldown * 0.3), () => {
             // Avant-Garde Juice: Micro-shake and directional spark burst
-            this.scene.cameras.main.shake(80, 0.005);
+            this.scene.scaledShake(80, 0.005);
             // Adjust start position to be slightly in front of the character
             const reach = 25;
             const pyCenter = player.y - 10; // A bit lower than helmet
@@ -115,8 +115,10 @@ export class WeaponManager {
             const py = pyCenter + Math.sin(angle) * reach;
 
             const angleDeg = Phaser.Math.RadToDeg(angle);
-            // Spark amount depends on graphics quality
-            const sparkCount = Math.max(10, Math.floor(25 * (this.scene.quality?.particleMultiplier || 1.0)));
+            // Spark amount depends on graphics quality and performance step
+            const pm = (this.scene as any).performanceManager;
+            const sparkMult = pm?.sparkMultiplier ?? 1;
+            const sparkCount = Math.max(5, Math.floor(25 * (this.scene.quality?.particleMultiplier || 1.0) * sparkMult));
 
             // Wide Swing Upgrade
             const levels = (this.scene.registry.get('upgradeLevels') || {}) as Record<string, number>;
@@ -146,7 +148,7 @@ export class WeaponManager {
                     if (this.scene.poolManager) {
                         this.scene.poolManager.spawnFireballExplosion(px, py);
                     }
-                    this.scene.cameras.main.shake(150, 0.012);
+                    this.scene.scaledShake(150, 0.012);
                     const nearby = this.scene.spatialGrid.findNearby({ x: px, y: py, width: 1, height: 1 }, shockRadius);
                     for (const entry of nearby) {
                         const e = entry.ref as any;
@@ -190,7 +192,7 @@ export class WeaponManager {
                         }
                     }
                     this.scene.poolManager.getDamageText(px, py - 40, `SPEIL: ${Math.floor(storedDmg)}`, '#cc44ff');
-                    this.scene.cameras.main.shake(120, 0.01);
+                    this.scene.scaledShake(120, 0.01);
                 }
                 // Start new storage window
                 this.mirrorBladeWindowEnd = Date.now() + 3000;
@@ -375,7 +377,7 @@ export class WeaponManager {
                     bolt.setScale(3);
                     bolt.setData('isSupercharged', true);
                     this.scene.poolManager.getDamageText(player.x, player.y - 50, '⚡ SUPERCHARGED!', '#aaffff');
-                    this.scene.cameras.main.shake(200, 0.015);
+                    this.scene.scaledShake(200, 0.015);
                 }
                 bolt.fire(player.x, player.y, ltTarget.x, ltTarget.y, finalDamage, finalBounces, new Set(), angle);
             }

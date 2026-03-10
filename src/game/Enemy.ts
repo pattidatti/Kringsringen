@@ -8,6 +8,7 @@ import { HistoryBuffer } from './HistoryBuffer';
 import { AudioManager } from './AudioManager';
 import type { GridClient } from './SpatialGrid';
 import { SpriteShadow } from './SpriteShadow';
+import { PerformanceManager } from './PerformanceManager';
 
 export class Enemy extends Phaser.Physics.Arcade.Sprite {
     private targetStart: Phaser.GameObjects.Components.Transform; // Renamed to avoid confusion with internal target
@@ -104,7 +105,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         scene.physics.add.existing(this);
         this.positionHistory = new HistoryBuffer(120); // 2 seconds at 60fps
         const shadowMode = (scene as any).quality?.shadowMode ?? 'blob';
-        this.shadow = new SpriteShadow(scene, this, shadowMode, this.height * this.scaleY * 0.05);
+        this.shadow = new SpriteShadow(scene, this, shadowMode, this.height * this.scaleY * 0.5);
 
         // If called with new(), we should initialize. If pooled, reset() will be called.
         // For now, we assume this might be called directly or via pool.
@@ -125,7 +126,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         this.setTint(0xffffff);
         if (this.shadow) {
             this.shadow.setVisible(true);
-            this.shadow.setPosition(x, y + (this.height * this.scaleY * 0.05));
+            this.shadow.setPosition(x, y + (this.height * this.scaleY * 0.5));
         }
         this.clearTint();
         this.postFX.clear();
@@ -227,7 +228,10 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         this.originalSpeed = this.movementSpeed;
 
         this.setTint(0xFFF4D0);
-        this.postFX.addGlow(0xFFD700, 3, 0, false, 0.1, 10);
+        const pm = (this.scene as any).performanceManager as PerformanceManager | undefined;
+        if (!pm || pm.enemyGlowEnabled) {
+            this.postFX.addGlow(0xFFD700, 3, 0, false, 0.1, 10);
+        }
         this.setScale(this.scaleX * 1.15);
     }
 
@@ -281,13 +285,18 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     }
 
     private lastAIUpdate: number = 0;
-    private readonly AI_UPDATE_INTERVAL: number = 100;
 
     preUpdate(time: number, delta: number) {
         // Pooling Check
         if (!this.active) return;
 
-        super.preUpdate(time, delta);
+        // Off-screen animation pause: skip super.preUpdate (animation ticking)
+        // and shadow update for off-screen enemies, but keep AI alive so they move.
+        const cam = this.scene.cameras.main;
+        const isOnScreen = PerformanceManager.isInView(cam, this.x, this.y, 200);
+        if (isOnScreen) {
+            super.preUpdate(time, delta);
+        }
 
         // CLIENT PUPPET MODE: rendering from JitterBuffer, predicting hits
         if (this.isClientMode) {
@@ -455,10 +464,16 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
                     this.postFX.clear();
                 }
 
-                // Throttled AI (We only reach here if NOT waiting on cooldown in range)
-                if (!this.isSpecialMovementActive && time > this.lastAIUpdate + this.AI_UPDATE_INTERVAL) {
-                    this.lastAIUpdate = time;
-                    this.updateAIPathing();
+                // Throttled AI with distance-based interval
+                if (!this.isSpecialMovementActive) {
+                    const dx = this.x - this.targetStart.x;
+                    const dy = this.y - this.targetStart.y;
+                    const distSq = dx * dx + dy * dy;
+                    const aiInterval = PerformanceManager.getAIInterval(distSq);
+                    if (time > this.lastAIUpdate + aiInterval) {
+                        this.lastAIUpdate = time;
+                        this.updateAIPathing();
+                    }
                 }
 
                 if (this.body.velocity.x !== 0) {
@@ -563,7 +578,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
                 }
             }
 
-            if (this.shadow) {
+            if (this.shadow && isOnScreen) {
                 this.shadow.update(this.targetStart.x, this.targetStart.y);
             }
 
@@ -1028,10 +1043,20 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
      * Uses the centralized emitter in MainScene to avoid object churn.
      */
     private spawnDeathSparks() {
+        // Off-screen culling
+        if (!PerformanceManager.isInView(this.scene.cameras.main, this.x, this.y)) return;
+
         const scene = this.scene as unknown as IMainScene;
         if (scene.deathSparkEmitter) {
-            scene.deathSparkEmitter.emitParticleAt(this.x, this.y, 10);
+            const pm = (this.scene as any).performanceManager as PerformanceManager | undefined;
+            const count = Math.max(3, Math.round(10 * (pm?.sparkMultiplier ?? 1)));
+            scene.deathSparkEmitter.emitParticleAt(this.x, this.y, count);
         }
+    }
+
+    /** Expose shadow for PerformanceManager shadow mode downgrade. */
+    public getShadow(): SpriteShadow | null {
+        return this.shadow;
     }
 
     /** Public so WaveManager (and other systems) can return this enemy to the pool without destroying it. */
@@ -1164,7 +1189,10 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         if (this.slowTimer === null) {
             this.originalSpeed = this.movementSpeed;
             this.setTint(0x88ccff); // Blue frost tint
-            this.postFX.addGlow(0x00aaff, 4, 0, false, 0.1, 10); // Add blue glow
+            const pm = (this.scene as any).performanceManager as PerformanceManager | undefined;
+            if (!pm || pm.enemyGlowEnabled) {
+                this.postFX.addGlow(0x00aaff, 4, 0, false, 0.1, 10);
+            }
         } else {
             // Reset timer if already slowed
             this.slowTimer.remove();
@@ -1202,7 +1230,10 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         if (!this.isPoisoned) {
             this.isPoisoned = true;
             this.setTint(0x44ff44);
-            this.postFX.addGlow(0x00cc44, 4, 0, false, 0.1, 10);
+            const pm = (this.scene as any).performanceManager as PerformanceManager | undefined;
+            if (!pm || pm.enemyGlowEnabled) {
+                this.postFX.addGlow(0x00cc44, 4, 0, false, 0.1, 10);
+            }
         }
 
         let ticksLeft = ticks;

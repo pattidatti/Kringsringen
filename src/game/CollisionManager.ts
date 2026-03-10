@@ -83,7 +83,7 @@ export class CollisionManager {
 
                         // Juice: Sparks and Shake
                         this.scene.swordSparkEmitter.emitParticleAt(projectile.x, projectile.y, 10);
-                        this.scene.cameras.main.shake(100, 0.005);
+                        this.scene.scaledShake(100, 0.005);
                     }
                 } else {
                     // Normal hit logic (delegated to EnemyProjectile.onHitPlayer via overlap in EnemyProjectile)
