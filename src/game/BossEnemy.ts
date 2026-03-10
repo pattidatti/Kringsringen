@@ -53,7 +53,7 @@ export class BossEnemy extends Enemy {
         // Update shadow offset after boss scale override
         const feetY = 82;
         if (this.shadow) {
-            this.shadow.setYOffset((feetY - this.height * 0.5) * this.scaleY);
+            this.shadow.setYOffset(this.scaleY * (feetY - this.height * 0.75));
         }
 
         // Apply boss-specific tint if defined

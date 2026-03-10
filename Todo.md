@@ -3,6 +3,9 @@
 - [x] Når jeg kommer til level 4, så begynner spillet å lagge en del på den crappy laptopen min, tror ikke den dynamiske performance, fps-mål, opplegget fungerer helt optimalt. Må vel være mer vi kan hente ut fra et slikt system for å opprettholde høy fps? 
 - [x] Oppdater nå knappen virker uresponsiv, virker ikke på brukeren som om den har noen effekt og faktisk laster inn den nye oppdateringen. 
 - [x] Beskrivelse på oppgraderingene er noen ganger missvisende. F.eks står det på Lås opp: Jernmur, at den er (Opplåst). Dette stemmer jo ikke før vi har låst opp jernmur. Slik er det ved svært mange av beskrivelsene som står i parantes. 
+-[x] Skyggene må fremdeles fikses
+- [ x] Dynamisk performance må tweakes mer, Tar ofte for lang tid før den nedjusterer (spesielt når lys spawner), dette gjør at man tidvis dypper ned i 5-10 fps. 
+
 
 # Paragon-update
 - [x] Lage karakternavn når man oppretter karakter. Tilbakeknapp når man velger klasse. 

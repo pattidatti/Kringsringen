@@ -24,6 +24,7 @@ export class PerformanceManager {
     private lastSampleTime = 0;
     private userMaxLights: number;
     private userQuality: GraphicsQuality;
+    private readonly qualityChangeCallback: (parent: unknown, val: GraphicsQuality) => void;
 
     /** Current degradation step (0 = full quality, 7 = maximum degradation) */
     public currentStep = 0;
@@ -34,7 +35,12 @@ export class PerformanceManager {
 
     private readonly SAMPLE_INTERVAL = 1000;
     private readonly SAMPLE_COUNT = 3;
-    private readonly REQUIRED_CONSECUTIVE = 2;
+    /** Step down after 1 bad sample (fast reaction). Step up requires 2 (stable recovery). */
+    private readonly REQUIRED_CONSECUTIVE_DOWN = 1;
+    private readonly REQUIRED_CONSECUTIVE_UP = 2;
+    /** If actual FPS falls below this, skip 2 steps immediately without waiting for rolling avg. */
+    private readonly EMERGENCY_FPS_THRESHOLD = 28;
+    private readonly EMERGENCY_STEP_JUMP = 2;
 
     private static readonly THRESHOLDS: StepThreshold[] = [
         { downFps: 50, upFps: 58 },  // step 0 → 1
@@ -54,7 +60,7 @@ export class PerformanceManager {
         this.userMaxLights = getQualityConfig(this.userQuality).maxProjectileLights;
 
         // Reset when user manually changes quality
-        scene.game.registry.events.on('changedata-graphicsQuality', (_parent: any, val: GraphicsQuality) => {
+        this.qualityChangeCallback = (_parent: unknown, val: GraphicsQuality) => {
             this.userQuality = val;
             this.userMaxLights = getQualityConfig(val).maxProjectileLights;
             this.currentStep = 0;
@@ -66,15 +72,36 @@ export class PerformanceManager {
             // Clear dynamic override so SceneVisualManager falls back to quality config
             (this.scene as any).visuals?.setDynamicLightBudget(-1);
             this.scene.events.emit('perf-step-change', 0);
-        });
+        };
+        scene.game.registry.events.on('changedata-graphicsQuality', this.qualityChangeCallback);
     }
 
     update(time: number): void {
         if (time - this.lastSampleTime < this.SAMPLE_INTERVAL) return;
         this.lastSampleTime = time;
 
+        const currentFps = this.scene.game.loop.actualFps;
+
+        // Emergency fast-path: catastrophic FPS drop → skip 2 steps immediately
+        if (currentFps < this.EMERGENCY_FPS_THRESHOLD && this.currentStep < 7) {
+            const prevStep = this.currentStep;
+            this.currentStep = Math.min(7, this.currentStep + this.EMERGENCY_STEP_JUMP);
+            this.consecutiveDown = 0;
+            this.consecutiveUp = 0;
+            this.samples[this.sampleIndex] = currentFps;
+            this.sampleIndex = (this.sampleIndex + 1) % this.SAMPLE_COUNT;
+            if (this.samplesFilled < this.SAMPLE_COUNT) this.samplesFilled++;
+            if (this.currentStep !== prevStep) {
+                console.log(`[PerformanceManager] EMERGENCY FPS=${currentFps.toFixed(1)}, step ${prevStep}→${this.currentStep}`);
+                this.scene.events.emit('perf-step-change', this.currentStep);
+                const budget = this.lightBudget;
+                (this.scene as any).visuals?.setDynamicLightBudget(budget === this.userMaxLights ? -1 : budget);
+            }
+            return;
+        }
+
         // Sample current FPS
-        this.samples[this.sampleIndex] = this.scene.game.loop.actualFps;
+        this.samples[this.sampleIndex] = currentFps;
         this.sampleIndex = (this.sampleIndex + 1) % this.SAMPLE_COUNT;
         if (this.samplesFilled < this.SAMPLE_COUNT) this.samplesFilled++;
 
@@ -88,13 +115,13 @@ export class PerformanceManager {
 
         const prevStep = this.currentStep;
 
-        // Check step down
+        // Check step down (fast: 1 bad sample required)
         if (this.currentStep < 7) {
             const threshold = PerformanceManager.THRESHOLDS[this.currentStep];
             if (avg < threshold.downFps) {
                 this.consecutiveDown++;
                 this.consecutiveUp = 0;
-                if (this.consecutiveDown >= this.REQUIRED_CONSECUTIVE) {
+                if (this.consecutiveDown >= this.REQUIRED_CONSECUTIVE_DOWN) {
                     this.currentStep++;
                     this.consecutiveDown = 0;
                 }
@@ -103,13 +130,13 @@ export class PerformanceManager {
             }
         }
 
-        // Check step up
+        // Check step up (slow: 2 good samples required for stable recovery)
         if (this.currentStep > 0) {
             const threshold = PerformanceManager.THRESHOLDS[this.currentStep - 1];
             if (avg > threshold.upFps) {
                 this.consecutiveUp++;
                 this.consecutiveDown = 0;
-                if (this.consecutiveUp >= this.REQUIRED_CONSECUTIVE) {
+                if (this.consecutiveUp >= this.REQUIRED_CONSECUTIVE_UP) {
                     this.currentStep--;
                     this.consecutiveUp = 0;
                 }
@@ -192,8 +219,8 @@ export class PerformanceManager {
     /** Projectile light budget (count). Respects user max and step level. */
     get lightBudget(): number {
         if (this.userMaxLights === 0) return 0;
-        if (this.currentStep >= 7) return 0;
-        if (this.currentStep >= 4) return Math.floor(this.userMaxLights / 2);
+        if (this.currentStep >= 5) return 0;
+        if (this.currentStep >= 2) return Math.floor(this.userMaxLights / 2);
         return this.userMaxLights;
     }
 
@@ -254,6 +281,6 @@ export class PerformanceManager {
     }
 
     destroy(): void {
-        this.scene.game.registry.events.off('changedata-graphicsQuality');
+        this.scene.game.registry.events.off('changedata-graphicsQuality', this.qualityChangeCallback);
     }
 }

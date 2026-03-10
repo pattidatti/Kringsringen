@@ -213,8 +213,9 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         // Update shadow offset based on actual feet position after scale is set
         const feetY = this.config.feetY ?? 82;
         if (this.shadow) {
-            this.shadow.setYOffset((feetY - this.height * 0.5) * this.scaleY);
-            this.shadow.setPosition(x, y + (feetY - this.height * 0.5) * this.scaleY);
+            const shadowYOffset = this.scaleY * (feetY - this.height * 0.75);
+            this.shadow.setYOffset(shadowYOffset);
+            this.shadow.setPosition(x, y + shadowYOffset);
         }
 
         // Visual Refinement: Data-driven permanent tint

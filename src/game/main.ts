@@ -307,7 +307,7 @@ export class MainScene extends Phaser.Scene implements IMainScene {
             this.data.set('player', this.player);
             const playerFeetY = 82; // Pixel from top to feet in the 100×100 frame
             this.playerShadow = new SpriteShadow(this, this.player, this.quality.shadowMode,
-                (playerFeetY - this.player.height * 0.5) * this.player.scaleY);
+                this.player.scaleY * (playerFeetY - this.player.height * 0.75));
             this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
             console.log('[MainScene] Camera following player.');
 
