@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
-import { initializeApp } from 'firebase/app';
+import { getApps, getApp, initializeApp } from 'firebase/app';
 import {
   getAuth,
   signInWithPopup,
@@ -24,15 +24,12 @@ const firebaseConfig = {
 };
 
 // Lazy-initialize Firebase Auth on first use
-let app: any = null;
 let auth: Auth | null = null;
 
 function getAuthInstance(): Auth {
   if (!auth) {
-    if (!app) {
-      app = initializeApp(firebaseConfig);
-    }
-    auth = getAuth(app);
+    const firebaseApp = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
+    auth = getAuth(firebaseApp);
   }
   return auth;
 }

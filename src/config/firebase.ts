@@ -1,4 +1,4 @@
-import { initializeApp } from 'firebase/app';
+import { getApps, getApp, initializeApp } from 'firebase/app';
 import {
   getDatabase,
   ref,
@@ -43,7 +43,7 @@ let firestore: Firestore | null = null;
 export function initializeFirebase() {
   if (!app) {
     try {
-      app = initializeApp(firebaseConfig);
+      app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
       database = getDatabase(app);
       firestore = getFirestore(app);
     } catch (error) {
