@@ -8,6 +8,7 @@ import { MultiplayerLobby } from './ui/MultiplayerLobby';
 import { SaveManager } from '../game/SaveManager';
 import { AudioManager } from '../game/AudioManager';
 import { AdSenseAd } from './ui/AdSenseAd';
+import { UpdateNotification } from './ui/UpdateNotification';
 import { useGameAssetPreloader } from '../hooks/useGameAssetPreloader';
 import Peer from 'peerjs';
 import '../styles/pixel-ui.css';
@@ -26,9 +27,13 @@ interface LandingPageProps {
     onStartMP: (role: 'host' | 'client', roomCode: string, peer: Peer, nickname: string, hostPeerId?: string) => void;
     /** New Paragon flow: opens character select screen */
     onPlay?: () => void;
+    /** PWA update available */
+    needRefresh?: boolean;
+    /** Trigger SW update + reload */
+    onUpdate?: () => void;
 }
 
-const LandingPage: React.FC<LandingPageProps> = ({ onStart, onContinue, onStartMP, onPlay }) => {
+const LandingPage: React.FC<LandingPageProps> = ({ onStart, onContinue, onStartMP, onPlay, needRefresh, onUpdate }) => {
     useGameAssetPreloader();
 
     const [showHighscores, setShowHighscores] = useState(false);
@@ -245,6 +250,11 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart, onContinue, onStartM
                     />
                 )}
             </AnimatePresence>
+
+            {/* PWA update notification — top-left */}
+            {needRefresh && onUpdate && (
+                <UpdateNotification needRefresh={needRefresh} onUpdate={onUpdate} />
+            )}
 
             {/* Google AdSense — bottom-left, unobtrusive */}
             <div className="absolute bottom-4 left-4 z-10">

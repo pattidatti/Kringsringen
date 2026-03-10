@@ -15,6 +15,7 @@ import { resolveClassId } from './config/classes'
 import type { ClassId } from './config/classes'
 import type { ParagonProfile } from './config/paragon'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
+import { useRegisterSW } from 'virtual:pwa-register/react'
 import './index.css'
 import './styles/pixel-ui.css'
 
@@ -33,6 +34,17 @@ type AppScreen = 'landing' | 'login-gate' | 'character-select' | 'class-select' 
 /** Inner component with access to AuthContext */
 function AppContent() {
   const { user } = useAuth();
+  const {
+    needRefresh: [needRefresh],
+    updateServiceWorker,
+  } = useRegisterSW({
+    onRegisteredSW(_swUrl, registration) {
+      if (registration) {
+        // Poll for new SW every 60 minutes (long game sessions)
+        setInterval(() => { registration.update(); }, 60 * 60 * 1000);
+      }
+    },
+  });
   const [screen, setScreen] = useState<AppScreen>('landing');
   const [showDemo, setShowDemo] = useState(false);
   const [networkConfig, setNetworkConfig] = useState<NetworkConfig | null>(null);
@@ -242,6 +254,8 @@ function AppContent() {
             onContinue={handleContinue}
             onStartMP={handleStartMP}
             onPlay={handlePlay}
+            needRefresh={needRefresh}
+            onUpdate={() => updateServiceWorker(true)}
           />
           {showClassSelector && (
             <ClassSelector

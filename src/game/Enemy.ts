@@ -104,7 +104,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         scene.physics.add.existing(this);
         this.positionHistory = new HistoryBuffer(120); // 2 seconds at 60fps
         const shadowMode = (scene as any).quality?.shadowMode ?? 'blob';
-        this.shadow = new SpriteShadow(scene, this, shadowMode, this.height * this.scaleY * 0.3);
+        this.shadow = new SpriteShadow(scene, this, shadowMode, this.height * this.scaleY * 0.05);
 
         // If called with new(), we should initialize. If pooled, reset() will be called.
         // For now, we assume this might be called directly or via pool.
@@ -125,7 +125,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         this.setTint(0xffffff);
         if (this.shadow) {
             this.shadow.setVisible(true);
-            this.shadow.setPosition(x, y + (this.height * this.scaleY * 0.3));
+            this.shadow.setPosition(x, y + (this.height * this.scaleY * 0.05));
         }
         this.clearTint();
         this.postFX.clear();

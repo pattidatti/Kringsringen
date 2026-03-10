@@ -96,9 +96,9 @@ export class SpriteShadow {
                 ? SpriteShadow.MAX_SHADOW_LEN
                 : rawLen;
 
-        // Position: offset from entity in direction away from light
+        // Position: offset from feet position in direction away from light
         this.shadow.x = this.parent.x + Math.cos(angle) * shadowLength;
-        this.shadow.y = this.parent.y + Math.sin(angle) * shadowLength;
+        this.shadow.y = (this.parent.y + this.yOffset) + Math.sin(angle) * shadowLength;
 
         // Flatten vertically and orient away from light
         this.shadow.setScale(this.parent.scaleX, this.parent.scaleY * 0.5);

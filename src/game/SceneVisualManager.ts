@@ -17,6 +17,7 @@ export class SceneVisualManager {
 
     // Light budget tracking (projectile lights only — player lights are separate)
     private activeProjectileLights: number = 0;
+    private dynamicLightBudget: number = -1;  // -1 = use quality config
 
     // Map Management
     private currentMap: StaticMapLoader | null = null;
@@ -36,6 +37,7 @@ export class SceneVisualManager {
         this.scene.game.registry.events.on('changedata-graphicsQuality', (_parent: any, val: GraphicsQuality) => {
             this.currentQuality = getQualityConfig(val);
             (this.scene as any).quality = this.currentQuality;
+            this.dynamicLightBudget = -1;
             this.applyQualitySettings();
         });
 
@@ -131,9 +133,16 @@ export class SceneVisualManager {
      * Request a PointLight for a projectile. Returns the light if budget allows, null otherwise.
      * Callers must call releaseProjectileLight() when the light is no longer needed.
      */
+    public setDynamicLightBudget(budget: number): void {
+        this.dynamicLightBudget = budget;
+    }
+
     public requestProjectileLight(x: number, y: number, radius: number, color: number, intensity: number): Phaser.GameObjects.Light | null {
         if (!this.currentQuality.lightingEnabled) return null;
-        if (this.activeProjectileLights >= this.currentQuality.maxProjectileLights) return null;
+        const effectiveBudget = this.dynamicLightBudget >= 0
+            ? this.dynamicLightBudget
+            : this.currentQuality.maxProjectileLights;
+        if (this.activeProjectileLights >= effectiveBudget) return null;
 
         this.activeProjectileLights++;
         return this.scene.lights.addLight(x, y, radius, color, intensity);

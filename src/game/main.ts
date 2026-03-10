@@ -37,6 +37,7 @@ import { AchievementManager } from './AchievementManager';
 import { WaveEventManager } from './WaveEventManager';
 import { ShrineManager } from './ShrineManager';
 import { SpriteShadow } from './SpriteShadow';
+import { PerformanceManager } from './PerformanceManager';
 
 
 export class MainScene extends Phaser.Scene implements IMainScene {
@@ -80,6 +81,7 @@ export class MainScene extends Phaser.Scene implements IMainScene {
     public waves!: WaveManager;
     public waveEvents!: WaveEventManager;
     public shrines!: ShrineManager;
+    public performanceManager!: PerformanceManager;
 
     // Map Generation
     private mapWidth: number = 3000;
@@ -225,6 +227,7 @@ export class MainScene extends Phaser.Scene implements IMainScene {
             this.paragonAbility = new ParagonAbilityManager(this);
             this.achievementManager = new AchievementManager(this);
             this.collisions = new CollisionManager(this);
+            this.performanceManager = new PerformanceManager(this);
             console.log('[MainScene] All managers instantiated.');
 
             this.quality = getQualityConfig((this.registry.get('graphicsQuality') as any) || 'medium');
@@ -270,7 +273,7 @@ export class MainScene extends Phaser.Scene implements IMainScene {
             }
 
             this.data.set('player', this.player);
-            this.playerShadow = new SpriteShadow(this, this.player, this.quality.shadowMode, 28);
+            this.playerShadow = new SpriteShadow(this, this.player, this.quality.shadowMode, this.player.height * this.player.scaleY * 0.05);
             this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
             console.log('[MainScene] Camera following player.');
 
@@ -374,6 +377,8 @@ export class MainScene extends Phaser.Scene implements IMainScene {
                 this.lastHeartbeat = _time;
                 console.log(`[Heartbeat] Scene: ${this.scene.key}, Player: (${Math.round(this.player?.x)},${Math.round(this.player?.y)}), Camera: (${Math.round(this.cameras.main.scrollX)},${Math.round(this.cameras.main.scrollY)}), Active: ${this.player?.active}`);
             }
+
+            this.performanceManager.update(_time);
 
             const cappedDelta = Math.min(delta, 100);
             this.poolManager.update(cappedDelta);

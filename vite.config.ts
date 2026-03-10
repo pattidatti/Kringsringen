@@ -7,7 +7,7 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      registerType: 'autoUpdate',
+      registerType: 'prompt',
       workbox: {
         // Exclude large music files from initial hashing to speed up builds.
         // These will be cached at runtime instead.
