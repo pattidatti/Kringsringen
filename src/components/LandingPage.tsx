@@ -27,13 +27,15 @@ interface LandingPageProps {
     onStartMP: (role: 'host' | 'client', roomCode: string, peer: Peer, nickname: string, hostPeerId?: string) => void;
     /** New Paragon flow: opens character select screen */
     onPlay?: () => void;
+    /** Open PVP lobby */
+    onPvp?: () => void;
     /** PWA update available */
     needRefresh?: boolean;
     /** Trigger SW update + reload */
     onUpdate?: () => void;
 }
 
-const LandingPage: React.FC<LandingPageProps> = ({ onStart, onContinue, onStartMP, onPlay, needRefresh, onUpdate }) => {
+const LandingPage: React.FC<LandingPageProps> = ({ onStart, onContinue, onStartMP, onPlay, onPvp, needRefresh, onUpdate }) => {
     useGameAssetPreloader();
 
     const [showHighscores, setShowHighscores] = useState(false);
@@ -217,6 +219,14 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart, onContinue, onStartM
                     onClick={() => setShowMPLobby(true)}
                     className="w-64 text-xl !text-black [text-shadow:none]"
                 />
+                {onPvp && (
+                    <FantasyButton
+                        label="PVP Duell"
+                        variant="secondary"
+                        onClick={onPvp}
+                        className="w-64 text-xl !text-black [text-shadow:none]"
+                    />
+                )}
             </motion.div>
 
             {/* Highscores Modal */}

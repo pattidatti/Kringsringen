@@ -24,6 +24,10 @@ import type { NetworkConfig } from '../App';
 import type { IMainScene } from '../game/IMainScene';
 import type { ClassId } from '../config/classes';
 import type { ParagonProfile } from '../config/paragon';
+import { PvpScoreHUD } from './ui/PvpScoreHUD';
+import { PvpCountdown } from './ui/PvpCountdown';
+import { PvpRoundSummary } from './ui/PvpRoundSummary';
+import { PvpMatchResult } from './ui/PvpMatchResult';
 
 interface GameContainerProps {
     networkConfig?: NetworkConfig | null;
@@ -147,6 +151,14 @@ export const GameContainer: React.FC<GameContainerProps> = React.memo(({ network
         if (phaserContainerRef.current && !gameInstanceRef.current) {
             const game = createGame(phaserContainerRef.current, networkConfig, continueRun, selectedClass); // Pass element directly
             gameInstanceRef.current = game;
+
+            // Inject PVP mode into registry
+            const gameMode = networkConfig?.gameMode || 'pve';
+            game.registry.set('gameMode', gameMode);
+            if (gameMode === 'pvp') {
+                game.registry.set('pvpBestOf', networkConfig?.pvpBestOf || 5);
+                game.registry.set('pvpOpponentName', networkConfig?.pvpOpponentName || 'Motstander');
+            }
 
             // Inject Paragon state into Phaser registry for WaveManager and other systems
             if (activeProfile) {
@@ -749,6 +761,18 @@ export const GameContainer: React.FC<GameContainerProps> = React.memo(({ network
         onExitToMenu?.();
     }, [onExitToMenu, networkConfig]);
 
+    const isPvpMode = networkConfig?.gameMode === 'pvp';
+
+    const handlePvpReady = useCallback(() => {
+        const mainScene = gameInstanceRef.current?.scene.getScene('MainScene') as any;
+        mainScene?.pvpRoundManager?.setLocalReady();
+    }, []);
+
+    const handlePvpRematch = useCallback(() => {
+        const mainScene = gameInstanceRef.current?.scene.getScene('MainScene') as any;
+        mainScene?.pvpRoundManager?.requestRematch();
+    }, []);
+
     const bookActions = useMemo(() => ({
         onSelectPerk: () => { },
         onBuyUpgrade: applyShopUpgrade,
@@ -803,7 +827,8 @@ export const GameContainer: React.FC<GameContainerProps> = React.memo(({ network
                 </div>
             </div>
 
-            <BossHUD />
+            {/* PvE-only overlays */}
+            {!isPvpMode && <BossHUD />}
             <UnifiedBuffDisplay />
 
             <LoadingScreen
@@ -812,8 +837,24 @@ export const GameContainer: React.FC<GameContainerProps> = React.memo(({ network
                 networkStatus={networkConfig ? { loaded: syncState.loaded, expected: syncState.expected } : undefined}
             />
 
-            <BossSplashScreen />
-            <GameOverOverlay />
+            {!isPvpMode && <BossSplashScreen />}
+            {!isPvpMode && <GameOverOverlay />}
+
+            {/* PVP overlays */}
+            {isPvpMode && (
+                <>
+                    <PvpScoreHUD />
+                    <PvpCountdown />
+                    <PvpRoundSummary
+                        onReady={handlePvpReady}
+                        isWaitingReady={false}
+                    />
+                    <PvpMatchResult
+                        onRematch={handlePvpRematch}
+                        onLeave={handleExitToMenu}
+                    />
+                </>
+            )}
 
             {/* Achievement Toast Queue */}
             <AchievementToastQueue

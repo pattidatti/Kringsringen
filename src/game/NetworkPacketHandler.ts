@@ -95,6 +95,10 @@ export class NetworkPacketHandler {
                             this.handleHitRequest(packet.ev, packet.ts, _conn.peer);
                         } else if (packet.ev.type === 'projectile_hit_request') {
                             this.handleProjectileHitRequest(packet.ev, packet.ts);
+                        } else if (packet.ev.type === 'pvp_hit_request') {
+                            this.handlePvpHitRequest(packet.ev, packet.ts, _conn.peer);
+                        } else if (packet.ev.type === 'pvp_projectile_hit') {
+                            this.handlePvpProjectileHit(packet.ev, packet.ts);
                         }
                     }
                     this.handleGameEvent(packet.ev);
@@ -175,8 +179,9 @@ export class NetworkPacketHandler {
             this.scene.players.add(sprite);
         }
 
-        // Remote Player Light
-        if ((this.scene as any).quality?.lightingEnabled) {
+        // Remote Player Light — hidden in PVP mode (players can't see opponent's light)
+        const isPvp = this.scene.registry.get('gameMode') === 'pvp';
+        if ((this.scene as any).quality?.lightingEnabled && !isPvp) {
             const light = this.scene.lights.addLight(x, y, 150, 0xffffff, 0.4);
             this.remotePlayerLights.set(id, light);
         }
@@ -440,6 +445,66 @@ export class NetworkPacketHandler {
                 if (target.active && !target.getIsDead()) target.clearTint();
             });
         }
+    }
+
+    // ─── PVP Hit Validation (Host-Only) ───────────────────────────────────
+
+    private handlePvpHitRequest(event: GameEventPacket, _ts: number, _peerId: string): void {
+        if (this.scene.registry.get('gameMode') !== 'pvp') return;
+        if (!this.scene.registry.get('pvpFightActive')) return;
+
+        const data = event.data;
+        const targetId = data.targetId;
+        const damage = data.damage;
+
+        // Find the target player
+        const targetSprite = this.remotePlayers.get(targetId);
+        if (!targetSprite || !targetSprite.active) return;
+
+        // Validate distance
+        const dist = Phaser.Math.Distance.Between(targetSprite.x, targetSprite.y, data.hitX, data.hitY);
+        if (dist > 80) return; // Grace distance for melee
+
+        // Apply damage
+        this.scene.networkManager?.broadcast({
+            t: PacketType.GAME_EVENT,
+            ev: {
+                type: 'damage_player',
+                data: { id: targetId, damage, x: data.hitX, y: data.hitY }
+            },
+            ts: Date.now()
+        });
+
+        // Track damage for round summary
+        const mainScene = this.scene as any;
+        mainScene.pvpRoundManager?.trackDamage(true, damage);
+    }
+
+    private handlePvpProjectileHit(event: GameEventPacket, _ts: number): void {
+        if (this.scene.registry.get('gameMode') !== 'pvp') return;
+        if (!this.scene.registry.get('pvpFightActive')) return;
+
+        const data = event.data;
+        const targetId = data.targetId;
+        const damage = data.damage;
+
+        const targetSprite = this.remotePlayers.get(targetId);
+        if (!targetSprite || !targetSprite.active) return;
+
+        const dist = Phaser.Math.Distance.Between(targetSprite.x, targetSprite.y, data.hitX, data.hitY);
+        if (dist > 120) return; // Larger grace for projectiles
+
+        this.scene.networkManager?.broadcast({
+            t: PacketType.GAME_EVENT,
+            ev: {
+                type: 'damage_player',
+                data: { id: targetId, damage, x: data.hitX, y: data.hitY }
+            },
+            ts: Date.now()
+        });
+
+        const mainScene = this.scene as any;
+        mainScene.pvpRoundManager?.trackDamage(true, damage);
     }
 
     /**

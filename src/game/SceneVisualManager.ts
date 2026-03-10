@@ -4,6 +4,7 @@ import { getQualityConfig, type QualitySettings, type GraphicsQuality, type Shad
 import { GAME_CONFIG } from '../config/GameConfig';
 import { StaticMapLoader } from './StaticMapLoader';
 import { STATIC_MAPS } from './StaticMapData';
+import { PVP_ARENA } from '../config/pvp-arena';
 
 /**
  * Manages game visuals including lighting, post-processing, and quality scaling.
@@ -178,12 +179,14 @@ export class SceneVisualManager {
             this.currentMap.destroy();
         }
 
-        // Select map definition (capped at last entry)
-        const mapIndex = Math.min(safeLevel - 1, STATIC_MAPS.length - 1);
-        const mapDef = STATIC_MAPS[mapIndex];
+        // Select map definition: PVP arena or regular level map
+        const isPvp = this.scene.registry.get('gameMode') === 'pvp';
+        const mapDef = isPvp
+            ? PVP_ARENA
+            : STATIC_MAPS[Math.min(safeLevel - 1, STATIC_MAPS.length - 1)];
 
         // Load static map – no procedural generation, instant
-        console.log('[SceneVisualManager] Loading map def at index:', mapIndex);
+        console.log('[SceneVisualManager] Loading map:', isPvp ? 'PVP Arena' : `Level ${safeLevel}`);
         this.currentMap = new StaticMapLoader(this.scene, this.scene.obstacles, this.mapWidth, this.mapHeight);
         this.currentMap.load(mapDef);
 

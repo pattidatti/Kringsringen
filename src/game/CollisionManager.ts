@@ -143,6 +143,127 @@ export class CollisionManager {
         );
     }
 
+    /**
+     * Sets up PVP-specific overlaps: player projectiles + melee vs remote players.
+     */
+    public setupPvpColliders(): void {
+        const phaserScene = this.scene as unknown as Phaser.Scene;
+        const isPvp = this.scene.registry.get('gameMode') === 'pvp';
+        if (!isPvp) return;
+
+        // Melee Attack Hitbox vs Remote Players
+        phaserScene.physics.add.overlap(this.attackHitbox, this.scene.players, (_hitbox, target) => {
+            const player = this.scene.data.get('player') as Phaser.Physics.Arcade.Sprite;
+            if (target === player) return; // Don't hit self
+
+            if (!this.scene.registry.get('pvpFightActive')) return;
+
+            // Rate-limit PVP hit requests
+            const now = Date.now();
+            const lastReq = (target as any).getData?.('lastPvpHitReq') || 0;
+            if (now - lastReq < 250) return;
+            (target as any).setData?.('lastPvpHitReq', now);
+
+            // Find the remote player ID
+            let targetId: string | undefined;
+            for (const [id, sprite] of this.scene.networkPacketHandler.remotePlayers) {
+                if (sprite === target) { targetId = id; break; }
+            }
+            if (!targetId) return;
+
+            if (this.scene.networkManager?.role === 'client') {
+                this.scene.networkManager.broadcast({
+                    t: PacketType.GAME_EVENT,
+                    ev: {
+                        type: 'pvp_hit_request',
+                        data: {
+                            targetId,
+                            damage: this.scene.stats.damage,
+                            hitX: this.attackHitbox.x,
+                            hitY: this.attackHitbox.y
+                        }
+                    },
+                    ts: this.scene.networkManager.getServerTime()
+                });
+            } else {
+                // Host: apply damage directly
+                this.scene.networkManager?.broadcast({
+                    t: PacketType.GAME_EVENT,
+                    ev: {
+                        type: 'damage_player',
+                        data: { id: targetId, damage: this.scene.stats.damage, x: this.attackHitbox.x, y: this.attackHitbox.y }
+                    },
+                    ts: Date.now()
+                });
+                const mainScene = this.scene as any;
+                mainScene.pvpRoundManager?.trackDamage(true, this.scene.stats.damage);
+            }
+
+            this.scene.poolManager.getDamageText((target as any).x, (target as any).y - 30, this.scene.stats.damage, '#ff4444');
+            this.scene.events.emit('enemy-hit');
+        });
+
+        // Player projectiles vs remote players
+        const projectileGroups = [
+            (this.scene as any).arrows,
+            (this.scene as any).fireballs,
+            (this.scene as any).frostBolts,
+            (this.scene as any).lightningBolts,
+            (this.scene as any).sonicBolts,
+        ].filter(g => g !== undefined);
+
+        for (const group of projectileGroups) {
+            phaserScene.physics.add.overlap(group, this.scene.players, (projectile: any, target: any) => {
+                const player = this.scene.data.get('player') as Phaser.Physics.Arcade.Sprite;
+                if (target === player) return;
+                if (!this.scene.registry.get('pvpFightActive')) return;
+                if (!projectile.active) return;
+
+                let targetId: string | undefined;
+                for (const [id, sprite] of this.scene.networkPacketHandler.remotePlayers) {
+                    if (sprite === target) { targetId = id; break; }
+                }
+                if (!targetId) return;
+
+                const damage = projectile.damage || this.scene.stats.damage;
+
+                if (this.scene.networkManager?.role === 'client') {
+                    this.scene.networkManager.broadcast({
+                        t: PacketType.GAME_EVENT,
+                        ev: {
+                            type: 'pvp_projectile_hit',
+                            data: {
+                                targetId,
+                                damage,
+                                hitX: projectile.x,
+                                hitY: projectile.y,
+                                projectileType: projectile.projectileType || 'arrow'
+                            }
+                        },
+                        ts: this.scene.networkManager.getServerTime()
+                    });
+                } else {
+                    this.scene.networkManager?.broadcast({
+                        t: PacketType.GAME_EVENT,
+                        ev: {
+                            type: 'damage_player',
+                            data: { id: targetId, damage, x: projectile.x, y: projectile.y }
+                        },
+                        ts: Date.now()
+                    });
+                    const mainScene = this.scene as any;
+                    mainScene.pvpRoundManager?.trackDamage(true, damage);
+                }
+
+                // Destroy projectile on hit
+                if (projectile.disableBody) projectile.disableBody(true, true);
+                else if (projectile.destroy) projectile.destroy();
+
+                this.scene.poolManager.getDamageText(target.x, target.y - 30, damage, '#ff4444');
+            });
+        }
+    }
+
     private handlePlayerMeleeHit(target: Enemy | BossEnemy): void {
         if (this.currentSwingHitIds.has(target.id)) return;
         this.currentSwingHitIds.add(target.id);
