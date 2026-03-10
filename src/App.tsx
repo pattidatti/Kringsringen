@@ -6,6 +6,7 @@ import FantasyDemo from './components/ui/FantasyDemo'
 import { FantasyButton } from './components/ui/FantasyButton'
 import { FantasyDebug } from './components/dev/FantasyDebug'
 import { ClassSelector } from './components/ui/ClassSelector'
+import { PvpLobby } from './components/ui/PvpLobby'
 import { CharacterSelectScreen } from './components/ui/CharacterSelectScreen'
 import { LevelSelectScreen } from './components/ui/LevelSelectScreen'
 import { LoginGateScreen } from './components/ui/LoginGateScreen'
@@ -27,9 +28,12 @@ export interface NetworkConfig {
   peer: Peer;
   nickname: string;
   hostPeerId?: string; // Påkrevd for klienter
+  gameMode?: 'pve' | 'pvp';
+  pvpBestOf?: 3 | 5 | 7 | 10;
+  pvpOpponentName?: string;
 }
 
-type AppScreen = 'landing' | 'login-gate' | 'character-select' | 'class-select' | 'level-select' | 'game';
+type AppScreen = 'landing' | 'login-gate' | 'character-select' | 'class-select' | 'level-select' | 'game' | 'pvp-lobby';
 
 /** Inner component with access to AuthContext */
 function AppContent() {
@@ -62,6 +66,30 @@ function AppContent() {
     // Multiplayer hopper over class selector – bruker lastSelectedClass eller default
     const lastClass = resolveClassId(SaveManager.load().lastSelectedClass);
     setSelectedClass(lastClass);
+    setScreen('game');
+    setSessionKey(prev => prev + 1);
+  };
+
+  const handleStartPVP = (
+    role: 'host' | 'client',
+    peer: Peer,
+    nickname: string,
+    hostPeerId: string,
+    bestOf: 3 | 5 | 7 | 10,
+    opponentName: string,
+    classId: ClassId
+  ) => {
+    setNetworkConfig({
+      role,
+      roomCode: 'pvp',
+      peer,
+      nickname,
+      hostPeerId: role === 'client' ? hostPeerId : undefined,
+      gameMode: 'pvp',
+      pvpBestOf: bestOf,
+      pvpOpponentName: opponentName,
+    });
+    setSelectedClass(classId);
     setScreen('game');
     setSessionKey(prev => prev + 1);
   };
@@ -254,6 +282,7 @@ function AppContent() {
             onContinue={handleContinue}
             onStartMP={handleStartMP}
             onPlay={handlePlay}
+            onPvp={() => setScreen('pvp-lobby')}
             needRefresh={needRefresh}
             onUpdate={() => updateServiceWorker(true)}
           />
@@ -301,6 +330,14 @@ function AppContent() {
           profile={activeProfile}
           onSelectLevel={handleSelectLevel}
           onClose={() => setScreen('character-select')}
+        />
+      )}
+
+      {screen === 'pvp-lobby' && (
+        <PvpLobby
+          isOpen={true}
+          onClose={() => setScreen('landing')}
+          onStartPvp={handleStartPVP}
         />
       )}
 

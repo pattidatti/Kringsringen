@@ -38,6 +38,7 @@ import { WaveEventManager } from './WaveEventManager';
 import { ShrineManager } from './ShrineManager';
 import { SpriteShadow } from './SpriteShadow';
 import { PerformanceManager } from './PerformanceManager';
+import { PvpRoundManager } from './PvpRoundManager';
 
 
 export class MainScene extends Phaser.Scene implements IMainScene {
@@ -82,6 +83,7 @@ export class MainScene extends Phaser.Scene implements IMainScene {
     public waveEvents!: WaveEventManager;
     public shrines!: ShrineManager;
     public performanceManager!: PerformanceManager;
+    public pvpRoundManager?: PvpRoundManager;
 
     // Map Generation
     private mapWidth: number = 3000;
@@ -313,6 +315,7 @@ export class MainScene extends Phaser.Scene implements IMainScene {
 
             // Now that player and groups exist, setup colliders
             this.collisions.setupColliders(this.player);
+            this.collisions.setupPvpColliders();
 
             this.eventManager.setupEventListeners();
             this.players.add(this.player);
@@ -335,8 +338,10 @@ export class MainScene extends Phaser.Scene implements IMainScene {
                 this.player.setPosition(savedRun.playerX, savedRun.playerY);
             }
 
+            const isPvp = this.registry.get('gameMode') === 'pvp';
+
             // If singleplayer and fresh run (or restored run that needs starting), start the wave logic!
-            if (!netConfig) {
+            if (!netConfig && !isPvp) {
                 console.log('[MainScene] Starting Level:', startLevelOverride);
                 this.waves.startLevel(startLevelOverride);
             }
@@ -356,8 +361,26 @@ export class MainScene extends Phaser.Scene implements IMainScene {
                 console.log('[MainScene] NetworkManager initialized as', netConfig.role);
             }
 
-            this.weather.enableFog();
-            this.weather.startRain();
+            // PVP Mode initialization
+            if (isPvp) {
+                this.pvpRoundManager = new PvpRoundManager(this);
+                this.pvpRoundManager.initialize();
+                console.log('[MainScene] PVP mode initialized');
+
+                // Override disconnect handler for PVP
+                if (this.networkManager) {
+                    const originalOnDisconnect = this.networkManager.onDisconnect;
+                    this.networkManager.onDisconnect = (id: string) => {
+                        originalOnDisconnect?.(id);
+                        this.pvpRoundManager?.handleOpponentDisconnect();
+                    };
+                }
+            }
+
+            if (!isPvp) {
+                this.weather.enableFog();
+                this.weather.startRain();
+            }
 
             // If client, we might need to connect to host (handled in create())
             if (this.networkManager?.role === 'client') {
@@ -436,7 +459,14 @@ export class MainScene extends Phaser.Scene implements IMainScene {
             this.abilityManager.update(_time, delta);
             this.paragonAbility.update(_time, delta);
             this.buffs.update();
-            this.shrines.update(cappedDelta);
+
+            const isPvpMode = this.registry.get('gameMode') === 'pvp';
+            if (!isPvpMode) {
+                this.shrines.update(cappedDelta);
+            }
+            if (isPvpMode && this.pvpRoundManager) {
+                this.pvpRoundManager.update(_time, cappedDelta);
+            }
             this.achievementManager.update(delta);
 
             // Update Spatial Grid (Throttled for Performance)
