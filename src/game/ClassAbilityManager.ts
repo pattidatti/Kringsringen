@@ -23,6 +23,17 @@ export class ClassAbilityManager {
     private bulwarkAlpha: number = 0;
     private bulwarkRotation: number = 0;
 
+    // ── Mastery state ──
+    /** Double Vault: whether second vault is available */
+    public doubleVaultAvailable: boolean = false;
+    private doubleVaultTimer: Phaser.Time.TimerEvent | null = null;
+    /** Valkyrie Hymn: shield charges remaining */
+    public valkyrieShieldCharges: number = 0;
+    public valkyrieAbsorbedDamage: number = 0;
+    /** Soul Grapple: linked enemy reference */
+    public soulLinkedEnemy: Enemy | null = null;
+    public soulLinkExpiry: number = 0;
+
     constructor(scene: IMainScene) {
         this.scene = scene;
     }
@@ -53,7 +64,16 @@ export class ClassAbilityManager {
         if (playerClassId === 'krieger') {
             if (this.isSlotUnlocked('ability_bulwark')) this.activateIronBulwark();
         } else if (playerClassId === 'archer') {
-            if (this.isSlotUnlocked('ability_vault')) this.activateVaultAndVolley();
+            if (this.isSlotUnlocked('ability_vault')) {
+                // ── MASTERY: Double Vault — free second activation ──
+                if (this.doubleVaultAvailable && Date.now() < this.classAbility3CooldownEnd) {
+                    this.doubleVaultAvailable = false;
+                    if (this.doubleVaultTimer) { this.doubleVaultTimer.remove(); this.doubleVaultTimer = null; }
+                    this.activateDoubleVaultSecond();
+                } else {
+                    this.activateVaultAndVolley();
+                }
+            }
         } else if (playerClassId === 'skald') {
             if (this.isSlotUnlocked('ability_kvad_inspire')) this.activateInspirendeKvad();
         }
@@ -110,7 +130,7 @@ export class ClassAbilityManager {
             title: 'WHIRLWIND',
             icon: 'item_sword',
             color: 0xffaa00,
-            duration: 3000,
+            duration: whirlDuration,
             maxStacks: 1,
             isVisible: true,
             description: 'Roterer og gjør skade',
@@ -138,10 +158,33 @@ export class ClassAbilityManager {
             return hitCount;
         };
 
+        // ── MASTERY: Eternal Storm — double duration, allow 50% movement ──
+        const eternalStormLvl = levels['eternal_storm'] || 0;
+        const whirlDuration = eternalStormLvl > 0 ? 6000 : 3000;
+        const whirlRotations = eternalStormLvl > 0 ? Math.PI * 48 : Math.PI * 24;
+
+        if (eternalStormLvl > 0) {
+            // Allow 50% movement during whirlwind
+            this.scene.data.set('whirlwindMoveSpeed', 0.5);
+        }
+
+        // ── MASTERY: Splinter Storm — fire 8 arrows at activation ──
+        const splinterStormLvl = levels['splinter_storm'] || 0;
+        if (splinterStormLvl > 0) {
+            for (let i = 0; i < 8; i++) {
+                const arrowAngle = (i / 8) * Math.PI * 2;
+                const arrow = (this.scene as any).arrows?.get(player.x, player.y) as Arrow;
+                if (arrow) {
+                    arrow.fire(player.x, player.y, arrowAngle, damage * 0.5, 700, 2, 0, 0, 0, 0, false);
+                    arrow.setTint(0xff4400);
+                }
+            }
+        }
+
         this.scene.tweens.add({
             targets: player,
-            rotation: Math.PI * 24, // 12 full rotations over 3000ms (maintains visual speed)
-            duration: 3000,
+            rotation: whirlRotations,
+            duration: whirlDuration,
             ease: 'Linear',
             onUpdate: (tween) => {
                 if (!this.isWhirlwinding) {
@@ -201,8 +244,8 @@ export class ClassAbilityManager {
         });
 
         // Periodic damage ticks every 200ms
-        // Ticks at: 0ms, 200ms, 400ms, ..., 2800ms (15 total ticks)
-        for (let i = 0; i < 15; i++) {
+        const totalTicks = Math.floor(whirlDuration / 200);
+        for (let i = 0; i < totalTicks; i++) {
             this.scene.time.delayedCall(i * 200, () => {
                 if (this.isWhirlwinding) {
                     const hitCount = triggerHit(i === 0 ? '#ffcc00' : '#ffaa00');
@@ -286,8 +329,16 @@ export class ClassAbilityManager {
                     const withLight = (volleyArrowIndex % 4 === 0);
                     volleyArrowIndex++;
 
+                    // ── MASTERY: Fate Volley — homing arrows ──
+                    const fateVolleyLvl = levels['fate_volley'] || 0;
+                    const arrowSpeed = fateVolleyLvl > 0 ? 600 : 900; // Slower for homing feel
+
                     // Fast arrows, pierce applied
-                    arrow.fire(player.x, player.y, finalAngle, baseDamage, 900, pierceCount, 0, 0, poisonLvl, 0, withLight);
+                    arrow.fire(player.x, player.y, finalAngle, baseDamage, arrowSpeed, pierceCount, 0, 0, poisonLvl, 0, withLight);
+                    if (fateVolleyLvl > 0) {
+                        arrow.setData('isHoming', true);
+                        arrow.setTint(0xffaa00);
+                    }
 
                     // Recoil (Push player slightly backwards)
                     const recoilDist = 20;
@@ -303,6 +354,21 @@ export class ClassAbilityManager {
                 }
             }
         });
+
+        // ── MASTERY: Hail Storm — spawn frost zones at volley impact area ──
+        const hailStormLvl = levels['hail_storm'] || 0;
+        if (hailStormLvl > 0) {
+            const hailTarget = this.scene.cameras.main.getWorldPoint(pointer.x, pointer.y);
+            // Spawn frost zones in a pattern around target
+            for (let i = 0; i < 3; i++) {
+                const hx = hailTarget.x + (Math.random() - 0.5) * 200;
+                const hy = hailTarget.y + (Math.random() - 0.5) * 200;
+                this.scene.time.delayedCall(i * 300, () => {
+                    this.spawnHazardArea(hx, hy, this.scene.stats.damage * 0.3, 3000, 100, 0x0088ff);
+                    this.scene.poolManager?.spawnFrostExplosion(hx, hy);
+                });
+            }
+        }
     }
 
     private activateCascade(): void {
@@ -333,18 +399,60 @@ export class ClassAbilityManager {
         this.scene.registry.set('classAbilityCooldown', { duration: cd, timestamp: Date.now() });
         this.scene.registry.set('classAbility4Cooldown', { duration: cd, timestamp: Date.now() });
 
+        // ── MASTERY: Elementær Konvergens — cascade deals 0 damage, buffs spells ──
+        const convergenceLvl = levels['elemental_convergence'] || 0;
+        const finalDamage = convergenceLvl > 0 ? 0 : baseDamage;
+
+        // ── MASTERY: Dimension Rift — teleport enemies to center every 1s, 3x final explosion ──
+        const dimensionRiftLvl = levels['dimension_rift'] || 0;
+        const finalCenterMult = dimensionRiftLvl > 0 ? centerDamageMult * 3 : centerDamageMult;
+
         const singularity = this.scene.singularities.get(spawnX, spawnY) as import('./Singularity').Singularity | null;
         if (singularity) {
-            singularity.spawn(spawnX, spawnY, duration, radiusMult, baseDamage, centerDamageMult, damageReduction);
+            singularity.spawn(spawnX, spawnY, duration, radiusMult, finalDamage, finalCenterMult, damageReduction);
+
+            // Dimension Rift: teleport enemies to center every 1s
+            if (dimensionRiftLvl > 0) {
+                const riftRadius = 200 * radiusMult;
+                const teleportTimer = this.scene.time.addEvent({
+                    delay: 1000,
+                    repeat: Math.floor(duration / 1000) - 1,
+                    callback: () => {
+                        const nearby = this.scene.spatialGrid.findNearby({ x: spawnX, y: spawnY, width: 1, height: 1 }, riftRadius);
+                        let teleported = 0;
+                        for (const entry of nearby) {
+                            if (teleported >= 3) break;
+                            const e = entry.ref as Enemy;
+                            if (e && e.active && !e.getIsDead()) {
+                                e.setPosition(spawnX + (Math.random() - 0.5) * 30, spawnY + (Math.random() - 0.5) * 30);
+                                e.setVelocity(0, 0);
+                                teleported++;
+                            }
+                        }
+                        if (teleported > 0) {
+                            this.scene.cameras.main.shake(80, 0.005);
+                        }
+                    }
+                });
+            }
+
+            // Elemental Convergence: set spell buff flags
+            if (convergenceLvl > 0) {
+                this.scene.data.set('convergenceActiveUntil', Date.now() + duration);
+                this.scene.time.delayedCall(duration, () => {
+                    this.scene.data.set('convergenceActiveUntil', 0);
+                });
+            }
+
             this.scene.buffs.addBuff({
                 key: 'cascade',
                 title: 'CASCADE',
                 icon: 'item_orb_purple',
-                color: 0xcc88ff,
+                color: convergenceLvl > 0 ? 0xffdd00 : 0xcc88ff,
                 duration: duration,
                 maxStacks: 1,
                 isVisible: true,
-                description: 'Tyngdefelt aktiv',
+                description: convergenceLvl > 0 ? 'Konvergens aktiv — buff modus' : 'Tyngdefelt aktiv',
                 category: 'ultimate',
                 priority: 13
             });
@@ -405,6 +513,62 @@ export class ClassAbilityManager {
         // Shield activation SFX
         AudioManager.instance.playSFX('shield_activate', { volume: 0.6 });
         this.scene.registry.set('bulwarkActiveUntil', Date.now() + duration);
+
+        const levels = (this.scene.registry.get('upgradeLevels') || {}) as Record<string, number>;
+
+        // ── MASTERY: Thorn Fortress — reflect blocked damage as AoE ──
+        const thornFortressLvl = levels['thorn_fortress'] || 0;
+        if (thornFortressLvl > 0) {
+            this.scene.data.set('thornFortressActive', true);
+            this.scene.time.delayedCall(duration, () => {
+                this.scene.data.set('thornFortressActive', false);
+            });
+        }
+
+        // ── MASTERY: Gravity Wall — pull enemies within 200px during bulwark ──
+        const gravityWallLvl = levels['gravity_wall'] || 0;
+        if (gravityWallLvl > 0) {
+            const pullRadius = 200;
+            const pullStrength = 30;
+            const pullTimer = this.scene.time.addEvent({
+                delay: 100,
+                repeat: Math.floor(duration / 100) - 1,
+                callback: () => {
+                    if (!player.active) { pullTimer.remove(); return; }
+                    const nearby = this.scene.spatialGrid.findNearby(
+                        { x: player.x, y: player.y, width: 1, height: 1 }, pullRadius
+                    );
+                    for (const entry of nearby) {
+                        const e = entry.ref as Enemy;
+                        if (e && e.active && !e.getIsDead()) {
+                            const ang = Phaser.Math.Angle.Between(e.x, e.y, player.x, player.y);
+                            const dist = Phaser.Math.Distance.Between(e.x, e.y, player.x, player.y);
+                            if (dist > 30) {
+                                e.setVelocity(
+                                    Math.cos(ang) * pullStrength * (1 - dist / pullRadius),
+                                    Math.sin(ang) * pullStrength * (1 - dist / pullRadius)
+                                );
+                            }
+                        }
+                    }
+                }
+            });
+            // Knockback explosion at end
+            this.scene.time.delayedCall(duration, () => {
+                const nearby = this.scene.spatialGrid.findNearby(
+                    { x: player.x, y: player.y, width: 1, height: 1 }, pullRadius
+                );
+                for (const entry of nearby) {
+                    const e = entry.ref as Enemy;
+                    if (e && e.active && !e.getIsDead()) {
+                        e.pushback(player.x, player.y, this.scene.stats.knockback * 3);
+                        e.takeDamage(this.scene.stats.damage, '#00ccff');
+                    }
+                }
+                this.scene.poolManager.spawnFireballExplosion(player.x, player.y);
+                this.scene.cameras.main.shake(200, 0.015);
+            });
+        }
     }
 
     public update(time: number, delta: number): void {
@@ -462,6 +626,39 @@ export class ClassAbilityManager {
                 this.bulwarkGraphics.strokePath();
             }
         }
+    }
+
+    private spawnHazardArea(x: number, y: number, dps: number, duration: number, radius: number = 100, color: number = 0xff4400): void {
+        const fireAura = this.scene.add.circle(x, y, radius, color, 0.3).setDepth(1);
+        this.scene.tweens.add({
+            targets: fireAura,
+            alpha: 0.1,
+            scale: 1.1,
+            yoyo: true,
+            repeat: -1,
+            duration: 300
+        });
+        const tickRate = 500;
+        let elapsed = 0;
+        const tickEvent = this.scene.time.addEvent({
+            delay: tickRate,
+            callback: () => {
+                elapsed += tickRate;
+                if (elapsed >= duration) {
+                    tickEvent.remove();
+                    fireAura.destroy();
+                    return;
+                }
+                const nearby = this.scene.spatialGrid.findNearby({ x, y, width: 1, height: 1 }, radius);
+                for (const cell of nearby) {
+                    const e = cell.ref as Enemy;
+                    if (e && e.active && !e.getIsDead()) {
+                        e.takeDamage(dps * (tickRate / 1000), '#ff4400');
+                    }
+                }
+            },
+            loop: true
+        });
     }
 
     private drawHexagon(x: number, y: number, radius: number, rotation: number): void {
@@ -525,6 +722,35 @@ export class ClassAbilityManager {
             width: 1,
             height: 1
         }, radius);
+
+        // ── MASTERY: Lava Chain — spawn fire hazard areas along grapple path ──
+        const lavaChainLvl = levels['lava_chain'] || 0;
+        if (lavaChainLvl > 0) {
+            const pointer = this.scene.input.activePointer;
+            const grappleAngle = Phaser.Math.Angle.Between(player.x, player.y, pointer.worldX, pointer.worldY);
+            const steps = 4;
+            for (let i = 1; i <= steps; i++) {
+                const t = i / (steps + 1);
+                const hx = player.x + Math.cos(grappleAngle) * radius * t;
+                const hy = player.y + Math.sin(grappleAngle) * radius * t;
+                this.spawnHazardArea(hx, hy, this.scene.stats.damage * 0.4, 4000, 80, 0xff4400);
+            }
+        }
+
+        // ── MASTERY: Soul Grapple — link player to first grappled enemy for lifesteal ──
+        const soulGrappleLvl = levels['soul_grapple'] || 0;
+        if (soulGrappleLvl > 0 && nearbyEntries.length > 0) {
+            // Find first valid enemy
+            for (const entry of nearbyEntries) {
+                const e = entry.ref as Enemy;
+                if (e && e.active && !e.getIsDead()) {
+                    this.soulLinkedEnemy = e;
+                    this.soulLinkExpiry = Date.now() + 5000;
+                    this.scene.poolManager.getDamageText(e.x, e.y - 50, '⛓ SJELELENKE', '#cc44ff');
+                    break;
+                }
+            }
+        }
 
         if (chainLvl > 0) {
             // Split enemies into two hemispheres based on pointer direction
@@ -687,6 +913,22 @@ export class ClassAbilityManager {
         const targetX = player.x - Math.cos(angle) * leapDist;
         const targetY = player.y - Math.sin(angle) * leapDist;
 
+        // ── MASTERY: Shadow Vault — leave poison cloud at origin ──
+        const shadowVaultLvl = levels['shadow_vault'] || 0;
+        if (shadowVaultLvl > 0) {
+            this.spawnHazardArea(player.x, player.y, this.scene.stats.damage * 0.5, 4000, 120, 0x44ff44);
+        }
+
+        // ── MASTERY: Double Vault — allow second vault within 2s ──
+        const doubleVaultLvl = levels['double_vault'] || 0;
+        if (doubleVaultLvl > 0) {
+            this.doubleVaultAvailable = true;
+            if (this.doubleVaultTimer) this.doubleVaultTimer.remove();
+            this.doubleVaultTimer = this.scene.time.delayedCall(2000, () => {
+                this.doubleVaultAvailable = false;
+            });
+        }
+
         this.scene.tweens.add({
             targets: player,
             x: targetX,
@@ -722,6 +964,36 @@ export class ClassAbilityManager {
         }
     }
 
+    /** Double Vault second activation: 360° arrows, free, i-frames */
+    private activateDoubleVaultSecond(): void {
+        const player = this.scene.data.get('player') as Phaser.Physics.Arcade.Sprite;
+        const pointer = this.scene.input.activePointer;
+        const angle = Phaser.Math.Angle.Between(player.x, player.y, pointer.worldX, pointer.worldY);
+        const levels = (this.scene.registry.get('upgradeLevels') || {}) as Record<string, number>;
+
+        const leapDist = 180 * (1 + (levels['vault_distance'] || 0) * 0.30);
+        const targetX = player.x - Math.cos(angle) * leapDist;
+        const targetY = player.y - Math.sin(angle) * leapDist;
+
+        this.scene.tweens.add({
+            targets: player,
+            x: targetX,
+            y: targetY,
+            duration: 300,
+            ease: 'Cubic.out'
+        });
+
+        // 360° arrows
+        const damageMult = 0.7 * (1 + (levels['vault_damage'] || 0) * 0.25);
+        for (let i = 0; i < 12; i++) {
+            const arrowAngle = (i / 12) * Math.PI * 2;
+            const arrow = (this.scene as any).arrows?.get(player.x, player.y) as Arrow;
+            if (arrow) {
+                arrow.fire(player.x, player.y, arrowAngle, this.scene.stats.damage * damageMult, 700, 0, 0, 0, 0, 0, false);
+            }
+        }
+    }
+
     private activateShadowDecoy(): void {
         const levels = (this.scene.registry.get('upgradeLevels') || {}) as Record<string, number>;
 
@@ -745,6 +1017,91 @@ export class ClassAbilityManager {
         const decoy = (this.scene as any).decoys.get(player.x, player.y) as any;
         if (decoy) {
             decoy.spawn(player.x, player.y, decoyLifespan, withExplosion, withMimic);
+        }
+
+        // ── MASTERY: Doppelganger — decoy fires arrows + teleport on death ──
+        const doppelgangerLvl = levels['doppelganger'] || 0;
+        if (doppelgangerLvl > 0 && decoy) {
+            // Decoy fires arrows at 50% damage
+            const decoyShootTimer = this.scene.time.addEvent({
+                delay: 800,
+                repeat: Math.floor(decoyLifespan / 800) - 1,
+                callback: () => {
+                    if (!decoy.active) { decoyShootTimer.remove(); return; }
+                    // Find nearest enemy
+                    const nearbyEn = this.scene.spatialGrid.findNearby({ x: decoy.x, y: decoy.y, width: 1, height: 1 }, 400);
+                    for (const cell of nearbyEn) {
+                        const e = cell.ref as Enemy;
+                        if (e && e.active && !e.getIsDead()) {
+                            const ang = Phaser.Math.Angle.Between(decoy.x, decoy.y, e.x, e.y);
+                            const arrow = (this.scene as any).arrows?.get(decoy.x, decoy.y) as Arrow;
+                            if (arrow) {
+                                arrow.fire(decoy.x, decoy.y, ang, this.scene.stats.damage * 0.5, 700, 0, 0, 0, 0, 0, false);
+                                arrow.setTint(0xcc44ff);
+                            }
+                            break;
+                        }
+                    }
+                }
+            });
+            // Teleport player to decoy on death/expiry
+            this.scene.time.delayedCall(decoyLifespan, () => {
+                if (player.active && decoy) {
+                    player.setPosition(decoy.x, decoy.y);
+                    player.setAlpha(1);
+                    this.scene.cameras.main.shake(100, 0.008);
+                }
+            });
+        }
+
+        // ── MASTERY: Trap Network — spawn 3 mini-decoys that chain-explode on proximity ──
+        const trapNetworkLvl = levels['trap_network'] || 0;
+        if (trapNetworkLvl > 0) {
+            for (let i = 0; i < 3; i++) {
+                const offsetAngle = (i / 3) * Math.PI * 2;
+                const tx = player.x + Math.cos(offsetAngle) * 80;
+                const ty = player.y + Math.sin(offsetAngle) * 80;
+                const miniDecoy = this.scene.add.circle(tx, ty, 12, 0xff6600, 0.7).setDepth(player.depth - 1);
+                miniDecoy.setStrokeStyle(2, 0xffaa00, 0.8);
+                // Pulsing
+                this.scene.tweens.add({
+                    targets: miniDecoy,
+                    alpha: { from: 0.4, to: 0.8 },
+                    scale: { from: 0.8, to: 1.2 },
+                    yoyo: true,
+                    repeat: -1,
+                    duration: 400
+                });
+                // Proximity check
+                const checkTimer = this.scene.time.addEvent({
+                    delay: 200,
+                    repeat: Math.floor(decoyLifespan / 200) - 1,
+                    callback: () => {
+                        if (!miniDecoy.active) { checkTimer.remove(); return; }
+                        const nearby = this.scene.spatialGrid.findNearby({ x: tx, y: ty, width: 1, height: 1 }, 60);
+                        for (const cell of nearby) {
+                            const e = cell.ref as Enemy;
+                            if (e && e.active && !e.getIsDead()) {
+                                // Detonate all mini-decoys
+                                checkTimer.remove();
+                                miniDecoy.destroy();
+                                this.scene.poolManager.spawnFireballExplosion(tx, ty);
+                                const blastNearby = this.scene.spatialGrid.findNearby({ x: tx, y: ty, width: 1, height: 1 }, 130);
+                                for (const bc of blastNearby) {
+                                    const be = bc.ref as Enemy;
+                                    if (be && be.active && !be.getIsDead()) {
+                                        be.takeDamage(this.scene.stats.damage * 1.5, '#ff6600');
+                                        be.pushback(tx, ty, 250);
+                                    }
+                                }
+                                break;
+                            }
+                        }
+                    }
+                });
+                // Auto-destroy after lifespan
+                this.scene.time.delayedCall(decoyLifespan, () => { if (miniDecoy.active) miniDecoy.destroy(); });
+            }
         }
 
         // decoy_invis: base 1500ms + 1000ms per level
@@ -917,6 +1274,51 @@ export class ClassAbilityManager {
 
         this.scene.cameras.main.shake(120, 0.006);
 
+        // ── MASTERY: Valkyrie Hymn — grant 3-hit absorption shield ──
+        const valkyrieHymnLvl = levels['valkyrie_hymn'] || 0;
+        if (valkyrieHymnLvl > 0) {
+            this.valkyrieShieldCharges = 3;
+            this.valkyrieAbsorbedDamage = 0;
+            this.scene.data.set('valkyrieShieldActive', true);
+            this.scene.poolManager.getDamageText(player.x, player.y - 90, '🛡 VALKYRJE', '#ffd700');
+        }
+
+        // ── MASTERY: War Horn Echo — pulsing AoE damage during horn ──
+        const warHornEchoLvl = levels['war_horn_echo'] || 0;
+        if (warHornEchoLvl > 0) {
+            const versCount = (this.scene.registry.get('skaldVers') || 0) as number;
+            const pulseTimer = this.scene.time.addEvent({
+                delay: 2000,
+                repeat: Math.floor(duration / 2000) - 1,
+                callback: () => {
+                    if (!player.active) { pulseTimer.remove(); return; }
+                    const pulseRadius = 150;
+                    const currentVers = (this.scene.registry.get('skaldVers') || 0) as number;
+                    const pulseDamage = this.scene.stats.damage * 0.5 * (1 + currentVers * 0.1);
+                    const nearby = this.scene.spatialGrid.findNearby(
+                        { x: player.x, y: player.y, width: 1, height: 1 }, pulseRadius
+                    );
+                    for (const entry of nearby) {
+                        const e = entry.ref as Enemy;
+                        if (e && e.active && !e.getIsDead()) {
+                            e.takeDamage(pulseDamage, '#ffd700');
+                        }
+                    }
+                    // Visual: expanding gold ring
+                    const ring = this.scene.add.circle(player.x, player.y, 20, 0xffd700, 0.3);
+                    ring.setStrokeStyle(3, 0xffd700, 0.8);
+                    ring.setDepth(player.depth - 1);
+                    this.scene.tweens.add({
+                        targets: ring,
+                        radius: pulseRadius,
+                        alpha: 0,
+                        duration: 400,
+                        onComplete: () => ring.destroy()
+                    });
+                }
+            });
+        }
+
         // Trigger stat recalculation to update passive bonuses
         this.scene.stats.recalculateStats();
     }
@@ -943,17 +1345,24 @@ export class ClassAbilityManager {
         const ekkoLvl = levels['ekko'] || 0;
         const blodkvadLvl = levels['blodkvad'] || 0;
         const anthemLvl = levels['anthem_of_fury'] || 0;
+        const ragnarokLvl = levels['ragnarok_requiem'] || 0;
+        const eternalVerseLvl = levels['eternal_verse'] || 0;
 
-        // Consume all Vers
-        this.scene.registry.set('skaldVers', 0);
+        // ── MASTERY: Eternal Verse — costs 3 Vers instead of 5, 60% damage ──
+        if (eternalVerseLvl > 0) {
+            this.scene.registry.set('skaldVers', Math.max(0, vers - 3));
+        } else {
+            // Consume all Vers
+            this.scene.registry.set('skaldVers', 0);
+        }
         this.scene.registry.set('skaldKvadReady', false);
 
         this.classAbility4CooldownEnd = Date.now() + cd;
         this.scene.registry.set('classAbility4Cooldown', { duration: cd, timestamp: Date.now() });
 
         const player = this.scene.data.get('player') as Phaser.Physics.Arcade.Sprite;
-        const radius = 200 + kvadRadiusLvl * 30;
-        const damage = this.scene.stats.damage * 2.5;
+        const radius = 200 + kvadRadiusLvl * 30 + (ragnarokLvl > 0 ? 100 : 0);
+        const damage = this.scene.stats.damage * (eternalVerseLvl > 0 ? 1.5 : 2.5) * (ragnarokLvl > 0 ? 1.5 : 1);
 
         // AOE burst
         const nearbyEntries = this.scene.spatialGrid.findNearby({
@@ -978,6 +1387,64 @@ export class ClassAbilityManager {
                 }
             }
         });
+
+        // ── MASTERY: Ragnarök Requiem — killed enemies become temporary allies ──
+        if (ragnarokLvl > 0) {
+            nearbyEntries.forEach(entry => {
+                const enemy = entry.ref as Enemy;
+                if (enemy && (!enemy.active || enemy.getIsDead())) {
+                    // Create a green-tinted "ghost" ally at enemy position
+                    const ghost = this.scene.add.sprite(enemy.x, enemy.y, enemy.texture.key, enemy.frame?.name);
+                    ghost.setTint(0x44ff44);
+                    ghost.setAlpha(0.7);
+                    ghost.setScale(enemy.scaleX, enemy.scaleY);
+                    ghost.setDepth(enemy.depth);
+                    ghost.postFX.addGlow(0x44ff44, 4, 0, false, 0.1, 8);
+
+                    // Ghost chases and attacks nearby enemies for 3s
+                    let ghostLife = 3000;
+                    const ghostTimer = this.scene.time.addEvent({
+                        delay: 200,
+                        repeat: 14,
+                        callback: () => {
+                            ghostLife -= 200;
+                            if (ghostLife <= 0) {
+                                ghostTimer.remove();
+                                this.scene.tweens.add({
+                                    targets: ghost,
+                                    alpha: 0,
+                                    duration: 300,
+                                    onComplete: () => ghost.destroy()
+                                });
+                                return;
+                            }
+                            // Find nearest living enemy and move toward it
+                            const nearby2 = this.scene.spatialGrid.findNearby({ x: ghost.x, y: ghost.y, width: 1, height: 1 }, 200);
+                            for (const cell of nearby2) {
+                                const target = cell.ref as Enemy;
+                                if (target && target.active && !target.getIsDead()) {
+                                    const ang = Phaser.Math.Angle.Between(ghost.x, ghost.y, target.x, target.y);
+                                    ghost.x += Math.cos(ang) * 15;
+                                    ghost.y += Math.sin(ang) * 15;
+                                    const dist = Phaser.Math.Distance.Between(ghost.x, ghost.y, target.x, target.y);
+                                    if (dist < 40) {
+                                        target.takeDamage(damage * 0.5, '#44ff44');
+                                    }
+                                    break;
+                                }
+                            }
+                        }
+                    });
+                }
+            });
+        }
+
+        // ── MASTERY: Eternal Verse — 10s window for permanent damage stacking ──
+        if (eternalVerseLvl > 0) {
+            this.scene.data.set('eternalVerseActiveUntil', Date.now() + 10000);
+            this.scene.data.set('eternalVerseStacks', 0);
+            this.scene.poolManager.getDamageText(player.x, player.y - 90, '♫ EVIG VERS AKTIV', '#ffd700');
+        }
 
         // Blodkvad lifesteal
         if (blodkvadLvl > 0 && totalDamageDealt > 0) {

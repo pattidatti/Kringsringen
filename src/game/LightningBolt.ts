@@ -290,6 +290,55 @@ export class LightningBolt extends Phaser.Physics.Arcade.Sprite {
                     hitEnemy.setData('shockedUntil', Date.now() + 3000);
                 }
             }
+
+            // ── MASTERY: Thunder Storm — mark position for delayed AoE nuke ──
+            const thunderStormLvl = upgLvls['thunder_storm'] || 0;
+            if (thunderStormLvl > 0) {
+                const marks = (mainScene.data?.get('thunderStormMarks') || []) as Array<{x: number, y: number}>;
+                if (marks.length < 5) {
+                    marks.push({ x: hitX, y: hitY });
+                    mainScene.data.set('thunderStormMarks', marks);
+                    // Visual indicator: pulsing circle at marked position
+                    const marker = mainScene.add.circle(hitX, hitY, 15, 0xffffff, 0.4).setDepth(1);
+                    mainScene.tweens.add({
+                        targets: marker,
+                        alpha: { from: 0.2, to: 0.6 },
+                        scale: { from: 0.8, to: 1.2 },
+                        yoyo: true,
+                        repeat: 3,
+                        duration: 250,
+                        onComplete: () => {
+                            marker.destroy();
+                            // Delayed nuke at each marked position
+                            const nukeDamage = this.damage * 3;
+                            const nukeRadius = 100;
+                            mainScene.cameras.main.shake(200, 0.015);
+                            const nukeNearby = mainScene.spatialGrid?.findNearby({ x: hitX, y: hitY, width: 1, height: 1 }, nukeRadius) || [];
+                            nukeNearby.forEach((cell: any) => {
+                                const e = cell.ref;
+                                if (e && e.active && !e.getIsDead()) {
+                                    e.takeDamage(nukeDamage, '#ffffff');
+                                    e.pushback(hitX, hitY, 300);
+                                }
+                            });
+                            if (mainScene.poolManager) {
+                                mainScene.poolManager.spawnLightningImpact(hitX, hitY);
+                                mainScene.poolManager.getDamageText(hitX, hitY - 30, '⚡ TORDEN!', '#ffffff');
+                            }
+                            // Remove from marks
+                            const currentMarks = (mainScene.data?.get('thunderStormMarks') || []) as Array<{x: number, y: number}>;
+                            const idx = currentMarks.findIndex((m: any) => m.x === hitX && m.y === hitY);
+                            if (idx !== -1) currentMarks.splice(idx, 1);
+                            mainScene.data.set('thunderStormMarks', currentMarks);
+                        }
+                    });
+                }
+            }
+
+            // ── MASTERY: Supercharge — leave hazard area at bounce points ──
+            if (this.getData('isSupercharged')) {
+                this.spawnHazardArea(hitX, hitY, this.damage * 0.4, 3000);
+            }
         }
 
         // Add to hit set

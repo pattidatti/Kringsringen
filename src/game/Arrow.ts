@@ -132,6 +132,55 @@ export class Arrow extends Phaser.Physics.Arcade.Sprite {
                 }
             }
 
+            // ── MASTERY: Solar Curse — mark enemies, explode at 3 marks ──
+            const solarCurseLvl = levels['solar_curse'] || 0;
+            if (solarCurseLvl > 0) {
+                const marks = (e.getData('solarMarks') || 0) + 1;
+                e.setData('solarMarks', marks);
+                e.setData('solarMarkExpiry', Date.now() + 5000);
+                if (marks >= 3) {
+                    e.setData('solarMarks', 0);
+                    // Trigger solar explosion
+                    if (mainScene.poolManager) {
+                        mainScene.poolManager.spawnFireballExplosion(e.x, e.y);
+                    }
+                    mainScene.cameras?.main.shake(150, 0.01);
+                    const solarRadius = 180;
+                    const solarDmg = this.damage * 2;
+                    const solarNearby = mainScene.spatialGrid?.findNearby({ x: e.x, y: e.y, width: 1, height: 1 }, solarRadius) || [];
+                    for (const cell of solarNearby) {
+                        const se = cell.ref as Enemy;
+                        if (se && se.active && !se.getIsDead()) {
+                            se.takeDamage(solarDmg, '#ffdd00');
+                            se.pushback(e.x, e.y, 200);
+                        }
+                    }
+                    mainScene.poolManager?.getDamageText(e.x, e.y - 40, '☀ SOL!', '#ffdd00');
+                }
+            }
+
+            // ── MASTERY: Splinter Arrow — on hit, spawn 3 mini-arrows seeking enemies ──
+            const splinterArrowLvl = levels['splinter_arrow'] || 0;
+            if (splinterArrowLvl > 0 && !(this.getData('isSplinter'))) {
+                const splinterNearby = mainScene.spatialGrid?.findNearby({ x: e.x, y: e.y, width: 1, height: 1 }, 200) || [];
+                let splinterCount = 0;
+                for (const cell of splinterNearby) {
+                    if (splinterCount >= 3) break;
+                    const se = cell.ref as Enemy;
+                    if (se && se !== e && se.active && !se.getIsDead()) {
+                        const splinterArrow = mainScene.arrows?.get(e.x, e.y) as Arrow;
+                        if (splinterArrow) {
+                            const ang = Phaser.Math.Angle.Between(e.x, e.y, se.x, se.y);
+                            splinterArrow.fire(e.x, e.y, ang, this.damage * 0.4, this.speed, 0, 0, 0, 0, 0, false);
+                            splinterArrow.setScale(0.9);
+                            splinterArrow.setTint(0x44ff44);
+                            splinterArrow.setData('isSplinter', true);
+                            splinterCount++;
+                        }
+                    }
+                }
+            }
+
             // Rikosjett – arrow bounces to nearest other enemy
             const rikosjettLvl = levels['rikosjett'] || 0;
             const ricochetCount = this.getData('ricochetCount') || 0;
@@ -294,6 +343,31 @@ export class Arrow extends Phaser.Physics.Arcade.Sprite {
 
         if (this.glowSprite && this.glowSprite.visible) {
             this.glowSprite.setPosition(this.x, this.y);
+        }
+
+        // ── MASTERY: Wind Arrows — boost if passing through player trail ──
+        const mainScene = this.scene as any;
+        if (!this.getData('windBoosted') && mainScene.weaponManager) {
+            const levels = (mainScene.registry?.get('upgradeLevels') || {}) as Record<string, number>;
+            if ((levels['wind_arrows'] || 0) > 0) {
+                const trail = mainScene.weaponManager.windTrailPositions as Array<{x: number, y: number, time: number}>;
+                const now = Date.now();
+                for (const pos of trail) {
+                    if (now - pos.time > 2000) continue;
+                    const dist = Phaser.Math.Distance.Between(this.x, this.y, pos.x, pos.y);
+                    if (dist < 60) {
+                        // Boost arrow
+                        this.setData('windBoosted', true);
+                        this.damage *= 1.5;
+                        if (this.body) {
+                            this.body.velocity.x *= 2;
+                            this.body.velocity.y *= 2;
+                        }
+                        this.setTint(0x88ccff);
+                        break;
+                    }
+                }
+            }
         }
 
         const distance = Phaser.Math.Distance.Between(this.startX, this.startY, this.x, this.y);

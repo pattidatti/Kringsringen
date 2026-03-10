@@ -51,6 +51,10 @@ export interface UpgradeConfig {
     shopCategoryId?: string;
     /** Kapittel-inndeling for visning i boken */
     chapterId?: ChapterId;
+    /** Detaljert mekanisk forklaring — vises i hover-tooltip for komplekse oppgraderinger */
+    detailedDescription?: string;
+    /** Krever bekreftelse fra spilleren før kjøp (f.eks. Elementær Konvergens) */
+    purchaseWarning?: string;
 }
 
 export const UPGRADES: UpgradeConfig[] = [

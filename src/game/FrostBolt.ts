@@ -135,6 +135,60 @@ export class FrostBolt extends Phaser.Physics.Arcade.Sprite {
             });
         }
 
+        // ── MASTERY: Ice Prison — frozen enemies that die explode into chain freeze ──
+        const upgLvls = (mainScene.registry.get('upgradeLevels') || {}) as Record<string, number>;
+        const icePrisonLvl = upgLvls['ice_prison'] || 0;
+        if (icePrisonLvl > 0) {
+            slowedEnemies.forEach(slowed => {
+                // Check if enemy died from this hit — chain freeze on death
+                if (!slowed.active || slowed.getIsDead()) {
+                    this.chainFrostExplosion(slowed.x, slowed.y, scaledDamage * 0.4, frostSlowDuration, 3, mainScene);
+                }
+            });
+        }
+
+        // ── MASTERY: Frost Domain — leave permanent frost zone at cast location ──
+        const frostDomainLvl = upgLvls['frost_domain'] || 0;
+        if (frostDomainLvl > 0) {
+            const existingZones = (mainScene.data?.get('frostDomainZones') || []) as Phaser.GameObjects.Arc[];
+            // Max 3 zones
+            if (existingZones.length >= 3) {
+                const oldest = existingZones.shift()!;
+                oldest.destroy();
+                mainScene.data.set('frostDomainZones', existingZones);
+            }
+            const zoneRadius = 200;
+            const zone = mainScene.add.circle(hitX, hitY, zoneRadius, 0x0088ff, 0.12).setDepth(1);
+            mainScene.tweens.add({
+                targets: zone,
+                alpha: { from: 0.08, to: 0.18 },
+                scale: { from: 0.95, to: 1.05 },
+                yoyo: true,
+                repeat: -1,
+                duration: 800
+            });
+            existingZones.push(zone);
+            mainScene.data.set('frostDomainZones', existingZones);
+
+            // Tick: 40% slow + 25% damage vulnerability
+            const tickRate = 500;
+            const zoneTickEvent = mainScene.time.addEvent({
+                delay: tickRate,
+                callback: () => {
+                    if (!zone.active) { zoneTickEvent.remove(); return; }
+                    const nearby = mainScene.spatialGrid?.findNearby({ x: hitX, y: hitY, width: 1, height: 1 }, zoneRadius) || [];
+                    nearby.forEach((cell: any) => {
+                        const e = cell.ref;
+                        if (e && e.active && !e.getIsDead()) {
+                            e.applySlow?.(1500);
+                            e.setData('frostVulnUntil', Date.now() + 2000);
+                        }
+                    });
+                },
+                loop: true
+            });
+        }
+
         mainScene.poolManager.spawnFrostExplosion(hitX, hitY);
         AudioManager.instance.playSFX('ice_freeze');
         AudioManager.instance.playSFX('frost_impact');
@@ -156,6 +210,26 @@ export class FrostBolt extends Phaser.Physics.Arcade.Sprite {
             });
             this.light = null;
         }
+    }
+
+    private chainFrostExplosion(x: number, y: number, damage: number, slowDuration: number, chainsLeft: number, mainScene: any): void {
+        if (chainsLeft <= 0) return;
+        const radius = 120;
+        mainScene.poolManager?.spawnFrostExplosion(x, y);
+        const nearby = mainScene.spatialGrid?.findNearby({ x, y, width: 1, height: 1 }, radius) || [];
+        nearby.forEach((cell: any) => {
+            const e = cell.ref;
+            if (e && e.active && !e.getIsDead()) {
+                e.takeDamage(damage, '#00ccff');
+                if (slowDuration > 0) e.applySlow?.(slowDuration);
+                // If this kills the enemy, chain further
+                if (!e.active || e.getIsDead()) {
+                    this.scene.time.delayedCall(200, () => {
+                        this.chainFrostExplosion(e.x, e.y, damage * 0.8, slowDuration, chainsLeft - 1, mainScene);
+                    });
+                }
+            }
+        });
     }
 
     update() {

@@ -276,6 +276,13 @@ export const FantasyBook: React.FC<FantasyBookProps> = React.memo(({
     const partyState = useGameRegistry<{ id: string, name: string, isDead: boolean }[]>('partyState', []);
     const reviveCount = useGameRegistry('reviveCount', 0);
 
+    // Hover tooltip for detailed descriptions
+    const [hoveredItem, setHoveredItem] = useState<(UpgradeConfig | ParagonUpgradeConfig) | null>(null);
+    const [hoverAnchorRect, setHoverAnchorRect] = useState<DOMRect | null>(null);
+
+    // Purchase confirmation for upgrades with purchaseWarning
+    const [pendingPurchase, setPendingPurchase] = useState<{ item: UpgradeConfig; cost: number } | null>(null);
+
     // Detailed Stats for Status Page
     const maxHp = useGameRegistry('playerMaxHP', 100);
     const damage = useGameRegistry('playerDamage', 10);
@@ -606,6 +613,13 @@ export const FantasyBook: React.FC<FantasyBookProps> = React.memo(({
                                                         key={item.id}
                                                         initial={{ opacity: 0, x: 10 }}
                                                         animate={{ opacity: 1, x: 0 }}
+                                                        onMouseEnter={(e) => {
+                                                            if ('detailedDescription' in item && (item as UpgradeConfig).detailedDescription) {
+                                                                setHoveredItem(item);
+                                                                setHoverAnchorRect((e.currentTarget as HTMLElement).getBoundingClientRect());
+                                                            }
+                                                        }}
+                                                        onMouseLeave={() => { setHoveredItem(null); setHoverAnchorRect(null); }}
                                                         className={`flex p-4 border rounded-lg transition-all group relative overflow-hidden gap-4
                                                 ${!reqMet
                                                                 ? 'bg-slate-200/70 border-slate-400/50 grayscale opacity-80'
@@ -672,7 +686,13 @@ export const FantasyBook: React.FC<FantasyBookProps> = React.memo(({
                                                                     </div>
                                                                 ) : (
                                                                     <button
-                                                                        onClick={() => actions.onBuyUpgrade(item.id, cost)}
+                                                                        onClick={() => {
+                                                                            if ('purchaseWarning' in item && (item as UpgradeConfig).purchaseWarning) {
+                                                                                setPendingPurchase({ item: item as UpgradeConfig, cost });
+                                                                            } else {
+                                                                                actions.onBuyUpgrade(item.id, cost);
+                                                                            }
+                                                                        }}
                                                                         disabled={!canAfford || !reqMet}
                                                                         className={`w-full py-2 text-base font-bold border rounded-lg transition-all flex items-center justify-center gap-1.5 shadow-sm
                                                                 ${canAfford && reqMet
@@ -861,6 +881,83 @@ export const FantasyBook: React.FC<FantasyBookProps> = React.memo(({
                             )}
                         </div>
                     </motion.div>
+
+                    {/* Hover Tooltip for detailed descriptions */}
+                    <AnimatePresence>
+                        {hoveredItem && hoverAnchorRect && 'detailedDescription' in hoveredItem && (hoveredItem as UpgradeConfig).detailedDescription && (
+                            <motion.div
+                                key="upgrade-tooltip"
+                                initial={{ opacity: 0, y: 6 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: 6 }}
+                                transition={{ duration: 0.15, ease: 'easeOut' }}
+                                style={{
+                                    position: 'fixed',
+                                    top: Math.max(8, hoverAnchorRect.top - 8),
+                                    left: Math.min(hoverAnchorRect.right + 12, window.innerWidth - 370),
+                                    zIndex: 9999,
+                                    pointerEvents: 'none',
+                                    maxWidth: 350,
+                                }}
+                                className="bg-slate-900/95 border border-amber-500/50 rounded-lg p-4 shadow-2xl backdrop-blur-sm"
+                            >
+                                <div className="text-amber-300 font-cinzel font-bold text-base mb-2 border-b border-amber-500/30 pb-2">
+                                    {hoveredItem.title}
+                                </div>
+                                <div className="text-slate-200 text-sm leading-relaxed font-crimson">
+                                    {(hoveredItem as UpgradeConfig).detailedDescription}
+                                </div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+
+                    {/* Purchase Confirmation Modal */}
+                    <AnimatePresence>
+                        {pendingPurchase && (
+                            <motion.div
+                                key="purchase-confirm"
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                transition={{ duration: 0.2 }}
+                                className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 backdrop-blur-sm"
+                                onClick={() => setPendingPurchase(null)}
+                            >
+                                <motion.div
+                                    initial={{ scale: 0.9, opacity: 0, y: 10 }}
+                                    animate={{ scale: 1, opacity: 1, y: 0 }}
+                                    exit={{ scale: 0.9, opacity: 0, y: 10 }}
+                                    transition={{ duration: 0.25, ease: 'easeOut' }}
+                                    className="bg-slate-900/95 border-2 border-amber-500/60 rounded-xl p-6 shadow-2xl max-w-md mx-4"
+                                    onClick={(e) => e.stopPropagation()}
+                                >
+                                    <div className="text-amber-400 font-cinzel font-bold text-xl mb-4 text-center">
+                                        ⚠ {pendingPurchase.item.title}
+                                    </div>
+                                    <div className="text-slate-200 text-base leading-relaxed font-crimson mb-6 text-center">
+                                        {pendingPurchase.item.purchaseWarning}
+                                    </div>
+                                    <div className="flex gap-4 justify-center">
+                                        <button
+                                            onClick={() => setPendingPurchase(null)}
+                                            className="px-6 py-2.5 bg-slate-700 hover:bg-slate-600 text-slate-200 font-bold rounded-lg border border-slate-500 transition-colors"
+                                        >
+                                            Avbryt
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                actions.onBuyUpgrade(pendingPurchase.item.id, pendingPurchase.cost);
+                                                setPendingPurchase(null);
+                                            }}
+                                            className="px-6 py-2.5 bg-amber-700 hover:bg-amber-600 text-amber-100 font-bold rounded-lg border border-amber-500 transition-colors"
+                                        >
+                                            Kjøp likevel
+                                        </button>
+                                    </div>
+                                </motion.div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
                 </div>
             )}
         </AnimatePresence>

@@ -16,6 +16,21 @@ import { AudioManager } from './AudioManager';
 export class WeaponManager {
     private scene: IMainScene;
 
+    // ── Mastery state tracking ──
+    /** Destroyer Blade: tracks sword hit count for every-5th-hit shockwave */
+    public destroyerBladeHitCount: number = 0;
+    /** Mirror Blade: damage stored from hits taken within window */
+    public mirrorBladeStoredDamage: number = 0;
+    public mirrorBladeWindowEnd: number = 0;
+    /** Supercharge (Lightning): consecutive lightning casts without switching */
+    public superchargeLightningCount: number = 0;
+    /** Wind Arrows: recent player positions for wind trail */
+    public windTrailPositions: Array<{ x: number; y: number; time: number }> = [];
+    /** Resonance Frequency (Skald): hit tracking per enemy */
+    public resonanceHits: Map<any, { count: number; lastHit: number }> = new Map();
+    /** Harmonic Echo (Skald): harp hit counter */
+    public harmonicEchoHitCount: number = 0;
+
     constructor(scene: IMainScene) {
         this.scene = scene;
     }
@@ -119,6 +134,67 @@ export class WeaponManager {
             this.scene.time.delayedCall(100, () => {
                 this.scene.collisions.disableAttackHitbox();
             });
+
+            // ── MASTERY: Destroyer Blade — every 5th sword hit triggers shockwave ──
+            const destroyerLvl = levels['destroyer_blade'] || 0;
+            if (destroyerLvl > 0) {
+                this.destroyerBladeHitCount++;
+                if (this.destroyerBladeHitCount >= 5) {
+                    this.destroyerBladeHitCount = 0;
+                    const shockDamage = this.scene.stats.damage * 2.0;
+                    const shockRadius = 150;
+                    if (this.scene.poolManager) {
+                        this.scene.poolManager.spawnFireballExplosion(px, py);
+                    }
+                    this.scene.cameras.main.shake(150, 0.012);
+                    const nearby = this.scene.spatialGrid.findNearby({ x: px, y: py, width: 1, height: 1 }, shockRadius);
+                    for (const entry of nearby) {
+                        const e = entry.ref as any;
+                        if (e && e.active && !e.getIsDead()) {
+                            e.pushback(px, py, this.scene.stats.knockback * 2);
+                            e.takeDamage(shockDamage, '#ff4400');
+                        }
+                    }
+                    this.scene.poolManager.getDamageText(px, py - 40, 'SHOCKWAVE!', '#ff4400');
+                }
+            }
+
+            // ── MASTERY: Blood Blade — 3x damage under 30% HP, burn, heal on kill ──
+            const bloodBladeLvl = levels['blood_blade'] || 0;
+            if (bloodBladeLvl > 0) {
+                const curHP = this.scene.registry.get('playerHP') || 0;
+                const maxHP = this.scene.registry.get('playerMaxHP') || 100;
+                if (curHP / maxHP < 0.3) {
+                    // Mark enemies hit this swing for blood blade bonus (handled in collision)
+                    this.scene.data.set('bloodBladeActive', true);
+                } else {
+                    this.scene.data.set('bloodBladeActive', false);
+                }
+            }
+
+            // ── MASTERY: Mirror Blade — start 3s damage storage window ──
+            const mirrorBladeLvl = levels['mirror_blade'] || 0;
+            if (mirrorBladeLvl > 0) {
+                // Release stored damage as AoE if we have any
+                if (this.mirrorBladeStoredDamage > 0) {
+                    const storedDmg = this.mirrorBladeStoredDamage;
+                    this.mirrorBladeStoredDamage = 0;
+                    if (this.scene.poolManager) {
+                        this.scene.poolManager.spawnFireballExplosion(px, py);
+                    }
+                    const nearby = this.scene.spatialGrid.findNearby({ x: px, y: py, width: 1, height: 1 }, 150);
+                    for (const entry of nearby) {
+                        const e = entry.ref as any;
+                        if (e && e.active && !e.getIsDead()) {
+                            e.takeDamage(storedDmg, '#cc44ff');
+                        }
+                    }
+                    this.scene.poolManager.getDamageText(px, py - 40, `SPEIL: ${Math.floor(storedDmg)}`, '#cc44ff');
+                    this.scene.cameras.main.shake(120, 0.01);
+                }
+                // Start new storage window
+                this.mirrorBladeWindowEnd = Date.now() + 3000;
+            }
         });
 
         player.once(`animationcomplete-${attackAnimKey}`, () => {
@@ -146,6 +222,15 @@ export class WeaponManager {
         this.scene.registry.set('weaponCooldown', { duration: bowCooldown, timestamp: Date.now() });
         player.play('player-bow');
         AudioManager.instance.playSFX('bow_attack');
+
+        // ── MASTERY: Wind Arrows — track player positions for wind trail ──
+        const levels = (this.scene.registry.get('upgradeLevels') || {}) as Record<string, number>;
+        if ((levels['wind_arrows'] || 0) > 0) {
+            const now = Date.now();
+            this.windTrailPositions.push({ x: player.x, y: player.y, time: now });
+            // Prune old positions
+            this.windTrailPositions = this.windTrailPositions.filter(p => now - p.time < 2000);
+        }
 
         this.scene.time.delayedCall(bowCooldown * 0.5, () => {
             const arrowDamageMultiplier = this.scene.registry.get('playerArrowDamageMultiplier') || 1;
@@ -194,6 +279,12 @@ export class WeaponManager {
         player.play('player-bow'); // Wizard uses bow anim for cast currently
         AudioManager.instance.playSFX('fireball_cast');
         this.scene.events.emit('fireball-cast');
+
+        // Reset supercharge counter on weapon switch away from lightning
+        const levels = (this.scene.registry.get('upgradeLevels') || {}) as Record<string, number>;
+        if ((levels['supercharge'] || 0) > 0) {
+            this.superchargeLightningCount = 0;
+        }
 
         this.scene.time.delayedCall(100, () => {
             const fireball = this.scene.fireballs.get(player.x, player.y) as Fireball;
@@ -253,11 +344,40 @@ export class WeaponManager {
         const ltTarget = this.scene.cameras.main.getWorldPoint(pointer.x, pointer.y);
 
         this.scene.time.delayedCall(100, () => {
+            const levels = (this.scene.registry.get('upgradeLevels') || {}) as Record<string, number>;
+            const convergenceActive = (levels['elemental_convergence'] || 0) > 0 && Date.now() < this.scene.abilityManager.cascadeActiveUntil;
             const cascadeBonus = Date.now() < this.scene.abilityManager.cascadeActiveUntil ? 1.5 + ((this.scene.registry.get('upgradeLevels') || {})['cascade_damage'] || 0) * 0.15 : 1;
             const baseDamage = this.scene.stats.damage * GAME_CONFIG.WEAPONS.LIGHTNING.damageMult * (this.scene.registry.get('lightningDamageMulti') || 1) * cascadeBonus;
+            let bounces = this.scene.registry.get('lightningBounces') || GAME_CONFIG.WEAPONS.LIGHTNING.bounces;
+
+            // ── MASTERY: Elementær Konvergens — +3 bounces during Cascade ──
+            if (convergenceActive) {
+                bounces += 3;
+            }
+
+            // ── MASTERY: Supercharge — after 5 casts, supercharged bolt ──
+            const superchargeLvl = levels['supercharge'] || 0;
+            let isSupercharged = false;
+            if (superchargeLvl > 0) {
+                this.superchargeLightningCount++;
+                if (this.superchargeLightningCount >= 6) { // 6th cast is supercharged (after 5)
+                    this.superchargeLightningCount = 0;
+                    isSupercharged = true;
+                }
+            }
+
+            const finalDamage = isSupercharged ? baseDamage * 2 : baseDamage;
+            const finalBounces = isSupercharged ? bounces + 5 : bounces;
+
             const bolt = this.scene.lightningBolts.get(player.x, player.y) as LightningBolt;
             if (bolt) {
-                bolt.fire(player.x, player.y, ltTarget.x, ltTarget.y, baseDamage, this.scene.registry.get('lightningBounces') || GAME_CONFIG.WEAPONS.LIGHTNING.bounces, new Set(), angle);
+                if (isSupercharged) {
+                    bolt.setScale(3);
+                    bolt.setData('isSupercharged', true);
+                    this.scene.poolManager.getDamageText(player.x, player.y - 50, '⚡ SUPERCHARGED!', '#aaffff');
+                    this.scene.cameras.main.shake(200, 0.015);
+                }
+                bolt.fire(player.x, player.y, ltTarget.x, ltTarget.y, finalDamage, finalBounces, new Set(), angle);
             }
             AudioManager.instance.playSFX('lightning_cast');
             this.scene.events.emit('lightning-cast');
