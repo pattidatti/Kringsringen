@@ -9,25 +9,12 @@ export class PreloadScene extends Phaser.Scene {
     }
 
     preload() {
-        const { width, height } = this.scale;
-        const barW = 320;
-        const barH = 20;
-        const bx = width / 2 - barW / 2;
-        const by = height / 2 - barH / 2;
+        // Reset progress so React LoadingScreen starts fresh
+        this.registry.set('loadProgress', 0);
 
-        // Background box
-        const bg = this.add.graphics();
-        bg.fillStyle(0x1a1a2e);
-        bg.fillRect(bx - 4, by - 4, barW + 8, barH + 8);
-        bg.lineStyle(1, 0x334466);
-        bg.strokeRect(bx - 4, by - 4, barW + 8, barH + 8);
-
-        // Progress bar fill
-        const bar = this.add.graphics();
+        // Emit load progress to Phaser registry so the React loading screen can display it
         this.load.on('progress', (value: number) => {
-            bar.clear();
-            bar.fillStyle(0x4488cc);
-            bar.fillRect(bx, by, barW * value, barH);
+            this.registry.set('loadProgress', value);
         });
 
         // Error handler — log failed assets but continue loading
@@ -47,18 +34,12 @@ export class PreloadScene extends Phaser.Scene {
 
         this.load.on('complete', () => {
             console.log('[PreloadScene] All assets loaded successfully. Transitioning shortly...');
+            this.registry.set('loadProgress', 1);
             if (this._fallbackTimeout) {
                 clearTimeout(this._fallbackTimeout);
                 this._fallbackTimeout = null;
             }
         });
-
-        // Label
-        this.add.text(width / 2, by - 28, 'Laster nivå...', {
-            fontSize: '16px',
-            color: '#8899cc',
-            fontFamily: '"Cinzel", Georgia, serif'
-        }).setOrigin(0.5);
 
         console.log('[PreloadScene] Preload starting for assets...');
         loadAssets(this);

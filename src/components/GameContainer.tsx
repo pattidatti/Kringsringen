@@ -18,7 +18,8 @@ import { AchievementToastQueue } from './ui/AchievementPopup';
 import type { AchievementDef } from '../config/achievements';
 import { SaveManager } from '../game/SaveManager';
 
-import { setGameInstance } from '../hooks/useGameRegistry';
+import { setGameInstance, useGameRegistry } from '../hooks/useGameRegistry';
+import { LoadingScreen } from './ui/LoadingScreen';
 import type { NetworkConfig } from '../App';
 import type { IMainScene } from '../game/IMainScene';
 import type { ClassId } from '../config/classes';
@@ -67,6 +68,9 @@ export const GameContainer: React.FC<GameContainerProps> = React.memo(({ network
     const isLoadingLevelRef = useRef(isLoadingLevel);
     const readyReasonRef = useRef(readyReason);
     const isExitingRef = useRef(false);
+
+    // Asset load progress from PreloadScene (0–1), used by LoadingScreen
+    const loadProgress = useGameRegistry<number>('loadProgress', 0);
 
     // Victory / Ascension state
     const [showVictory, setShowVictory] = useState(false);
@@ -802,20 +806,11 @@ export const GameContainer: React.FC<GameContainerProps> = React.memo(({ network
             <BossHUD />
             <UnifiedBuffDisplay />
 
-            {isLoadingLevel && (
-                <div className="absolute inset-0 z-[100] bg-black/80 flex items-center justify-center pointer-events-auto backdrop-blur-sm">
-                    <div className="flex flex-col items-center gap-4">
-                        <div className="text-amber-100 font-cinzel text-3xl animate-pulse tracking-widest uppercase">
-                            Laster Verden...
-                        </div>
-                        {networkConfig && (
-                            <div className="text-amber-500/70 font-crimson text-xl">
-                                {'['} {syncState.loaded} / {syncState.expected} {']'} Klare
-                            </div>
-                        )}
-                    </div>
-                </div>
-            )}
+            <LoadingScreen
+                visible={isLoadingLevel}
+                progress={loadProgress > 0 ? loadProgress : undefined}
+                networkStatus={networkConfig ? { loaded: syncState.loaded, expected: syncState.expected } : undefined}
+            />
 
             <BossSplashScreen />
             <GameOverOverlay />
