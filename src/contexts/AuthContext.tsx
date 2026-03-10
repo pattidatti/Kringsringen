@@ -2,7 +2,8 @@ import { createContext, useContext, useState, useEffect, type ReactNode } from '
 import { getApps, getApp, initializeApp } from 'firebase/app';
 import {
   getAuth,
-  signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   GoogleAuthProvider,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
@@ -72,50 +73,58 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   // Subscribe to auth state changes
   useEffect(() => {
-    try {
-      const authInstance = getAuthInstance();
-      const unsubscribe = onAuthStateChanged(
-        authInstance,
-        (user) => {
-          setUser(user);
-          setLoading(false);
-          setError(null);
-        },
-        (err) => {
-          console.error('[AuthContext] Auth state change error:', err);
-          setError('Autentiseringsfeil. Vennligst prøv igjen.');
-          setLoading(false);
-        }
-      );
+    let unsubscribe: () => void = () => {};
 
-      return unsubscribe;
-    } catch (err) {
-      console.error('[AuthContext] Failed to initialize auth:', err);
-      setError('Kunne ikke initialisere autentisering.');
-      setLoading(false);
-      return () => {};
-    }
+    const initAuth = async () => {
+      try {
+        const authInstance = getAuthInstance();
+
+        // Handle redirect result from signInWithRedirect flow
+        try {
+          await getRedirectResult(authInstance);
+          // If redirect was successful, onAuthStateChanged will fire with the user.
+          // If there was no pending redirect, this resolves null silently.
+        } catch (redirectErr: any) {
+          console.error('[AuthContext] Redirect result error:', redirectErr);
+          setError('Innlogging feilet etter omdirigering. Prøv igjen.');
+          setLoading(false);
+          return;
+        }
+
+        unsubscribe = onAuthStateChanged(
+          authInstance,
+          (user) => {
+            setUser(user);
+            setLoading(false);
+            setError(null);
+          },
+          (err) => {
+            console.error('[AuthContext] Auth state change error:', err);
+            setError('Autentiseringsfeil. Vennligst prøv igjen.');
+            setLoading(false);
+          }
+        );
+      } catch (err) {
+        console.error('[AuthContext] Failed to initialize auth:', err);
+        setError('Kunne ikke initialisere autentisering.');
+        setLoading(false);
+      }
+    };
+
+    initAuth();
+    return () => unsubscribe();
   }, []);
 
   const signIn = async () => {
     setError(null);
-    setLoading(true);
     try {
       const authInstance = getAuthInstance();
       const provider = new GoogleAuthProvider();
-      await signInWithPopup(authInstance, provider);
-      // User state will be updated by onAuthStateChanged listener
+      await signInWithRedirect(authInstance, provider);
+      // Page navigates away — no code runs after this point
     } catch (err: any) {
-      console.error('[AuthContext] Sign-in failed:', err);
-      if (err.code === 'auth/popup-closed-by-user') {
-        setError('Innlogging avbrutt.');
-      } else if (err.code === 'auth/network-request-failed') {
-        setError('Nettverksfeil. Sjekk internettforbindelsen din.');
-      } else {
-        setError('Kunne ikke logge inn. Prøv igjen.');
-      }
-    } finally {
-      setLoading(false);
+      console.error('[AuthContext] Sign-in redirect failed:', err);
+      setError('Kunne ikke starte innlogging. Prøv igjen.');
     }
   };
 
