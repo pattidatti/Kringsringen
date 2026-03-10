@@ -111,10 +111,14 @@ export class AmbientParticleManager {
     public updateQuality(quality: any) {
         const multiplier = quality.particleMultiplier;
 
+        if (multiplier === 0) {
+            for (const emitter of this.emitters) emitter.stop();
+            return;
+        }
+
         for (const emitter of this.emitters) {
-            // Map original frequency based on current multiplier
-            // Using a heuristic: if freq was 500 at 1.0, it should be 500/multiplier
-            // We'll use a conservative update since we don't store original fancies
+            if (!emitter.emitting) emitter.start();
+
             const tex = emitter.texture.key;
             let baseFreq = 500;
             let baseQty = 1;

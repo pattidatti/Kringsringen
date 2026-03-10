@@ -22,6 +22,7 @@ export interface EnemyConfig {
     attackRange?: number;
     attackGlowColor?: number;
     tint?: number;
+    feetY?: number; // Pixel from top to feet in the 100×100 frame (default: 82)
 }
 
 export const ENEMY_TYPES: Record<string, EnemyConfig> = {
@@ -63,7 +64,8 @@ export const ENEMY_TYPES: Record<string, EnemyConfig> = {
         scale: 1.5,
         bodySize: { width: 32, height: 24 }, // Adjusted for 100x100 frame content
         knockbackResistance: 0.2,
-        attackDamageFrame: 5 // 12-frame animation (row 2), damage at ~40%
+        attackDamageFrame: 5, // 12-frame animation (row 2), damage at ~40%
+        feetY: 75
     },
     skeleton: {
         id: 'skeleton',

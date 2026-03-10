@@ -126,7 +126,8 @@ const KRIEGER: ClassConfig = {
             icon: 'item_swords_crossed',
             isExclusive: true,
             chapterLabels: {
-                ability: 'Virvelvind'
+                ability: 'Virvelvind',
+                synergy: 'Stormens Mestring'
             }
         },
         {
@@ -136,7 +137,8 @@ const KRIEGER: ClassConfig = {
             isExclusive: true,
             chapterLabels: {
                 foundation: 'Rustning',
-                combat_style: 'Forsvarsteknikk'
+                combat_style: 'Forsvarsteknikk',
+                synergy: 'Festningens Kraft'
             }
         },
         {
@@ -146,7 +148,8 @@ const KRIEGER: ClassConfig = {
             isExclusive: true,
             chapterLabels: {
                 ability: 'Kjettingkrok',
-                combat_style: 'Lenketeknikk'
+                combat_style: 'Lenketeknikk',
+                synergy: 'Krokens Magi'
             }
         },
         {
@@ -174,6 +177,11 @@ const KRIEGER: ClassConfig = {
         // KROK
         'grapple_cooldown', 'grapple_radius', 'grapple_damage',
         'grapple_stun', 'grapple_lifesteal', 'grapple_chain',
+        // MASTERY
+        'destroyer_blade', 'blood_blade', 'mirror_blade',
+        'eternal_storm', 'splinter_storm',
+        'thorn_fortress', 'gravity_wall',
+        'lava_chain', 'soul_grapple',
     ],
 };
 
@@ -219,7 +227,8 @@ const ARCHER: ClassConfig = {
             icon: 'item_crossbow',
             isExclusive: true,
             chapterLabels: {
-                ability: 'Fantombyge'
+                ability: 'Fantombyge',
+                synergy: 'Bygenes Mestring'
             }
         },
         {
@@ -229,7 +238,8 @@ const ARCHER: ClassConfig = {
             isExclusive: true,
             chapterLabels: {
                 ability: 'Hopp og Byge',
-                combat_style: 'Akrobatikk'
+                combat_style: 'Akrobatikk',
+                synergy: 'Sprangets Mestring'
             }
         },
         {
@@ -239,7 +249,8 @@ const ARCHER: ClassConfig = {
             isExclusive: true,
             chapterLabels: {
                 ability: 'Skyggemannekeng',
-                combat_style: 'Lureri'
+                combat_style: 'Lureri',
+                synergy: 'Skyggens Mestring'
             }
         },
         {
@@ -280,6 +291,11 @@ const ARCHER: ClassConfig = {
         'decoy_duration', 'decoy_invis', 'decoy_cooldown', 'decoy_explode', 'decoy_mimic',
         // SMIDIGHET
         'luftmobilitet', 'aerial_shot', 'shadow_step', 'kite_mastery',
+        // MASTERY
+        'solar_curse', 'wind_arrows', 'splinter_arrow',
+        'fate_volley', 'hail_storm',
+        'shadow_vault', 'double_vault',
+        'doppelganger', 'trap_network',
     ],
 };
 
@@ -313,7 +329,8 @@ const WIZARD: ClassConfig = {
             icon: 'item_magic_staff',
             isExclusive: true,
             chapterLabels: {
-                uncategorized: 'Ildmagi'
+                uncategorized: 'Ildmagi',
+                synergy: 'Ildens Mestring'
             }
         },
         {
@@ -322,7 +339,8 @@ const WIZARD: ClassConfig = {
             icon: 'item_frost_orb',
             isExclusive: true,
             chapterLabels: {
-                uncategorized: 'Frostmagi'
+                uncategorized: 'Frostmagi',
+                synergy: 'Frostens Mestring'
             }
         },
         {
@@ -331,16 +349,26 @@ const WIZARD: ClassConfig = {
             icon: 'item_lightning_staff',
             isExclusive: true,
             chapterLabels: {
-                uncategorized: 'Tordenmagi'
+                uncategorized: 'Tordenmagi',
+                synergy: 'Tordenens Mestring'
             }
         },
         {
-            id: 'wizard_evner',
-            label: 'EVNER',
+            id: 'wizard_kaskade',
+            label: 'KASKADE',
             icon: 'item_magic_staff',
             isExclusive: true,
             chapterLabels: {
                 ability: 'Kaskade',
+                synergy: 'Kaskade-Mestring'
+            }
+        },
+        {
+            id: 'wizard_evner',
+            label: 'ARKAN',
+            icon: 'item_magic_staff',
+            isExclusive: true,
+            chapterLabels: {
                 combat_style: 'Arkan Kunnskap'
             }
         },
@@ -380,6 +408,11 @@ const WIZARD: ClassConfig = {
         'spell_echo', 'overload', 'arcane_insight', 'mana_shield',
         // SYNERGI
         'thermal_shock', 'frozen_lightning', 'blaze_storm', 'absolute_zero', 'magic_soul_link',
+        // MASTERY
+        'solar_flare', 'unstable_core', 'chain_omega',
+        'ice_prison', 'frost_domain',
+        'thunder_storm', 'supercharge',
+        'dimension_rift', 'elemental_convergence',
     ],
 };
 
@@ -411,28 +444,28 @@ const SKALD: ClassConfig = {
             label: 'HARPE',
             icon: 'item_harp',
             isExclusive: true,
-            chapterLabels: { foundation: 'Harpe' }
+            chapterLabels: { foundation: 'Harpe', synergy: 'Harpens Mestring' }
         },
         {
             id: 'skald_fiolin',
             label: 'FIOLIN',
             icon: 'item_lute',
             isExclusive: true,
-            chapterLabels: { foundation: 'Stridssang', combat_style: 'Resonans', ability: 'Lisens' }
+            chapterLabels: { foundation: 'Stridssang', combat_style: 'Resonans', ability: 'Lisens', synergy: 'Stridssangens Mestring' }
         },
         {
             id: 'skald_horn',
             label: 'HORN',
             icon: 'item_moon_crescent',
             isExclusive: true,
-            chapterLabels: { foundation: 'Inspirasjon', ability: 'Horn' }
+            chapterLabels: { foundation: 'Inspirasjon', ability: 'Horn', synergy: 'Hornets Mestring' }
         },
         {
             id: 'skald_kvad',
             label: 'PANFLØYTE',
             icon: 'item_panflute',
             isExclusive: true,
-            chapterLabels: { ability: 'Panfløyte', combat_style: 'Panfløyte-Synergier' }
+            chapterLabels: { ability: 'Panfløyte', combat_style: 'Panfløyte-Synergier', synergy: 'Panfløytens Mestring' }
         },
         {
             id: 'skald_vers',
@@ -462,6 +495,11 @@ const SKALD: ClassConfig = {
         'kvad_radius', 'blodkvad', 'krigsbarde', 'ekko', 'anthem_of_fury',
         // VERS
         'vers_damage', 'resonans_shield', 'crescendo',
+        // MASTERY
+        'harmonic_echo', 'resonance_frequency',
+        'war_melody', 'ballad_curse',
+        'valkyrie_hymn', 'war_horn_echo',
+        'ragnarok_requiem', 'eternal_verse',
     ],
 };
 

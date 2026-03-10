@@ -109,6 +109,10 @@ export class SpriteShadow {
         this.shadow.setAlpha(alpha);
     }
 
+    public setYOffset(offset: number): void {
+        this.yOffset = offset;
+    }
+
     public setVisible(v: boolean): void {
         this.shadow.setVisible(v);
     }

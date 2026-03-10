@@ -145,17 +145,27 @@ export class WeatherManager {
 
         // Update rain if active
         if (this.rainEmitter) {
-            this.rainEmitter.setQuantity(Math.max(1, Math.floor(4 * multiplier)));
-            this.rainEmitter.setFrequency(Math.max(1, Math.floor(1 / multiplier)));
+            if (multiplier === 0) {
+                this.rainEmitter.stop();
+            } else {
+                if (!this.rainEmitter.emitting) this.rainEmitter.start();
+                this.rainEmitter.setQuantity(Math.max(1, Math.floor(4 * multiplier)));
+                this.rainEmitter.setFrequency(Math.max(1, Math.floor(1 / multiplier)));
+            }
         }
 
         // Update fog if active
         if (this.fogParticles) {
-            this.fogParticles.setFrequency(Math.max(1, Math.floor(120 / multiplier)));
-            if (quality.lightingEnabled && this.scene.lights.active) {
-                this.fogParticles.setPipeline('Light2D');
+            if (multiplier === 0) {
+                this.fogParticles.stop();
             } else {
-                this.fogParticles.resetPipeline();
+                if (!this.fogParticles.emitting) this.fogParticles.start();
+                this.fogParticles.setFrequency(Math.max(1, Math.floor(120 / multiplier)));
+                if (quality.lightingEnabled && this.scene.lights.active) {
+                    this.fogParticles.setPipeline('Light2D');
+                } else {
+                    this.fogParticles.resetPipeline();
+                }
             }
         }
     }

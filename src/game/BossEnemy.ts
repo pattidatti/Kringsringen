@@ -50,6 +50,12 @@ export class BossEnemy extends Enemy {
         this.scene.registry.set('bossPhase', 1);
         this.scene.registry.set('isBossActive', true);
 
+        // Update shadow offset after boss scale override
+        const feetY = 82;
+        if (this.shadow) {
+            this.shadow.setYOffset((feetY - this.height * 0.5) * this.scaleY);
+        }
+
         // Apply boss-specific tint if defined
         if (config.tint !== undefined) {
             this.setTint(config.tint);

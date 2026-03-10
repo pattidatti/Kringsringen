@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface UpdateNotificationProps {
@@ -8,6 +8,15 @@ interface UpdateNotificationProps {
 
 export const UpdateNotification: React.FC<UpdateNotificationProps> = ({ needRefresh, onUpdate }) => {
     const [dismissed, setDismissed] = useState(false);
+    const [updating, setUpdating] = useState(false);
+
+    const handleUpdate = useCallback(() => {
+        if (updating) return;
+        setUpdating(true);
+        onUpdate();
+        // Fallback: force reload if SW controlling event doesn't fire
+        setTimeout(() => { window.location.reload(); }, 3000);
+    }, [updating, onUpdate]);
 
     if (!needRefresh || dismissed) return null;
 
@@ -25,19 +34,33 @@ export const UpdateNotification: React.FC<UpdateNotificationProps> = ({ needRefr
                         Ny oppdatering!
                     </span>
                     <button
-                        onClick={onUpdate}
-                        className="mt-1 px-3 py-1 text-xs font-bold uppercase tracking-wider text-black bg-gradient-to-b from-amber-300 to-amber-500 rounded border border-amber-600/50 hover:from-amber-200 hover:to-amber-400 transition-colors cursor-pointer"
+                        onClick={handleUpdate}
+                        disabled={updating}
+                        className={`mt-1 px-3 py-1 text-xs font-bold uppercase tracking-wider rounded border border-amber-600/50 transition-colors flex items-center justify-center gap-2 ${
+                            updating
+                                ? 'text-amber-900/70 bg-gradient-to-b from-amber-200/60 to-amber-400/60 cursor-not-allowed'
+                                : 'text-black bg-gradient-to-b from-amber-300 to-amber-500 hover:from-amber-200 hover:to-amber-400 cursor-pointer'
+                        }`}
                     >
-                        Oppdater nå
+                        {updating && (
+                            <motion.div
+                                className="w-3 h-3 border-2 border-amber-900/20 border-t-amber-700 rounded-full"
+                                animate={{ rotate: 360 }}
+                                transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                            />
+                        )}
+                        {updating ? 'Oppdaterer...' : 'Oppdater nå'}
                     </button>
                 </div>
-                <button
-                    onClick={() => setDismissed(true)}
-                    className="text-amber-400/60 hover:text-amber-200 text-lg leading-none cursor-pointer"
-                    aria-label="Lukk"
-                >
-                    ✕
-                </button>
+                {!updating && (
+                    <button
+                        onClick={() => setDismissed(true)}
+                        className="text-amber-400/60 hover:text-amber-200 text-lg leading-none cursor-pointer"
+                        aria-label="Lukk"
+                    >
+                        ✕
+                    </button>
+                )}
             </motion.div>
         </AnimatePresence>
     );

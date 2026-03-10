@@ -24,6 +24,7 @@ export class ObjectPoolManager {
     private enemyProjectilePool: EnemyProjectile[] = [];
     private activeDamageTexts: { text: Phaser.GameObjects.Text, startTime: number, x: number, y: number, driftX: number }[] = [];
     private activeEffects: Phaser.GameObjects.Sprite[] = [];
+    private activeBloodCount = 0;
 
     // Config
     private readonly MAX_TEXT_POOL = 100;
@@ -157,6 +158,10 @@ export class ObjectPoolManager {
         // Off-screen culling
         if (!PerformanceManager.isInView(this.scene.cameras.main, x, y)) return;
 
+        // Blood VFX cap from PerformanceManager
+        const pm = (this.scene as any).performanceManager as PerformanceManager | undefined;
+        if (this.activeBloodCount >= (pm?.maxBloodEffects ?? 50)) return;
+
         let blood: Phaser.GameObjects.Sprite;
         const bloodKey = `blood_${Phaser.Math.Between(1, 5)}`;
 
@@ -176,6 +181,7 @@ export class ObjectPoolManager {
 
         blood.play(bloodKey);
         this.activeEffects.push(blood);
+        this.activeBloodCount++;
     }
 
     private returnEffect(sprite: Phaser.GameObjects.Sprite) {
@@ -190,6 +196,7 @@ export class ObjectPoolManager {
     }
 
     private returnBlood(blood: Phaser.GameObjects.Sprite) {
+        this.activeBloodCount = Math.max(0, this.activeBloodCount - 1);
         if (this.bloodPool.length < this.MAX_BLOOD_POOL) {
             blood.setActive(false);
             blood.setVisible(false);

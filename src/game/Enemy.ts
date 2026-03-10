@@ -35,7 +35,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     private poisonTimer: Phaser.Time.TimerEvent | null = null;
     private isPoisoned: boolean = false;
     protected originalSpeed: number = 100;
-    private shadow: SpriteShadow | null = null;
+    protected shadow: SpriteShadow | null = null;
     public id: string = "";
     private attackLight: Phaser.GameObjects.Light | null = null;
     public isStunned: boolean = false;
@@ -105,7 +105,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         scene.physics.add.existing(this);
         this.positionHistory = new HistoryBuffer(120); // 2 seconds at 60fps
         const shadowMode = (scene as any).quality?.shadowMode ?? 'blob';
-        this.shadow = new SpriteShadow(scene, this, shadowMode, this.height * this.scaleY * 0.5);
+        this.shadow = new SpriteShadow(scene, this, shadowMode, 0);
 
         // If called with new(), we should initialize. If pooled, reset() will be called.
         // For now, we assume this might be called directly or via pool.
@@ -126,7 +126,6 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         this.setTint(0xffffff);
         if (this.shadow) {
             this.shadow.setVisible(true);
-            this.shadow.setPosition(x, y + (this.height * this.scaleY * 0.5));
         }
         this.clearTint();
         this.postFX.clear();
@@ -210,6 +209,13 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         // Better: Define one-time listeners in constructor, but their logic needs to check current state.
 
         // Registry updates or other reset logic
+
+        // Update shadow offset based on actual feet position after scale is set
+        const feetY = this.config.feetY ?? 82;
+        if (this.shadow) {
+            this.shadow.setYOffset((feetY - this.height * 0.5) * this.scaleY);
+            this.shadow.setPosition(x, y + (feetY - this.height * 0.5) * this.scaleY);
+        }
 
         // Visual Refinement: Data-driven permanent tint
         if (this.config.tint !== undefined) {

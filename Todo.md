@@ -1,5 +1,11 @@
+# 10 mars 
+- [x] Vi har akkurat implementert mange high level upgrades til de ulike klassene; men ser ikke ut som alle vises i boken. De skal jo være knytt til den abilitien de oppgraderer. På wizard må det også være en egen kategori bare for kaskade, og upgrades relatert til denne. 
+- [x] Når jeg kommer til level 4, så begynner spillet å lagge en del på den crappy laptopen min, tror ikke den dynamiske performance, fps-mål, opplegget fungerer helt optimalt. Må vel være mer vi kan hente ut fra et slikt system for å opprettholde høy fps? 
+- [x] Oppdater nå knappen virker uresponsiv, virker ikke på brukeren som om den har noen effekt og faktisk laster inn den nye oppdateringen. 
+- [x] Beskrivelse på oppgraderingene er noen ganger missvisende. F.eks står det på Lås opp: Jernmur, at den er (Opplåst). Dette stemmer jo ikke før vi har låst opp jernmur. Slik er det ved svært mange av beskrivelsene som står i parantes. 
+
 # Paragon-update
-- [ ] Lage karakternavn når man oppretter karakter. Tilbakeknapp når man velger klasse. 
+- [x] Lage karakternavn når man oppretter karakter. Tilbakeknapp når man velger klasse. 
 - [x] Flash på hele skjermen med abilit 2 til Skald er litt voldsom. 
 - [x] Vi må ha mye lavere volum på enemy-hit (punch)
 

@@ -229,7 +229,7 @@ export class MainScene extends Phaser.Scene implements IMainScene {
             this.collisions = new CollisionManager(this);
             this.performanceManager = new PerformanceManager(this);
 
-            // Listen for performance step changes to downgrade shadow modes
+            // Listen for performance step changes to downgrade visuals
             this.events.on('perf-step-change', (_step: number) => {
                 const override = this.performanceManager.shadowModeOverride;
                 if (override) {
@@ -246,6 +246,18 @@ export class MainScene extends Phaser.Scene implements IMainScene {
                         (this.playerShadow as any).setMode(override);
                     }
                 }
+
+                // Update weather particles (rain, fog)
+                const wMult = this.performanceManager.weatherParticleMultiplier;
+                const userMult = this.quality.particleMultiplier;
+                this.weather.updateQuality({
+                    particleMultiplier: userMult * wMult,
+                    lightingEnabled: this.quality.lightingEnabled
+                });
+
+                // Update ambient particles (fireflies, leaves, embers)
+                const aMult = this.performanceManager.ambientParticleMultiplier;
+                this.ambient.updateQuality({ particleMultiplier: userMult * aMult });
             });
 
             console.log('[MainScene] All managers instantiated.');
@@ -293,7 +305,9 @@ export class MainScene extends Phaser.Scene implements IMainScene {
             }
 
             this.data.set('player', this.player);
-            this.playerShadow = new SpriteShadow(this, this.player, this.quality.shadowMode, this.player.height * this.player.scaleY * 0.5);
+            const playerFeetY = 82; // Pixel from top to feet in the 100×100 frame
+            this.playerShadow = new SpriteShadow(this, this.player, this.quality.shadowMode,
+                (playerFeetY - this.player.height * 0.5) * this.player.scaleY);
             this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
             console.log('[MainScene] Camera following player.');
 

@@ -84,6 +84,7 @@ const CATEGORY_THEMES: Record<string, { primary: string; secondary: string; bord
     'wizard_ild': { primary: '#7c2d12', secondary: '#ea580c', border: 'border-orange-900/30', bg: 'bg-orange-200/30', text: 'text-orange-950' },
     'wizard_frost': { primary: '#1e3a5f', secondary: '#3b82f6', border: 'border-blue-900/30', bg: 'bg-blue-200/30', text: 'text-blue-950' },
     'wizard_torden': { primary: '#4a1d96', secondary: '#7c3aed', border: 'border-violet-900/30', bg: 'bg-violet-200/30', text: 'text-violet-950' },
+    'wizard_kaskade': { primary: '#4c1d95', secondary: '#8e44ad', border: 'border-purple-900/30', bg: 'bg-purple-200/30', text: 'text-purple-950' },
     'wizard_evner': { primary: '#4c1d95', secondary: '#8e44ad', border: 'border-purple-900/30', bg: 'bg-purple-200/30', text: 'text-purple-950' },
     'wizard_synergi': { primary: '#4c1d95', secondary: '#8e44ad', border: 'border-purple-900/30', bg: 'bg-purple-200/30', text: 'text-purple-950' },
     // Legacy wizard ids
@@ -661,7 +662,7 @@ export const FantasyBook: React.FC<FantasyBookProps> = React.memo(({
                                                     ${!reqMet ? 'text-slate-600' : `opacity-90`}
                                                 `}
                                                                 style={reqMet ? { color: chapterThemeColor, filter: 'brightness(0.5)' } : {}}>
-                                                                {item.summary} ({item.value.prefix || ''}{item.value.getValue(lvl + 1)}{item.value.suffix || ''})
+                                                                {item.summary} ({item.value.prefix || ''}{item.value.getValue(lvl)}{item.value.suffix || ''})
                                                             </div>
                                                             {!reqMet && (
                                                                 <div className="text-sm text-red-800 font-bold mt-3 p-2 bg-red-100/60 rounded border border-red-900/20 flex items-center gap-2">

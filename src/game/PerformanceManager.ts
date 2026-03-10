@@ -32,8 +32,8 @@ export class PerformanceManager {
     private consecutiveDown = 0;
     private consecutiveUp = 0;
 
-    private readonly SAMPLE_INTERVAL = 1500;
-    private readonly SAMPLE_COUNT = 5;
+    private readonly SAMPLE_INTERVAL = 1000;
+    private readonly SAMPLE_COUNT = 3;
     private readonly REQUIRED_CONSECUTIVE = 2;
 
     private static readonly THRESHOLDS: StepThreshold[] = [
@@ -158,8 +158,9 @@ export class PerformanceManager {
         return this.currentStep < 3;
     }
 
-    /** Spark count multiplier for death/sword sparks: 1.0 / 0.5 */
+    /** Spark count multiplier for death/sword sparks: 1.0 / 0.5 / 0 */
     get sparkMultiplier(): number {
+        if (this.currentStep >= 7) return 0;
         if (this.currentStep >= 5) return 0.5;
         return 1.0;
     }
@@ -180,9 +181,11 @@ export class PerformanceManager {
         return null; // already blob, can't go lower
     }
 
-    /** Max active damage texts. 100 normally, 15 at step >= 7. */
+    /** Max active damage texts. Gradually reduced at higher steps. */
     get maxDamageTexts(): number {
-        if (this.currentStep >= 7) return 15;
+        if (this.currentStep >= 7) return 10;
+        if (this.currentStep >= 5) return 30;
+        if (this.currentStep >= 3) return 60;
         return 100;
     }
 
@@ -199,6 +202,31 @@ export class PerformanceManager {
         const userPostFX = getQualityConfig(this.userQuality).postFXEnabled;
         if (!userPostFX) return false;
         return this.currentStep < 5;
+    }
+
+    /** Weather particle (rain, fog) multiplier. Aggressively reduced at higher steps. */
+    get weatherParticleMultiplier(): number {
+        if (this.currentStep >= 7) return 0;
+        if (this.currentStep >= 5) return 0.15;
+        if (this.currentStep >= 3) return 0.35;
+        if (this.currentStep >= 1) return 0.6;
+        return 1.0;
+    }
+
+    /** Ambient particle (fireflies, leaves, embers) multiplier. */
+    get ambientParticleMultiplier(): number {
+        if (this.currentStep >= 7) return 0;
+        if (this.currentStep >= 5) return 0.2;
+        if (this.currentStep >= 3) return 0.4;
+        return 1.0;
+    }
+
+    /** Max concurrent blood VFX sprites. */
+    get maxBloodEffects(): number {
+        if (this.currentStep >= 7) return 3;
+        if (this.currentStep >= 5) return 10;
+        if (this.currentStep >= 3) return 20;
+        return 50;
     }
 
     // ─── Always-on Utilities ────────────────────────────────────────────────
