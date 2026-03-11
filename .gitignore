@@ -16,6 +16,9 @@ dist-ssr
 .env.local
 .env.*.local
 
+# Build artifacts
+public/version.json
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

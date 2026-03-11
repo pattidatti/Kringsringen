@@ -44,7 +44,7 @@ export const PvpRoundSummary: React.FC<PvpRoundSummaryProps> = ({ onReady, isWai
             >
                 <FantasyPanel className="w-[420px] p-6 flex flex-col items-center gap-4">
                     {/* Round number */}
-                    <p className="text-amber-100/50 text-sm">Runde {pvpRound} avsluttet</p>
+                    <p className="text-amber-400 text-sm">Runde {pvpRound} avsluttet</p>
 
                     {/* Winner */}
                     <h2 className="font-fantasy text-3xl"
@@ -58,7 +58,7 @@ export const PvpRoundSummary: React.FC<PvpRoundSummaryProps> = ({ onReady, isWai
                     {/* Score */}
                     <div className="flex items-center gap-3 text-2xl font-fantasy">
                         <span className="text-amber-200">{pvpScore[0]}</span>
-                        <span className="text-amber-100/30">-</span>
+                        <span className="text-amber-600">-</span>
                         <span className="text-amber-200">{pvpScore[1]}</span>
                     </div>
 
@@ -69,20 +69,20 @@ export const PvpRoundSummary: React.FC<PvpRoundSummaryProps> = ({ onReady, isWai
                             <div className="text-center text-amber-200 font-medium truncate">{nickname}</div>
                             <div className="text-center text-amber-200 font-medium truncate">{pvpOpponentName}</div>
 
-                            <div className="text-amber-100/60">Skade gjort</div>
+                            <div className="text-amber-400">Skade gjort</div>
                             <div className="text-center text-amber-100">{Math.round(pvpRoundResult.playerDamageDealt)}</div>
                             <div className="text-center text-amber-100">{Math.round(pvpRoundResult.opponentDamageDealt)}</div>
 
-                            <div className="text-amber-100/60">HP igjen</div>
+                            <div className="text-amber-400">HP igjen</div>
                             <div className="text-center text-amber-100">{Math.max(0, Math.round(pvpRoundResult.playerHpRemaining))}</div>
                             <div className="text-center text-amber-100">{Math.max(0, Math.round(pvpRoundResult.opponentHpRemaining))}</div>
 
-                            <div className="text-amber-100/60">Gull</div>
+                            <div className="text-amber-400">Gull</div>
                             <div className="text-center text-yellow-400">+{pvpRoundResult.playerGold}</div>
                             <div className="text-center text-yellow-400">+{pvpRoundResult.opponentGold}</div>
                         </div>
 
-                        <div className="text-center text-amber-100/40 text-xs mt-2">
+                        <div className="text-center text-amber-500 text-xs mt-2">
                             Varighet: {durationStr} | {pvpRoundResult.reason === 'timeout' ? 'Tid ut' : 'Eliminasjon'}
                         </div>
                     </div>

@@ -33,7 +33,7 @@ export const PvpScoreHUD: React.FC = () => {
                             style={{ textShadow: '0 0 8px rgba(255,215,0,0.6)' }}>
                             {pvpScore[0]}
                         </span>
-                        <span className="text-amber-100/40 font-fantasy text-xl">-</span>
+                        <span className="text-amber-600 font-fantasy text-xl">-</span>
                         <span className="text-white font-fantasy text-3xl font-bold"
                             style={{ textShadow: '0 0 8px rgba(255,215,0,0.6)' }}>
                             {pvpScore[1]}
@@ -44,12 +44,12 @@ export const PvpScoreHUD: React.FC = () => {
 
                 {/* Round info + timer */}
                 <div className="flex items-center gap-3 mt-1">
-                    <span className="text-amber-100/50 text-xs">
+                    <span className="text-amber-400 text-xs">
                         Runde {pvpRound} av {pvpBestOf}
                     </span>
                     {pvpState === 'fighting' && (
                         <span className={`text-sm font-mono font-bold ${
-                            timerWarning ? 'text-red-400 animate-pulse' : 'text-amber-200/80'
+                            timerWarning ? 'text-red-400 animate-pulse' : 'text-amber-200'
                         }`}>
                             {timerStr}
                         </span>

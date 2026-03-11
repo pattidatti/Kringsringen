@@ -32,7 +32,6 @@ const BEST_OF_OPTIONS: (3 | 5 | 7 | 10)[] = [3, 5, 7, 10];
 export const PvpLobby: React.FC<PvpLobbyProps> = ({ isOpen, onClose, onStartPvp }) => {
     const [nickname, setNickname] = useState(localStorage.getItem('pvp_nickname') || '');
     const [selectedClass, setSelectedClass] = useState<ClassId>('krieger');
-    const [bestOf, setBestOf] = useState<3 | 5 | 7 | 10>(5);
     const [peer, setPeer] = useState<Peer | null>(null);
     const [isRegistered, setIsRegistered] = useState(false);
     const [players, setPlayers] = useState<Record<string, PvpPlayerEntry>>({});
@@ -43,6 +42,8 @@ export const PvpLobby: React.FC<PvpLobbyProps> = ({ isOpen, onClose, onStartPvp 
     const [pendingChallenge, setPendingChallenge] = useState<{ id: string; challenge: PvpChallenge } | null>(null);
     const [sentChallengeId, setSentChallengeId] = useState<string | null>(null);
     const [waitingForResponse, setWaitingForResponse] = useState(false);
+    const [challengeTarget, setChallengeTarget] = useState<{ peerId: string; name: string } | null>(null);
+    const [composerBestOf, setComposerBestOf] = useState<3 | 5 | 7 | 10>(3);
 
     const unsubPlayersRef = useRef<(() => void) | null>(null);
     const unsubChallengesRef = useRef<(() => void) | null>(null);
@@ -118,8 +119,19 @@ export const PvpLobby: React.FC<PvpLobbyProps> = ({ isOpen, onClose, onStartPvp 
         }
     };
 
-    const handleChallenge = async (targetPeerId: string, targetName: string) => {
-        if (!peer?.id || waitingForResponse) return;
+    function openChallengeComposer(targetPeerId: string, targetName: string) {
+        setComposerBestOf(3);
+        setChallengeTarget({ peerId: targetPeerId, name: targetName });
+    }
+
+    function handleCancelComposer() {
+        setChallengeTarget(null);
+    }
+
+    const handleSendChallenge = async () => {
+        if (!peer?.id || !challengeTarget) return;
+        const { peerId: targetPeerId, name: targetName } = challengeTarget;
+        setChallengeTarget(null);
         setWaitingForResponse(true);
         setError(null);
 
@@ -129,7 +141,7 @@ export const PvpLobby: React.FC<PvpLobbyProps> = ({ isOpen, onClose, onStartPvp 
                 nickname.trim(),
                 targetPeerId,
                 targetName,
-                bestOf
+                composerBestOf
             );
             setSentChallengeId(challengeId);
 
@@ -218,6 +230,7 @@ export const PvpLobby: React.FC<PvpLobbyProps> = ({ isOpen, onClose, onStartPvp 
         setWaitingForResponse(false);
         setSentChallengeId(null);
         setPendingChallenge(null);
+        setChallengeTarget(null);
         onClose();
     };
 
@@ -241,7 +254,7 @@ export const PvpLobby: React.FC<PvpLobbyProps> = ({ isOpen, onClose, onStartPvp 
                             PVP Arena
                         </h2>
                         {isRegistered && (
-                            <p className="text-amber-100/60 text-sm mt-1">
+                            <p className="text-amber-400 text-sm mt-1">
                                 Klikk på en spiller for å utfordre
                             </p>
                         )}
@@ -276,7 +289,7 @@ export const PvpLobby: React.FC<PvpLobbyProps> = ({ isOpen, onClose, onStartPvp 
                                                 className={`flex-1 px-3 py-2 rounded border text-sm transition-all ${
                                                     selectedClass === id
                                                         ? 'bg-amber-700/60 border-amber-500 text-amber-100'
-                                                        : 'bg-black/30 border-amber-800/30 text-amber-100/50 hover:border-amber-600/50'
+                                                        : 'bg-black/30 border-amber-800/30 text-amber-500 hover:border-amber-600/50'
                                                 }`}
                                             >
                                                 {label}
@@ -284,30 +297,10 @@ export const PvpLobby: React.FC<PvpLobbyProps> = ({ isOpen, onClose, onStartPvp 
                                         ))}
                                     </div>
                                     {CLASS_CONFIGS[selectedClass] && (
-                                        <p className="text-amber-100/40 text-xs mt-2">
+                                        <p className="text-amber-500 text-xs mt-2">
                                             {CLASS_CONFIGS[selectedClass].description || ''}
                                         </p>
                                     )}
-                                </div>
-
-                                {/* Best-of Selection */}
-                                <div>
-                                    <label className="text-amber-200 text-sm mb-2 block">Best of</label>
-                                    <div className="flex gap-2">
-                                        {BEST_OF_OPTIONS.map((n) => (
-                                            <button
-                                                key={n}
-                                                onClick={() => setBestOf(n)}
-                                                className={`flex-1 px-3 py-2 rounded border text-sm transition-all ${
-                                                    bestOf === n
-                                                        ? 'bg-amber-700/60 border-amber-500 text-amber-100'
-                                                        : 'bg-black/30 border-amber-800/30 text-amber-100/50 hover:border-amber-600/50'
-                                                }`}
-                                            >
-                                                {n}
-                                            </button>
-                                        ))}
-                                    </div>
                                 </div>
 
                                 {error && (
@@ -326,7 +319,7 @@ export const PvpLobby: React.FC<PvpLobbyProps> = ({ isOpen, onClose, onStartPvp 
                             /* Player List */
                             <div className="flex flex-col gap-2">
                                 {otherPlayers.length === 0 ? (
-                                    <div className="text-center py-8 text-amber-100/40">
+                                    <div className="text-center py-8 text-amber-400">
                                         <p className="text-lg mb-2">Ingen andre spillere i arenaen...</p>
                                         <p className="text-sm">Vent til noen utfordrer deg!</p>
                                     </div>
@@ -334,10 +327,10 @@ export const PvpLobby: React.FC<PvpLobbyProps> = ({ isOpen, onClose, onStartPvp 
                                     otherPlayers.map(([id, player]) => (
                                         <button
                                             key={id}
-                                            onClick={() => handleChallenge(id, player.name)}
-                                            disabled={waitingForResponse}
+                                            onClick={() => openChallengeComposer(id, player.name)}
+                                            disabled={waitingForResponse || !!challengeTarget}
                                             className={`w-full flex items-center justify-between p-3 rounded border transition-all ${
-                                                waitingForResponse
+                                                waitingForResponse || !!challengeTarget
                                                     ? 'bg-black/20 border-amber-800/20 cursor-not-allowed opacity-50'
                                                     : 'bg-black/30 border-amber-800/40 hover:bg-amber-900/30 hover:border-amber-500/60 cursor-pointer'
                                             }`}
@@ -346,11 +339,52 @@ export const PvpLobby: React.FC<PvpLobbyProps> = ({ isOpen, onClose, onStartPvp 
                                                 <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
                                                 <span className="text-amber-100 font-medium">{player.name}</span>
                                             </div>
-                                            <span className="text-amber-100/50 text-sm capitalize">
+                                            <span className="text-amber-400 text-sm capitalize">
                                                 {CLASS_OPTIONS.find(c => c.id === player.classId)?.label || player.classId}
                                             </span>
                                         </button>
                                     ))
+                                )}
+
+                                {challengeTarget && !waitingForResponse && (
+                                    <div className="mt-3 p-4 rounded border border-amber-600/50 bg-amber-900/20">
+                                        <p className="text-amber-200 text-sm font-medium text-center mb-3">
+                                            Du utfordrer{' '}
+                                            <span className="text-amber-300 font-bold">{challengeTarget.name}</span>
+                                        </p>
+                                        <div className="mb-3">
+                                            <label className="text-amber-400 text-xs mb-2 block text-center">Best of</label>
+                                            <div className="flex gap-2">
+                                                {BEST_OF_OPTIONS.map((n) => (
+                                                    <button
+                                                        key={n}
+                                                        onClick={() => setComposerBestOf(n)}
+                                                        className={`flex-1 px-3 py-2 rounded border text-sm transition-all ${
+                                                            composerBestOf === n
+                                                                ? 'bg-amber-700/60 border-amber-500 text-amber-100'
+                                                                : 'bg-black/30 border-amber-800/30 text-amber-500 hover:border-amber-600/50'
+                                                        }`}
+                                                    >
+                                                        {n}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <button
+                                                onClick={handleSendChallenge}
+                                                className="flex-1 px-3 py-2 rounded border border-amber-500 bg-amber-700/60 text-amber-100 text-sm hover:bg-amber-600/70 transition-all"
+                                            >
+                                                Send utfordring
+                                            </button>
+                                            <button
+                                                onClick={handleCancelComposer}
+                                                className="flex-1 px-3 py-2 rounded border border-amber-800/40 bg-black/30 text-amber-500 text-sm hover:border-amber-600/50 transition-all"
+                                            >
+                                                Avbryt
+                                            </button>
+                                        </div>
+                                    </div>
                                 )}
 
                                 {waitingForResponse && (
@@ -401,7 +435,7 @@ export const PvpLobby: React.FC<PvpLobbyProps> = ({ isOpen, onClose, onStartPvp 
                                     <span className="font-bold text-amber-300">{pendingChallenge.challenge.challengerName}</span>
                                     {' '}utfordrer deg til duell!
                                 </p>
-                                <p className="text-amber-100/60 text-sm">
+                                <p className="text-amber-400 text-sm">
                                     Best of {pendingChallenge.challenge.bestOf}
                                 </p>
                                 <div className="flex gap-3 w-full">

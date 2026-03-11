@@ -32,6 +32,18 @@
                 "status",
                 "createdAt"
             ]
+        },
+        "pvp": {
+            "players": {
+                ".read": true,
+                ".write": true,
+                ".indexOn": ["status"]
+            },
+            "challenges": {
+                ".read": true,
+                ".write": true,
+                ".indexOn": ["targetId"]
+            }
         }
     }
 }

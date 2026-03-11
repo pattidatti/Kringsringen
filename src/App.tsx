@@ -1,5 +1,5 @@
 
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { GameContainer } from './components/GameContainer'
 import LandingPage from './components/LandingPage'
 import FantasyDemo from './components/ui/FantasyDemo'
@@ -38,11 +38,14 @@ type AppScreen = 'landing' | 'login-gate' | 'character-select' | 'class-select' 
 /** Inner component with access to AuthContext */
 function AppContent() {
   const { user } = useAuth();
+  const registrationRef = useRef<ServiceWorkerRegistration | undefined>(undefined);
+  const [versionMismatch, setVersionMismatch] = useState(false);
   const {
     needRefresh: [needRefresh],
     updateServiceWorker,
   } = useRegisterSW({
     onRegisteredSW(_swUrl, registration) {
+      registrationRef.current = registration;
       if (registration) {
         // Poll for new SW every 60 minutes (long game sessions)
         setInterval(() => { registration.update(); }, 60 * 60 * 1000);
@@ -227,6 +230,23 @@ function AppContent() {
     setScreen('landing');
   }, [activeProfile]);
 
+  // Version check: fetch /version.json with no-cache to detect a new deploy
+  useEffect(() => {
+    if (import.meta.env.DEV) return;
+    const checkVersion = async () => {
+      try {
+        const res = await fetch('/version.json', { cache: 'no-store' });
+        if (!res.ok) return;
+        const data = await res.json() as { buildTime: number };
+        if (data.buildTime !== __APP_BUILD_TIME__) {
+          setVersionMismatch(true);
+          registrationRef.current?.update();
+        }
+      } catch { /* Network error — silently ignore */ }
+    };
+    checkVersion();
+  }, []);
+
   // Force sync on app blur/visibility change (before device switch)
   useEffect(() => {
     const handleVisibilityChange = () => {
@@ -246,6 +266,8 @@ function AppContent() {
             console.warn('[App] Blur sync failed:', err);
           });
         }
+      } else {
+        registrationRef.current?.update();
       }
     };
 
@@ -283,7 +305,7 @@ function AppContent() {
             onStartMP={handleStartMP}
             onPlay={handlePlay}
             onPvp={() => setScreen('pvp-lobby')}
-            needRefresh={needRefresh}
+            needRefresh={needRefresh || versionMismatch}
             onUpdate={() => updateServiceWorker(true)}
           />
           {showClassSelector && (

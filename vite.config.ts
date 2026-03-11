@@ -1,10 +1,28 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
+import { writeFileSync } from 'fs'
+import { resolve } from 'path'
+import type { Plugin } from 'vite'
+
+const buildTime = Date.now();
+
+function versionFilePlugin(): Plugin {
+  return {
+    name: 'version-file',
+    buildStart() {
+      writeFileSync(resolve('public/version.json'), JSON.stringify({ buildTime }));
+    }
+  };
+}
 
 // https://vite.dev/config/
 export default defineConfig({
+  define: {
+    __APP_BUILD_TIME__: JSON.stringify(buildTime),
+  },
   plugins: [
+    versionFilePlugin(),
     react(),
     VitePWA({
       registerType: 'prompt',
@@ -14,6 +32,10 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,png,jpg,jpeg,gif,svg,ogg}', 'assets/audio/sfx/*.wav'],
         maximumFileSizeToCacheInBytes: 20 * 1024 * 1024, // 20 MB
         runtimeCaching: [
+          {
+            urlPattern: /\/version\.json$/,
+            handler: 'NetworkOnly',  // Never cache version.json in SW
+          },
           {
             urlPattern: /\/assets\/audio\/music\//,
             handler: 'CacheFirst',
