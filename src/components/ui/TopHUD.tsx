@@ -19,6 +19,7 @@ export const TopHUD: React.FC = React.memo(() => {
     const paragonLevel = useGameRegistry('paragonLevel', 0) as number;
     const activeWaveEvent = useGameRegistry('activeWaveEvent', null) as ActiveWaveEventInfo | null;
     const activeShrineEffect = useGameRegistry('activeShrineEffect', null) as ActiveShrineInfo | null;
+    const gameMode = useGameRegistry('gameMode', '') as string;
     const [eventSecondsLeft, setEventSecondsLeft] = useState(0);
     const [shrineSecondsLeft, setShrineSecondsLeft] = useState(0);
 
@@ -79,7 +80,7 @@ export const TopHUD: React.FC = React.memo(() => {
             </div>
 
             {/* Center: Phase & Level Indicator */}
-            <div className="absolute left-1/2 -translate-x-1/2 top-4 flex flex-col items-center pointer-events-auto">
+            {gameMode !== 'pvp' && <div className="absolute left-1/2 -translate-x-1/2 top-4 flex flex-col items-center pointer-events-auto">
                 {/* Decorative Ribbon Backing (CSS or Image) */}
                 <div className="relative bg-amber-950/80 border-x border-b border-amber-500/30 px-8 py-2 rounded-b-xl shadow-2xl backdrop-blur-md flex flex-col items-center gap-1 group">
                     <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-amber-400 to-transparent opacity-50" />
@@ -106,7 +107,7 @@ export const TopHUD: React.FC = React.memo(() => {
                         <div className="h-full bg-amber-400/80 transition-transform duration-500 ease-out origin-left" style={{ transform: `scaleX(${wave / maxWaves})`, width: '100%' }} />
                     </div>
                 </div>
-            </div>
+            </div>}
 
             {/* Wave Event Badge */}
             {activeWaveEvent && (

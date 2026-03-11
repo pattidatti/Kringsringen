@@ -19,6 +19,7 @@ export class SceneVisualManager {
     // Light budget tracking (projectile lights only — player lights are separate)
     private activeProjectileLights: number = 0;
     private dynamicLightBudget: number = -1;  // -1 = use quality config
+    private enemyLightingOverride: boolean | null = null;  // null = use quality config
 
     // Map Management
     private currentMap: StaticMapLoader | null = null;
@@ -138,8 +139,55 @@ export class SceneVisualManager {
         this.dynamicLightBudget = budget;
     }
 
+    /** Whether non-player sprites should enroll in Light2D. Used at spawn time. */
+    get effectiveEnemyLightingEnabled(): boolean {
+        if (this.enemyLightingOverride !== null) return this.enemyLightingOverride;
+        return this.currentQuality.lightingEnabled;
+    }
+
+    /**
+     * Dynamically strip/restore Light2D pipeline on enemy sprites and pooled FX.
+     * Player sprite and player lights are NEVER touched — they must stay active.
+     * Does NOT call lights.disable() — that would destroy the Light objects.
+     */
+    public setEnemyLightingOverride(override: boolean | null): void {
+        const wasOverride = this.enemyLightingOverride;
+        this.enemyLightingOverride = override;
+
+        const effectiveNow = override === null ? this.currentQuality.lightingEnabled : override;
+        const effectiveBefore = wasOverride === null ? this.currentQuality.lightingEnabled : wasOverride;
+        if (effectiveNow === effectiveBefore) return;  // no change
+
+        if (effectiveNow) {
+            // Re-enable pipelines on enemies
+            this.scene.enemies.children.iterate((e: any) => {
+                if (e.active) e.setPipeline('Light2D');
+                return true;
+            });
+            this.scene.bossGroup.children.iterate((e: any) => {
+                if (e.active) e.setPipeline('Light2D');
+                return true;
+            });
+            this.scene.poolManager.setLightingEnabled(true);
+        } else {
+            // Strip Light2D from enemy/pooled sprites only — player untouched
+            this.scene.enemies.children.iterate((e: any) => {
+                if (e.active) e.resetPipeline();
+                return true;
+            });
+            this.scene.bossGroup.children.iterate((e: any) => {
+                if (e.active) e.resetPipeline();
+                return true;
+            });
+            this.scene.poolManager.setLightingEnabled(false);
+        }
+    }
+
     public requestProjectileLight(x: number, y: number, radius: number, color: number, intensity: number): Phaser.GameObjects.Light | null {
-        if (!this.currentQuality.lightingEnabled) return null;
+        const lightingActive = this.enemyLightingOverride === null
+            ? this.currentQuality.lightingEnabled
+            : this.enemyLightingOverride;
+        if (!lightingActive) return null;
         const effectiveBudget = this.dynamicLightBudget >= 0
             ? this.dynamicLightBudget
             : this.currentQuality.maxProjectileLights;

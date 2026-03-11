@@ -254,7 +254,7 @@ export const PvpLobby: React.FC<PvpLobbyProps> = ({ isOpen, onClose, onStartPvp 
                             PVP Arena
                         </h2>
                         {isRegistered && (
-                            <p className="text-amber-400 text-sm mt-1">
+                            <p className="text-stone-700 text-sm mt-1">
                                 Klikk på en spiller for å utfordre
                             </p>
                         )}
@@ -267,7 +267,7 @@ export const PvpLobby: React.FC<PvpLobbyProps> = ({ isOpen, onClose, onStartPvp 
                             <div className="flex flex-col gap-4">
                                 {/* Name */}
                                 <div>
-                                    <label className="text-amber-200 text-sm mb-1 block">Navn</label>
+                                    <label className="text-stone-700 text-sm mb-1 block">Navn</label>
                                     <input
                                         type="text"
                                         value={nickname}
@@ -280,7 +280,7 @@ export const PvpLobby: React.FC<PvpLobbyProps> = ({ isOpen, onClose, onStartPvp 
 
                                 {/* Class Selection */}
                                 <div>
-                                    <label className="text-amber-200 text-sm mb-2 block">Klasse</label>
+                                    <label className="text-stone-700 text-sm mb-2 block">Klasse</label>
                                     <div className="flex gap-2">
                                         {CLASS_OPTIONS.map(({ id, label }) => (
                                             <button
@@ -297,7 +297,7 @@ export const PvpLobby: React.FC<PvpLobbyProps> = ({ isOpen, onClose, onStartPvp 
                                         ))}
                                     </div>
                                     {CLASS_CONFIGS[selectedClass] && (
-                                        <p className="text-amber-500 text-xs mt-2">
+                                        <p className="text-stone-800 text-xs mt-2">
                                             {CLASS_CONFIGS[selectedClass].description || ''}
                                         </p>
                                     )}
@@ -319,7 +319,7 @@ export const PvpLobby: React.FC<PvpLobbyProps> = ({ isOpen, onClose, onStartPvp 
                             /* Player List */
                             <div className="flex flex-col gap-2">
                                 {otherPlayers.length === 0 ? (
-                                    <div className="text-center py-8 text-amber-400">
+                                    <div className="text-center py-8 text-stone-600">
                                         <p className="text-lg mb-2">Ingen andre spillere i arenaen...</p>
                                         <p className="text-sm">Vent til noen utfordrer deg!</p>
                                     </div>
@@ -348,12 +348,12 @@ export const PvpLobby: React.FC<PvpLobbyProps> = ({ isOpen, onClose, onStartPvp 
 
                                 {challengeTarget && !waitingForResponse && (
                                     <div className="mt-3 p-4 rounded border border-amber-600/50 bg-amber-900/20">
-                                        <p className="text-amber-200 text-sm font-medium text-center mb-3">
+                                        <p className="text-stone-800 text-sm font-medium text-center mb-3">
                                             Du utfordrer{' '}
-                                            <span className="text-amber-300 font-bold">{challengeTarget.name}</span>
+                                            <span className="text-stone-900 font-bold">{challengeTarget.name}</span>
                                         </p>
                                         <div className="mb-3">
-                                            <label className="text-amber-400 text-xs mb-2 block text-center">Best of</label>
+                                            <label className="text-stone-700 text-xs mb-2 block text-center">Best of</label>
                                             <div className="flex gap-2">
                                                 {BEST_OF_OPTIONS.map((n) => (
                                                     <button
@@ -389,7 +389,7 @@ export const PvpLobby: React.FC<PvpLobbyProps> = ({ isOpen, onClose, onStartPvp 
 
                                 {waitingForResponse && (
                                     <div className="text-center py-4">
-                                        <p className="text-amber-200 animate-pulse">Venter på svar...</p>
+                                        <p className="text-stone-700 animate-pulse">Venter på svar...</p>
                                         <FantasyButton
                                             label="Avbryt"
                                             variant="secondary"
@@ -431,11 +431,11 @@ export const PvpLobby: React.FC<PvpLobbyProps> = ({ isOpen, onClose, onStartPvp 
                                     style={{ textShadow: '2px 2px 0 #000' }}>
                                     Utfordring!
                                 </h3>
-                                <p className="text-amber-100 text-center">
-                                    <span className="font-bold text-amber-300">{pendingChallenge.challenge.challengerName}</span>
+                                <p className="text-stone-800 text-center">
+                                    <span className="font-bold text-stone-900">{pendingChallenge.challenge.challengerName}</span>
                                     {' '}utfordrer deg til duell!
                                 </p>
-                                <p className="text-amber-400 text-sm">
+                                <p className="text-stone-700 text-sm">
                                     Best of {pendingChallenge.challenge.bestOf}
                                 </p>
                                 <div className="flex gap-3 w-full">

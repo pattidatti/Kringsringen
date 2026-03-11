@@ -198,7 +198,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         if (this.config.spriteInfo.type === 'spritesheet' && this.config.spriteInfo.anims) {
             this.play(this.config.spriteInfo.anims.walk);
         }
-        if ((this.scene as any).quality?.lightingEnabled) {
+        if ((this.scene as any).visuals?.effectiveEnemyLightingEnabled ?? (this.scene as any).quality?.lightingEnabled) {
             this.setPipeline('Light2D');
         } else {
             this.resetPipeline();

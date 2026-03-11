@@ -233,6 +233,11 @@ export class MainScene extends Phaser.Scene implements IMainScene {
 
             // Listen for performance step changes to downgrade visuals
             this.events.on('perf-step-change', (_step: number) => {
+                // 0. Strip Light2D from enemy sprites when FPS is too low
+                const enemyLightingOn = this.performanceManager.dynamicEnemyLightingEnabled;
+                this.visuals.setEnemyLightingOverride(enemyLightingOn ? null : false);
+
+                // 1. Shadow modes
                 const override = this.performanceManager.shadowModeOverride;
                 if (override) {
                     // Downgrade enemy shadows
@@ -249,15 +254,15 @@ export class MainScene extends Phaser.Scene implements IMainScene {
                     }
                 }
 
-                // Update weather particles (rain, fog)
+                // 2. Update weather particles (rain, fog)
                 const wMult = this.performanceManager.weatherParticleMultiplier;
                 const userMult = this.quality.particleMultiplier;
                 this.weather.updateQuality({
                     particleMultiplier: userMult * wMult,
-                    lightingEnabled: this.quality.lightingEnabled
+                    lightingEnabled: enemyLightingOn && this.quality.lightingEnabled
                 });
 
-                // Update ambient particles (fireflies, leaves, embers)
+                // 3. Update ambient particles (fireflies, leaves, embers)
                 const aMult = this.performanceManager.ambientParticleMultiplier;
                 this.ambient.updateQuality({ particleMultiplier: userMult * aMult });
             });

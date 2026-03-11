@@ -75,6 +75,7 @@ export const GameContainer: React.FC<GameContainerProps> = React.memo(({ network
 
     // Asset load progress from PreloadScene (0–1), used by LoadingScreen
     const loadProgress = useGameRegistry<number>('loadProgress', 0);
+    const pvpState = useGameRegistry<string>('pvpState', 'waiting');
 
     // Victory / Ascension state
     const [showVictory, setShowVictory] = useState(false);
@@ -107,16 +108,23 @@ export const GameContainer: React.FC<GameContainerProps> = React.memo(({ network
 
             // Toggle Book
             if (key === 'b') {
+                const isPvp = networkConfig?.gameMode === 'pvp';
                 if (currentIsOpen) {
                     if (currentMode === 'view') {
-                        if (isMultiplayer) {
-                            // Ignore B to close in MP for safety
-                        } else {
+                        if (isMultiplayer && !isPvp) {
+                            // Ignore B to close in co-op MP for safety
+                        } else if (!isPvp) {
                             setIsBookOpen(false);
                         }
                     }
                 } else {
-                    if (isMultiplayer) {
+                    if (isPvp) {
+                        // In PvP, only allow book during round_end (between rounds)
+                        const state = gameInstanceRef.current?.registry.get('pvpState');
+                        if (state !== 'round_end') return;
+                        setBookMode('shop');
+                        setIsBookOpen(true);
+                    } else if (isMultiplayer) {
                         const partyDead = gameInstanceRef.current?.registry.get('partyDead') || false;
                         if (partyDead) return; // Can't open book if everyone is dead
 
@@ -674,6 +682,11 @@ export const GameContainer: React.FC<GameContainerProps> = React.memo(({ network
     }, [networkConfig]);
 
     const handleBookClose = useCallback(() => {
+        // In PvP, book is only used for shopping between rounds — just close it
+        if (networkConfig?.gameMode === 'pvp') {
+            setIsBookOpen(false);
+            return;
+        }
         if (bookMode === 'shop') {
             handleContinue();
         } else {
@@ -773,6 +786,18 @@ export const GameContainer: React.FC<GameContainerProps> = React.memo(({ network
         mainScene?.pvpRoundManager?.requestRematch();
     }, []);
 
+    const handlePvpOpenShop = useCallback(() => {
+        setBookMode('shop');
+        setIsBookOpen(true);
+    }, []);
+
+    // Auto-close book when PvP countdown starts (round is about to begin)
+    useEffect(() => {
+        if (isPvpMode && pvpState === 'countdown') {
+            setIsBookOpen(false);
+        }
+    }, [isPvpMode, pvpState]);
+
     const bookActions = useMemo(() => ({
         onSelectPerk: () => { },
         onBuyUpgrade: applyShopUpgrade,
@@ -847,6 +872,7 @@ export const GameContainer: React.FC<GameContainerProps> = React.memo(({ network
                     <PvpCountdown />
                     <PvpRoundSummary
                         onReady={handlePvpReady}
+                        onOpenShop={handlePvpOpenShop}
                         isWaitingReady={false}
                     />
                     <PvpMatchResult

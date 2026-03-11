@@ -234,6 +234,7 @@ export class PvpRoundManager {
         };
 
         this.scene.registry.set('pvpRoundResult', roundResult);
+        this.scene.registry.set('pvpOpponentReady', false);
         this.setState('round_end');
 
         // Broadcast round end if host
@@ -309,6 +310,7 @@ export class PvpRoundManager {
 
     private handleRemoteReady = (_data: any): void => {
         this.remoteReady = true;
+        this.scene.registry.set('pvpOpponentReady', true);
         this.checkBothReady();
     };
 
@@ -316,6 +318,7 @@ export class PvpRoundManager {
         if (this.localReady && this.remoteReady) {
             this.localReady = false;
             this.remoteReady = false;
+            this.scene.registry.set('pvpOpponentReady', false);
 
             // Check if we're ending the match
             const winsNeeded = Math.ceil(this.bestOf / 2);

@@ -56,17 +56,15 @@ export const PvpMatchResult: React.FC<PvpMatchResultProps> = ({ onRematch, onLea
                         {/* Final Score */}
                         <div className="flex items-center gap-4">
                             <div className="text-center">
-                                <p className="text-amber-200 text-sm truncate max-w-[120px]">{nickname}</p>
-                                <p className="text-white font-fantasy text-4xl font-bold"
-                                    style={{ textShadow: '0 0 10px rgba(255,215,0,0.5)' }}>
+                                <p className="text-stone-700 text-sm truncate max-w-[120px]">{nickname}</p>
+                                <p className="text-stone-900 font-fantasy text-4xl font-bold">
                                     {pvpMatchResult.finalScore[0]}
                                 </p>
                             </div>
-                            <span className="text-amber-600 font-fantasy text-2xl">-</span>
+                            <span className="text-stone-500 font-fantasy text-2xl">-</span>
                             <div className="text-center">
-                                <p className="text-amber-200 text-sm truncate max-w-[120px]">{pvpOpponentName}</p>
-                                <p className="text-white font-fantasy text-4xl font-bold"
-                                    style={{ textShadow: '0 0 10px rgba(255,215,0,0.5)' }}>
+                                <p className="text-stone-700 text-sm truncate max-w-[120px]">{pvpOpponentName}</p>
+                                <p className="text-stone-900 font-fantasy text-4xl font-bold">
                                     {pvpMatchResult.finalScore[1]}
                                 </p>
                             </div>
@@ -74,7 +72,7 @@ export const PvpMatchResult: React.FC<PvpMatchResultProps> = ({ onRematch, onLea
 
                         {/* Round Breakdown */}
                         <div className="w-full border-t border-amber-800/30 pt-3">
-                            <p className="text-amber-400 text-xs text-center mb-2">Rundeoversikt</p>
+                            <p className="text-stone-600 text-xs text-center mb-2">Rundeoversikt</p>
                             <div className="flex flex-wrap justify-center gap-2">
                                 {pvpMatchResult.roundResults.map((r, i) => (
                                     <div

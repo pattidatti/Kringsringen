@@ -38,9 +38,9 @@ export class PerformanceManager {
     /** Step down after 1 bad sample (fast reaction). Step up requires 2 (stable recovery). */
     private readonly REQUIRED_CONSECUTIVE_DOWN = 1;
     private readonly REQUIRED_CONSECUTIVE_UP = 2;
-    /** If actual FPS falls below this, skip 2 steps immediately without waiting for rolling avg. */
-    private readonly EMERGENCY_FPS_THRESHOLD = 28;
-    private readonly EMERGENCY_STEP_JUMP = 2;
+    /** If actual FPS falls below this, skip steps immediately without waiting for rolling avg. */
+    private readonly EMERGENCY_FPS_THRESHOLD = 30;
+    private readonly EMERGENCY_STEP_JUMP = 4;
 
     private static readonly THRESHOLDS: StepThreshold[] = [
         { downFps: 50, upFps: 58 },  // step 0 → 1
@@ -77,12 +77,24 @@ export class PerformanceManager {
     }
 
     update(time: number): void {
+        // Single-frame catastrophic drop: bypass rolling average for extreme cases
+        const currentFps = this.scene.game.loop.actualFps;
+        if (currentFps < 15 && this.currentStep < 7) {
+            const prevStep = this.currentStep;
+            this.currentStep = 7;
+            this.consecutiveDown = 0;
+            this.consecutiveUp = 0;
+            if (this.currentStep !== prevStep) {
+                console.log(`[PerformanceManager] CATASTROPHIC FPS=${currentFps.toFixed(1)}, jump to step 7`);
+                this.scene.events.emit('perf-step-change', this.currentStep);
+                (this.scene as any).visuals?.setDynamicLightBudget(0);
+            }
+        }
+
         if (time - this.lastSampleTime < this.SAMPLE_INTERVAL) return;
         this.lastSampleTime = time;
 
-        const currentFps = this.scene.game.loop.actualFps;
-
-        // Emergency fast-path: catastrophic FPS drop → skip 2 steps immediately
+        // Emergency fast-path: catastrophic FPS drop → skip steps immediately
         if (currentFps < this.EMERGENCY_FPS_THRESHOLD && this.currentStep < 7) {
             const prevStep = this.currentStep;
             this.currentStep = Math.min(7, this.currentStep + this.EMERGENCY_STEP_JUMP);
@@ -219,9 +231,15 @@ export class PerformanceManager {
     /** Projectile light budget (count). Respects user max and step level. */
     get lightBudget(): number {
         if (this.userMaxLights === 0) return 0;
-        if (this.currentStep >= 5) return 0;
+        if (this.currentStep >= 3) return 0;
         if (this.currentStep >= 2) return Math.floor(this.userMaxLights / 2);
         return this.userMaxLights;
+    }
+
+    /** Whether non-player sprites (enemies, pooled FX) should use Light2D pipeline. False at step >= 4. */
+    get dynamicEnemyLightingEnabled(): boolean {
+        if (!getQualityConfig(this.userQuality).lightingEnabled) return false;
+        return this.currentStep < 4;
     }
 
     /** Whether state glows on enemies (slow, poison, elite) should render. False at step >= 5. */

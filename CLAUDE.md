@@ -136,3 +136,18 @@ flex flex-col items-center overflow-hidden   ← outer shell (no justify-center)
 `min-h-0` on the scrollable zone is mandatory. Without it, the flex child ignores its allocated height and overflows. Reference implementations: `AchievementBookOverlay.tsx`, `HighscoresModal.tsx`, `LevelSelectScreen.tsx`.
 
 **Avoid**: `max-h-[Xvh]`, large `mt-N`/`mb-N` fixed gaps in full-screen overlays, `justify-center` as the sole vertical alignment strategy.
+
+### FantasyPanel Text Color Convention
+
+FantasyPanel (alle varianter) har en mid-tone teksturert overflate. Bruk MØRK tekst.
+
+| Kontekst | Klasse |
+|---|---|
+| Body / labels / verdier | `text-stone-800` / `text-stone-700` / `text-stone-600` |
+| Gull-verdier | `text-amber-700` (mørk amber) |
+| Titler (heading) | `text-amber-200` + `textShadow: '2px 2px 0 #000'` (obligatorisk) |
+| Seier/Tap semantikk | Behold semantisk farge + `textShadow: '2px 2px 0 #000'` |
+
+**Ikke bruk** direkte på panel-overflaten: `text-amber-100/200/400/500`, `text-yellow-400`, `text-white`.
+
+**Unntak**: elementer med mørk inner-bakgrunn (`bg-black/30`, `bg-green-900/40`, etc.) — amber og lyse farger forblir akseptable siden overflaten er mørk.

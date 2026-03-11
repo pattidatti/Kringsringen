@@ -18,16 +18,18 @@ export interface PvpRoundResult {
 
 interface PvpRoundSummaryProps {
     onReady: () => void;
+    onOpenShop?: () => void;
     isWaitingReady: boolean;
 }
 
-export const PvpRoundSummary: React.FC<PvpRoundSummaryProps> = ({ onReady, isWaitingReady }) => {
+export const PvpRoundSummary: React.FC<PvpRoundSummaryProps> = ({ onReady, onOpenShop, isWaitingReady }) => {
     const pvpState = useGameRegistry<string>('pvpState', 'waiting');
     const pvpRoundResult = useGameRegistry<PvpRoundResult | null>('pvpRoundResult', null);
     const pvpRound = useGameRegistry<number>('pvpRound', 1);
     const pvpScore = useGameRegistry<[number, number]>('pvpScore', [0, 0]);
     const nickname = useGameRegistry<string>('nickname', 'Du');
     const pvpOpponentName = useGameRegistry<string>('pvpOpponentName', 'Motstander');
+    const pvpOpponentReady = useGameRegistry<boolean>('pvpOpponentReady', false);
 
     if (pvpState !== 'round_end' || !pvpRoundResult) return null;
 
@@ -44,7 +46,7 @@ export const PvpRoundSummary: React.FC<PvpRoundSummaryProps> = ({ onReady, isWai
             >
                 <FantasyPanel className="w-[420px] p-6 flex flex-col items-center gap-4">
                     {/* Round number */}
-                    <p className="text-amber-400 text-sm">Runde {pvpRound} avsluttet</p>
+                    <p className="text-stone-600 text-sm">Runde {pvpRound} avsluttet</p>
 
                     {/* Winner */}
                     <h2 className="font-fantasy text-3xl"
@@ -57,44 +59,59 @@ export const PvpRoundSummary: React.FC<PvpRoundSummaryProps> = ({ onReady, isWai
 
                     {/* Score */}
                     <div className="flex items-center gap-3 text-2xl font-fantasy">
-                        <span className="text-amber-200">{pvpScore[0]}</span>
-                        <span className="text-amber-600">-</span>
-                        <span className="text-amber-200">{pvpScore[1]}</span>
+                        <span className="text-stone-900">{pvpScore[0]}</span>
+                        <span className="text-stone-500">-</span>
+                        <span className="text-stone-900">{pvpScore[1]}</span>
                     </div>
 
                     {/* Stats */}
                     <div className="w-full border-t border-amber-800/30 pt-3">
                         <div className="grid grid-cols-3 gap-2 text-sm">
                             <div />
-                            <div className="text-center text-amber-200 font-medium truncate">{nickname}</div>
-                            <div className="text-center text-amber-200 font-medium truncate">{pvpOpponentName}</div>
+                            <div className="text-center text-stone-800 font-medium truncate">{nickname}</div>
+                            <div className="text-center text-stone-800 font-medium truncate">{pvpOpponentName}</div>
 
-                            <div className="text-amber-400">Skade gjort</div>
-                            <div className="text-center text-amber-100">{Math.round(pvpRoundResult.playerDamageDealt)}</div>
-                            <div className="text-center text-amber-100">{Math.round(pvpRoundResult.opponentDamageDealt)}</div>
+                            <div className="text-stone-600">Skade gjort</div>
+                            <div className="text-center text-stone-800">{Math.round(pvpRoundResult.playerDamageDealt)}</div>
+                            <div className="text-center text-stone-800">{Math.round(pvpRoundResult.opponentDamageDealt)}</div>
 
-                            <div className="text-amber-400">HP igjen</div>
-                            <div className="text-center text-amber-100">{Math.max(0, Math.round(pvpRoundResult.playerHpRemaining))}</div>
-                            <div className="text-center text-amber-100">{Math.max(0, Math.round(pvpRoundResult.opponentHpRemaining))}</div>
+                            <div className="text-stone-600">HP igjen</div>
+                            <div className="text-center text-stone-800">{Math.max(0, Math.round(pvpRoundResult.playerHpRemaining))}</div>
+                            <div className="text-center text-stone-800">{Math.max(0, Math.round(pvpRoundResult.opponentHpRemaining))}</div>
 
-                            <div className="text-amber-400">Gull</div>
-                            <div className="text-center text-yellow-400">+{pvpRoundResult.playerGold}</div>
-                            <div className="text-center text-yellow-400">+{pvpRoundResult.opponentGold}</div>
+                            <div className="text-stone-600">Gull</div>
+                            <div className="text-center text-amber-700">+{pvpRoundResult.playerGold}</div>
+                            <div className="text-center text-amber-700">+{pvpRoundResult.opponentGold}</div>
                         </div>
 
-                        <div className="text-center text-amber-500 text-xs mt-2">
+                        <div className="text-center text-stone-600 text-xs mt-2">
                             Varighet: {durationStr} | {pvpRoundResult.reason === 'timeout' ? 'Tid ut' : 'Eliminasjon'}
                         </div>
                     </div>
 
-                    {/* Ready button */}
-                    <FantasyButton
-                        label={isWaitingReady ? 'Venter på motstander...' : 'Klar'}
-                        variant="primary"
-                        onClick={onReady}
-                        disabled={isWaitingReady}
-                        className="w-full mt-2"
-                    />
+                    {/* Shop + Ready buttons */}
+                    <div className="w-full flex flex-col gap-2 mt-2">
+                        {onOpenShop && (
+                            <FantasyButton
+                                label="Åpne Butikk"
+                                variant="secondary"
+                                onClick={onOpenShop}
+                                className="w-full"
+                            />
+                        )}
+                        <FantasyButton
+                            label={isWaitingReady ? 'Venter på motstander...' : 'Klar'}
+                            variant="primary"
+                            onClick={onReady}
+                            disabled={isWaitingReady}
+                            className="w-full"
+                        />
+                        {pvpOpponentReady && !isWaitingReady && (
+                            <p className="text-center text-stone-600 text-xs">
+                                {pvpOpponentName} er klar!
+                            </p>
+                        )}
+                    </div>
                 </FantasyPanel>
             </motion.div>
         </AnimatePresence>
