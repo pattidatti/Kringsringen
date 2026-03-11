@@ -1,5 +1,6 @@
 # 11 mars 
 - [ ] Pvp arena, Spells og piler går rett gjennom den andre spilleren. En av spillerne (litt vanskelig å vite hvem som er host eller ikke) får ikke opp animation/reaksjon på å selv bli skadet. 
+- [ ] pvp arena; caster man fireball (spell 1), så ser det ikke ut som man får impact på fiende-spilleren. 
 
 
 # 10 mars 
