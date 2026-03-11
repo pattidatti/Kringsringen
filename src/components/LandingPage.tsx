@@ -138,96 +138,101 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart, onContinue, onStartM
             {/* Bottom gradient for button contrast */}
             <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent" />
 
-            {/* Title */}
-            <motion.div
-                className="absolute top-8 w-full text-center"
-                initial={{ opacity: 0, y: -16 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.7, ease: 'easeOut' }}
-            >
-                <motion.h1
-                    className="font-fantasy text-6xl md:text-7xl tracking-widest uppercase inline-block"
-                    style={{
-                        color: '#fde68a',
-                        textShadow: '2px 2px 0 #000, -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 0 4px 12px rgba(0,0,0,0.9)',
-                    }}
-                    animate={{
-                        textShadow: [
-                            '2px 2px 0 #000, -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 0 4px 12px rgba(0,0,0,0.9)',
-                            '2px 2px 0 #000, -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 0 8px 24px rgba(253, 230, 138, 0.4)',
-                            '2px 2px 0 #000, -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 0 4px 12px rgba(0,0,0,0.9)',
-                        ],
-                        y: [0, -3, 0],
-                    }}
-                    transition={{
-                        duration: 3,
-                        repeat: Infinity,
-                        ease: 'easeInOut',
-                    }}
+            {/* Content layer — flex column so title + buttons are always visible */}
+            <div className="absolute inset-0 flex flex-col items-center overflow-hidden">
+                {/* Title */}
+                <motion.div
+                    className="flex-shrink-0 pt-8 w-full text-center"
+                    initial={{ opacity: 0, y: -16 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.7, ease: 'easeOut' }}
                 >
-                    Krigsringen
-                </motion.h1>
-            </motion.div>
+                    <motion.h1
+                        className="font-fantasy text-6xl md:text-7xl tracking-widest uppercase inline-block"
+                        style={{
+                            color: '#fde68a',
+                            textShadow: '2px 2px 0 #000, -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 0 4px 12px rgba(0,0,0,0.9)',
+                        }}
+                        animate={{
+                            textShadow: [
+                                '2px 2px 0 #000, -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 0 4px 12px rgba(0,0,0,0.9)',
+                                '2px 2px 0 #000, -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 0 8px 24px rgba(253, 230, 138, 0.4)',
+                                '2px 2px 0 #000, -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 0 4px 12px rgba(0,0,0,0.9)',
+                            ],
+                            y: [0, -3, 0],
+                        }}
+                        transition={{
+                            duration: 3,
+                            repeat: Infinity,
+                            ease: 'easeInOut',
+                        }}
+                    >
+                        Krigsringen
+                    </motion.h1>
+                </motion.div>
 
-            {/* Buttons — centered horizontally, positioned below the character */}
-            <motion.div
-                className="absolute flex flex-col items-center gap-5"
-                style={{ top: '62%', left: '50%', transform: 'translateX(-50%)' }}
-                initial={{ opacity: 0, y: 24 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, ease: 'easeOut', delay: 0.2 }}
-            >
-                {/* Primary: Paragon character select flow */}
-                <FantasyButton
-                    label="Spill"
-                    variant="primary"
-                    onClick={() => {
-                        if (onPlay) {
-                            fadeAudio(onPlay);
-                        } else if (SaveManager.load().tutorialSeen) {
-                            fadeAudioAndStart();
-                        } else {
-                            setShowTutorial(true);
-                        }
-                    }}
-                    className="w-64 text-xl !text-black [text-shadow:none]"
-                />
-                {/* Legacy: quick continue for existing saved run */}
-                {hasSave && !onPlay && (
+                {/* Elastic spacer — "karaktervinduet", shrinks gracefully on short screens */}
+                <div className="flex-1 min-h-0" />
+
+                {/* Buttons — pinned to bottom, never clipped */}
+                <motion.div
+                    className="flex-shrink-0 flex flex-col items-center gap-5 pb-6 overflow-y-auto"
+                    initial={{ opacity: 0, y: 24 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.6, ease: 'easeOut', delay: 0.2 }}
+                >
+                    {/* Primary: Paragon character select flow */}
                     <FantasyButton
-                        label="Fortsett Spill"
-                        variant="secondary"
-                        onClick={handleContinue}
-                        className="w-64 text-base !text-black [text-shadow:none]"
-                    />
-                )}
-                <FantasyButton
-                    label="Høyeste Poengsum"
-                    variant="secondary"
-                    onClick={() => setShowHighscores(true)}
-                    className="w-64 text-xl !text-black [text-shadow:none]"
-                />
-                <FantasyButton
-                    label="Innstillinger"
-                    variant="secondary"
-                    onClick={() => setShowSettings(true)}
-                    className="w-64 text-xl !text-black [text-shadow:none]"
-                />
-                <FantasyButton
-                    label="Multiplayer"
-                    variant="secondary"
-                    onClick={() => setShowMPLobby(true)}
-                    className="w-64 text-xl !text-black [text-shadow:none]"
-                />
-                {onPvp && (
-                    <FantasyButton
-                        label="PVP Duell"
-                        variant="secondary"
-                        onClick={onPvp}
+                        label="Spill"
+                        variant="primary"
+                        onClick={() => {
+                            if (onPlay) {
+                                fadeAudio(onPlay);
+                            } else if (SaveManager.load().tutorialSeen) {
+                                fadeAudioAndStart();
+                            } else {
+                                setShowTutorial(true);
+                            }
+                        }}
                         className="w-64 text-xl !text-black [text-shadow:none]"
                     />
-                )}
-            </motion.div>
+                    {/* Legacy: quick continue for existing saved run */}
+                    {hasSave && !onPlay && (
+                        <FantasyButton
+                            label="Fortsett Spill"
+                            variant="secondary"
+                            onClick={handleContinue}
+                            className="w-64 text-base !text-black [text-shadow:none]"
+                        />
+                    )}
+                    <FantasyButton
+                        label="Høyeste Poengsum"
+                        variant="secondary"
+                        onClick={() => setShowHighscores(true)}
+                        className="w-64 text-xl !text-black [text-shadow:none]"
+                    />
+                    <FantasyButton
+                        label="Innstillinger"
+                        variant="secondary"
+                        onClick={() => setShowSettings(true)}
+                        className="w-64 text-xl !text-black [text-shadow:none]"
+                    />
+                    <FantasyButton
+                        label="Multiplayer"
+                        variant="secondary"
+                        onClick={() => setShowMPLobby(true)}
+                        className="w-64 text-xl !text-black [text-shadow:none]"
+                    />
+                    {onPvp && (
+                        <FantasyButton
+                            label="PVP Duell"
+                            variant="secondary"
+                            onClick={onPvp}
+                            className="w-64 text-xl !text-black [text-shadow:none]"
+                        />
+                    )}
+                </motion.div>
+            </div>
 
             {/* Highscores Modal */}
             <HighscoresModal

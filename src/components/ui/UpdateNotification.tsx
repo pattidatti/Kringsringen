@@ -7,7 +7,6 @@ interface UpdateNotificationProps {
 }
 
 export const UpdateNotification: React.FC<UpdateNotificationProps> = ({ needRefresh, onUpdate }) => {
-    const [dismissed, setDismissed] = useState(false);
     const [updating, setUpdating] = useState(false);
 
     const handleUpdate = useCallback(() => {
@@ -18,7 +17,7 @@ export const UpdateNotification: React.FC<UpdateNotificationProps> = ({ needRefr
         setTimeout(() => { window.location.reload(); }, 3000);
     }, [updating, onUpdate]);
 
-    if (!needRefresh || dismissed) return null;
+    if (!needRefresh) return null;
 
     return (
         <AnimatePresence>
@@ -52,15 +51,6 @@ export const UpdateNotification: React.FC<UpdateNotificationProps> = ({ needRefr
                         {updating ? 'Oppdaterer...' : 'Oppdater nå'}
                     </button>
                 </div>
-                {!updating && (
-                    <button
-                        onClick={() => setDismissed(true)}
-                        className="text-amber-400/60 hover:text-amber-200 text-lg leading-none cursor-pointer"
-                        aria-label="Lukk"
-                    >
-                        ✕
-                    </button>
-                )}
             </motion.div>
         </AnimatePresence>
     );

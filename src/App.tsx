@@ -48,7 +48,7 @@ function AppContent() {
       registrationRef.current = registration;
       if (registration) {
         // Poll for new SW every 60 minutes (long game sessions)
-        setInterval(() => { registration.update(); }, 60 * 60 * 1000);
+        setInterval(() => { registration.update(); }, 5 * 60 * 1000);
       }
     },
   });
@@ -230,22 +230,34 @@ function AppContent() {
     setScreen('landing');
   }, [activeProfile]);
 
-  // Version check: fetch /version.json with no-cache to detect a new deploy
-  useEffect(() => {
+  // Version check — extracted so it can be reused from multiple call sites
+  const checkVersion = useCallback(async () => {
     if (import.meta.env.DEV) return;
-    const checkVersion = async () => {
-      try {
-        const res = await fetch('/version.json', { cache: 'no-store' });
-        if (!res.ok) return;
-        const data = await res.json() as { buildTime: number };
-        if (data.buildTime !== __APP_BUILD_TIME__) {
-          setVersionMismatch(true);
-          registrationRef.current?.update();
-        }
-      } catch { /* Network error — silently ignore */ }
-    };
-    checkVersion();
+    try {
+      const res = await fetch('/version.json', { cache: 'no-store' });
+      if (!res.ok) return;
+      const data = await res.json() as { buildTime: number };
+      if (data.buildTime !== __APP_BUILD_TIME__) {
+        setVersionMismatch(true);
+        registrationRef.current?.update();
+      }
+    } catch { /* Network error — silently ignore */ }
   }, []);
+
+  // Run version check on mount
+  useEffect(() => {
+    checkVersion();
+  }, [checkVersion]);
+
+  // Auto-activate the waiting SW immediately when on the landing screen (safe to reload here).
+  // With registerType:'prompt', the new SW sits in "waiting" forever unless skipWaiting() is
+  // called. Ctrl+Refresh does NOT bypass the SW. This effect guarantees activation without
+  // requiring any user interaction.
+  useEffect(() => {
+    if (needRefresh && screen === 'landing') {
+      updateServiceWorker(true);
+    }
+  }, [needRefresh, screen, updateServiceWorker]);
 
   // Force sync on app blur/visibility change (before device switch)
   useEffect(() => {
@@ -267,7 +279,9 @@ function AppContent() {
           });
         }
       } else {
+        // Tab became visible — trigger SW update check and re-run version compare
         registrationRef.current?.update();
+        checkVersion();
       }
     };
 
@@ -291,7 +305,7 @@ function AppContent() {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('beforeunload', handleBeforeUnload);
     };
-  }, [user, activeProfile]);
+  }, [user, activeProfile, checkVersion]);
 
   // ─── Screen Rendering ────────────────────────────────────────────────
 

@@ -37,6 +37,7 @@ export const PvpLobby: React.FC<PvpLobbyProps> = ({ isOpen, onClose, onStartPvp 
     const [players, setPlayers] = useState<Record<string, PvpPlayerEntry>>({});
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
+    const [retryKey, setRetryKey] = useState(0);
 
     // Challenge state
     const [pendingChallenge, setPendingChallenge] = useState<{ id: string; challenge: PvpChallenge } | null>(null);
@@ -48,27 +49,53 @@ export const PvpLobby: React.FC<PvpLobbyProps> = ({ isOpen, onClose, onStartPvp 
     const unsubPlayersRef = useRef<(() => void) | null>(null);
     const unsubChallengesRef = useRef<(() => void) | null>(null);
     const unsubSentChallengeRef = useRef<(() => void) | null>(null);
+    const peerRef = useRef<Peer | null>(null);
 
     // Initialize PeerJS
     useEffect(() => {
-        if (isOpen && !peer) {
-            const newPeer = new Peer();
-            newPeer.on('open', () => {
-                setPeer(newPeer);
-            });
-            newPeer.on('error', (err) => {
-                console.error('PVP Peer error:', err);
-                setError('Kunne ikke koble til P2P-nettverket.');
-            });
-        }
-
-        return () => {
-            if (!isOpen && peer && !isRegistered) {
-                peer.destroy();
+        if (!isOpen) {
+            // Lobby closed — destroy peer unless it was already handed off to the game
+            if (peerRef.current) {
+                peerRef.current.destroy();
+                peerRef.current = null;
                 setPeer(null);
             }
+            return;
+        }
+
+        if (peerRef.current) return; // Already initialized
+
+        const newPeer = new Peer();
+        peerRef.current = newPeer;
+
+        const timeout = setTimeout(() => {
+            if (peerRef.current === newPeer) {
+                console.warn('[PvP] Peer initialization timed out');
+                setError('Tidsoversikt ved tilkobling. Prøv igjen.');
+                newPeer.destroy();
+                peerRef.current = null;
+            }
+        }, 10000);
+
+        newPeer.on('open', () => {
+            clearTimeout(timeout);
+            setPeer(newPeer);
+        });
+
+        newPeer.on('error', (err) => {
+            clearTimeout(timeout);
+            console.error('[PvP] Peer error:', err.type, err);
+            setError('Kunne ikke koble til P2P-nettverket. Prøv igjen.');
+            newPeer.destroy();
+            if (peerRef.current === newPeer) {
+                peerRef.current = null;
+            }
+        });
+
+        return () => {
+            clearTimeout(timeout);
         };
-    }, [isOpen]);
+    }, [isOpen, retryKey]);
 
     // Cleanup on unmount
     useEffect(() => {
@@ -209,6 +236,9 @@ export const PvpLobby: React.FC<PvpLobbyProps> = ({ isOpen, onClose, onStartPvp 
         // Mark as in match
         PvpMatchmakingService.setPlayerInMatch(peer.id).catch(() => {});
 
+        // Clear ref so cleanup doesn't destroy the peer after it's handed off to the game
+        peerRef.current = null;
+
         onStartPvp(role, peer, nickname.trim(), opponentPeerId, matchBestOf, opponentName, selectedClass);
     };
 
@@ -304,11 +334,21 @@ export const PvpLobby: React.FC<PvpLobbyProps> = ({ isOpen, onClose, onStartPvp 
                                 </div>
 
                                 {error && (
-                                    <p className="text-red-400 text-sm text-center">{error}</p>
+                                    <div className="flex flex-col items-center gap-2">
+                                        <p className="text-red-400 text-sm text-center">{error}</p>
+                                        {!peer && (
+                                            <button
+                                                onClick={() => { setError(null); setRetryKey(k => k + 1); }}
+                                                className="text-sm text-amber-400 underline hover:text-amber-200 transition-colors"
+                                            >
+                                                Prøv igjen
+                                            </button>
+                                        )}
+                                    </div>
                                 )}
 
                                 <FantasyButton
-                                    label={loading ? 'Kobler til...' : 'Gå inn i arenaen'}
+                                    label={loading ? 'Kobler til...' : (!peer && !error ? 'Kobler til...' : 'Gå inn i arenaen')}
                                     variant="primary"
                                     onClick={handleRegister}
                                     disabled={!nickname.trim() || !peer || loading}
