@@ -39,6 +39,7 @@ import { ShrineManager } from './ShrineManager';
 import { SpriteShadow } from './SpriteShadow';
 import { PerformanceManager } from './PerformanceManager';
 import { PvpRoundManager } from './PvpRoundManager';
+import { Pvp2v2RoundManager } from './Pvp2v2RoundManager';
 
 
 export class MainScene extends Phaser.Scene implements IMainScene {
@@ -84,6 +85,7 @@ export class MainScene extends Phaser.Scene implements IMainScene {
     public shrines!: ShrineManager;
     public performanceManager!: PerformanceManager;
     public pvpRoundManager?: PvpRoundManager;
+    public pvp2v2RoundManager?: Pvp2v2RoundManager;
 
     // Map Generation
     private mapWidth: number = 3000;
@@ -321,6 +323,7 @@ export class MainScene extends Phaser.Scene implements IMainScene {
             // Now that player and groups exist, setup colliders
             this.collisions.setupColliders(this.player);
             this.collisions.setupPvpColliders();
+            this.collisions.setupPvp2v2Colliders();
 
             this.eventManager.setupEventListeners();
             this.players.add(this.player);
@@ -379,6 +382,32 @@ export class MainScene extends Phaser.Scene implements IMainScene {
                     this.networkManager.onDisconnect = (id: string) => {
                         originalOnDisconnect?.(id);
                         this.pvpRoundManager?.handleOpponentDisconnect();
+                    };
+                }
+            }
+
+            // 2v2 PvP Mode initialization
+            const isPvp2v2 = this.registry.get('gameMode') === 'pvp2v2';
+            if (isPvp2v2) {
+                // Inject team assignments and slot into scene registry
+                const teamAssignments = netConfig?.pvp2v2TeamAssignments || {};
+                const mySlot = netConfig?.pvp2v2MySlot || 'A1';
+                const myPeerId = netConfig?.peer.id || 'local';
+                const myTeam = teamAssignments[myPeerId] || 'A';
+                this.registry.set('pvp2v2Teams', teamAssignments);
+                this.registry.set('pvp2v2MySlot', mySlot);
+                this.registry.set('pvp2v2MyTeam', myTeam);
+
+                this.pvp2v2RoundManager = new Pvp2v2RoundManager(this);
+                this.pvp2v2RoundManager.initialize();
+                console.log('[MainScene] 2v2 PvP mode initialized, slot:', mySlot, 'team:', myTeam);
+
+                // Override disconnect handler for 2v2
+                if (this.networkManager) {
+                    const originalOnDisconnect = this.networkManager.onDisconnect;
+                    this.networkManager.onDisconnect = (id: string) => {
+                        originalOnDisconnect?.(id);
+                        this.pvp2v2RoundManager?.handleOpponentDisconnect();
                     };
                 }
             }
@@ -472,6 +501,10 @@ export class MainScene extends Phaser.Scene implements IMainScene {
             }
             if (isPvpMode && this.pvpRoundManager) {
                 this.pvpRoundManager.update(_time, cappedDelta);
+            }
+            const isPvp2v2Mode = this.registry.get('gameMode') === 'pvp2v2';
+            if (isPvp2v2Mode && this.pvp2v2RoundManager) {
+                this.pvp2v2RoundManager.update(_time, cappedDelta);
             }
             this.achievementManager.update(delta);
 

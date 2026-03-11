@@ -2,9 +2,17 @@ import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameRegistry } from '../../hooks/useGameRegistry';
 
-export const PvpCountdown: React.FC = () => {
-    const pvpState = useGameRegistry<string>('pvpState', 'waiting');
-    const pvpCountdown = useGameRegistry<number>('pvpCountdown', 0);
+interface PvpCountdownProps {
+    registryKey?: string;
+    stateKey?: string;
+}
+
+export const PvpCountdown: React.FC<PvpCountdownProps> = ({
+    registryKey = 'pvpCountdown',
+    stateKey = 'pvpState',
+}) => {
+    const pvpState = useGameRegistry<string>(stateKey, 'waiting');
+    const pvpCountdown = useGameRegistry<number>(registryKey, 0);
 
     if (pvpState !== 'countdown') return null;
 

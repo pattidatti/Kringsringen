@@ -410,6 +410,7 @@ export class ClassAbilityManager {
         const singularity = this.scene.singularities.get(spawnX, spawnY) as import('./Singularity').Singularity | null;
         if (singularity) {
             singularity.spawn(spawnX, spawnY, duration, radiusMult, finalDamage, finalCenterMult, damageReduction);
+            AudioManager.instance.playSFX('cascade_activate');
 
             // Dimension Rift: teleport enemies to center every 1s
             if (dimensionRiftLvl > 0) {

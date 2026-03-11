@@ -192,7 +192,7 @@ export class AudioManager {
         if (!ctx) return null;
 
         const sampleRate = ctx.sampleRate;
-        const duration = 0.6; // seconds
+        const duration = 1.5; // seconds
         const length = Math.floor(sampleRate * duration);
         const impulse = ctx.createBuffer(2, length, sampleRate);
 

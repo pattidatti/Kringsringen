@@ -188,6 +188,18 @@ export const AUDIO_MANIFEST: SoundConfig[] = [
         pitchVariance: 0.10,
     },
 
+    // — Cascade (Wizard Spell 4) —
+    {
+        id: 'cascade_activate',
+        variants: [
+            'assets/audio/sfx/cascade_activate_1.wav',
+            'assets/audio/sfx/cascade_activate_2.wav',
+        ],
+        category: 'sfx',
+        volume: 0.65,
+        reverb: true,
+    },
+
     // — Shield SFX —
     {
         id: 'shield_activate',

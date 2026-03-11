@@ -2,6 +2,7 @@ import type { IMainScene } from './IMainScene';
 import { PacketType } from '../network/SyncSchemas';
 import type { PvpRoundResult } from '../components/ui/PvpRoundSummary';
 import type { PvpMatchResultData } from '../components/ui/PvpMatchResult';
+import { AudioManager } from './AudioManager';
 
 export type PvpState = 'waiting' | 'countdown' | 'fighting' | 'round_end' | 'shop' | 'match_end';
 
@@ -9,6 +10,16 @@ const ROUND_DURATION = 120; // seconds
 const COUNTDOWN_DURATION = 3; // seconds
 const GOLD_WINNER = 200;
 const GOLD_LOSER = 500;
+
+const PVP_BGM_POOL = [
+    'dragons_fury',
+    'pixel_rush_overture',
+    'glitch_in_the_dungeon',
+    'glitch_in_the_catacombs',
+    'glitch_king',
+    'final_dungeon_loop',
+    'glitch_in_the_heavens',
+];
 
 /**
  * Manages PVP round state machine, timer, scoring, and synchronized start.
@@ -38,6 +49,10 @@ export class PvpRoundManager {
 
     // Accumulator for timer ticks
     private timerAccumulator: number = 0;
+
+    // Music shuffle state
+    private pvpPlaylist: string[] = [];
+    private lastPlayedBGM: string | null = null;
 
     constructor(scene: IMainScene) {
         this.scene = scene;
@@ -345,11 +360,28 @@ export class PvpRoundManager {
         }
     }
 
+    private pickNextBGM(): string {
+        if (this.pvpPlaylist.length === 0) {
+            this.pvpPlaylist = Phaser.Utils.Array.Shuffle([...PVP_BGM_POOL]);
+            // Avoid repeating the last track after a reshuffle
+            if (this.pvpPlaylist.length > 1 && this.pvpPlaylist[this.pvpPlaylist.length - 1] === this.lastPlayedBGM) {
+                const swapIdx = Math.floor(Math.random() * (this.pvpPlaylist.length - 1));
+                [this.pvpPlaylist[swapIdx], this.pvpPlaylist[this.pvpPlaylist.length - 1]] =
+                    [this.pvpPlaylist[this.pvpPlaylist.length - 1], this.pvpPlaylist[swapIdx]];
+            }
+        }
+        const track = this.pvpPlaylist.pop()!;
+        this.lastPlayedBGM = track;
+        return track;
+    }
+
     private startCountdown(): void {
         this.setState('countdown');
         this.countdownTimer = COUNTDOWN_DURATION;
         this.timerAccumulator = 0;
         this.scene.registry.set('pvpCountdown', COUNTDOWN_DURATION);
+
+        AudioManager.instance.playBGM(this.pickNextBGM());
 
         // Reset player state for new round
         this.resetForNewRound();
@@ -451,7 +483,7 @@ export class PvpRoundManager {
         if (player) {
             const isHost = this.scene.networkManager?.role === 'host' || !this.scene.networkManager;
             // Host spawns left, client spawns right
-            const spawnX = isHost ? 1200 : 1800;
+            const spawnX = isHost ? 980 : 2020;
             const spawnY = 1500;
             player.setPosition(spawnX, spawnY);
             player.setVelocity(0, 0);

@@ -19,6 +19,7 @@ import type { BuffManager } from './BuffManager';
 import type { ParagonAbilityManager } from './ParagonAbilityManager';
 import type { WaveEventManager } from './WaveEventManager';
 import type { ShrineManager } from './ShrineManager';
+import type { Pvp2v2RoundManager } from './Pvp2v2RoundManager';
 
 /**
  * Lightweight interface for MainScene.
@@ -74,6 +75,7 @@ export interface IMainScene extends Phaser.Scene {
     deathSparkEmitter: Phaser.GameObjects.Particles.ParticleEmitter;
     swordSparkEmitter: Phaser.GameObjects.Particles.ParticleEmitter;
     playerShadow: SpriteShadow | null;
+    pvp2v2RoundManager?: Pvp2v2RoundManager;
     restartGame(): void;
     restartAtLevel(level: number): void;
     triggerHitstop(durationMs?: number): void;

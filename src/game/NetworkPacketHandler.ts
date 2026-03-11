@@ -99,6 +99,10 @@ export class NetworkPacketHandler {
                             this.handlePvpHitRequest(packet.ev, packet.ts, _conn.peer);
                         } else if (packet.ev.type === 'pvp_projectile_hit') {
                             this.handlePvpProjectileHit(packet.ev, packet.ts);
+                        } else if (packet.ev.type === 'pvp2v2_hit_request') {
+                            this.handlePvp2v2HitRequest(packet.ev, packet.ts, _conn.peer);
+                        } else if (packet.ev.type === 'pvp2v2_projectile_hit') {
+                            this.handlePvp2v2ProjectileHit(packet.ev, packet.ts, _conn.peer);
                         }
                     }
                     this.handleGameEvent(packet.ev);
@@ -179,8 +183,9 @@ export class NetworkPacketHandler {
             this.scene.players.add(sprite);
         }
 
-        // Remote Player Light — hidden in PVP mode (players can't see opponent's light)
-        const isPvp = this.scene.registry.get('gameMode') === 'pvp';
+        // Remote Player Light — hidden in PVP/2v2 mode
+        const gameMode = this.scene.registry.get('gameMode');
+        const isPvp = gameMode === 'pvp' || gameMode === 'pvp2v2';
         if ((this.scene as any).quality?.lightingEnabled && !isPvp) {
             const light = this.scene.lights.addLight(x, y, 150, 0xffffff, 0.4);
             this.remotePlayerLights.set(id, light);
@@ -507,6 +512,68 @@ export class NetworkPacketHandler {
         mainScene.pvpRoundManager?.trackDamage(true, damage);
     }
 
+    private handlePvp2v2HitRequest(event: GameEventPacket, _ts: number, senderPeerId: string): void {
+        if (this.scene.registry.get('gameMode') !== 'pvp2v2') return;
+        if (!this.scene.registry.get('pvp2v2FightActive')) return;
+
+        const data = event.data;
+        const targetId = data.targetId;
+        const damage = data.damage;
+
+        // Friendly fire check (host-authoritative)
+        const teams = (this.scene.registry.get('pvp2v2Teams') || {}) as Record<string, 'A' | 'B'>;
+        if (teams[senderPeerId] && teams[senderPeerId] === teams[targetId]) return;
+
+        const targetSprite = this.remotePlayers.get(targetId);
+        if (!targetSprite || !targetSprite.active) return;
+
+        const dist = Phaser.Math.Distance.Between(targetSprite.x, targetSprite.y, data.hitX, data.hitY);
+        if (dist > 80) return;
+
+        this.scene.networkManager?.broadcast({
+            t: PacketType.GAME_EVENT,
+            ev: { type: 'damage_player', data: { id: targetId, damage, x: data.hitX, y: data.hitY } },
+            ts: Date.now()
+        });
+
+        const senderTeam = teams[senderPeerId];
+        if (senderTeam) {
+            const mainScene = this.scene as any;
+            mainScene.pvp2v2RoundManager?.trackTeamDamage(senderTeam, damage);
+        }
+    }
+
+    private handlePvp2v2ProjectileHit(event: GameEventPacket, _ts: number, senderPeerId: string): void {
+        if (this.scene.registry.get('gameMode') !== 'pvp2v2') return;
+        if (!this.scene.registry.get('pvp2v2FightActive')) return;
+
+        const data = event.data;
+        const targetId = data.targetId;
+        const damage = data.damage;
+
+        // Friendly fire check (host-authoritative)
+        const teams = (this.scene.registry.get('pvp2v2Teams') || {}) as Record<string, 'A' | 'B'>;
+        if (teams[senderPeerId] && teams[senderPeerId] === teams[targetId]) return;
+
+        const targetSprite = this.remotePlayers.get(targetId);
+        if (!targetSprite || !targetSprite.active) return;
+
+        const dist = Phaser.Math.Distance.Between(targetSprite.x, targetSprite.y, data.hitX, data.hitY);
+        if (dist > 120) return;
+
+        this.scene.networkManager?.broadcast({
+            t: PacketType.GAME_EVENT,
+            ev: { type: 'damage_player', data: { id: targetId, damage, x: data.hitX, y: data.hitY } },
+            ts: Date.now()
+        });
+
+        const senderTeam = teams[senderPeerId];
+        if (senderTeam) {
+            const mainScene = this.scene as any;
+            mainScene.pvp2v2RoundManager?.trackTeamDamage(senderTeam, damage);
+        }
+    }
+
     /**
      * Broadcasts local state to other players.
      */
@@ -659,5 +726,18 @@ export class NetworkPacketHandler {
 
         if (remotePlayer.anims.currentAnim?.key !== anim) remotePlayer.play(anim);
         remotePlayer.setFlipX(flipX === 1);
+
+        // Track teammate HP in 2v2 mode
+        if (this.scene.registry.get('gameMode') === 'pvp2v2') {
+            const peerId = state[0];
+            const teams = (this.scene.registry.get('pvp2v2Teams') || {}) as Record<string, 'A' | 'B'>;
+            const myTeam = this.scene.registry.get('pvp2v2MyTeam') as 'A' | 'B';
+            if (peerId && teams[peerId] === myTeam) {
+                const name = state[7] || 'Lagkamerat';
+                this.scene.registry.set('pvp2v2TeammateHP', hp);
+                this.scene.registry.set('pvp2v2TeammateMaxHP', this.scene.registry.get('playerMaxHP') || 100);
+                this.scene.registry.set('pvp2v2TeammateName', name);
+            }
+        }
     }
 }

@@ -28,6 +28,7 @@ import { PvpScoreHUD } from './ui/PvpScoreHUD';
 import { PvpCountdown } from './ui/PvpCountdown';
 import { PvpRoundSummary } from './ui/PvpRoundSummary';
 import { PvpMatchResult } from './ui/PvpMatchResult';
+import { Pvp2v2TeammateHUD } from './ui/Pvp2v2TeammateHUD';
 
 interface GameContainerProps {
     networkConfig?: NetworkConfig | null;
@@ -76,6 +77,7 @@ export const GameContainer: React.FC<GameContainerProps> = React.memo(({ network
     // Asset load progress from PreloadScene (0–1), used by LoadingScreen
     const loadProgress = useGameRegistry<number>('loadProgress', 0);
     const pvpState = useGameRegistry<string>('pvpState', 'waiting');
+    const pvp2v2State = useGameRegistry<string>('pvp2v2State', 'waiting');
 
     // Victory / Ascension state
     const [showVictory, setShowVictory] = useState(false);
@@ -109,11 +111,12 @@ export const GameContainer: React.FC<GameContainerProps> = React.memo(({ network
             // Toggle Book
             if (key === 'b') {
                 const isPvp = networkConfig?.gameMode === 'pvp';
+                const isPvp2v2 = networkConfig?.gameMode === 'pvp2v2';
                 if (currentIsOpen) {
                     if (currentMode === 'view') {
-                        if (isMultiplayer && !isPvp) {
+                        if (isMultiplayer && !isPvp && !isPvp2v2) {
                             // Ignore B to close in co-op MP for safety
-                        } else if (!isPvp) {
+                        } else if (!isPvp && !isPvp2v2) {
                             setIsBookOpen(false);
                         }
                     }
@@ -121,6 +124,12 @@ export const GameContainer: React.FC<GameContainerProps> = React.memo(({ network
                     if (isPvp) {
                         // In PvP, only allow book during round_end (between rounds)
                         const state = gameInstanceRef.current?.registry.get('pvpState');
+                        if (state !== 'round_end') return;
+                        setBookMode('shop');
+                        setIsBookOpen(true);
+                    } else if (isPvp2v2) {
+                        // In 2v2 PvP, only allow book during round_end
+                        const state = gameInstanceRef.current?.registry.get('pvp2v2State');
                         if (state !== 'round_end') return;
                         setBookMode('shop');
                         setIsBookOpen(true);
@@ -166,6 +175,10 @@ export const GameContainer: React.FC<GameContainerProps> = React.memo(({ network
             if (gameMode === 'pvp') {
                 game.registry.set('pvpBestOf', networkConfig?.pvpBestOf || 5);
                 game.registry.set('pvpOpponentName', networkConfig?.pvpOpponentName || 'Motstander');
+            }
+            if (gameMode === 'pvp2v2') {
+                game.registry.set('pvpBestOf', networkConfig?.pvpBestOf || 5);
+                // Team assignments and slot are injected in MainScene.create() from netConfig
             }
 
             // Inject Paragon state into Phaser registry for WaveManager and other systems
@@ -775,6 +788,7 @@ export const GameContainer: React.FC<GameContainerProps> = React.memo(({ network
     }, [onExitToMenu, networkConfig]);
 
     const isPvpMode = networkConfig?.gameMode === 'pvp';
+    const isPvp2v2Mode = networkConfig?.gameMode === 'pvp2v2';
 
     const handlePvpReady = useCallback(() => {
         const mainScene = gameInstanceRef.current?.scene.getScene('MainScene') as any;
@@ -784,6 +798,16 @@ export const GameContainer: React.FC<GameContainerProps> = React.memo(({ network
     const handlePvpRematch = useCallback(() => {
         const mainScene = gameInstanceRef.current?.scene.getScene('MainScene') as any;
         mainScene?.pvpRoundManager?.requestRematch();
+    }, []);
+
+    const handlePvp2v2Ready = useCallback(() => {
+        const mainScene = gameInstanceRef.current?.scene.getScene('MainScene') as any;
+        mainScene?.pvp2v2RoundManager?.setLocalReady();
+    }, []);
+
+    const handlePvp2v2Rematch = useCallback(() => {
+        const mainScene = gameInstanceRef.current?.scene.getScene('MainScene') as any;
+        mainScene?.pvp2v2RoundManager?.requestRematch();
     }, []);
 
     const handlePvpOpenShop = useCallback(() => {
@@ -797,6 +821,12 @@ export const GameContainer: React.FC<GameContainerProps> = React.memo(({ network
             setIsBookOpen(false);
         }
     }, [isPvpMode, pvpState]);
+
+    useEffect(() => {
+        if (isPvp2v2Mode && pvp2v2State === 'countdown') {
+            setIsBookOpen(false);
+        }
+    }, [isPvp2v2Mode, pvp2v2State]);
 
     const bookActions = useMemo(() => ({
         onSelectPerk: () => { },
@@ -865,20 +895,46 @@ export const GameContainer: React.FC<GameContainerProps> = React.memo(({ network
             {!isPvpMode && <BossSplashScreen />}
             {!isPvpMode && <GameOverOverlay />}
 
-            {/* PVP overlays */}
+            {/* PVP 1v1 overlays */}
             {isPvpMode && (
                 <>
-                    <PvpScoreHUD />
+                    {!isBookOpen && <PvpScoreHUD mode="pvp" />}
                     <PvpCountdown />
-                    <PvpRoundSummary
-                        onReady={handlePvpReady}
-                        onOpenShop={handlePvpOpenShop}
-                        isWaitingReady={false}
-                    />
+                    {!isBookOpen && (
+                        <PvpRoundSummary
+                            mode="pvp"
+                            onReady={handlePvpReady}
+                            onOpenShop={handlePvpOpenShop}
+                            isWaitingReady={false}
+                        />
+                    )}
                     <PvpMatchResult
+                        mode="pvp"
                         onRematch={handlePvpRematch}
                         onLeave={handleExitToMenu}
                     />
+                </>
+            )}
+
+            {/* PVP 2v2 overlays */}
+            {isPvp2v2Mode && (
+                <>
+                    {!isBookOpen && <PvpScoreHUD mode="pvp2v2" />}
+                    <PvpCountdown registryKey="pvp2v2Countdown" stateKey="pvp2v2State" />
+                    {!isBookOpen && (
+                        <PvpRoundSummary
+                            mode="pvp2v2"
+                            onReady={handlePvp2v2Ready}
+                            onOpenShop={handlePvpOpenShop}
+                            isWaitingReady={false}
+                        />
+                    )}
+                    <PvpMatchResult
+                        mode="pvp2v2"
+                        onRematch={handlePvp2v2Rematch}
+                        onLeave={handleExitToMenu}
+                    />
+                    <Pvp2v2TeammateHUD />
                 </>
             )}
 

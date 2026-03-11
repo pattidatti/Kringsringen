@@ -60,6 +60,10 @@ export class InputManager {
         const hp = this.scene.registry.get('playerHP') || 0;
         if (!player || !player.body || hp <= 0) return;
 
+        // Lock all controls during PVP when fight is not active (countdown, round_end, etc.)
+        if (this.scene.registry.get('gameMode') === 'pvp' && !this.scene.registry.get('pvpFightActive')) return;
+        if (this.scene.registry.get('gameMode') === 'pvp2v2' && !this.scene.registry.get('pvp2v2FightActive')) return;
+
         // 1. Handle Orientation (Face Mouse)
         this.handleOrientation(player);
 

@@ -28,9 +28,11 @@ export interface NetworkConfig {
   peer: Peer;
   nickname: string;
   hostPeerId?: string; // Påkrevd for klienter
-  gameMode?: 'pve' | 'pvp';
+  gameMode?: 'pve' | 'pvp' | 'pvp2v2';
   pvpBestOf?: 3 | 5 | 7 | 10;
   pvpOpponentName?: string;
+  pvp2v2TeamAssignments?: Record<string, 'A' | 'B'>;
+  pvp2v2MySlot?: 'A1' | 'A2' | 'B1' | 'B2';
 }
 
 type AppScreen = 'landing' | 'login-gate' | 'character-select' | 'class-select' | 'level-select' | 'game' | 'pvp-lobby';
@@ -91,6 +93,32 @@ function AppContent() {
       gameMode: 'pvp',
       pvpBestOf: bestOf,
       pvpOpponentName: opponentName,
+    });
+    setSelectedClass(classId);
+    setScreen('game');
+    setSessionKey(prev => prev + 1);
+  };
+
+  const handleStartPVP2v2 = (
+    role: 'host' | 'client',
+    peer: Peer,
+    nickname: string,
+    hostPeerId: string,
+    bestOf: 3 | 5 | 7 | 10,
+    classId: ClassId,
+    teamAssignments: Record<string, 'A' | 'B'>,
+    mySlot: 'A1' | 'A2' | 'B1' | 'B2'
+  ) => {
+    setNetworkConfig({
+      role,
+      roomCode: 'pvp2v2',
+      peer,
+      nickname,
+      hostPeerId: role === 'client' ? hostPeerId : undefined,
+      gameMode: 'pvp2v2',
+      pvpBestOf: bestOf,
+      pvp2v2TeamAssignments: teamAssignments,
+      pvp2v2MySlot: mySlot,
     });
     setSelectedClass(classId);
     setScreen('game');
@@ -374,6 +402,7 @@ function AppContent() {
           isOpen={true}
           onClose={() => setScreen('landing')}
           onStartPvp={handleStartPVP}
+          onStartPvp2v2={handleStartPVP2v2}
         />
       )}
 

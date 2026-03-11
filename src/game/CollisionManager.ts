@@ -264,6 +264,116 @@ export class CollisionManager {
         }
     }
 
+    /**
+     * Sets up 2v2 PvP overlaps with friendly-fire checks.
+     */
+    public setupPvp2v2Colliders(): void {
+        const phaserScene = this.scene as unknown as Phaser.Scene;
+        if (this.scene.registry.get('gameMode') !== 'pvp2v2') return;
+
+        // Melee Attack Hitbox vs Remote Players (with team check)
+        phaserScene.physics.add.overlap(this.attackHitbox, this.scene.players, (_hitbox, target) => {
+            const player = this.scene.data.get('player') as Phaser.Physics.Arcade.Sprite;
+            if (target === player) return;
+            if (!this.scene.registry.get('pvp2v2FightActive')) return;
+
+            const now = Date.now();
+            const lastReq = (target as any).getData?.('lastPvp2v2HitReq') || 0;
+            if (now - lastReq < 250) return;
+            (target as any).setData?.('lastPvp2v2HitReq', now);
+
+            let targetId: string | undefined;
+            for (const [id, sprite] of this.scene.networkPacketHandler.remotePlayers) {
+                if (sprite === target) { targetId = id; break; }
+            }
+            if (!targetId) return;
+
+            // Client-side friendly fire guard
+            const teams = (this.scene.registry.get('pvp2v2Teams') || {}) as Record<string, 'A' | 'B'>;
+            const myTeam = this.scene.registry.get('pvp2v2MyTeam') as 'A' | 'B';
+            if (teams[targetId] === myTeam) return;
+
+            const damage = this.scene.stats.damage;
+
+            if (this.scene.networkManager?.role === 'client') {
+                this.scene.networkManager.broadcast({
+                    t: PacketType.GAME_EVENT,
+                    ev: {
+                        type: 'pvp2v2_hit_request',
+                        data: { targetId, damage, hitX: this.attackHitbox.x, hitY: this.attackHitbox.y }
+                    },
+                    ts: this.scene.networkManager.getServerTime()
+                });
+            } else {
+                this.scene.networkManager?.broadcast({
+                    t: PacketType.GAME_EVENT,
+                    ev: { type: 'damage_player', data: { id: targetId, damage, x: this.attackHitbox.x, y: this.attackHitbox.y } },
+                    ts: Date.now()
+                });
+                const mainScene = this.scene as any;
+                mainScene.pvp2v2RoundManager?.trackTeamDamage(myTeam, damage);
+            }
+
+            this.scene.poolManager.getDamageText((target as any).x, (target as any).y - 30, damage, '#ff4444');
+            this.scene.events.emit('enemy-hit');
+        });
+
+        // Player projectiles vs remote players (with team check)
+        const projectileGroups = [
+            (this.scene as any).arrows,
+            (this.scene as any).fireballs,
+            (this.scene as any).frostBolts,
+            (this.scene as any).lightningBolts,
+            (this.scene as any).sonicBolts,
+        ].filter(g => g !== undefined);
+
+        for (const group of projectileGroups) {
+            phaserScene.physics.add.overlap(group, this.scene.players, (projectile: any, target: any) => {
+                const player = this.scene.data.get('player') as Phaser.Physics.Arcade.Sprite;
+                if (target === player) return;
+                if (!this.scene.registry.get('pvp2v2FightActive')) return;
+                if (!projectile.active) return;
+
+                let targetId: string | undefined;
+                for (const [id, sprite] of this.scene.networkPacketHandler.remotePlayers) {
+                    if (sprite === target) { targetId = id; break; }
+                }
+                if (!targetId) return;
+
+                // Client-side friendly fire guard
+                const teams = (this.scene.registry.get('pvp2v2Teams') || {}) as Record<string, 'A' | 'B'>;
+                const myTeam = this.scene.registry.get('pvp2v2MyTeam') as 'A' | 'B';
+                if (teams[targetId] === myTeam) return;
+
+                const damage = projectile.damage || this.scene.stats.damage;
+
+                if (this.scene.networkManager?.role === 'client') {
+                    this.scene.networkManager.broadcast({
+                        t: PacketType.GAME_EVENT,
+                        ev: {
+                            type: 'pvp2v2_projectile_hit',
+                            data: { targetId, damage, hitX: projectile.x, hitY: projectile.y, projectileType: projectile.projectileType || 'arrow' }
+                        },
+                        ts: this.scene.networkManager.getServerTime()
+                    });
+                } else {
+                    this.scene.networkManager?.broadcast({
+                        t: PacketType.GAME_EVENT,
+                        ev: { type: 'damage_player', data: { id: targetId, damage, x: projectile.x, y: projectile.y } },
+                        ts: Date.now()
+                    });
+                    const mainScene = this.scene as any;
+                    mainScene.pvp2v2RoundManager?.trackTeamDamage(myTeam, damage);
+                }
+
+                if (projectile.disableBody) projectile.disableBody(true, true);
+                else if (projectile.destroy) projectile.destroy();
+
+                this.scene.poolManager.getDamageText(target.x, target.y - 30, damage, '#ff4444');
+            });
+        }
+    }
+
     private handlePlayerMeleeHit(target: Enemy | BossEnemy): void {
         if (this.currentSwingHitIds.has(target.id)) return;
         this.currentSwingHitIds.add(target.id);
