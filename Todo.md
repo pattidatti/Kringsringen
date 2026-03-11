@@ -1,3 +1,7 @@
+# 11 mars 
+- [ ] Pvp arena, Spells og piler går rett gjennom den andre spilleren. En av spillerne (litt vanskelig å vite hvem som er host eller ikke) får ikke opp animation/reaksjon på å selv bli skadet. 
+
+
 # 10 mars 
 - [x] Vi har akkurat implementert mange high level upgrades til de ulike klassene; men ser ikke ut som alle vises i boken. De skal jo være knytt til den abilitien de oppgraderer. På wizard må det også være en egen kategori bare for kaskade, og upgrades relatert til denne. 
 - [x] Når jeg kommer til level 4, så begynner spillet å lagge en del på den crappy laptopen min, tror ikke den dynamiske performance, fps-mål, opplegget fungerer helt optimalt. Må vel være mer vi kan hente ut fra et slikt system for å opprettholde høy fps? 
