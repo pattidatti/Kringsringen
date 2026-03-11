@@ -6,7 +6,7 @@ import { useGameRegistry } from '../../hooks/useGameRegistry';
 import type { Pvp2v2MatchResultData } from '../../game/Pvp2v2RoundManager';
 
 export interface PvpMatchResultData {
-    winner: 'player' | 'opponent';
+    winner: 'player' | 'opponent' | 'draw';
     finalScore: [number, number];
     roundResults: Array<{ winner: 'player' | 'opponent'; reason: 'death' | 'timeout' }>;
     disconnected?: boolean;
@@ -27,6 +27,7 @@ const Pvp1v1MatchResult: React.FC<Omit<PvpMatchResultProps, 'mode'>> = ({ onRema
     if (pvpState !== 'match_end' || !pvpMatchResult) return null;
 
     const isWinner = pvpMatchResult.winner === 'player';
+    const isDraw = pvpMatchResult.winner === 'draw';
 
     return (
         <AnimatePresence>
@@ -38,12 +39,14 @@ const Pvp1v1MatchResult: React.FC<Omit<PvpMatchResultProps, 'mode'>> = ({ onRema
                     <FantasyPanel className="w-[440px] p-8 flex flex-col items-center gap-5">
                         <h1 className="font-fantasy text-5xl tracking-wider"
                             style={{
-                                color: isWinner ? '#fde68a' : '#f87171',
-                                textShadow: isWinner
+                                color: isDraw ? '#d4a853' : isWinner ? '#fde68a' : '#f87171',
+                                textShadow: isDraw
+                                    ? '0 0 20px rgba(212,168,83,0.4), 3px 3px 0 #000'
+                                    : isWinner
                                     ? '0 0 30px rgba(253,230,138,0.6), 3px 3px 0 #000'
                                     : '0 0 20px rgba(248,113,113,0.4), 3px 3px 0 #000'
                             }}>
-                            {pvpMatchResult.disconnected ? 'Motstander koblet fra' : isWinner ? 'SEIER!' : 'TAP'}
+                            {pvpMatchResult.disconnected ? 'Motstander koblet fra' : isDraw ? 'UAVGJORT' : isWinner ? 'SEIER!' : 'TAP'}
                         </h1>
                         <div className="flex items-center gap-4">
                             <div className="text-center">
@@ -91,7 +94,8 @@ const Pvp2v2MatchResult: React.FC<Omit<PvpMatchResultProps, 'mode'>> = ({ onRema
     if (pvp2v2State !== 'match_end' || !pvp2v2MatchResult) return null;
 
     const { winnerTeam, myTeam, finalScore, roundResults, disconnected } = pvp2v2MatchResult;
-    const didWin = winnerTeam === myTeam;
+    const isDraw = winnerTeam === 'draw';
+    const didWin = !isDraw && winnerTeam === myTeam;
 
     return (
         <AnimatePresence>
@@ -103,12 +107,14 @@ const Pvp2v2MatchResult: React.FC<Omit<PvpMatchResultProps, 'mode'>> = ({ onRema
                     <FantasyPanel className="w-[440px] p-8 flex flex-col items-center gap-5">
                         <h1 className="font-fantasy text-4xl tracking-wider"
                             style={{
-                                color: didWin ? '#fde68a' : '#f87171',
-                                textShadow: didWin
+                                color: isDraw ? '#d4a853' : didWin ? '#fde68a' : '#f87171',
+                                textShadow: isDraw
+                                    ? '0 0 20px rgba(212,168,83,0.4), 3px 3px 0 #000'
+                                    : didWin
                                     ? '0 0 30px rgba(253,230,138,0.6), 3px 3px 0 #000'
                                     : '0 0 20px rgba(248,113,113,0.4), 3px 3px 0 #000'
                             }}>
-                            {disconnected ? 'Motstander koblet fra' : `Team ${winnerTeam} Seier!`}
+                            {disconnected ? 'Motstander koblet fra' : isDraw ? 'UAVGJORT' : `Team ${winnerTeam} Seier!`}
                         </h1>
 
                         {/* Score */}

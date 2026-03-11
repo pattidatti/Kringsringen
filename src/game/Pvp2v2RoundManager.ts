@@ -19,7 +19,7 @@ export interface Pvp2v2RoundResult {
 }
 
 export interface Pvp2v2MatchResultData {
-    winnerTeam: 'A' | 'B';
+    winnerTeam: 'A' | 'B' | 'draw';
     myTeam: 'A' | 'B';
     finalScore: [number, number];
     roundResults: Array<{ winnerTeam: 'A' | 'B'; reason: 'death' | 'timeout' }>;
@@ -70,6 +70,9 @@ export class Pvp2v2RoundManager {
     private scheduledStartTime: number = 0;
     private timerAccumulator: number = 0;
 
+    // Reconnect grace period timer
+    private disconnectTimer: ReturnType<typeof setTimeout> | null = null;
+
     // Music
     private pvpPlaylist: string[] = [];
     private lastPlayedBGM: string | null = null;
@@ -102,6 +105,7 @@ export class Pvp2v2RoundManager {
         this.scene.events.on('pvp2v2_round_end', this.handleRemoteRoundEnd, this);
         this.scene.events.on('pvp2v2_match_end', this.handleRemoteMatchEnd, this);
         this.scene.events.on('pvp2v2_rematch', this.handleRematch, this);
+        this.scene.events.on('pvp2v2_rematch_reset', this.handleRematchReset, this);
 
         // Auto-ready after a short delay
         this.scene.time.delayedCall(1000, () => {
@@ -129,34 +133,25 @@ export class Pvp2v2RoundManager {
         }
     }
 
-    private updateCountdown(delta: number): void {
-        if (this.scheduledStartTime > 0) {
-            const serverTime = this.scene.networkManager
-                ? this.scene.networkManager.getServerTime()
-                : Date.now();
-            const remaining = (this.scheduledStartTime - serverTime) / 1000;
+    private updateCountdown(_delta: number): void {
+        // If no NTP start time yet, wait — don't tick with unsynced local clock
+        if (this.scheduledStartTime === 0) return;
 
-            if (remaining <= 0) {
-                this.scheduledStartTime = 0;
-                this.startFighting();
-                return;
-            }
+        const serverTime = this.scene.networkManager
+            ? this.scene.networkManager.getServerTime()
+            : Date.now();
+        const remaining = (this.scheduledStartTime - serverTime) / 1000;
 
-            const countdownVal = Math.ceil(remaining);
-            if (countdownVal !== this.countdownTimer) {
-                this.countdownTimer = countdownVal;
-                this.scene.registry.set('pvp2v2Countdown', countdownVal);
-            }
-        } else {
-            this.timerAccumulator += delta;
-            if (this.timerAccumulator >= 1000) {
-                this.timerAccumulator -= 1000;
-                this.countdownTimer--;
-                this.scene.registry.set('pvp2v2Countdown', Math.max(0, this.countdownTimer));
-                if (this.countdownTimer <= 0) {
-                    this.startFighting();
-                }
-            }
+        if (remaining <= 0) {
+            this.scheduledStartTime = 0;
+            this.startFighting();
+            return;
+        }
+
+        const countdownVal = Math.ceil(remaining);
+        if (countdownVal !== this.countdownTimer) {
+            this.countdownTimer = countdownVal;
+            this.scene.registry.set('pvp2v2Countdown', countdownVal);
         }
     }
 
@@ -329,7 +324,9 @@ export class Pvp2v2RoundManager {
 
     private endMatch(): void {
         const myTeam = this.scene.registry.get('pvp2v2MyTeam') as 'A' | 'B';
-        const winnerTeam: 'A' | 'B' = this.score[0] > this.score[1] ? 'A' : 'B';
+        const winnerTeam: 'A' | 'B' | 'draw' =
+            this.score[0] > this.score[1] ? 'A' :
+            this.score[0] < this.score[1] ? 'B' : 'draw';
 
         const result: Pvp2v2MatchResultData = {
             winnerTeam,
@@ -361,13 +358,18 @@ export class Pvp2v2RoundManager {
         this.readyPeers.add(myPeerId);
         this.scene.registry.set('pvp2v2ReadyCount', this.readyPeers.size);
 
-        const trySendReady = () => {
+        const MAX_READY_RETRIES = 30;
+        const trySendReady = (retryCount = 0) => {
             if (!this.scene.networkManager) {
                 this.checkAllReady();
                 return;
             }
             if (this.scene.networkManager.getConnectedPeerCount() === 0) {
-                this.scene.time.delayedCall(500, trySendReady);
+                if (retryCount >= MAX_READY_RETRIES) {
+                    this.handleOpponentDisconnect();
+                    return;
+                }
+                this.scene.time.delayedCall(500, () => trySendReady(retryCount + 1));
                 return;
             }
             this.scene.networkManager.broadcast({
@@ -539,29 +541,58 @@ export class Pvp2v2RoundManager {
     }
 
     /**
-     * Handle a player disconnecting mid-match.
+     * Handle a player disconnecting mid-match — 10-second grace period before forfeit.
      */
     public handleOpponentDisconnect(): void {
         if (this.state === 'match_end') return;
+        if (this.disconnectTimer) return; // already counting down
 
-        const myTeam = this.scene.registry.get('pvp2v2MyTeam') as 'A' | 'B';
-        const winnerTeam = myTeam;
-        const winsNeeded = Math.ceil(this.bestOf / 2);
-        if (winnerTeam === 'A') this.score[0] = winsNeeded;
-        else this.score[1] = winsNeeded;
+        this.scene.registry.set('pvpOpponentDisconnecting', true);
+        this.disconnectTimer = setTimeout(() => {
+            this.disconnectTimer = null;
+            this.scene.registry.set('pvpOpponentDisconnecting', false);
 
-        this.scene.registry.set('pvp2v2Score', [...this.score]);
-        const result: Pvp2v2MatchResultData = {
-            winnerTeam,
-            myTeam,
-            finalScore: [...this.score] as [number, number],
-            roundResults: [...this.roundResults],
-            disconnected: true,
-        };
-        this.scene.registry.set('pvp2v2MatchResult', result);
-        this.scene.registry.set('pvp2v2FightActive', false);
-        this.setState('match_end');
+            if (this.state === 'match_end') return;
+
+            const myTeam = this.scene.registry.get('pvp2v2MyTeam') as 'A' | 'B';
+            const winnerTeam = myTeam;
+            const winsNeeded = Math.ceil(this.bestOf / 2);
+            if (winnerTeam === 'A') this.score[0] = winsNeeded;
+            else this.score[1] = winsNeeded;
+
+            this.scene.registry.set('pvp2v2Score', [...this.score]);
+            const result: Pvp2v2MatchResultData = {
+                winnerTeam,
+                myTeam,
+                finalScore: [...this.score] as [number, number],
+                roundResults: [...this.roundResults],
+                disconnected: true,
+            };
+            this.scene.registry.set('pvp2v2MatchResult', result);
+            this.scene.registry.set('pvp2v2FightActive', false);
+            this.setState('match_end');
+        }, 10_000);
     }
+
+    /**
+     * Cancel the disconnect grace period when opponent reconnects.
+     */
+    public handleOpponentReconnect(): void {
+        if (this.disconnectTimer) {
+            clearTimeout(this.disconnectTimer);
+            this.disconnectTimer = null;
+        }
+        this.scene.registry.set('pvpOpponentDisconnecting', false);
+    }
+
+    /**
+     * Reset coins + upgrades on rematch (for remote side).
+     */
+    private handleRematchReset = (): void => {
+        this.scene.registry.set('playerCoins', 0);
+        this.scene.registry.set('upgradeLevels', {});
+        this.scene.stats.recalculateStats();
+    };
 
     private handleRematch = (): void => {
         this.score = [0, 0];
@@ -591,15 +622,26 @@ export class Pvp2v2RoundManager {
                 ev: { type: 'pvp2v2_rematch', data: {} },
                 ts: Date.now()
             });
+            // Explicit reset broadcast ensures all peers reset coins/upgrades
+            this.scene.networkManager.broadcast({
+                t: PacketType.GAME_EVENT,
+                ev: { type: 'pvp2v2_rematch_reset', data: {} },
+                ts: Date.now()
+            });
         }
         this.handleRematch();
     }
 
     public destroy(): void {
+        if (this.disconnectTimer) {
+            clearTimeout(this.disconnectTimer);
+            this.disconnectTimer = null;
+        }
         this.scene.events.off('pvp2v2_ready', this.handleRemoteReady, this);
         this.scene.events.off('pvp2v2_round_start', this.handleRoundStart, this);
         this.scene.events.off('pvp2v2_round_end', this.handleRemoteRoundEnd, this);
         this.scene.events.off('pvp2v2_match_end', this.handleRemoteMatchEnd, this);
         this.scene.events.off('pvp2v2_rematch', this.handleRematch, this);
+        this.scene.events.off('pvp2v2_rematch_reset', this.handleRematchReset, this);
     }
 }

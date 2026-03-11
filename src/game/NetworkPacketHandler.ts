@@ -38,6 +38,7 @@ export class NetworkPacketHandler {
     public playerNicknames: Map<string, Phaser.GameObjects.Text> = new Map();
     public playerBuffers: Map<string, JitterBuffer<PackedPlayer>> = new Map();
     public remotePlayerPackets: Map<string, PackedPlayer> = new Map();
+    private remotePlayerPacketReceivedAt: Map<string, number> = new Map();
     public remotePlayerLights: Map<string, Phaser.GameObjects.Light> = new Map();
 
     constructor(scene: IMainScene) {
@@ -65,6 +66,7 @@ export class NetworkPacketHandler {
 
         this.playerBuffers.delete(id);
         this.remotePlayerPackets.delete(id);
+        this.remotePlayerPacketReceivedAt.delete(id);
     }
 
     /**
@@ -141,8 +143,9 @@ export class NetworkPacketHandler {
             buffer.push(ts, p);
         }
 
-        // Store latest raw packet for reference
+        // Store latest raw packet with receive timestamp for stale-relay detection
         this.remotePlayerPackets.set(id, p);
+        this.remotePlayerPacketReceivedAt.set(id, Date.now());
     }
 
     private spawnRemotePlayer(id: string, initialData: PackedPlayer): void {
@@ -359,16 +362,23 @@ export class NetworkPacketHandler {
 
             if (weapon === 'bow') {
                 const arrow = this.scene.arrows.get(remoteSprite.x, remoteSprite.y) as any;
-                if (arrow) arrow.fire(remoteSprite.x, remoteSprite.y, angle, 10, 700, 0, 0);
+                if (arrow) {
+                    arrow.fire(remoteSprite.x, remoteSprite.y, angle, 10, 700, 0, 0);
+                    arrow.setData('pvpRemote', true);
+                }
             } else if (weapon === 'fire') {
                 const fireball = this.scene.fireballs.get(remoteSprite.x, remoteSprite.y) as any;
-                if (fireball) fireball.fire(remoteSprite.x, remoteSprite.y, angle, 15);
+                if (fireball) {
+                    fireball.fire(remoteSprite.x, remoteSprite.y, angle, 15);
+                    fireball.setData('pvpRemote', true);
+                }
             } else if (weapon === 'frost') {
                 const bolt = this.scene.frostBolts.get(remoteSprite.x, remoteSprite.y) as any;
                 if (bolt) {
                     const targetX = remoteSprite.x + Math.cos(angle) * 200;
                     const targetY = remoteSprite.y + Math.sin(angle) * 200;
                     bolt.fire(remoteSprite.x, remoteSprite.y, targetX, targetY, 12);
+                    bolt.setData('pvpRemote', true);
                 }
             } else if (weapon === 'lightning') {
                 const bolt = this.scene.lightningBolts.get(remoteSprite.x, remoteSprite.y) as any;
@@ -376,6 +386,7 @@ export class NetworkPacketHandler {
                     const targetX = remoteSprite.x + Math.cos(angle) * 300;
                     const targetY = remoteSprite.y + Math.sin(angle) * 300;
                     bolt.fire(remoteSprite.x, remoteSprite.y, targetX, targetY, 20, 1);
+                    bolt.setData('pvpRemote', true);
                 }
             }
         }
@@ -468,7 +479,7 @@ export class NetworkPacketHandler {
 
         // Validate distance
         const dist = Phaser.Math.Distance.Between(targetSprite.x, targetSprite.y, data.hitX, data.hitY);
-        if (dist > 80) return; // Grace distance for melee
+        if (dist > 60) return; // Grace distance for melee
 
         // Apply damage
         this.scene.networkManager?.broadcast({
@@ -497,7 +508,7 @@ export class NetworkPacketHandler {
         if (!targetSprite || !targetSprite.active) return;
 
         const dist = Phaser.Math.Distance.Between(targetSprite.x, targetSprite.y, data.hitX, data.hitY);
-        if (dist > 120) return; // Larger grace for projectiles
+        if (dist > 80) return; // Grace for projectiles
 
         this.scene.networkManager?.broadcast({
             t: PacketType.GAME_EVENT,
@@ -528,7 +539,7 @@ export class NetworkPacketHandler {
         if (!targetSprite || !targetSprite.active) return;
 
         const dist = Phaser.Math.Distance.Between(targetSprite.x, targetSprite.y, data.hitX, data.hitY);
-        if (dist > 80) return;
+        if (dist > 60) return;
 
         this.scene.networkManager?.broadcast({
             t: PacketType.GAME_EVENT,
@@ -559,7 +570,7 @@ export class NetworkPacketHandler {
         if (!targetSprite || !targetSprite.active) return;
 
         const dist = Phaser.Math.Distance.Between(targetSprite.x, targetSprite.y, data.hitX, data.hitY);
-        if (dist > 120) return;
+        if (dist > 80) return;
 
         this.scene.networkManager?.broadcast({
             t: PacketType.GAME_EVENT,
@@ -598,7 +609,7 @@ export class NetworkPacketHandler {
         } else {
             // Delta-sync optimization for clients
             this.networkTickCount++;
-            const forceFullSync = this.networkTickCount % 20 === 0;
+            const forceFullSync = this.networkTickCount % 10 === 0;
             const stateStr = `${this.localPackedPlayer[1]},${this.localPackedPlayer[2]},${this.localPackedPlayer[3]},${this.localPackedPlayer[4]},${this.localPackedPlayer[5]},${this.localPackedPlayer[6]}`;
             if (forceFullSync || this.lastSentPlayerStates.get(myId) !== stateStr) {
                 this.lastSentPlayerStates.set(myId, stateStr);
@@ -609,7 +620,7 @@ export class NetworkPacketHandler {
 
     private handleHostTick(now: number): void {
         this.networkTickCount++;
-        const forceFullSync = this.networkTickCount % 20 === 0;
+        const forceFullSync = this.networkTickCount % 10 === 0;
         const playersToSync: PackedPlayer[] = [];
         const myId = this.scene.networkManager?.peerId || 'unknown';
 
@@ -641,8 +652,12 @@ export class NetworkPacketHandler {
 
         // Local player
         processPlayer(this.localPackedPlayer);
-        // Remote players
-        this.remotePlayerPackets.forEach((p: PackedPlayer) => processPlayer(p));
+        // Remote players — skip stale packets (not received in last 200ms) to avoid relaying old positions
+        this.remotePlayerPackets.forEach((p: PackedPlayer, id: string) => {
+            const receivedAt = this.remotePlayerPacketReceivedAt.get(id) || 0;
+            if (Date.now() - receivedAt > 200) return;
+            processPlayer(p);
+        });
 
         this.scene.registry.set('partyState', partyState);
 

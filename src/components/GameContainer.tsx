@@ -78,6 +78,21 @@ export const GameContainer: React.FC<GameContainerProps> = React.memo(({ network
     const loadProgress = useGameRegistry<number>('loadProgress', 0);
     const pvpState = useGameRegistry<string>('pvpState', 'waiting');
     const pvp2v2State = useGameRegistry<string>('pvp2v2State', 'waiting');
+    const pvpOpponentDisconnecting = useGameRegistry<boolean>('pvpOpponentDisconnecting', false);
+
+    // PvP opponent disconnect countdown
+    const [disconnectCountdown, setDisconnectCountdown] = useState(10);
+    useEffect(() => {
+        if (!pvpOpponentDisconnecting) {
+            setDisconnectCountdown(10);
+            return;
+        }
+        setDisconnectCountdown(10);
+        const interval = setInterval(() => {
+            setDisconnectCountdown(prev => Math.max(0, prev - 1));
+        }, 1000);
+        return () => clearInterval(interval);
+    }, [pvpOpponentDisconnecting]);
 
     // Victory / Ascension state
     const [showVictory, setShowVictory] = useState(false);
@@ -894,6 +909,15 @@ export const GameContainer: React.FC<GameContainerProps> = React.memo(({ network
 
             {!isPvpMode && <BossSplashScreen />}
             {!isPvpMode && <GameOverOverlay />}
+
+            {/* PVP opponent disconnect grace period banner */}
+            {(isPvpMode || isPvp2v2Mode) && pvpOpponentDisconnecting && (
+                <div className="fixed top-20 left-1/2 -translate-x-1/2 z-[90] px-5 py-3 rounded-lg bg-black/80 border border-amber-700/60 text-center pointer-events-none">
+                    <p className="text-amber-200 font-fantasy text-sm" style={{ textShadow: '1px 1px 0 #000' }}>
+                        Motstanderen er borte... kobler til igjen ({disconnectCountdown}s)
+                    </p>
+                </div>
+            )}
 
             {/* PVP 1v1 overlays */}
             {isPvpMode && (

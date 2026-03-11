@@ -20,7 +20,7 @@ export type PackedPlayer = [string, number, number, string, number, number, stri
 export type PackedEnemy = [string, number, number, number, string, number];
 
 export interface GameEventPacket {
-    type: 'attack' | 'spawn' | 'death' | 'upgrade' | 'boss_ability' | 'coin_collect' | 'spawn_coins' | 'level_complete' | 'hit_request' | 'hit_confirm' | 'projectile_hit_request' | 'enemy_death' | 'damage_player' | 'sync_pause' | 'player_loaded' | 'player_ready' | 'start_level' | 'resume_game' | 'sync_players_state' | 'revive_request' | 'player_revived' | 'party_dead' | 'restart_game' | 'spawn_enemy_projectile' | 'enemy_heal' | 'pvp_hit_request' | 'pvp_hit_confirm' | 'pvp_projectile_hit' | 'pvp_round_start' | 'pvp_round_end' | 'pvp_ready' | 'pvp_match_end' | 'pvp_rematch' | 'pvp2v2_round_start' | 'pvp2v2_round_end' | 'pvp2v2_match_end' | 'pvp2v2_ready' | 'pvp2v2_hit_request' | 'pvp2v2_projectile_hit' | 'pvp2v2_rematch';
+    type: 'attack' | 'spawn' | 'death' | 'upgrade' | 'boss_ability' | 'coin_collect' | 'spawn_coins' | 'level_complete' | 'hit_request' | 'hit_confirm' | 'projectile_hit_request' | 'enemy_death' | 'damage_player' | 'sync_pause' | 'player_loaded' | 'player_ready' | 'start_level' | 'resume_game' | 'sync_players_state' | 'revive_request' | 'player_revived' | 'party_dead' | 'restart_game' | 'spawn_enemy_projectile' | 'enemy_heal' | 'pvp_hit_request' | 'pvp_hit_confirm' | 'pvp_projectile_hit' | 'pvp_round_start' | 'pvp_round_end' | 'pvp_ready' | 'pvp_match_end' | 'pvp_rematch' | 'pvp_rematch_reset' | 'pvp_death_report' | 'pvp2v2_round_start' | 'pvp2v2_round_end' | 'pvp2v2_match_end' | 'pvp2v2_ready' | 'pvp2v2_hit_request' | 'pvp2v2_projectile_hit' | 'pvp2v2_rematch' | 'pvp2v2_rematch_reset';
     data: any;
 }
 

@@ -214,6 +214,7 @@ export class CollisionManager {
 
         for (const group of projectileGroups) {
             phaserScene.physics.add.overlap(group, this.scene.players, (projectile: any, target: any) => {
+                if (projectile.getData?.('pvpRemote')) return;
                 const player = this.scene.data.get('player') as Phaser.Physics.Arcade.Sprite;
                 if (target === player) return;
                 if (!this.scene.registry.get('pvpFightActive')) return;
@@ -329,6 +330,7 @@ export class CollisionManager {
 
         for (const group of projectileGroups) {
             phaserScene.physics.add.overlap(group, this.scene.players, (projectile: any, target: any) => {
+                if (projectile.getData?.('pvpRemote')) return;
                 const player = this.scene.data.get('player') as Phaser.Physics.Arcade.Sprite;
                 if (target === player) return;
                 if (!this.scene.registry.get('pvp2v2FightActive')) return;

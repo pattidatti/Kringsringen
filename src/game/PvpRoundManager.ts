@@ -47,6 +47,12 @@ export class PvpRoundManager {
     // NTP-synced start time
     private scheduledStartTime: number = 0;
 
+    // Reconnect grace period timer
+    private disconnectTimer: ReturnType<typeof setTimeout> | null = null;
+
+    // Death witness — prevents broadcasting pvp_death_report every frame
+    private deathReported: boolean = false;
+
     // Accumulator for timer ticks
     private timerAccumulator: number = 0;
 
@@ -82,6 +88,8 @@ export class PvpRoundManager {
         this.scene.events.on('pvp_round_end', this.handleRemoteRoundEnd, this);
         this.scene.events.on('pvp_match_end', this.handleRemoteMatchEnd, this);
         this.scene.events.on('pvp_rematch', this.handleRematch, this);
+        this.scene.events.on('pvp_rematch_reset', this.handleRematchReset, this);
+        this.scene.events.on('pvp_death_report', this.handleDeathReport, this);
 
         // Start first round automatically after a short delay
         this.scene.time.delayedCall(1000, () => {
@@ -112,37 +120,25 @@ export class PvpRoundManager {
         }
     }
 
-    private updateCountdown(delta: number): void {
-        if (this.scheduledStartTime > 0) {
-            const serverTime = this.scene.networkManager
-                ? this.scene.networkManager.getServerTime()
-                : Date.now();
-            const remaining = (this.scheduledStartTime - serverTime) / 1000;
+    private updateCountdown(_delta: number): void {
+        // If no NTP start time yet, wait — don't tick with unsynced local clock
+        if (this.scheduledStartTime === 0) return;
 
-            if (remaining <= 0) {
-                // Start fighting
-                this.scheduledStartTime = 0;
-                this.startFighting();
-                return;
-            }
+        const serverTime = this.scene.networkManager
+            ? this.scene.networkManager.getServerTime()
+            : Date.now();
+        const remaining = (this.scheduledStartTime - serverTime) / 1000;
 
-            const countdownVal = Math.ceil(remaining);
-            if (countdownVal !== this.countdownTimer) {
-                this.countdownTimer = countdownVal;
-                this.scene.registry.set('pvpCountdown', countdownVal);
-            }
-        } else {
-            // Fallback: use delta accumulation
-            this.timerAccumulator += delta;
-            if (this.timerAccumulator >= 1000) {
-                this.timerAccumulator -= 1000;
-                this.countdownTimer--;
-                this.scene.registry.set('pvpCountdown', Math.max(0, this.countdownTimer));
+        if (remaining <= 0) {
+            this.scheduledStartTime = 0;
+            this.startFighting();
+            return;
+        }
 
-                if (this.countdownTimer <= 0) {
-                    this.startFighting();
-                }
-            }
+        const countdownVal = Math.ceil(remaining);
+        if (countdownVal !== this.countdownTimer) {
+            this.countdownTimer = countdownVal;
+            this.scene.registry.set('pvpCountdown', countdownVal);
         }
     }
 
@@ -162,6 +158,15 @@ export class PvpRoundManager {
         const playerHP = this.scene.registry.get('playerHP') || 0;
         if (playerHP <= 0) {
             this.endRound('opponent', 'death');
+            // Client also reports its own death to the host as a witness
+            if (!this.deathReported && this.scene.networkManager?.role === 'client') {
+                this.deathReported = true;
+                this.scene.networkManager.broadcast({
+                    t: PacketType.GAME_EVENT,
+                    ev: { type: 'pvp_death_report', data: { peerId: this.scene.networkManager.peerId } },
+                    ts: Date.now()
+                });
+            }
         }
 
         // Check if opponent died (host checks remote player HP)
@@ -281,7 +286,9 @@ export class PvpRoundManager {
     }
 
     private endMatch(): void {
-        const matchWinner: 'player' | 'opponent' = this.score[0] > this.score[1] ? 'player' : 'opponent';
+        const matchWinner: 'player' | 'opponent' | 'draw' =
+            this.score[0] > this.score[1] ? 'player' :
+            this.score[0] < this.score[1] ? 'opponent' : 'draw';
 
         const result: PvpMatchResultData = {
             winner: matchWinner,
@@ -311,14 +318,18 @@ export class PvpRoundManager {
         if (this.localReady) return;
         this.localReady = true;
 
-        const trySendReady = () => {
+        const MAX_READY_RETRIES = 30;
+        const trySendReady = (retryCount = 0) => {
             if (!this.scene.networkManager) {
                 this.checkBothReady();
                 return;
             }
             if (this.scene.networkManager.getConnectedPeerCount() === 0) {
-                // Retry every 500ms until connection opens
-                this.scene.time.delayedCall(500, trySendReady);
+                if (retryCount >= MAX_READY_RETRIES) {
+                    this.handleOpponentDisconnect();
+                    return;
+                }
+                this.scene.time.delayedCall(500, () => trySendReady(retryCount + 1));
                 return;
             }
             this.scene.networkManager.broadcast({
@@ -455,7 +466,8 @@ export class PvpRoundManager {
 
     private handleRemoteMatchEnd = (data: PvpMatchResultData): void => {
         // Invert for local perspective
-        const localWinner: 'player' | 'opponent' = data.winner === 'player' ? 'opponent' : 'player';
+        const localWinner: 'player' | 'opponent' | 'draw' =
+            data.winner === 'draw' ? 'draw' : data.winner === 'player' ? 'opponent' : 'player';
         const result: PvpMatchResultData = {
             winner: localWinner,
             finalScore: [data.finalScore[1], data.finalScore[0]],
@@ -491,6 +503,7 @@ export class PvpRoundManager {
 
         this.playerDamageDealt = 0;
         this.opponentDamageDealt = 0;
+        this.deathReported = false;
         this.scene.registry.set('pvpDamageDealt', 0);
     }
 
@@ -507,27 +520,65 @@ export class PvpRoundManager {
     }
 
     /**
-     * Handle opponent disconnect
+     * Handle opponent disconnect — 10-second grace period before awarding forfeit.
      */
     public handleOpponentDisconnect(): void {
         if (this.state === 'match_end') return;
+        if (this.disconnectTimer) return; // already counting down
 
-        // Award remaining rounds to local player
-        const winsNeeded = Math.ceil(this.bestOf / 2);
-        this.score[0] = winsNeeded;
-        this.scene.registry.set('pvpScore', [...this.score]);
+        this.scene.registry.set('pvpOpponentDisconnecting', true);
+        this.disconnectTimer = setTimeout(() => {
+            this.disconnectTimer = null;
+            this.scene.registry.set('pvpOpponentDisconnecting', false);
 
-        const result: PvpMatchResultData = {
-            winner: 'player',
-            finalScore: [...this.score] as [number, number],
-            roundResults: [...this.roundResults],
-            disconnected: true
-        };
+            if (this.state === 'match_end') return;
 
-        this.scene.registry.set('pvpMatchResult', result);
-        this.scene.registry.set('pvpFightActive', false);
-        this.setState('match_end');
+            // Award forfeit to local player
+            const winsNeeded = Math.ceil(this.bestOf / 2);
+            this.score[0] = winsNeeded;
+            this.scene.registry.set('pvpScore', [...this.score]);
+
+            const result: PvpMatchResultData = {
+                winner: 'player',
+                finalScore: [...this.score] as [number, number],
+                roundResults: [...this.roundResults],
+                disconnected: true
+            };
+
+            this.scene.registry.set('pvpMatchResult', result);
+            this.scene.registry.set('pvpFightActive', false);
+            this.setState('match_end');
+        }, 10_000);
     }
+
+    /**
+     * Cancel the disconnect grace period when opponent reconnects.
+     */
+    public handleOpponentReconnect(): void {
+        if (this.disconnectTimer) {
+            clearTimeout(this.disconnectTimer);
+            this.disconnectTimer = null;
+        }
+        this.scene.registry.set('pvpOpponentDisconnecting', false);
+    }
+
+    /**
+     * Reset coins + upgrades on rematch (for remote side).
+     */
+    private handleRematchReset = (): void => {
+        this.scene.registry.set('playerCoins', 0);
+        this.scene.registry.set('upgradeLevels', {});
+        this.scene.stats.recalculateStats();
+    };
+
+    /**
+     * Host receives death confirmation from client (CRITICAL-7 witness).
+     */
+    private handleDeathReport = (): void => {
+        if (this.scene.networkManager?.role === 'host' && this.state === 'fighting') {
+            this.endRound('player', 'death');
+        }
+    };
 
     private handleRematch = (): void => {
         this.score = [0, 0];
@@ -562,15 +613,27 @@ export class PvpRoundManager {
                 ev: { type: 'pvp_rematch', data: {} },
                 ts: Date.now()
             });
+            // Explicit reset broadcast ensures all peers reset coins/upgrades
+            this.scene.networkManager.broadcast({
+                t: PacketType.GAME_EVENT,
+                ev: { type: 'pvp_rematch_reset', data: {} },
+                ts: Date.now()
+            });
         }
         this.handleRematch();
     }
 
     public destroy(): void {
+        if (this.disconnectTimer) {
+            clearTimeout(this.disconnectTimer);
+            this.disconnectTimer = null;
+        }
         this.scene.events.off('pvp_ready', this.handleRemoteReady, this);
         this.scene.events.off('pvp_round_start', this.handleRoundStart, this);
         this.scene.events.off('pvp_round_end', this.handleRemoteRoundEnd, this);
         this.scene.events.off('pvp_match_end', this.handleRemoteMatchEnd, this);
         this.scene.events.off('pvp_rematch', this.handleRematch, this);
+        this.scene.events.off('pvp_rematch_reset', this.handleRematchReset, this);
+        this.scene.events.off('pvp_death_report', this.handleDeathReport, this);
     }
 }

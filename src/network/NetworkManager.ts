@@ -17,6 +17,9 @@ export class NetworkManager {
     private onTick: (() => void) | null = null;
     public latencyMs: number = 0; // For debug simulation
     public onDisconnect?: (peerId: string) => void;
+    public onReconnect?: (peerId: string) => void;
+    private rtt: number = 100; // smoothed RTT in ms (default 100ms assumption)
+    private disconnectedPeers: Set<string> = new Set();
 
     constructor(
         peer: Peer,
@@ -52,9 +55,14 @@ export class NetworkManager {
     private handleConnection(conn: DataConnection) {
         const onOpen = () => {
             if (conn.label === 'reliable') {
+                const wasDisconnected = this.disconnectedPeers.has(conn.peer);
                 this.reliableConnections.set(conn.peer, conn);
                 if (this.role === 'client') {
                     this.startPingLoop(conn);
+                }
+                if (wasDisconnected) {
+                    this.disconnectedPeers.delete(conn.peer);
+                    if (this.onReconnect) this.onReconnect(conn.peer);
                 }
             } else {
                 this.unreliableConnections.set(conn.peer, conn);
@@ -119,7 +127,8 @@ export class NetworkManager {
                 const rtt = Date.now() - packet.po.clientTime;
                 const newOffset = packet.po.serverTime - (packet.po.clientTime + rtt / 2);
 
-                // Smooth the offset using EMA (Exponential Moving Average)
+                // Smooth RTT and time offset using EMA (Exponential Moving Average)
+                this.rtt = this.rtt * 0.8 + rtt * 0.2;
                 if (this.timeOffset === 0) {
                     this.timeOffset = newOffset;
                 } else {
@@ -134,6 +143,7 @@ export class NetworkManager {
         conn.on('close', () => {
             if (conn.label === 'reliable') {
                 this.reliableConnections.delete(conn.peer);
+                this.disconnectedPeers.add(conn.peer);
                 if (this.onDisconnect) this.onDisconnect(conn.peer);
             } else {
                 this.unreliableConnections.delete(conn.peer);
@@ -146,7 +156,10 @@ export class NetworkManager {
             if (conn.label === 'reliable') {
                 const wasConnected = this.reliableConnections.has(conn.peer);
                 this.reliableConnections.delete(conn.peer);
-                if (wasConnected && this.onDisconnect) this.onDisconnect(conn.peer);
+                if (wasConnected) {
+                    this.disconnectedPeers.add(conn.peer);
+                    if (this.onDisconnect) this.onDisconnect(conn.peer);
+                }
             } else {
                 this.unreliableConnections.delete(conn.peer);
             }
@@ -258,12 +271,19 @@ export class NetworkManager {
         return this.peer.id;
     }
 
-    /** 
+    /**
      * Returns the globally synchronized time.
      * Host returns local time. Client returns local time + network offset.
      */
     public getServerTime(): number {
         return Date.now() + (this.role === 'client' ? this.timeOffset : 0);
+    }
+
+    /**
+     * Returns estimated one-way latency in ms (half of smoothed RTT).
+     */
+    public getEstimatedLatency(): number {
+        return this.rtt / 2;
     }
 
     public getConnectedPeerCount(): number {

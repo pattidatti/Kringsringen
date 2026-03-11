@@ -376,12 +376,15 @@ export class MainScene extends Phaser.Scene implements IMainScene {
                 this.pvpRoundManager.initialize();
                 console.log('[MainScene] PVP mode initialized');
 
-                // Override disconnect handler for PVP
+                // Override disconnect/reconnect handlers for PVP
                 if (this.networkManager) {
                     const originalOnDisconnect = this.networkManager.onDisconnect;
                     this.networkManager.onDisconnect = (id: string) => {
                         originalOnDisconnect?.(id);
                         this.pvpRoundManager?.handleOpponentDisconnect();
+                    };
+                    this.networkManager.onReconnect = (_id: string) => {
+                        this.pvpRoundManager?.handleOpponentReconnect();
                     };
                 }
             }
@@ -402,12 +405,15 @@ export class MainScene extends Phaser.Scene implements IMainScene {
                 this.pvp2v2RoundManager.initialize();
                 console.log('[MainScene] 2v2 PvP mode initialized, slot:', mySlot, 'team:', myTeam);
 
-                // Override disconnect handler for 2v2
+                // Override disconnect/reconnect handlers for 2v2
                 if (this.networkManager) {
                     const originalOnDisconnect = this.networkManager.onDisconnect;
                     this.networkManager.onDisconnect = (id: string) => {
                         originalOnDisconnect?.(id);
                         this.pvp2v2RoundManager?.handleOpponentDisconnect();
+                    };
+                    this.networkManager.onReconnect = (_id: string) => {
+                        this.pvp2v2RoundManager?.handleOpponentReconnect();
                     };
                 }
             }
@@ -486,7 +492,10 @@ export class MainScene extends Phaser.Scene implements IMainScene {
             if (this.player && this.playerShadow) this.playerShadow.update(this.player.x, this.player.y);
             if (!this.player || !this.player.body) return;
 
-            const renderTime = this.networkManager ? this.networkManager.getServerTime() - 100 : Date.now();
+            const latency = this.networkManager?.getEstimatedLatency() ?? 100;
+            const renderTime = this.networkManager
+                ? this.networkManager.getServerTime() - Math.max(latency * 1.5, 80)
+                : Date.now();
             this.networkPacketHandler.interpolateRemotePlayers(renderTime);
 
             this.visuals.update();

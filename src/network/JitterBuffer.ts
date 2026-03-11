@@ -52,8 +52,11 @@ export class JitterBuffer<T> {
                 const dt = latest.ts - prev.ts;
 
                 if (dt > 0) {
-                    const extrapolationTime = Math.min(targetTime - latest.ts, 200); // Cap to 200ms
-                    const factor = extrapolationTime / dt;
+                    const MAX_EXTRAP_MS = 400;
+                    const extrapolationTime = Math.min(targetTime - latest.ts, MAX_EXTRAP_MS);
+                    // Dampen velocity linearly so the ghost smoothly decelerates instead of freezing
+                    const dampFactor = Math.max(0, 1 - (extrapolationTime / MAX_EXTRAP_MS) * 0.5);
+                    const factor = (extrapolationTime / dt) * dampFactor;
 
                     // We return the latest as both prev and next, but with a factor > 1
                     // The caller must handle factors > 1 if they want true extrapolation,
