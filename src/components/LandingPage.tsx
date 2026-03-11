@@ -176,7 +176,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart, onContinue, onStartM
 
                 {/* Buttons — pinned to bottom, never clipped */}
                 <motion.div
-                    className="flex-shrink-0 flex flex-col items-center gap-5 pb-6 overflow-y-auto"
+                    className="flex-shrink-0 flex flex-col items-center gap-5 pb-6 overflow-y-auto px-4"
                     initial={{ opacity: 0, y: 24 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.6, ease: 'easeOut', delay: 0.2 }}

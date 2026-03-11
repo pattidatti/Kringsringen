@@ -296,16 +296,25 @@ export class PvpRoundManager {
         if (this.localReady) return;
         this.localReady = true;
 
-        // Broadcast ready
-        if (this.scene.networkManager) {
+        const trySendReady = () => {
+            if (!this.scene.networkManager) {
+                this.checkBothReady();
+                return;
+            }
+            if (this.scene.networkManager.getConnectedPeerCount() === 0) {
+                // Retry every 500ms until connection opens
+                this.scene.time.delayedCall(500, trySendReady);
+                return;
+            }
             this.scene.networkManager.broadcast({
                 t: PacketType.GAME_EVENT,
                 ev: { type: 'pvp_ready', data: { playerId: this.scene.networkManager.peerId } },
                 ts: Date.now()
             });
-        }
+            this.checkBothReady();
+        };
 
-        this.checkBothReady();
+        trySendReady();
     }
 
     private handleRemoteReady = (_data: any): void => {

@@ -530,8 +530,10 @@ export class NetworkPacketHandler {
             this.handleHostTick(now);
         } else {
             // Delta-sync optimization for clients
+            this.networkTickCount++;
+            const forceFullSync = this.networkTickCount % 20 === 0;
             const stateStr = `${this.localPackedPlayer[1]},${this.localPackedPlayer[2]},${this.localPackedPlayer[3]},${this.localPackedPlayer[4]},${this.localPackedPlayer[5]},${this.localPackedPlayer[6]}`;
-            if (this.lastSentPlayerStates.get(myId) !== stateStr) {
+            if (forceFullSync || this.lastSentPlayerStates.get(myId) !== stateStr) {
                 this.lastSentPlayerStates.set(myId, stateStr);
                 this.scene.networkManager.broadcast(BinaryPacker.packPlayer(this.localPackedPlayer, now));
             }

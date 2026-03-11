@@ -363,6 +363,7 @@ export class MainScene extends Phaser.Scene implements IMainScene {
                 if (netConfig.role === 'client' && netConfig.hostPeerId) {
                     this.networkManager.connectToHost(netConfig.hostPeerId);
                 }
+                this.registry.set('nickname', netConfig.nickname || '');
                 console.log('[MainScene] NetworkManager initialized as', netConfig.role);
             }
 
