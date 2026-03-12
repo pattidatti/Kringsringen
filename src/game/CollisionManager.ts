@@ -4,6 +4,8 @@ import { Enemy } from './Enemy';
 import { BossEnemy } from './BossEnemy';
 import { EnemyProjectile } from './EnemyProjectile';
 import { PacketType } from '../network/SyncSchemas';
+import { Fireball } from './Fireball';
+import { AudioManager } from './AudioManager';
 
 /**
  * Manages all physics colliders, overlaps, and the core combat damage pipeline.
@@ -256,6 +258,12 @@ export class CollisionManager {
                     mainScene.pvpRoundManager?.trackDamage(true, damage);
                 }
 
+                // Spawn spell impact VFX before disableBody hides the projectile
+                if (projectile instanceof Fireball) {
+                    this.scene.poolManager.spawnFireballExplosion(projectile.x, projectile.y, 80);
+                    AudioManager.instance?.playSFX('fireball_hit');
+                }
+
                 // Destroy projectile on hit
                 if (projectile.disableBody) projectile.disableBody(true, true);
                 else if (projectile.destroy) projectile.destroy();
@@ -366,6 +374,12 @@ export class CollisionManager {
                     });
                     const mainScene = this.scene as any;
                     mainScene.pvp2v2RoundManager?.trackTeamDamage(myTeam, damage);
+                }
+
+                // Spawn spell impact VFX before disableBody hides the projectile
+                if (projectile instanceof Fireball) {
+                    this.scene.poolManager.spawnFireballExplosion(projectile.x, projectile.y, 80);
+                    AudioManager.instance?.playSFX('fireball_hit');
                 }
 
                 if (projectile.disableBody) projectile.disableBody(true, true);

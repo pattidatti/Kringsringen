@@ -169,6 +169,8 @@ export class SceneVisualManager {
                 return true;
             });
             this.scene.poolManager.setLightingEnabled(true);
+            // Restore dark ambient now that enemies are back on Light2D
+            this.scene.lights.setAmbientColor(0x0a0a0a);
         } else {
             // Strip Light2D from enemy/pooled sprites only — player untouched
             this.scene.enemies.children.iterate((e: any) => {
@@ -180,6 +182,10 @@ export class SceneVisualManager {
                 return true;
             });
             this.scene.poolManager.setLightingEnabled(false);
+            // Normalize scene: map tiles still on Light2D would render near-black at
+            // ambient 0x0a0a0a while unlit enemies render at full brightness — stark mismatch.
+            // Set ambient to white so map tiles match the unlit enemies visually.
+            this.scene.lights.setAmbientColor(0xffffff);
         }
     }
 

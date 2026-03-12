@@ -377,13 +377,16 @@ export class MainScene extends Phaser.Scene implements IMainScene {
                 console.log('[MainScene] PVP mode initialized');
 
                 // Override disconnect/reconnect handlers for PVP
+                // NOTE: Do NOT call removeRemotePlayer immediately here — PvpRoundManager
+                // defers sprite removal until after the 10s grace period to prevent
+                // instant HP=0 win-condition triggering.
                 if (this.networkManager) {
-                    const originalOnDisconnect = this.networkManager.onDisconnect;
                     this.networkManager.onDisconnect = (id: string) => {
-                        originalOnDisconnect?.(id);
-                        this.pvpRoundManager?.handleOpponentDisconnect();
+                        console.log('[MainScene] PvP peer disconnected:', id);
+                        this.pvpRoundManager?.handleOpponentDisconnect(id);
                     };
                     this.networkManager.onReconnect = (_id: string) => {
+                        console.log('[MainScene] PvP peer reconnected:', _id);
                         this.pvpRoundManager?.handleOpponentReconnect();
                     };
                 }
@@ -406,13 +409,16 @@ export class MainScene extends Phaser.Scene implements IMainScene {
                 console.log('[MainScene] 2v2 PvP mode initialized, slot:', mySlot, 'team:', myTeam);
 
                 // Override disconnect/reconnect handlers for 2v2
+                // NOTE: Do NOT call removeRemotePlayer immediately here — Pvp2v2RoundManager
+                // defers sprite removal until after the 10s grace period to prevent
+                // instant HP=0 win-condition triggering in updateFighting().
                 if (this.networkManager) {
-                    const originalOnDisconnect = this.networkManager.onDisconnect;
                     this.networkManager.onDisconnect = (id: string) => {
-                        originalOnDisconnect?.(id);
-                        this.pvp2v2RoundManager?.handleOpponentDisconnect();
+                        console.log('[MainScene] 2v2 PvP peer disconnected:', id);
+                        this.pvp2v2RoundManager?.handleOpponentDisconnect(id);
                     };
                     this.networkManager.onReconnect = (_id: string) => {
+                        console.log('[MainScene] 2v2 PvP peer reconnected:', _id);
                         this.pvp2v2RoundManager?.handleOpponentReconnect();
                     };
                 }

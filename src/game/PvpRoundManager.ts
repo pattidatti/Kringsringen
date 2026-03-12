@@ -90,6 +90,7 @@ export class PvpRoundManager {
         this.scene.events.on('pvp_rematch', this.handleRematch, this);
         this.scene.events.on('pvp_rematch_reset', this.handleRematchReset, this);
         this.scene.events.on('pvp_death_report', this.handleDeathReport, this);
+        this.scene.events.on('pvp_state_sync', this.handleStateSync, this);
 
         // Start first round automatically after a short delay
         this.scene.time.delayedCall(1000, () => {
@@ -184,6 +185,10 @@ export class PvpRoundManager {
     }
 
     private handleTimeout(): void {
+        // Only host is arbiter for timeout winner — prevents score divergence
+        if (this.scene.networkManager && this.scene.networkManager.role !== 'host') return;
+
+        console.log('[PvpRoundManager] handleTimeout — host deciding winner');
         // Compare HP percentages
         const playerHP = this.scene.registry.get('playerHP') || 0;
         const playerMaxHP = this.scene.registry.get('playerMaxHP') || 100;
@@ -317,6 +322,7 @@ export class PvpRoundManager {
     public setLocalReady(): void {
         if (this.localReady) return;
         this.localReady = true;
+        console.log('[PvpRoundManager] setLocalReady, state:', this.state);
 
         const MAX_READY_RETRIES = 30;
         const trySendReady = (retryCount = 0) => {
@@ -344,6 +350,7 @@ export class PvpRoundManager {
     }
 
     private handleRemoteReady = (_data: any): void => {
+        console.log('[PvpRoundManager] handleRemoteReady received');
         this.remoteReady = true;
         this.scene.registry.set('pvpOpponentReady', true);
         this.checkBothReady();
@@ -424,7 +431,8 @@ export class PvpRoundManager {
             this.scene.registry.set('pvpRound', this.currentRound);
         }
 
-        if (this.state !== 'countdown') {
+        // Don't reset if fight is already in progress (late packet scenario)
+        if (this.state !== 'countdown' && this.state !== 'fighting') {
             this.setState('countdown');
             this.resetForNewRound();
         }
@@ -521,17 +529,25 @@ export class PvpRoundManager {
 
     /**
      * Handle opponent disconnect — 10-second grace period before awarding forfeit.
+     * Sprite removal is deferred to here (not on the initial disconnect) to prevent
+     * immediate HP=0 win-condition triggering.
      */
-    public handleOpponentDisconnect(): void {
+    public handleOpponentDisconnect(peerId: string = ''): void {
         if (this.state === 'match_end') return;
         if (this.disconnectTimer) return; // already counting down
 
+        console.log('[PvpRoundManager] handleOpponentDisconnect, starting 10s grace, peerId:', peerId);
         this.scene.registry.set('pvpOpponentDisconnecting', true);
         this.disconnectTimer = setTimeout(() => {
             this.disconnectTimer = null;
             this.scene.registry.set('pvpOpponentDisconnecting', false);
 
             if (this.state === 'match_end') return;
+
+            // Remove sprite NOW (after grace period, not immediately on disconnect)
+            if (peerId) {
+                this.scene.networkPacketHandler?.removeRemotePlayer(peerId);
+            }
 
             // Award forfeit to local player
             const winsNeeded = Math.ceil(this.bestOf / 2);
@@ -577,6 +593,24 @@ export class PvpRoundManager {
     private handleDeathReport = (): void => {
         if (this.scene.networkManager?.role === 'host' && this.state === 'fighting') {
             this.endRound('player', 'death');
+        }
+    };
+
+    /**
+     * Periodic state sync from host — corrects score/round/state desync after brief packet loss.
+     */
+    private handleStateSync = (data: any): void => {
+        // Only apply on clients; don't overwrite match_end
+        if (this.scene.networkManager?.role === 'host') return;
+        if (this.state === 'match_end') return;
+        if (data.score) {
+            // Invert score for local perspective (host sends host-perspective score)
+            this.score = [data.score[1], data.score[0]] as [number, number];
+            this.scene.registry.set('pvpScore', [...this.score]);
+        }
+        if (data.round) {
+            this.currentRound = data.round;
+            this.scene.registry.set('pvpRound', this.currentRound);
         }
     };
 
@@ -635,5 +669,6 @@ export class PvpRoundManager {
         this.scene.events.off('pvp_rematch', this.handleRematch, this);
         this.scene.events.off('pvp_rematch_reset', this.handleRematchReset, this);
         this.scene.events.off('pvp_death_report', this.handleDeathReport, this);
+        this.scene.events.off('pvp_state_sync', this.handleStateSync, this);
     }
 }

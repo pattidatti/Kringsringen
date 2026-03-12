@@ -32,6 +32,7 @@ export class NetworkPacketHandler {
     private localPackedPlayer: PackedPlayer = ['', 0, 0, 'player-idle', 0, 100, 'sword', ''] as any;
     private networkTickCount: number = 0;
     private lastSyncTime: number = 0;
+    private lastPvpSyncTime: number = 0;
 
     // Multiplayer State
     public remotePlayers: Map<string, Phaser.Physics.Arcade.Sprite> = new Map();
@@ -472,24 +473,31 @@ export class NetworkPacketHandler {
         const data = event.data;
         const targetId = data.targetId;
         const damage = data.damage;
+        const myId = this.scene.networkManager?.peerId;
 
-        // Find the target player
-        const targetSprite = this.remotePlayers.get(targetId);
+        // Target may be the host itself (not present in remotePlayers)
+        let targetSprite: Phaser.Physics.Arcade.Sprite;
+        if (targetId === myId) {
+            targetSprite = this.scene.data.get('player') as Phaser.Physics.Arcade.Sprite;
+        } else {
+            const remote = this.remotePlayers.get(targetId);
+            if (!remote || !remote.active) return;
+            targetSprite = remote;
+        }
         if (!targetSprite || !targetSprite.active) return;
 
         // Validate distance
         const dist = Phaser.Math.Distance.Between(targetSprite.x, targetSprite.y, data.hitX, data.hitY);
         if (dist > 60) return; // Grace distance for melee
 
-        // Apply damage
+        const damageData = { id: targetId, damage, x: data.hitX, y: data.hitY };
         this.scene.networkManager?.broadcast({
             t: PacketType.GAME_EVENT,
-            ev: {
-                type: 'damage_player',
-                data: { id: targetId, damage, x: data.hitX, y: data.hitY }
-            },
+            ev: { type: 'damage_player', data: damageData },
             ts: Date.now()
         });
+        // Host must apply its own damage locally (broadcast doesn't loop back to sender)
+        this.handleGameEvent({ type: 'damage_player', data: damageData });
 
         // Track damage for round summary
         const mainScene = this.scene as any;
@@ -503,21 +511,30 @@ export class NetworkPacketHandler {
         const data = event.data;
         const targetId = data.targetId;
         const damage = data.damage;
+        const myId = this.scene.networkManager?.peerId;
 
-        const targetSprite = this.remotePlayers.get(targetId);
+        // Target may be the host itself (not present in remotePlayers)
+        let targetSprite: Phaser.Physics.Arcade.Sprite;
+        if (targetId === myId) {
+            targetSprite = this.scene.data.get('player') as Phaser.Physics.Arcade.Sprite;
+        } else {
+            const remote = this.remotePlayers.get(targetId);
+            if (!remote || !remote.active) return;
+            targetSprite = remote;
+        }
         if (!targetSprite || !targetSprite.active) return;
 
         const dist = Phaser.Math.Distance.Between(targetSprite.x, targetSprite.y, data.hitX, data.hitY);
         if (dist > 80) return; // Grace for projectiles
 
+        const damageData = { id: targetId, damage, x: data.hitX, y: data.hitY };
         this.scene.networkManager?.broadcast({
             t: PacketType.GAME_EVENT,
-            ev: {
-                type: 'damage_player',
-                data: { id: targetId, damage, x: data.hitX, y: data.hitY }
-            },
+            ev: { type: 'damage_player', data: damageData },
             ts: Date.now()
         });
+        // Host must apply its own damage locally (broadcast doesn't loop back to sender)
+        this.handleGameEvent({ type: 'damage_player', data: damageData });
 
         const mainScene = this.scene as any;
         mainScene.pvpRoundManager?.trackDamage(true, damage);
@@ -530,22 +547,34 @@ export class NetworkPacketHandler {
         const data = event.data;
         const targetId = data.targetId;
         const damage = data.damage;
+        const myId = this.scene.networkManager?.peerId;
 
         // Friendly fire check (host-authoritative)
         const teams = (this.scene.registry.get('pvp2v2Teams') || {}) as Record<string, 'A' | 'B'>;
         if (teams[senderPeerId] && teams[senderPeerId] === teams[targetId]) return;
 
-        const targetSprite = this.remotePlayers.get(targetId);
+        // Target may be the host itself (not present in remotePlayers)
+        let targetSprite: Phaser.Physics.Arcade.Sprite;
+        if (targetId === myId) {
+            targetSprite = this.scene.data.get('player') as Phaser.Physics.Arcade.Sprite;
+        } else {
+            const remote = this.remotePlayers.get(targetId);
+            if (!remote || !remote.active) return;
+            targetSprite = remote;
+        }
         if (!targetSprite || !targetSprite.active) return;
 
         const dist = Phaser.Math.Distance.Between(targetSprite.x, targetSprite.y, data.hitX, data.hitY);
         if (dist > 60) return;
 
+        const damageData = { id: targetId, damage, x: data.hitX, y: data.hitY };
         this.scene.networkManager?.broadcast({
             t: PacketType.GAME_EVENT,
-            ev: { type: 'damage_player', data: { id: targetId, damage, x: data.hitX, y: data.hitY } },
+            ev: { type: 'damage_player', data: damageData },
             ts: Date.now()
         });
+        // Host must apply its own damage locally (broadcast doesn't loop back to sender)
+        this.handleGameEvent({ type: 'damage_player', data: damageData });
 
         const senderTeam = teams[senderPeerId];
         if (senderTeam) {
@@ -561,22 +590,34 @@ export class NetworkPacketHandler {
         const data = event.data;
         const targetId = data.targetId;
         const damage = data.damage;
+        const myId = this.scene.networkManager?.peerId;
 
         // Friendly fire check (host-authoritative)
         const teams = (this.scene.registry.get('pvp2v2Teams') || {}) as Record<string, 'A' | 'B'>;
         if (teams[senderPeerId] && teams[senderPeerId] === teams[targetId]) return;
 
-        const targetSprite = this.remotePlayers.get(targetId);
+        // Target may be the host itself (not present in remotePlayers)
+        let targetSprite: Phaser.Physics.Arcade.Sprite;
+        if (targetId === myId) {
+            targetSprite = this.scene.data.get('player') as Phaser.Physics.Arcade.Sprite;
+        } else {
+            const remote = this.remotePlayers.get(targetId);
+            if (!remote || !remote.active) return;
+            targetSprite = remote;
+        }
         if (!targetSprite || !targetSprite.active) return;
 
         const dist = Phaser.Math.Distance.Between(targetSprite.x, targetSprite.y, data.hitX, data.hitY);
         if (dist > 80) return;
 
+        const damageData = { id: targetId, damage, x: data.hitX, y: data.hitY };
         this.scene.networkManager?.broadcast({
             t: PacketType.GAME_EVENT,
-            ev: { type: 'damage_player', data: { id: targetId, damage, x: data.hitX, y: data.hitY } },
+            ev: { type: 'damage_player', data: damageData },
             ts: Date.now()
         });
+        // Host must apply its own damage locally (broadcast doesn't loop back to sender)
+        this.handleGameEvent({ type: 'damage_player', data: damageData });
 
         const senderTeam = teams[senderPeerId];
         if (senderTeam) {
@@ -695,6 +736,34 @@ export class NetworkPacketHandler {
                 },
                 ts: now
             });
+        }
+
+        // Periodic PvP state sync (every 5s) — prevents permanent score/round desync
+        // after brief packet loss. Clients update their local state on receipt.
+        const gameMode = this.scene.registry.get('gameMode');
+        if ((gameMode === 'pvp' || gameMode === 'pvp2v2') && now - this.lastPvpSyncTime > 5000) {
+            this.lastPvpSyncTime = now;
+            if (gameMode === 'pvp') {
+                this.scene.networkManager?.broadcast({
+                    t: PacketType.GAME_EVENT,
+                    ev: { type: 'pvp_state_sync', data: {
+                        score: this.scene.registry.get('pvpScore'),
+                        round: this.scene.registry.get('pvpRound'),
+                        state: this.scene.registry.get('pvpState'),
+                    }},
+                    ts: now
+                });
+            } else {
+                this.scene.networkManager?.broadcast({
+                    t: PacketType.GAME_EVENT,
+                    ev: { type: 'pvp2v2_state_sync', data: {
+                        score: this.scene.registry.get('pvp2v2Score'),
+                        round: this.scene.registry.get('pvp2v2Round'),
+                        state: this.scene.registry.get('pvp2v2State'),
+                    }},
+                    ts: now
+                });
+            }
         }
     }
 

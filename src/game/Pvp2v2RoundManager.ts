@@ -106,11 +106,27 @@ export class Pvp2v2RoundManager {
         this.scene.events.on('pvp2v2_match_end', this.handleRemoteMatchEnd, this);
         this.scene.events.on('pvp2v2_rematch', this.handleRematch, this);
         this.scene.events.on('pvp2v2_rematch_reset', this.handleRematchReset, this);
+        this.scene.events.on('pvp2v2_state_sync', this.handleStateSync, this);
 
         // Auto-ready after a short delay
         this.scene.time.delayedCall(1000, () => {
             this.setLocalReady();
         });
+
+        // Bug 5 watchdog: if client is stuck in countdown without scheduledStartTime after 10s,
+        // request a resync from host by re-sending a ready signal
+        if (this.scene.networkManager?.role === 'client') {
+            this.scene.time.delayedCall(10_000, () => {
+                if (this.state === 'countdown' && this.scheduledStartTime === 0) {
+                    console.warn('[Pvp2v2RoundManager] Stuck in countdown without startTime — requesting resync');
+                    this.scene.networkManager?.broadcast({
+                        t: PacketType.GAME_EVENT,
+                        ev: { type: 'pvp2v2_ready', data: { peerId: this.scene.networkManager.peerId, resync: true } },
+                        ts: Date.now()
+                    });
+                }
+            });
+        }
     }
 
     private setState(state: Pvp2v2State): void {
@@ -353,6 +369,7 @@ export class Pvp2v2RoundManager {
     public setLocalReady(): void {
         if (this.localReady) return;
         this.localReady = true;
+        console.log('[Pvp2v2RoundManager] setLocalReady, state:', this.state);
 
         const myPeerId = this.scene.networkManager?.peerId || 'local';
         this.readyPeers.add(myPeerId);
@@ -386,6 +403,7 @@ export class Pvp2v2RoundManager {
     }
 
     private handleRemoteReady = (data: any): void => {
+        console.log('[Pvp2v2RoundManager] handleRemoteReady from', data?.peerId, data?.resync ? '(resync)' : '');
         if (data?.peerId) {
             this.readyPeers.add(data.peerId);
             this.scene.registry.set('pvp2v2ReadyCount', this.readyPeers.size);
@@ -463,7 +481,8 @@ export class Pvp2v2RoundManager {
             this.currentRound = data.round;
             this.scene.registry.set('pvp2v2Round', this.currentRound);
         }
-        if (this.state !== 'countdown') {
+        // Don't reset if fight is already in progress (late packet scenario)
+        if (this.state !== 'countdown' && this.state !== 'fighting') {
             this.setState('countdown');
             this.resetForNewRound();
         }
@@ -542,17 +561,25 @@ export class Pvp2v2RoundManager {
 
     /**
      * Handle a player disconnecting mid-match — 10-second grace period before forfeit.
+     * Sprite removal is deferred to here (not on the initial disconnect) to prevent
+     * immediate HP=0 win-condition triggering in updateFighting().
      */
-    public handleOpponentDisconnect(): void {
+    public handleOpponentDisconnect(peerId: string = ''): void {
         if (this.state === 'match_end') return;
         if (this.disconnectTimer) return; // already counting down
 
+        console.log('[Pvp2v2RoundManager] handleOpponentDisconnect, starting 10s grace, peerId:', peerId);
         this.scene.registry.set('pvpOpponentDisconnecting', true);
         this.disconnectTimer = setTimeout(() => {
             this.disconnectTimer = null;
             this.scene.registry.set('pvpOpponentDisconnecting', false);
 
             if (this.state === 'match_end') return;
+
+            // Remove sprite NOW (after grace period, not immediately on disconnect)
+            if (peerId) {
+                this.scene.networkPacketHandler?.removeRemotePlayer(peerId);
+            }
 
             const myTeam = this.scene.registry.get('pvp2v2MyTeam') as 'A' | 'B';
             const winnerTeam = myTeam;
@@ -592,6 +619,23 @@ export class Pvp2v2RoundManager {
         this.scene.registry.set('playerCoins', 0);
         this.scene.registry.set('upgradeLevels', {});
         this.scene.stats.recalculateStats();
+    };
+
+    /**
+     * Periodic state sync from host — corrects score/round/state desync after brief packet loss.
+     */
+    private handleStateSync = (data: any): void => {
+        // Only apply on clients; don't overwrite match_end
+        if (this.scene.networkManager?.role === 'host') return;
+        if (this.state === 'match_end') return;
+        if (data.score) {
+            this.score = [data.score[0], data.score[1]] as [number, number];
+            this.scene.registry.set('pvp2v2Score', [...this.score]);
+        }
+        if (data.round) {
+            this.currentRound = data.round;
+            this.scene.registry.set('pvp2v2Round', this.currentRound);
+        }
     };
 
     private handleRematch = (): void => {
@@ -643,5 +687,6 @@ export class Pvp2v2RoundManager {
         this.scene.events.off('pvp2v2_match_end', this.handleRemoteMatchEnd, this);
         this.scene.events.off('pvp2v2_rematch', this.handleRematch, this);
         this.scene.events.off('pvp2v2_rematch_reset', this.handleRematchReset, this);
+        this.scene.events.off('pvp2v2_state_sync', this.handleStateSync, this);
     }
 }
