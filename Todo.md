@@ -1,5 +1,8 @@
 # 15. mars
 - [] Må ha eksplosjonslyd når casdade er ferdig/ekspolderer.  
+- [] Justere lys mer
+- [ ] Sjekk ehvordan nye lyssettings fungerer opp mot 7 stegs performance greiene. 
+- [  ] Sjekke lys på prosjektiler og spells osv. 
 
 # 11 mars 
 - [x] Pvp arena, Spells og piler går rett gjennom den andre spilleren. En av spillerne (litt vanskelig å vite hvem som er host eller ikke) får ikke opp animation/reaksjon på å selv bli skadet. 
