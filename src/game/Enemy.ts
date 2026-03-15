@@ -18,8 +18,8 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 
     /** Reusable GridClient object for spatial hash insertion — avoids per-frame allocation. */
     public _gridClient: GridClient = { x: 0, y: 0, width: 40, height: 40, id: '', ref: this };
-    private attackRange: number = 60;
-    private attackCooldown: number = 1500;
+    protected attackRange: number = 60;
+    protected attackCooldown: number = 1500;
     private currentAbilityCooldown: number = 1500;
     private lastAttackTime: number = 0;
     protected isAttacking: boolean = false;

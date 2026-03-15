@@ -317,7 +317,9 @@ export class MainScene extends Phaser.Scene implements IMainScene {
             const playerFeetY = 82; // Pixel from top to feet in the 100×100 frame
             this.playerShadow = new SpriteShadow(this, this.player, this.quality.shadowMode,
                 this.player.scaleY * (playerFeetY - this.player.height * 0.75));
-            this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
+            this.cameras.main.startFollow(this.player, true, 1, 1);
+            this.cameras.main.setZoom(1);
+            this.cameras.main.setBounds(0, 0, 3000, 3000);
             console.log('[MainScene] Camera following player.');
 
             // Now that player and groups exist, setup colliders
