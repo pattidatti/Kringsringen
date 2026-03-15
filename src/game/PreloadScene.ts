@@ -63,9 +63,14 @@ export class PreloadScene extends Phaser.Scene {
         const ctx = canvas.getContext('2d')!;
         const half = size / 2;
         const gradient = ctx.createRadialGradient(half, half, 0, half, half, half);
+        // Cubic falloff curve (1-r)^3 — approximates Light2D inverse-square attenuation
         gradient.addColorStop(0, 'rgba(255,255,255,1)');
-        gradient.addColorStop(0.3, 'rgba(255,255,255,0.4)');
-        gradient.addColorStop(0.7, 'rgba(255,255,255,0.1)');
+        gradient.addColorStop(0.1, 'rgba(255,255,255,0.73)');
+        gradient.addColorStop(0.25, 'rgba(255,255,255,0.42)');
+        gradient.addColorStop(0.4, 'rgba(255,255,255,0.22)');
+        gradient.addColorStop(0.55, 'rgba(255,255,255,0.09)');
+        gradient.addColorStop(0.7, 'rgba(255,255,255,0.03)');
+        gradient.addColorStop(0.85, 'rgba(255,255,255,0.005)');
         gradient.addColorStop(1, 'rgba(255,255,255,0)');
         ctx.fillStyle = gradient;
         ctx.fillRect(0, 0, size, size);

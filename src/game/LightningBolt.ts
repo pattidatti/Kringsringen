@@ -459,7 +459,7 @@ export class LightningBolt extends Phaser.Physics.Arcade.Sprite {
         this.play({ key: animKey }, true);
 
         if (this.light) {
-            this.light.setColor(this.colorHex);
+            this.light.color = this.colorHex;
         }
 
         if (this.glowEffect) {

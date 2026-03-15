@@ -39,9 +39,6 @@ export class LightmapRenderer {
     private lights: Map<number, LightmapLight> = new Map();
     private nextId = 1;
 
-    /** Ambient colour painted as the RT base each frame (near-black = dark). */
-    private ambientColor: number = 0x0a0a0a;
-
     /** Resolution scale factor (1 = native, 0.5 = half, etc.) */
     private resolutionScale: number;
     private rtWidth: number;
@@ -66,14 +63,13 @@ export class LightmapRenderer {
         this.overlay = scene.add.image(0, 0, this.rt.texture.key);
         this.overlay.setOrigin(0, 0);
         this.overlay.setScrollFactor(0); // fixed to camera
-        this.overlay.setBlendMode(Phaser.BlendModes.MULTIPLY);
+        this.overlay.setBlendMode(Phaser.BlendModes.NORMAL);
         this.overlay.setDepth(9999); // on top of everything
         this.overlay.setScale(1 / resolutionScale);
 
         // Stamp sprite used to draw each light onto the RT
         this.stamp = scene.add.image(0, 0, 'glow-soft');
         this.stamp.setVisible(false);
-        this.stamp.setBlendMode(Phaser.BlendModes.ADD);
     }
 
     // ─── Public API ─────────────────────────────────────────────────────────────
@@ -93,10 +89,8 @@ export class LightmapRenderer {
         this.lights.delete(light._id);
     }
 
-    /** Set the ambient (base darkness) colour. 0x0a0a0a = very dark. */
-    public setAmbientColor(color: number): void {
-        this.ambientColor = color;
-    }
+    /** @deprecated No-op — erase approach uses opaque black. Kept for API compat. */
+    public setAmbientColor(_color: number): void { /* no-op */ }
 
     /** Enable or disable the lightmap overlay entirely. */
     public setEnabled(enabled: boolean): void {
@@ -118,7 +112,7 @@ export class LightmapRenderer {
         this.rtHeight = Math.ceil(cam.height * scale);
 
         this.rt.resize(this.rtWidth, this.rtHeight);
-        this.overlay.setScale(1 / scale);
+        this.overlay.setScale(1 / (scale * this.scene.cameras.main.zoom));
     }
 
     // ─── Per-frame render ───────────────────────────────────────────────────────
@@ -133,30 +127,30 @@ export class LightmapRenderer {
         const cam = this.scene.cameras.main;
         const scale = this.resolutionScale;
 
-        // 1. Clear to ambient colour (the "darkness")
-        const r = (this.ambientColor >> 16) & 0xff;
-        const g = (this.ambientColor >> 8) & 0xff;
-        const b = this.ambientColor & 0xff;
-        this.rt.fill(r, g, b);
+        // Counteract camera zoom on the overlay so it fills exactly the viewport
+        this.overlay.setScale(1 / (scale * cam.zoom));
+
+        // 1. Fill with opaque black (the "darkness")
+        this.rt.fill(0x000000, 1);
 
         // The glow-soft texture is 64×64. Each light needs to be drawn at the
         // correct camera-relative position and scaled so its visual radius matches.
         const glowHalf = 32; // half of 64
 
+        const zoom = cam.zoom;
+
         this.lights.forEach(light => {
-            // Camera-relative position, scaled to RT resolution
-            const lx = (light.x - cam.scrollX) * scale;
-            const ly = (light.y - cam.scrollY) * scale;
+            // Camera-relative position, accounting for zoom and RT resolution
+            const lx = (light.x - cam.scrollX) * zoom * scale;
+            const ly = (light.y - cam.scrollY) * zoom * scale;
 
-            // Scale so the glow circle covers `radius` pixels (in world space)
-            const lightScale = (light.radius * scale) / glowHalf;
+            // Scale so the glow circle covers `radius` screen-pixels (world radius * zoom)
+            const lightScale = (light.radius * zoom * scale) / glowHalf;
 
-            // Tint from light colour
-            this.stamp.setTint(light.color);
             this.stamp.setAlpha(Math.min(light.intensity, 1));
             this.stamp.setScale(lightScale);
 
-            this.rt.draw(this.stamp, lx, ly);
+            this.rt.erase(this.stamp, lx, ly);
         });
     }
 

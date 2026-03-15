@@ -6,27 +6,23 @@ import { StaticMapLoader } from './StaticMapLoader';
 import { STATIC_MAPS } from './StaticMapData';
 import { PVP_ARENA } from '../config/pvp-arena';
 import { LightmapRenderer, type LightmapLight } from './LightmapRenderer';
+import { DarknessPostFX } from './DarknessPostFX';
 
 /**
  * Manages game visuals including lighting, post-processing, and quality scaling.
  *
- * Lighting is handled via an RGB lightmap overlay (LightmapRenderer) instead of
- * Phaser's per-sprite Light2D pipeline. This decouples lighting cost from sprite
- * count, yielding significant GPU savings when many sprites are on screen.
+ * Lighting uses a custom PostFX shader (DarknessPostFX) that computes radial
+ * darkness on the GPU. The shader runs on the camera output, darkening pixels
+ * based on distance from screen center (where the player always is).
  */
 export class SceneVisualManager {
     private scene: IMainScene;
-    private playerLight: LightmapLight | null = null;
-    private outerPlayerLight: LightmapLight | null = null;
     private vignetteEffect: any = null;
+    private darknessEffect: DarknessPostFX | null = null;
     private currentQuality!: QualitySettings;
 
-    /** The RGB lightmap renderer (null when lighting disabled). */
+    /** @deprecated Lightmap is replaced by DarknessPostFX shader. Kept for API compat. */
     public lightmap: LightmapRenderer | null = null;
-
-    // Light budget tracking (projectile lights only — player lights are separate)
-    private activeProjectileLights: number = 0;
-    private dynamicLightBudget: number = -1;  // -1 = use quality config
 
     // Map Management
     private currentMap: StaticMapLoader | null = null;
@@ -46,7 +42,6 @@ export class SceneVisualManager {
         this.scene.game.registry.events.on('changedata-graphicsQuality', (_parent: any, val: GraphicsQuality) => {
             this.currentQuality = getQualityConfig(val);
             (this.scene as any).quality = this.currentQuality;
-            this.dynamicLightBudget = -1;
             this.applyQualitySettings();
         });
 
@@ -55,24 +50,25 @@ export class SceneVisualManager {
 
     private setupPostFX(): void {
         if (this.currentQuality.postFXEnabled) {
-            this.vignetteEffect = this.scene.cameras.main.postFX.addVignette(0.5, 0.5, 0.85, 0.15);
+            this.vignetteEffect = this.scene.cameras.main.postFX.addVignette(0.5, 0.5, 0.65, 0.35);
+        }
+
+        // Darkness shader — always apply if lighting is enabled (independent of postFX toggle)
+        if (this.currentQuality.lightingEnabled) {
+            this.scene.cameras.main.setPostPipeline('DarknessPostFX');
+            const pipelines = this.scene.cameras.main.getPostPipeline('DarknessPostFX');
+            this.darknessEffect = (Array.isArray(pipelines) ? pipelines[0] : pipelines) as DarknessPostFX;
+            if (this.darknessEffect) {
+                this.darknessEffect.setDarkness(0.06, 0.55, 0.95);
+            }
         }
     }
 
     /**
-     * Updates visual elements: player light positions, vignette, and lightmap render.
+     * Updates visual elements: darkness shader resolution, vignette pulse.
      */
     public update(): void {
-        // 1. Update Player Lights
-        const player = this.scene.player;
-        if (player && player.active && this.playerLight && this.outerPlayerLight) {
-            this.playerLight.x = player.x;
-            this.playerLight.y = player.y;
-            this.outerPlayerLight.x = player.x;
-            this.outerPlayerLight.y = player.y;
-        }
-
-        // 2. Update Vignette Intensity based on HP (Red-out)
+        // 1. Update Vignette Intensity based on HP (Red-out)
         if (this.vignetteEffect && this.currentQuality.postFXEnabled) {
             const hp = this.scene.registry.get('playerHP') || 100;
             const maxHP = this.scene.registry.get('playerMaxHP') || 100;
@@ -80,13 +76,8 @@ export class SceneVisualManager {
             if (hpRatio < 0.3) {
                 this.vignetteEffect.strength = 1.0 + Math.sin(Date.now() / 200) * 0.2;
             } else {
-                this.vignetteEffect.strength = 0.85;
+                this.vignetteEffect.strength = 0.35;
             }
-        }
-
-        // 3. Render lightmap (must happen every frame when active)
-        if (this.lightmap) {
-            this.lightmap.render();
         }
     }
 
@@ -94,40 +85,19 @@ export class SceneVisualManager {
      * Re-applies all lighting and shader settings based on current quality profile.
      */
     public applyQualitySettings(): void {
+        // Darkness PostFX shader
         if (this.currentQuality.lightingEnabled) {
-            console.log('[SceneVisualManager] Enabling RGB lightmap...');
-
-            // Create or reconfigure lightmap
-            if (!this.lightmap) {
-                this.lightmap = new LightmapRenderer(this.scene, this.currentQuality.lightmapResolution);
-            } else {
-                this.lightmap.setResolutionScale(this.currentQuality.lightmapResolution);
-                this.lightmap.setEnabled(true);
-            }
-            this.lightmap.setAmbientColor(0x0a0a0a);
-
-            // Re-create player lights if missing
-            if (!this.playerLight) {
-                this.playerLight = this.lightmap.addLight(
-                    0, 0,
-                    GAME_CONFIG.LIGHTING.PLAYER_INNER_RADIUS,
-                    GAME_CONFIG.LIGHTING.PLAYER_COLOR,
-                    GAME_CONFIG.LIGHTING.PLAYER_INTENSITY_INNER
-                );
-                this.outerPlayerLight = this.lightmap.addLight(
-                    0, 0,
-                    GAME_CONFIG.LIGHTING.PLAYER_OUTER_RADIUS,
-                    GAME_CONFIG.LIGHTING.PLAYER_COLOR,
-                    GAME_CONFIG.LIGHTING.PLAYER_INTENSITY_OUTER
-                );
+            if (!this.darknessEffect) {
+                this.scene.cameras.main.setPostPipeline('DarknessPostFX');
+                const pipelines = this.scene.cameras.main.getPostPipeline('DarknessPostFX');
+                this.darknessEffect = (Array.isArray(pipelines) ? pipelines[0] : pipelines) as DarknessPostFX;
+                this.darknessEffect?.setDarkness(0.06, 0.55, 0.95);
             }
         } else {
-            // Disable lightmap overlay — sprites render at full brightness
-            if (this.lightmap) {
-                this.lightmap.setEnabled(false);
+            if (this.darknessEffect) {
+                this.scene.cameras.main.removePostPipeline('DarknessPostFX');
+                this.darknessEffect = null;
             }
-            this.playerLight = null;
-            this.outerPlayerLight = null;
         }
 
         if (this.vignetteEffect) {
@@ -136,73 +106,61 @@ export class SceneVisualManager {
     }
 
     /**
-     * Set the projectile light budget override. -1 = use quality config.
+     * Set the projectile light budget override. No-op with PostFX shader.
      */
-    public setDynamicLightBudget(budget: number): void {
-        this.dynamicLightBudget = budget;
+    public setDynamicLightBudget(_budget: number): void {
+        // No-op — projectile lights not supported by PostFX shader
     }
 
-    /** Whether lighting is currently active (lightmap enabled). */
+    /** Whether lighting is currently active. */
     get effectiveLightingEnabled(): boolean {
-        return this.currentQuality.lightingEnabled && this.lightmap?.enabled === true;
+        return this.currentQuality.lightingEnabled && this.darknessEffect !== null;
     }
 
     /**
-     * Request a light for a projectile. Returns the light if budget allows, null otherwise.
-     * Callers must call releaseProjectileLight() when the light is no longer needed.
+     * Request a light for a projectile. Returns null — projectile lights not yet
+     * supported by the PostFX shader. Kept for API compatibility.
      */
-    public requestProjectileLight(x: number, y: number, radius: number, color: number, intensity: number): LightmapLight | null {
-        if (!this.lightmap || !this.effectiveLightingEnabled) return null;
-        const effectiveBudget = this.dynamicLightBudget >= 0
-            ? this.dynamicLightBudget
-            : this.currentQuality.maxProjectileLights;
-        if (this.activeProjectileLights >= effectiveBudget) return null;
-
-        this.activeProjectileLights++;
-        return this.lightmap.addLight(x, y, radius, color, intensity);
+    public requestProjectileLight(_x: number, _y: number, _radius: number, _color: number, _intensity: number): LightmapLight | null {
+        return null;
     }
 
     /**
      * Release a projectile light back to the budget.
      */
-    public releaseProjectileLight(light: LightmapLight): void {
-        if (this.lightmap) this.lightmap.removeLight(light);
-        this.activeProjectileLights = Math.max(0, this.activeProjectileLights - 1);
+    public releaseProjectileLight(_light: LightmapLight): void {
+        // No-op — projectile lights not used with PostFX shader
     }
 
     /**
-     * Add a non-budgeted light (e.g. enemy attack glow, remote player).
-     * Caller is responsible for removing it via removeLight().
+     * Add a non-budgeted light. Returns null — not supported by PostFX shader.
      */
-    public addLight(x: number, y: number, radius: number, color: number, intensity: number): LightmapLight | null {
-        if (!this.lightmap || !this.effectiveLightingEnabled) return null;
-        return this.lightmap.addLight(x, y, radius, color, intensity);
+    public addLight(_x: number, _y: number, _radius: number, _color: number, _intensity: number): LightmapLight | null {
+        return null;
     }
 
     /**
      * Remove a non-budgeted light.
      */
-    public removeLight(light: LightmapLight): void {
-        if (this.lightmap) this.lightmap.removeLight(light);
+    public removeLight(_light: LightmapLight): void {
+        // No-op
     }
 
     public handleGhostMode(isDead: boolean): void {
-        if (!this.playerLight || !this.outerPlayerLight) return;
+        if (!this.darknessEffect) return;
 
         if (isDead) {
-            this.playerLight.radius = GAME_CONFIG.LIGHTING.GHOST_INNER_RADIUS;
-            this.outerPlayerLight.radius = GAME_CONFIG.LIGHTING.GHOST_OUTER_RADIUS;
+            // Shrink visible area dramatically
+            this.darknessEffect.setDarkness(0.02, 0.08, 0.98);
         } else {
-            this.playerLight.radius = GAME_CONFIG.LIGHTING.PLAYER_INNER_RADIUS;
-            this.outerPlayerLight.radius = GAME_CONFIG.LIGHTING.PLAYER_OUTER_RADIUS;
+            // Restore normal lighting
+            this.darknessEffect.setDarkness(0.06, 0.55, 0.95);
         }
     }
 
     /** Change lightmap resolution at runtime (for performance degradation). */
-    public setLightmapResolution(scale: number): void {
-        if (this.lightmap) {
-            this.lightmap.setResolutionScale(scale);
-        }
+    public setLightmapResolution(_scale: number): void {
+        // No-op — PostFX shader runs at native resolution
     }
 
     /** Load the static map for a given level. */
@@ -258,6 +216,10 @@ export class SceneVisualManager {
 
     public destroy(): void {
         this.scene.game.registry.events.off('changedata-graphicsQuality');
+        if (this.darknessEffect) {
+            this.scene.cameras.main.removePostPipeline('DarknessPostFX');
+            this.darknessEffect = null;
+        }
         if (this.lightmap) {
             this.lightmap.destroy();
             this.lightmap = null;

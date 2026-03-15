@@ -1,5 +1,5 @@
-# 13. mars
-- [] 
+# 15. mars
+- [] Må ha eksplosjonslyd når casdade er ferdig/ekspolderer.  
 
 # 11 mars 
 - [x] Pvp arena, Spells og piler går rett gjennom den andre spilleren. En av spillerne (litt vanskelig å vite hvem som er host eller ikke) får ikke opp animation/reaksjon på å selv bli skadet. 
@@ -12,7 +12,7 @@
 - [x] Oppdater nå knappen virker uresponsiv, virker ikke på brukeren som om den har noen effekt og faktisk laster inn den nye oppdateringen. 
 - [x] Beskrivelse på oppgraderingene er noen ganger missvisende. F.eks står det på Lås opp: Jernmur, at den er (Opplåst). Dette stemmer jo ikke før vi har låst opp jernmur. Slik er det ved svært mange av beskrivelsene som står i parantes. 
 -[x] Skyggene må fremdeles fikses
-- [ x] Dynamisk performance må tweakes mer, Tar ofte for lang tid før den nedjusterer (spesielt når lys spawner), dette gjør at man tidvis dypper ned i 5-10 fps. 
+- [x] Dynamisk performance må tweakes mer, Tar ofte for lang tid før den nedjusterer (spesielt når lys spawner), dette gjør at man tidvis dypper ned i 5-10 fps. 
 
 
 # Paragon-update

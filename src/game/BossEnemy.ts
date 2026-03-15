@@ -35,6 +35,8 @@ export class BossEnemy extends Enemy {
         this.hp = config.hp;
         this.movementSpeed = config.speed;
         this.originalSpeed = config.speed;
+        this.attackRange = config.attackRange;
+        this.attackCooldown = config.attackCooldown;
 
         // Physics body & scale
         this.setScale(config.scale);
@@ -91,6 +93,9 @@ export class BossEnemy extends Enemy {
                 this.abilityTimers.push(
                     this.scene.time.addEvent({ delay: p2 ? 2500 : 4000, callback: this.performBoneVolley, callbackScope: this, loop: true })
                 );
+                this.abilityTimers.push(
+                    this.scene.time.addEvent({ delay: p2 ? 3500 : 5500, callback: this.performBoneCharge, callbackScope: this, loop: true })
+                );
                 break;
 
             case 'werewolf':
@@ -103,6 +108,7 @@ export class BossEnemy extends Enemy {
                 break;
 
             case 'elite_orc':
+            case 'wizard':
                 this.abilityTimers.push(
                     this.scene.time.addEvent({ delay: p2 ? 3500 : 6000, callback: this.performGroundSlam, callbackScope: this, loop: true })
                 );
@@ -316,6 +322,116 @@ export class BossEnemy extends Enemy {
         });
     }
 
+    private performBoneCharge(): void {
+        if (!this.active || this.isDead || this.isCharging) return;
+
+        const dashCount = this.phase === 2 ? 2 : 1;
+        this.executeBoneCharge(dashCount);
+    }
+
+    private executeBoneCharge(remaining: number): void {
+        if (remaining <= 0 || !this.active || this.isDead) {
+            this.isCharging = false;
+            this.isSpecialMovementActive = false;
+            return;
+        }
+
+        const player = (this.scene as any).data?.get('player') as any;
+        if (!player || !player.active) {
+            this.isCharging = false;
+            this.isSpecialMovementActive = false;
+            return;
+        }
+
+        this.isCharging = true;
+        this.isSpecialMovementActive = true;
+        this.setTint(0xaaffaa); // Green-white telegraph
+
+        this.scene.time.delayedCall(400, () => {
+            if (!this.active || this.isDead) {
+                this.isSpecialMovementActive = false;
+                return;
+            }
+            this.clearTint();
+
+            const angle = Phaser.Math.Angle.Between(this.x, this.y, player.x, player.y);
+            const chargeSpeed = this.bossConfig.speed * 5;
+
+            this.setVelocity(
+                Math.cos(angle) * chargeSpeed,
+                Math.sin(angle) * chargeSpeed
+            );
+
+            // Bone trail ghosts
+            this.scene.time.addEvent({
+                delay: 50,
+                repeat: 10,
+                callback: () => {
+                    if (!this.active) return;
+                    const ghost = this.scene.add.sprite(this.x, this.y, this.texture.key, this.frame.name);
+                    ghost.setScale(this.scale);
+                    ghost.setAlpha(0.35);
+                    ghost.setTint(0xccddcc);
+                    ghost.setDepth(this.depth - 1);
+                    this.scene.tweens.add({
+                        targets: ghost,
+                        alpha: 0,
+                        duration: 300,
+                        onComplete: () => ghost.destroy()
+                    });
+                }
+            });
+
+            // Stop after travel duration
+            this.scene.time.delayedCall(600, () => {
+                if (!this.active || this.isDead) {
+                    this.isSpecialMovementActive = false;
+                    return;
+                }
+                this.setVelocity(0, 0);
+
+                // AoE bone shatter on landing
+                const bossX = this.x;
+                const bossY = this.y;
+                const radius = 120;
+
+                const graphics = this.scene.add.graphics();
+                const state = { r: 0, alpha: 0.8 };
+                this.scene.tweens.add({
+                    targets: state,
+                    r: radius,
+                    alpha: 0,
+                    duration: 350,
+                    onUpdate: () => {
+                        graphics.clear();
+                        graphics.lineStyle(4, 0xdddddd, state.alpha);
+                        graphics.strokeCircle(bossX, bossY, state.r);
+                    },
+                    onComplete: () => graphics.destroy(),
+                });
+
+                (this.scene as any).scaledShake?.(150, 0.01);
+
+                // Damage check
+                this.scene.time.delayedCall(100, () => {
+                    const p = (this.scene as any).data?.get('player') as any;
+                    if (!p || !p.active) return;
+                    const dist = Phaser.Math.Distance.Between(bossX, bossY, p.x, p.y);
+                    if (dist <= radius) {
+                        const dmg = Math.floor(this.bossConfig.damage * 0.6);
+                        this.scene.events.emit('enemy-hit-player', dmg, 'bone_charge', bossX, bossY);
+                    }
+                });
+
+                // Brief pause then chain next dash
+                const delay = remaining > 1 ? 500 : 0;
+                this.scene.time.delayedCall(delay, () => {
+                    this.executeBoneCharge(remaining - 1);
+                });
+            });
+        });
+    }
+
     private performFeralHowl(): void {
         if (!this.active || this.isDead) return;
 
@@ -520,6 +636,19 @@ export class BossEnemy extends Enemy {
             yoyo: true,
         });
 
+        // Skeleton Overlord enrage: +30% speed + extra skeleton minions
+        if (this.bossConfig.enemyType === 'greatsword_skeleton') {
+            this.movementSpeed = this.bossConfig.speed * 1.3;
+            this.originalSpeed = this.movementSpeed;
+
+            for (let i = 0; i < 3; i++) {
+                const angle = (i / 3) * Math.PI * 2;
+                const sx = this.x + Math.cos(angle) * 160;
+                const sy = this.y + Math.sin(angle) * 160;
+                this.scene.events.emit('boss-spawn-minion', sx, sy, 'greatsword_skeleton');
+            }
+        }
+
         // Orc Warchief enrage: permanent +50% speed + minions
         if (this.bossConfig.enemyType === 'armored_orc') {
             this.movementSpeed = this.bossConfig.speed * 1.5;
@@ -534,7 +663,7 @@ export class BossEnemy extends Enemy {
         }
 
         // Trollhersker enrage: +40% speed + spawns elite orc minions
-        if (this.bossConfig.enemyType === 'elite_orc') {
+        if (this.bossConfig.enemyType === 'elite_orc' || this.bossConfig.enemyType === 'wizard') {
             this.movementSpeed = this.bossConfig.speed * 1.4;
             this.originalSpeed = this.movementSpeed;
 
