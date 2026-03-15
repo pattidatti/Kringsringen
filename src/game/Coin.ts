@@ -62,7 +62,6 @@ export class Coin extends Phaser.Physics.Arcade.Sprite {
         this.setDrag(150);
 
         // Removed postFX.addGlow - now using baked-in texture glow + ADD blend
-        if (this.scene.lights.active) this.setPipeline('Light2D');
     }
 
     preUpdate(time: number, delta: number) {

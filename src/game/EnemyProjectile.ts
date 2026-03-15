@@ -8,7 +8,7 @@ export class EnemyProjectile extends Phaser.Physics.Arcade.Sprite {
     private startX: number = 0;
     private startY: number = 0;
     private trail: Phaser.GameObjects.Particles.ParticleEmitter | null = null;
-    private light: Phaser.GameObjects.Light | null = null;
+    private light: import('./LightmapRenderer').LightmapLight | null = null;
     private glowSprite: Phaser.GameObjects.Sprite | null = null;
     private projectileType: 'arrow' | 'fireball' | 'frostball' = 'arrow';
     private isBurstProjectile: boolean = false;
@@ -75,12 +75,11 @@ export class EnemyProjectile extends Phaser.Physics.Arcade.Sprite {
                 this.trail.resume();
             }
 
-            // Non-burst fireball/frostball: use light budget for PointLight
+            // Non-burst fireball/frostball: use light budget
             if (!this.isBurstProjectile) {
                 if (this.light) {
                     const vis = (this.scene as any).visuals;
                     if (vis) vis.releaseProjectileLight(this.light);
-                    else this.scene.lights.removeLight(this.light);
                     this.light = null;
                 }
                 const vis = (this.scene as any).visuals;
@@ -100,8 +99,6 @@ export class EnemyProjectile extends Phaser.Physics.Arcade.Sprite {
             this.play(`${this.projectileType}-proj-anim`);
             this.setScale(1.5);
             this.setDepth(150);
-
-            if (this.scene.lights.active) this.setPipeline('Light2D');
 
             this.setBodySize(20, 10);
 
@@ -173,7 +170,6 @@ export class EnemyProjectile extends Phaser.Physics.Arcade.Sprite {
         if (this.light) {
             const vis = (this.scene as any).visuals;
             if (vis) vis.releaseProjectileLight(this.light);
-            else this.scene.lights.removeLight(this.light);
             this.light = null;
         }
         if (this.glowSprite) {
@@ -216,7 +212,8 @@ export class EnemyProjectile extends Phaser.Physics.Arcade.Sprite {
         if (!this.active) return;
 
         if (this.light) {
-            this.light.setPosition(this.x, this.y);
+            this.light.x = this.x;
+            this.light.y = this.y;
         }
         if (this.glowSprite && this.glowSprite.visible) {
             this.glowSprite.setPosition(this.x, this.y);
@@ -233,7 +230,6 @@ export class EnemyProjectile extends Phaser.Physics.Arcade.Sprite {
         if (this.light) {
             const vis = (this.scene as any).visuals;
             if (vis) vis.releaseProjectileLight(this.light);
-            else this.scene.lights.removeLight(this.light);
             this.light = null;
         }
         if (this.glowSprite) {

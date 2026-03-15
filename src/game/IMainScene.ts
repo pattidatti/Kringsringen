@@ -70,7 +70,7 @@ export interface IMainScene extends Phaser.Scene {
     playerNicknames: Map<string, Phaser.GameObjects.Text>;
     playerBuffers: Map<string, any>;
     remotePlayerPackets: Map<string, any>;
-    remotePlayerLights: Map<string, Phaser.GameObjects.Light>;
+    remotePlayerLights: Map<string, import('./LightmapRenderer').LightmapLight>;
     pendingDeaths: Set<string>;
     deathSparkEmitter: Phaser.GameObjects.Particles.ParticleEmitter;
     swordSparkEmitter: Phaser.GameObjects.Particles.ParticleEmitter;

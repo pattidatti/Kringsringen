@@ -11,7 +11,7 @@ export class LightningBolt extends Phaser.Physics.Arcade.Sprite {
     private hitEnemies: Set<Enemy> = new Set();
     private bouncesLeft: number = 1;
     private speed: number = 400;
-    private light: Phaser.GameObjects.Light | null = null;
+    private light: import('./LightmapRenderer').LightmapLight | null = null;
     private impactSprite: Phaser.GameObjects.Sprite | null = null;
     private turnRate: number = GAME_CONFIG.WEAPONS.LIGHTNING.turnRate;
     private targetSearchTimer: number = 0;
@@ -32,7 +32,6 @@ export class LightningBolt extends Phaser.Physics.Arcade.Sprite {
         this.setScale(1.5);
         this.setBodySize(16, 16);
         this.setDepth(200);
-        if (this.scene.lights.active) this.setPipeline('Light2D');
 
         // Setup overlap detection with enemies
         const mainScene = scene as any;
@@ -92,7 +91,6 @@ export class LightningBolt extends Phaser.Physics.Arcade.Sprite {
         if (this.light) {
             const vis = (this.scene as any).visuals;
             if (vis) vis.releaseProjectileLight(this.light);
-            else this.scene.lights.removeLight(this.light);
             this.light = null;
         }
         const visuals = (this.scene as any).visuals;
@@ -191,7 +189,8 @@ export class LightningBolt extends Phaser.Physics.Arcade.Sprite {
 
         // Update light position
         if (this.light) {
-            this.light.setPosition(this.x, this.y);
+            this.light.x = this.x;
+            this.light.y = this.y;
         }
 
         // Check if target is still valid
@@ -359,7 +358,7 @@ export class LightningBolt extends Phaser.Physics.Arcade.Sprite {
             this.impactSprite.play('lightning-impact');
             this.impactSprite.setScale(1.5);
             this.impactSprite.setDepth(199);
-            if (this.scene.lights.active) this.impactSprite.setPipeline('Light2D');
+            // Lighting handled by lightmap — no per-sprite pipeline needed
         }
 
         // Impact light handling — only for final bolt in chain (no bounces remaining)
@@ -368,7 +367,10 @@ export class LightningBolt extends Phaser.Physics.Arcade.Sprite {
             if (this.light) {
                 const light = this.light;
                 const vis = (this.scene as any).visuals;
-                light.setPosition(hitX, hitY).setRadius(250).setIntensity(2.0);
+                light.x = hitX;
+                light.y = hitY;
+                light.radius = 250;
+                light.intensity = 2.0;
                 this.scene.tweens.add({
                     targets: light,
                     intensity: 0,
@@ -376,7 +378,6 @@ export class LightningBolt extends Phaser.Physics.Arcade.Sprite {
                     duration: 300,
                     onComplete: () => {
                         if (vis) vis.releaseProjectileLight(light);
-                        else this.scene.lights.removeLight(light);
                     }
                 });
                 this.light = null;
@@ -440,7 +441,6 @@ export class LightningBolt extends Phaser.Physics.Arcade.Sprite {
         if (this.light) {
             const vis = (this.scene as any).visuals;
             if (vis) vis.releaseProjectileLight(this.light);
-            else this.scene.lights.removeLight(this.light);
             this.light = null;
         }
         this.postFX.clear();

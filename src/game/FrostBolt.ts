@@ -6,7 +6,7 @@ import type { PerformanceManager } from './PerformanceManager';
 
 export class FrostBolt extends Phaser.Physics.Arcade.Sprite {
     private damage: number = 0;
-    private light: Phaser.GameObjects.Light | null = null;
+    private light: import('./LightmapRenderer').LightmapLight | null = null;
 
     constructor(scene: Phaser.Scene, x: number, y: number) {
         super(scene, x, y, 'frost_projectile');
@@ -17,7 +17,6 @@ export class FrostBolt extends Phaser.Physics.Arcade.Sprite {
         this.setScale(1.5);
         this.setBodySize(1, 1); // Physics body disabled during use
         this.setDepth(200);
-        if (this.scene.lights.active) this.setPipeline('Light2D');
     }
 
     fire(x: number, y: number, targetX: number, targetY: number, damage: number) {
@@ -40,7 +39,6 @@ export class FrostBolt extends Phaser.Physics.Arcade.Sprite {
         if (this.light) {
             const vis = (this.scene as any).visuals;
             if (vis) vis.releaseProjectileLight(this.light);
-            else this.scene.lights.removeLight(this.light);
             this.light = null;
         }
         const visuals = (this.scene as any).visuals;
@@ -201,7 +199,10 @@ export class FrostBolt extends Phaser.Physics.Arcade.Sprite {
         if (this.light) {
             const light = this.light;
             const vis = (this.scene as any).visuals;
-            light.setPosition(hitX, hitY).setRadius(350).setIntensity(2.5);
+            light.x = hitX;
+            light.y = hitY;
+            light.radius = 350;
+            light.intensity = 2.5;
             this.scene.tweens.add({
                 targets: light,
                 intensity: 0,
@@ -209,7 +210,6 @@ export class FrostBolt extends Phaser.Physics.Arcade.Sprite {
                 duration: 500,
                 onComplete: () => {
                     if (vis) vis.releaseProjectileLight(light);
-                    else this.scene.lights.removeLight(light);
                 }
             });
             this.light = null;
@@ -244,7 +244,6 @@ export class FrostBolt extends Phaser.Physics.Arcade.Sprite {
         if (this.light) {
             const vis = (this.scene as any).visuals;
             if (vis) vis.releaseProjectileLight(this.light);
-            else this.scene.lights.removeLight(this.light);
             this.light = null;
         }
         super.destroy(fromScene);

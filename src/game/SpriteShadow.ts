@@ -37,7 +37,7 @@ export class SpriteShadow {
                 .setTint(0x000000)
                 .setAlpha(0.3)
                 .setDepth(parent.depth - 1);
-            this.shadow.resetPipeline(); // Never apply Light2D to the shadow
+            // Shadow stays on default pipeline (lightmap handles scene lighting)
             // Initial flatten
             this.shadow.setScale(parent.scaleX, parent.scaleY * 0.5);
         }
@@ -148,7 +148,6 @@ export class SpriteShadow {
             this.shadow.setAlpha(0.3);
             this.shadow.setRotation(0);
             this.shadow.setScale(this.parent.scaleX, this.parent.scaleY * 0.5);
-            this.shadow.resetPipeline();
         }
         // silhouette ↔ dynamic doesn't need texture changes, just mode flag
     }

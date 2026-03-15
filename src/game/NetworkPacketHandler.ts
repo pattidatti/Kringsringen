@@ -40,7 +40,7 @@ export class NetworkPacketHandler {
     public playerBuffers: Map<string, JitterBuffer<PackedPlayer>> = new Map();
     public remotePlayerPackets: Map<string, PackedPlayer> = new Map();
     private remotePlayerPacketReceivedAt: Map<string, number> = new Map();
-    public remotePlayerLights: Map<string, Phaser.GameObjects.Light> = new Map();
+    public remotePlayerLights: Map<string, import('./LightmapRenderer').LightmapLight> = new Map();
 
     constructor(scene: IMainScene) {
         this.scene = scene;
@@ -61,7 +61,7 @@ export class NetworkPacketHandler {
 
         const light = this.remotePlayerLights.get(id);
         if (light) {
-            this.scene.lights.removeLight(light);
+            (this.scene as any).visuals?.removeLight(light);
             this.remotePlayerLights.delete(id);
         }
 
@@ -161,9 +161,7 @@ export class NetworkPacketHandler {
         const offsetY = (sprite.height * 0.5) - (15 * 0.5); // bodySize.height = 15
         sprite.setOffset(sprite.body!.offset.x, offsetY + 10);
 
-        if ((this.scene as any).quality?.lightingEnabled) {
-            sprite.setPipeline('Light2D');
-        }
+        // Lighting handled by lightmap — no per-sprite pipeline needed
 
         this.remotePlayers.set(id, sprite);
 
@@ -191,8 +189,9 @@ export class NetworkPacketHandler {
         const gameMode = this.scene.registry.get('gameMode');
         const isPvp = gameMode === 'pvp' || gameMode === 'pvp2v2';
         if ((this.scene as any).quality?.lightingEnabled && !isPvp) {
-            const light = this.scene.lights.addLight(x, y, 150, 0xffffff, 0.4);
-            this.remotePlayerLights.set(id, light);
+            const vis = (this.scene as any).visuals;
+            const light = vis ? vis.addLight(x, y, 150, 0xffffff, 0.4) : null;
+            if (light) this.remotePlayerLights.set(id, light);
         }
     }
 
@@ -786,7 +785,7 @@ export class NetworkPacketHandler {
                     );
 
                     const light = this.remotePlayerLights.get(id);
-                    if (light) light.setPosition(remotePlayer.x, remotePlayer.y);
+                    if (light) { light.x = remotePlayer.x; light.y = remotePlayer.y; }
 
                     const activeState = f > 0.5 ? pNext : pPrev;
                     this.applyRemoteVitals(remotePlayer, activeState);

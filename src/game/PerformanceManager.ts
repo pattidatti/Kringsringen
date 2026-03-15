@@ -236,10 +236,16 @@ export class PerformanceManager {
         return this.userMaxLights;
     }
 
-    /** Whether non-player sprites (enemies, pooled FX) should use Light2D pipeline. False at step >= 4. */
-    get dynamicEnemyLightingEnabled(): boolean {
-        if (!getQualityConfig(this.userQuality).lightingEnabled) return false;
-        return this.currentStep < 4;
+    /**
+     * Lightmap resolution override. Returns null (use user setting) or a degraded
+     * scale at higher steps. At step >= 4 the lightmap drops to 0.25; at step >= 6
+     * it is effectively invisible (0.1).
+     */
+    get lightmapResolution(): number | null {
+        if (!getQualityConfig(this.userQuality).lightingEnabled) return null;
+        if (this.currentStep >= 6) return 0.1;
+        if (this.currentStep >= 4) return 0.25;
+        return null; // use quality config default
     }
 
     /** Whether state glows on enemies (slow, poison, elite) should render. False at step >= 5. */

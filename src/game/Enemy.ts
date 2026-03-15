@@ -37,7 +37,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     protected originalSpeed: number = 100;
     protected shadow: SpriteShadow | null = null;
     public id: string = "";
-    private attackLight: Phaser.GameObjects.Light | null = null;
+    private attackLight: import('./LightmapRenderer').LightmapLight | null = null;
     public isStunned: boolean = false;
     private stunTimer: Phaser.Time.TimerEvent | null = null;
 
@@ -198,11 +198,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         if (this.config.spriteInfo.type === 'spritesheet' && this.config.spriteInfo.anims) {
             this.play(this.config.spriteInfo.anims.walk);
         }
-        if ((this.scene as any).visuals?.effectiveEnemyLightingEnabled ?? (this.scene as any).quality?.lightingEnabled) {
-            this.setPipeline('Light2D');
-        } else {
-            this.resetPipeline();
-        }
+        // Lighting is handled by the screen-space lightmap — no per-sprite pipeline needed.
 
         // Animation Listeners (Clean previous listeners to avoid duplicates if not careful, 
         // but Phaser usually handles 'on' by adding. We should check if listener exists or just use internal flags)
@@ -375,7 +371,9 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
                     this.setTint(this.config.tint);
                 }
             } else if (this.attackLight) {
-                this.attackLight.setVisible(false);
+                const vis = (this.scene as any).visuals;
+                if (vis) vis.removeLight(this.attackLight);
+                this.attackLight = null;
             }
         } else {
             // Fallback interpolation if no buffer bounds exist yet
@@ -454,16 +452,20 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 
                     if (this.config.attackGlowColor !== undefined) {
                         if (!this.attackLight) {
-                            this.attackLight = this.scene.lights.addLight(this.x, this.y, 60, this.config.attackGlowColor, 0.5);
+                            const vis = (this.scene as any).visuals;
+                            this.attackLight = vis ? vis.addLight(this.x, this.y, 60, this.config.attackGlowColor, 0.5) : null;
                         }
-                        this.attackLight.setPosition(this.x, this.y);
-                        this.attackLight.setVisible(true);
+                        if (this.attackLight) {
+                            this.attackLight.x = this.x;
+                            this.attackLight.y = this.y;
+                        }
                     }
                 }
             } else {
-                // Restore Light2D for ambient consistency
                 if (this.attackLight) {
-                    this.attackLight.setVisible(false);
+                    const vis = (this.scene as any).visuals;
+                    if (vis) vis.removeLight(this.attackLight);
+                    this.attackLight = null;
                 }
 
                 // Clear glow if not attacking
@@ -1077,7 +1079,11 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         this.setActive(false);
         this.setVisible(false);
         if (this.shadow) this.shadow.setVisible(false);
-        if (this.attackLight) this.attackLight.setVisible(false);
+        if (this.attackLight) {
+            const vis = (this.scene as any).visuals;
+            if (vis) vis.removeLight(this.attackLight);
+            this.attackLight = null;
+        }
         this.isClientMode = false;
         // Do NOT call destroy() — keep in pool for reuse
     }
@@ -1087,7 +1093,9 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
             this.shadow.destroy();
         }
         if (this.attackLight) {
-            this.scene.lights.removeLight(this.attackLight);
+            const vis = (this.scene as any).visuals;
+            if (vis) vis.removeLight(this.attackLight);
+            this.attackLight = null;
         }
         if (this.slowTimer) {
             this.slowTimer.remove();

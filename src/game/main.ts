@@ -235,9 +235,11 @@ export class MainScene extends Phaser.Scene implements IMainScene {
 
             // Listen for performance step changes to downgrade visuals
             this.events.on('perf-step-change', (_step: number) => {
-                // 0. Strip Light2D from enemy sprites when FPS is too low
-                const enemyLightingOn = this.performanceManager.dynamicEnemyLightingEnabled;
-                this.visuals.setEnemyLightingOverride(enemyLightingOn ? null : false);
+                // 0. Downgrade lightmap resolution when FPS is too low
+                const lightmapScale = this.performanceManager.lightmapResolution;
+                if (lightmapScale !== null) {
+                    this.visuals.setLightmapResolution(lightmapScale);
+                }
 
                 // 1. Shadow modes
                 const override = this.performanceManager.shadowModeOverride;
@@ -261,7 +263,7 @@ export class MainScene extends Phaser.Scene implements IMainScene {
                 const userMult = this.quality.particleMultiplier;
                 this.weather.updateQuality({
                     particleMultiplier: userMult * wMult,
-                    lightingEnabled: enemyLightingOn && this.quality.lightingEnabled
+                    lightingEnabled: this.quality.lightingEnabled
                 });
 
                 // 3. Update ambient particles (fireflies, leaves, embers)
@@ -308,7 +310,6 @@ export class MainScene extends Phaser.Scene implements IMainScene {
 
             if (this.player && this.player.body) {
                 console.log('[MainScene] Player body created successfully.');
-                this.player.setPipeline('Light2D');
             } else if (this.player) {
                 console.error('[MainScene] FATAL: Player created but has no physics body!');
             }

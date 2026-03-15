@@ -10,7 +10,7 @@ export class Fireball extends Phaser.Physics.Arcade.Sprite {
     private startX: number = 0;
     private startY: number = 0;
     private trail: Phaser.GameObjects.Particles.ParticleEmitter | null = null;
-    private light: Phaser.GameObjects.Light | null = null;
+    private light: import('./LightmapRenderer').LightmapLight | null = null;
 
     constructor(scene: Phaser.Scene, x: number, y: number) {
         super(scene, x, y, 'fireball_projectile');
@@ -78,7 +78,6 @@ export class Fireball extends Phaser.Physics.Arcade.Sprite {
         if (this.light) {
             const visuals = (this.scene as any).visuals;
             if (visuals) visuals.releaseProjectileLight(this.light);
-            else this.scene.lights.removeLight(this.light);
             this.light = null;
         }
         const visuals = (this.scene as any).visuals;
@@ -110,7 +109,10 @@ export class Fireball extends Phaser.Physics.Arcade.Sprite {
         if (this.light) {
             const light = this.light;
             const vis = (this.scene as any).visuals;
-            light.setPosition(hitX, hitY).setRadius(300).setIntensity(2.0);
+            light.x = hitX;
+            light.y = hitY;
+            light.radius = 300;
+            light.intensity = 2.0;
             this.scene.tweens.add({
                 targets: light,
                 intensity: 0,
@@ -118,7 +120,6 @@ export class Fireball extends Phaser.Physics.Arcade.Sprite {
                 duration: 400,
                 onComplete: () => {
                     if (vis) vis.releaseProjectileLight(light);
-                    else this.scene.lights.removeLight(light);
                 }
             });
             this.light = null;
@@ -414,7 +415,8 @@ export class Fireball extends Phaser.Physics.Arcade.Sprite {
         const distance = Phaser.Math.Distance.Between(this.startX, this.startY, this.x, this.y);
 
         if (this.light) {
-            this.light.setPosition(this.x, this.y);
+            this.light.x = this.x;
+            this.light.y = this.y;
         }
 
         // ── MASTERY: Unstable Core — grow fireball over distance ──
@@ -438,7 +440,6 @@ export class Fireball extends Phaser.Physics.Arcade.Sprite {
         if (this.light) {
             const vis = (this.scene as any).visuals;
             if (vis) vis.releaseProjectileLight(this.light);
-            else this.scene.lights.removeLight(this.light);
             this.light = null;
         }
         super.destroy(fromScene);

@@ -107,7 +107,7 @@ export class WeatherManager {
 
     /**
      * Implements an "Avant-Garde" fog effect.
-     * Uses large, soft particles that interact with the Light2D pipeline.
+     * Uses large, soft particles for atmospheric fog.
      */
     public enableFog() {
         const { width, height } = this.scene.scale;
@@ -115,7 +115,7 @@ export class WeatherManager {
         const quality = (this.scene as any).quality;
         const multiplier = quality?.particleMultiplier || 1.0;
 
-        // Use a particle emitter for fog so it can interact with Light2D
+        // Fog particle emitter
         this.fogParticles = this.scene.add.particles(0, 0, 'fog_cloud', {
             x: { min: -width * 1.5, max: width * 1.5 },
             y: { min: -height * 1.5, max: height * 1.5 },
@@ -130,10 +130,6 @@ export class WeatherManager {
 
         this.fogParticles.setDepth(10); // Below player mostly
         this.fogParticles.setScrollFactor(0); // Fixed to screen, covers viewport
-
-        if (quality?.lightingEnabled && this.scene.lights.active) {
-            this.fogParticles.setPipeline('Light2D');
-        }
 
         // Add a subtle tint to the scene for "mood"
         this.scene.cameras.main.setBackgroundColor(0x000000);
@@ -161,11 +157,6 @@ export class WeatherManager {
             } else {
                 if (!this.fogParticles.emitting) this.fogParticles.start();
                 this.fogParticles.setFrequency(Math.max(1, Math.floor(120 / multiplier)));
-                if (quality.lightingEnabled && this.scene.lights.active) {
-                    this.fogParticles.setPipeline('Light2D');
-                } else {
-                    this.fogParticles.resetPipeline();
-                }
             }
         }
     }

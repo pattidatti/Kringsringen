@@ -11,7 +11,7 @@ export class Singularity extends Phaser.GameObjects.Sprite {
 
     private particles: Phaser.GameObjects.Particles.ParticleEmitter | null = null;
     private coreTween: Phaser.Tweens.Tween | null = null;
-    private light: Phaser.GameObjects.Light | null = null;
+    private light: import('./LightmapRenderer').LightmapLight | null = null;
     private lightTween: Phaser.Tweens.Tween | null = null;
 
     private damageReductionActive: boolean = false;
@@ -27,10 +27,7 @@ export class Singularity extends Phaser.GameObjects.Sprite {
         this.setActive(false);
         this.setTint(0x220033);
 
-        if (this.scene.lights && this.scene.lights.active) {
-            this.setPipeline('Light2D');
-            // Light will be requested from budget on spawn()
-        }
+        // Lighting handled by lightmap — light will be requested from budget on spawn()
 
         // Create the purple vortex effect
         this.particles = scene.add.particles(0, 0, 'spark', {
@@ -107,9 +104,10 @@ export class Singularity extends Phaser.GameObjects.Sprite {
             this.light = vis ? vis.requestProjectileLight(x, y, this.pullRadius, 0xaa00ff, 1.5) : null;
         }
         if (this.light) {
-            this.light.setPosition(x, y);
-            this.light.setRadius(this.pullRadius);
-            this.light.setIntensity(1.5);
+            this.light.x = x;
+            this.light.y = y;
+            this.light.radius = this.pullRadius;
+            this.light.intensity = 1.5;
 
             // Pulsating light tween matching the core
             this.lightTween = this.scene.tweens.add({
@@ -207,9 +205,9 @@ export class Singularity extends Phaser.GameObjects.Sprite {
             const light = this.light;
             const vis = (this.scene as any).visuals;
             // Bright flash
-            light.setColor(0xff00ff);
-            light.setIntensity(10);
-            light.setRadius(this.pullRadius * 1.5);
+            light.color = 0xff00ff;
+            light.intensity = 10;
+            light.radius = this.pullRadius * 1.5;
 
             // Fade out light quickly, then release from budget
             this.scene.tweens.add({
@@ -220,7 +218,6 @@ export class Singularity extends Phaser.GameObjects.Sprite {
                 ease: 'Quad.easeOut',
                 onComplete: () => {
                     if (vis) vis.releaseProjectileLight(light);
-                    else this.scene.lights.removeLight(light);
                 }
             });
             this.light = null;
@@ -274,7 +271,6 @@ export class Singularity extends Phaser.GameObjects.Sprite {
         if (this.light) {
             const vis = (this.scene as any).visuals;
             if (vis) vis.releaseProjectileLight(this.light);
-            else this.scene.lights.removeLight(this.light);
             this.light = null;
         }
     }

@@ -8,10 +8,12 @@ export interface QualitySettings {
     hpBarUpdateMode: 'reactive' | 'continuous';
     postFXEnabled: boolean;
     bloomEnabled: boolean;
-    /** Max simultaneous PointLights for projectiles (player lights are separate) */
+    /** Max simultaneous lights for projectiles (player lights are separate) */
     maxProjectileLights: number;
     /** Shadow rendering mode: blob (oval), silhouette (sprite shape), dynamic (light-reactive) */
     shadowMode: ShadowMode;
+    /** Lightmap RenderTexture resolution scale (1 = native, 0.5 = half). Lower = cheaper. */
+    lightmapResolution: number;
 }
 
 export const QUALITY_CONFIGS: Record<GraphicsQuality, QualitySettings> = {
@@ -22,7 +24,8 @@ export const QUALITY_CONFIGS: Record<GraphicsQuality, QualitySettings> = {
         postFXEnabled: false,
         bloomEnabled: false,
         maxProjectileLights: 0,
-        shadowMode: 'blob'
+        shadowMode: 'blob',
+        lightmapResolution: 0
     },
     medium: {
         lightingEnabled: true,
@@ -31,7 +34,8 @@ export const QUALITY_CONFIGS: Record<GraphicsQuality, QualitySettings> = {
         postFXEnabled: true,
         bloomEnabled: false,
         maxProjectileLights: 6,
-        shadowMode: 'silhouette'
+        shadowMode: 'silhouette',
+        lightmapResolution: 0.5
     },
     high: {
         lightingEnabled: true,
@@ -40,7 +44,8 @@ export const QUALITY_CONFIGS: Record<GraphicsQuality, QualitySettings> = {
         postFXEnabled: true,
         bloomEnabled: true,
         maxProjectileLights: 12,
-        shadowMode: 'dynamic'
+        shadowMode: 'dynamic',
+        lightmapResolution: 0.75
     }
 };
 

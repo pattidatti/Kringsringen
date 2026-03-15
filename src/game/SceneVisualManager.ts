@@ -5,21 +5,28 @@ import { GAME_CONFIG } from '../config/GameConfig';
 import { StaticMapLoader } from './StaticMapLoader';
 import { STATIC_MAPS } from './StaticMapData';
 import { PVP_ARENA } from '../config/pvp-arena';
+import { LightmapRenderer, type LightmapLight } from './LightmapRenderer';
 
 /**
  * Manages game visuals including lighting, post-processing, and quality scaling.
+ *
+ * Lighting is handled via an RGB lightmap overlay (LightmapRenderer) instead of
+ * Phaser's per-sprite Light2D pipeline. This decouples lighting cost from sprite
+ * count, yielding significant GPU savings when many sprites are on screen.
  */
 export class SceneVisualManager {
     private scene: IMainScene;
-    private playerLight: Phaser.GameObjects.Light | null = null;
-    private outerPlayerLight: Phaser.GameObjects.Light | null = null;
+    private playerLight: LightmapLight | null = null;
+    private outerPlayerLight: LightmapLight | null = null;
     private vignetteEffect: any = null;
     private currentQuality!: QualitySettings;
+
+    /** The RGB lightmap renderer (null when lighting disabled). */
+    public lightmap: LightmapRenderer | null = null;
 
     // Light budget tracking (projectile lights only — player lights are separate)
     private activeProjectileLights: number = 0;
     private dynamicLightBudget: number = -1;  // -1 = use quality config
-    private enemyLightingOverride: boolean | null = null;  // null = use quality config
 
     // Map Management
     private currentMap: StaticMapLoader | null = null;
@@ -53,17 +60,16 @@ export class SceneVisualManager {
     }
 
     /**
-     * Updates visual elements, such as dynamic light positions.
+     * Updates visual elements: player light positions, vignette, and lightmap render.
      */
     public update(): void {
         // 1. Update Player Lights
         const player = this.scene.player;
         if (player && player.active && this.playerLight && this.outerPlayerLight) {
-            this.playerLight.setPosition(player.x, player.y);
-            this.outerPlayerLight.setPosition(player.x, player.y);
-
-            // Dynamic radius based on ghost mode (handled in MainScene events currently, but could be here)
-            // Original main.ts handles ghost radius in events: player-died / local-player-revived
+            this.playerLight.x = player.x;
+            this.playerLight.y = player.y;
+            this.outerPlayerLight.x = player.x;
+            this.outerPlayerLight.y = player.y;
         }
 
         // 2. Update Vignette Intensity based on HP (Red-out)
@@ -72,11 +78,15 @@ export class SceneVisualManager {
             const maxHP = this.scene.registry.get('playerMaxHP') || 100;
             const hpRatio = hp / maxHP;
             if (hpRatio < 0.3) {
-                // Pulse vignette at low HP
                 this.vignetteEffect.strength = 1.0 + Math.sin(Date.now() / 200) * 0.2;
             } else {
                 this.vignetteEffect.strength = 0.85;
             }
+        }
+
+        // 3. Render lightmap (must happen every frame when active)
+        if (this.lightmap) {
+            this.lightmap.render();
         }
     }
 
@@ -84,46 +94,40 @@ export class SceneVisualManager {
      * Re-applies all lighting and shader settings based on current quality profile.
      */
     public applyQualitySettings(): void {
-        const player = this.scene.player;
-
         if (this.currentQuality.lightingEnabled) {
-            console.log('[SceneVisualManager] Enabling lights/Light2D...');
-            this.scene.lights.enable();
-            this.scene.lights.setAmbientColor(0x0a0a0a);
+            console.log('[SceneVisualManager] Enabling RGB lightmap...');
 
-            if (player && player.body) player.setPipeline('Light2D');
-            else if (player) console.warn('[SceneVisualManager] Player has no body, skipping pipeline set.');
+            // Create or reconfigure lightmap
+            if (!this.lightmap) {
+                this.lightmap = new LightmapRenderer(this.scene, this.currentQuality.lightmapResolution);
+            } else {
+                this.lightmap.setResolutionScale(this.currentQuality.lightmapResolution);
+                this.lightmap.setEnabled(true);
+            }
+            this.lightmap.setAmbientColor(0x0a0a0a);
 
             // Re-create player lights if missing
             if (!this.playerLight) {
-                this.playerLight = this.scene.lights.addLight(
+                this.playerLight = this.lightmap.addLight(
                     0, 0,
                     GAME_CONFIG.LIGHTING.PLAYER_INNER_RADIUS,
                     GAME_CONFIG.LIGHTING.PLAYER_COLOR,
                     GAME_CONFIG.LIGHTING.PLAYER_INTENSITY_INNER
                 );
-                this.outerPlayerLight = this.scene.lights.addLight(
+                this.outerPlayerLight = this.lightmap.addLight(
                     0, 0,
                     GAME_CONFIG.LIGHTING.PLAYER_OUTER_RADIUS,
                     GAME_CONFIG.LIGHTING.PLAYER_COLOR,
                     GAME_CONFIG.LIGHTING.PLAYER_INTENSITY_OUTER
                 );
-            } else if (this.playerLight && this.outerPlayerLight) {
-                this.playerLight.setVisible(true);
-                this.outerPlayerLight.setVisible(true);
             }
-
-            // Sync lights for other entities
-            this.scene.enemies.children.iterate((e: any) => { e.setPipeline('Light2D'); return true; });
-            this.scene.bossGroup.children.iterate((e: any) => { e.setPipeline('Light2D'); return true; });
-            this.scene.poolManager.setLightingEnabled(true);
         } else {
-            this.scene.lights.disable();
-            if (player) player.resetPipeline();
-            if (this.playerLight) this.playerLight.setVisible(false);
-            if (this.outerPlayerLight) this.outerPlayerLight.setVisible(false);
-
-            this.scene.poolManager.setLightingEnabled(false);
+            // Disable lightmap overlay — sprites render at full brightness
+            if (this.lightmap) {
+                this.lightmap.setEnabled(false);
+            }
+            this.playerLight = null;
+            this.outerPlayerLight = null;
         }
 
         if (this.vignetteEffect) {
@@ -132,94 +136,72 @@ export class SceneVisualManager {
     }
 
     /**
-     * Request a PointLight for a projectile. Returns the light if budget allows, null otherwise.
-     * Callers must call releaseProjectileLight() when the light is no longer needed.
+     * Set the projectile light budget override. -1 = use quality config.
      */
     public setDynamicLightBudget(budget: number): void {
         this.dynamicLightBudget = budget;
     }
 
-    /** Whether non-player sprites should enroll in Light2D. Used at spawn time. */
-    get effectiveEnemyLightingEnabled(): boolean {
-        if (this.enemyLightingOverride !== null) return this.enemyLightingOverride;
-        return this.currentQuality.lightingEnabled;
+    /** Whether lighting is currently active (lightmap enabled). */
+    get effectiveLightingEnabled(): boolean {
+        return this.currentQuality.lightingEnabled && this.lightmap?.enabled === true;
     }
 
     /**
-     * Dynamically strip/restore Light2D pipeline on enemy sprites and pooled FX.
-     * Player sprite and player lights are NEVER touched — they must stay active.
-     * Does NOT call lights.disable() — that would destroy the Light objects.
+     * Request a light for a projectile. Returns the light if budget allows, null otherwise.
+     * Callers must call releaseProjectileLight() when the light is no longer needed.
      */
-    public setEnemyLightingOverride(override: boolean | null): void {
-        const wasOverride = this.enemyLightingOverride;
-        this.enemyLightingOverride = override;
-
-        const effectiveNow = override === null ? this.currentQuality.lightingEnabled : override;
-        const effectiveBefore = wasOverride === null ? this.currentQuality.lightingEnabled : wasOverride;
-        if (effectiveNow === effectiveBefore) return;  // no change
-
-        if (effectiveNow) {
-            // Re-enable pipelines on enemies
-            this.scene.enemies.children.iterate((e: any) => {
-                if (e.active) e.setPipeline('Light2D');
-                return true;
-            });
-            this.scene.bossGroup.children.iterate((e: any) => {
-                if (e.active) e.setPipeline('Light2D');
-                return true;
-            });
-            this.scene.poolManager.setLightingEnabled(true);
-            // Restore dark ambient now that enemies are back on Light2D
-            this.scene.lights.setAmbientColor(0x0a0a0a);
-        } else {
-            // Strip Light2D from enemy/pooled sprites only — player untouched
-            this.scene.enemies.children.iterate((e: any) => {
-                if (e.active) e.resetPipeline();
-                return true;
-            });
-            this.scene.bossGroup.children.iterate((e: any) => {
-                if (e.active) e.resetPipeline();
-                return true;
-            });
-            this.scene.poolManager.setLightingEnabled(false);
-            // Normalize scene: map tiles still on Light2D would render near-black at
-            // ambient 0x0a0a0a while unlit enemies render at full brightness — stark mismatch.
-            // Set ambient to white so map tiles match the unlit enemies visually.
-            this.scene.lights.setAmbientColor(0xffffff);
-        }
-    }
-
-    public requestProjectileLight(x: number, y: number, radius: number, color: number, intensity: number): Phaser.GameObjects.Light | null {
-        const lightingActive = this.enemyLightingOverride === null
-            ? this.currentQuality.lightingEnabled
-            : this.enemyLightingOverride;
-        if (!lightingActive) return null;
+    public requestProjectileLight(x: number, y: number, radius: number, color: number, intensity: number): LightmapLight | null {
+        if (!this.lightmap || !this.effectiveLightingEnabled) return null;
         const effectiveBudget = this.dynamicLightBudget >= 0
             ? this.dynamicLightBudget
             : this.currentQuality.maxProjectileLights;
         if (this.activeProjectileLights >= effectiveBudget) return null;
 
         this.activeProjectileLights++;
-        return this.scene.lights.addLight(x, y, radius, color, intensity);
+        return this.lightmap.addLight(x, y, radius, color, intensity);
     }
 
     /**
      * Release a projectile light back to the budget.
      */
-    public releaseProjectileLight(light: Phaser.GameObjects.Light): void {
-        this.scene.lights.removeLight(light);
+    public releaseProjectileLight(light: LightmapLight): void {
+        if (this.lightmap) this.lightmap.removeLight(light);
         this.activeProjectileLights = Math.max(0, this.activeProjectileLights - 1);
+    }
+
+    /**
+     * Add a non-budgeted light (e.g. enemy attack glow, remote player).
+     * Caller is responsible for removing it via removeLight().
+     */
+    public addLight(x: number, y: number, radius: number, color: number, intensity: number): LightmapLight | null {
+        if (!this.lightmap || !this.effectiveLightingEnabled) return null;
+        return this.lightmap.addLight(x, y, radius, color, intensity);
+    }
+
+    /**
+     * Remove a non-budgeted light.
+     */
+    public removeLight(light: LightmapLight): void {
+        if (this.lightmap) this.lightmap.removeLight(light);
     }
 
     public handleGhostMode(isDead: boolean): void {
         if (!this.playerLight || !this.outerPlayerLight) return;
 
         if (isDead) {
-            this.playerLight.setRadius(GAME_CONFIG.LIGHTING.GHOST_INNER_RADIUS);
-            this.outerPlayerLight.setRadius(GAME_CONFIG.LIGHTING.GHOST_OUTER_RADIUS);
+            this.playerLight.radius = GAME_CONFIG.LIGHTING.GHOST_INNER_RADIUS;
+            this.outerPlayerLight.radius = GAME_CONFIG.LIGHTING.GHOST_OUTER_RADIUS;
         } else {
-            this.playerLight.setRadius(GAME_CONFIG.LIGHTING.PLAYER_INNER_RADIUS);
-            this.outerPlayerLight.setRadius(GAME_CONFIG.LIGHTING.PLAYER_OUTER_RADIUS);
+            this.playerLight.radius = GAME_CONFIG.LIGHTING.PLAYER_INNER_RADIUS;
+            this.outerPlayerLight.radius = GAME_CONFIG.LIGHTING.PLAYER_OUTER_RADIUS;
+        }
+    }
+
+    /** Change lightmap resolution at runtime (for performance degradation). */
+    public setLightmapResolution(scale: number): void {
+        if (this.lightmap) {
+            this.lightmap.setResolutionScale(scale);
         }
     }
 
@@ -276,5 +258,9 @@ export class SceneVisualManager {
 
     public destroy(): void {
         this.scene.game.registry.events.off('changedata-graphicsQuality');
+        if (this.lightmap) {
+            this.lightmap.destroy();
+            this.lightmap = null;
+        }
     }
 }
