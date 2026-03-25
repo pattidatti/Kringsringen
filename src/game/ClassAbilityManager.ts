@@ -301,6 +301,9 @@ export class ClassAbilityManager {
             priority: 12
         });
 
+        // Single activation shake (instead of per-arrow shake that stacks badly at 15-30+ arrows)
+        this.scene.scaledShake(120, 0.003);
+
         // Fire loop
         const fireInterval = 1500 / totalArrows;
         let volleyArrowIndex = 0;
@@ -349,8 +352,7 @@ export class ClassAbilityManager {
                         );
                     }
 
-                    // Juice: minor screen shake per arrow
-                    this.scene.scaledShake(40, 0.002);
+                    // Shake removed — single activation shake replaces per-arrow shake
                 }
             }
         });

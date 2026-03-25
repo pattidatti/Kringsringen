@@ -112,9 +112,24 @@ export function AuthProvider({ children }: AuthProviderProps) {
       // onAuthStateChanged fires automatically — no manual state update needed
     } catch (err: any) {
       console.error('[AuthContext] Sign-in popup failed:', err.code, err);
-      // Don't show error if user simply closed the popup themselves
-      if (err.code !== 'auth/popup-closed-by-user' && err.code !== 'auth/cancelled-popup-request') {
-        setError('Kunne ikke starte innlogging. Prøv igjen.');
+      switch (err.code) {
+        case 'auth/popup-closed-by-user':
+        case 'auth/cancelled-popup-request':
+          break;
+        case 'auth/unauthorized-domain':
+          setError('Dette domenet er ikke autorisert for innlogging. Kontakt administrator.');
+          break;
+        case 'auth/operation-not-allowed':
+          setError('Google-innlogging er ikke aktivert. Kontakt administrator.');
+          break;
+        case 'auth/popup-blocked':
+          setError('Popup ble blokkert av nettleseren. Tillat popups og prøv igjen.');
+          break;
+        case 'auth/network-request-failed':
+          setError('Nettverksfeil. Sjekk internettforbindelsen og prøv igjen.');
+          break;
+        default:
+          setError(`Kunne ikke starte innlogging (${err.code ?? 'ukjent feil'}). Prøv igjen.`);
       }
     }
   };

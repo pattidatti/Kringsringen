@@ -239,6 +239,9 @@ export class MainScene extends Phaser.Scene implements IMainScene {
                 const enemyLightingOn = this.performanceManager.dynamicEnemyLightingEnabled;
                 this.visuals.setEnemyLightingOverride(enemyLightingOn ? null : false);
 
+                // Disable vignette PostFX when performance is degraded
+                this.visuals.setVignetteActive(this.performanceManager.vignetteEnabled);
+
                 // 1. Shadow modes
                 const override = this.performanceManager.shadowModeOverride;
                 if (override) {

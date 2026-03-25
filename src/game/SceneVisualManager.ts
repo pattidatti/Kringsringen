@@ -67,7 +67,7 @@ export class SceneVisualManager {
         }
 
         // 2. Update Vignette Intensity based on HP (Red-out)
-        if (this.vignetteEffect && this.currentQuality.postFXEnabled) {
+        if (this.vignetteEffect && this.vignetteEffect.active) {
             const hp = this.scene.registry.get('playerHP') || 100;
             const maxHP = this.scene.registry.get('playerMaxHP') || 100;
             const hpRatio = hp / maxHP;
@@ -268,6 +268,12 @@ export class SceneVisualManager {
         if ((this.scene as any).ambient) (this.scene as any).ambient.setTheme(safeLevel);
 
         this.scene.events.emit('map-ready', { level: safeLevel });
+    }
+
+    public setVignetteActive(active: boolean): void {
+        if (this.vignetteEffect) {
+            this.vignetteEffect.active = active;
+        }
     }
 
     public getShadowMode(): ShadowMode {

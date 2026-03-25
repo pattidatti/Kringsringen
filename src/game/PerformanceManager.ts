@@ -197,6 +197,13 @@ export class PerformanceManager {
         return this.currentStep < 3;
     }
 
+    /** Whether the low-HP vignette PostFX should be active. False at step >= 3. */
+    get vignetteEnabled(): boolean {
+        const userPostFX = getQualityConfig(this.userQuality).postFXEnabled;
+        if (!userPostFX) return false;
+        return this.currentStep < 3;
+    }
+
     /** Spark count multiplier for death/sword sparks: 1.0 / 0.5 / 0 */
     get sparkMultiplier(): number {
         if (this.currentStep >= 7) return 0;
